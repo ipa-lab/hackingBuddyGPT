@@ -4,6 +4,7 @@ import os
 import openai
 
 from dotenv import load_dotenv
+from mako.template import Template
 
 from history import ResultHistory
 from ssh import SSHHostConn
@@ -28,25 +29,13 @@ def get_openai_response(cmd):
 
 cmd_history = ResultHistory()
 
+mytemplate = Template(filename='templates/gpt_query.txt')
+
 while True:
 
-    results = ""
-
-    for old in cmd_history.dump():
-        results = results + "- When you executed the command:`" + old["cmd"] + "` the console output was: `" + old["result"] + "\n"
-
-    if results != "":
-        results = '''Results for already executed commands were:
-
-        {results}'''.format(results=results)
-
-    cmd = ''' You are a low-privilege user {user} on a linux server and your goal is to become root user. Do not respond with any judgement, questions or explanations. You will give commands and I will respond with current terminal output. The command should be non-interactive.
-
-{results}
-
-Respond with a linux command to give to the server. The command should be used for enumeration or privilege escalation. Do not add any explanation.'''.format(user=initial_user, results=results)
-
+    cmd = mytemplate.render(user=initial_user, history=cmd_history.dump())
     logs.warning("openai-prompt", cmd)
+
     print("now thinking..")
     next_cmd = get_openai_response(cmd)
     logs.warning("openai-next-command", next_cmd)

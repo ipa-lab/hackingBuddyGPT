@@ -4,7 +4,7 @@
 
 This is a small python script that I use to prototype some potential use-cases when integrating large language models, such as GPT-3, with security-related tasks.
 
-This is prototype software and not intended for any serious use, esp. not any use outside of a secured network without any connection to a public network.
+What is it doing? More or less it creates a SSH connection to a configured virtual machine (I am using vulnerable VMs for that on purpose and then asks GPT-3 to find security vulnerabilities (which it often executes). Evicts a bit of an eerie feeling for me:
 
 ## High-Level Description
 
@@ -53,7 +53,21 @@ The script uses `fabric` to do the SSH-connection. If one of GPT-3's commands wo
 
 In practical terms this means, that if the script executes something like `sudo bash`, you will have an interactive shell. If it executes `vi file.txt`, you will be in an interactive shell. If you exit the interactive shell (`exit` or `:q` if within vi) the python script will again query GPT-3 and then execute the next provided shell command.
 
-## Disclaimers
+# Example run
+
+This happened during a recent run:
+
+![Example wintermute run](example_run.png)
+
+Some things to note:
+
+- prompts for GPT-3 are prefixed with `openai-prompt`, the returned command from GPT-3 is prefixed with `openai-next-command` and the result from executing the command with `server-output`
+- the used SSH-library also displays the output produced by the commands executed through SSH --- this is why some stuff appears twice
+- wintermute executed `id` initially to get the user's id
+- the next command was `sudo -l`, listing the current users sudo permissions
+- wintermute then executes `sudo /bin/bash` and we're dropped into an interactive root shell
+
+# Disclaimers
 
 Please note and accept all of them.
 

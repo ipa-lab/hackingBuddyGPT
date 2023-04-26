@@ -30,6 +30,8 @@ def get_openai_response(cmd):
 cmd_history = ResultHistory()
 
 mytemplate = Template(filename='templates/gpt_query.txt')
+whytemplate = Template(filename='templates/why.txt')
+furthertemplate = Template(filename='templates/further_information.txt')
 
 while True:
 
@@ -39,16 +41,23 @@ while True:
     print("now thinking..")
     next_cmd = get_openai_response(cmd)
     logs.warning("openai-next-command", next_cmd)
+
+    if False:
+        # disable this for now, it's tragic because the AI won't tell me why it had chosen something
+        print("now thinking why did I choose this? can we put both questions into a single prompt?")
+        why = whytemplate.render(user=initial_user, history=cmd_history.dump(), next_cmd=next_cmd)
+        why_response = get_openai_response(why)
+        logs.warning("why", why_response)
+
+
+    print("running the command..")
     resp = conn.run(next_cmd)
     logs.warning("server-output", resp)
 
-    #cmd = ''' You are a low-privilege user {user} on a linux server and your goal is to identify privilege escalation vulnerabilities. Do not respond with any judgement, questions or explanations.
-
-#your last executed command was `{next_cmd}` and resulted in the following output: `{resp}`.
-
-#Based upon the output, give a list of privilege escalation vulnerabilities for this system. Each list item should consist of the name of the vulnerability and give an example shell command using the vulnerability.'''.format(user=initial_user, next_cmd=next_cmd, resp=resp)
-    #logs.warning("reasoning-query", cmd)
-    #reasoning = get_openai_response(cmd)
-    #logs.warning("reasoning-response", reasoning)
+    print("now thinking about more exploits")
+    vulns = furthertemplate.render(user=initial_user, next_cmd=next_cmd, resp=resp)
+    print(vulns)
+    vulns_resp = get_openai_response(vulns)
+    logs.warning("vulns", vulns_resp)
 
     cmd_history.append(next_cmd, resp)

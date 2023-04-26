@@ -4,7 +4,26 @@
 
 This is a small python script that I use to prototype some potential use-cases when integrating large language models, such as GPT-3, with security-related tasks.
 
-What is it doing? More or less it creates a SSH connection to a configured virtual machine (I am using vulnerable VMs for that on purpose and then asks GPT-3 to find security vulnerabilities (which it often executes). Evicts a bit of an eerie feeling for me:
+What is it doing? More or less it creates a SSH connection to a configured virtual machine (I am using vulnerable VMs for that on purpose and then asks GPT-3 to find security vulnerabilities (which it often executes). Evicts a bit of an eerie feeling for me.
+
+# Example run
+
+This happened during a recent run:
+
+![Example wintermute run](example_run.png)
+
+Some things to note:
+
+- prompts for GPT-3 are prefixed with `openai-prompt`, the returned command from GPT-3 is prefixed with `openai-next-command` and the result from executing the command with `server-output`
+- the used SSH-library also displays the output produced by the commands executed through SSH --- this is why some stuff appears twice
+- I've added a simple callback that automatically enters the configured account's credentials if sudo prompts for a password
+
+So, what is acutally happening when executing wintermute?
+
+- wintermute executed `id` initially to get the user's id
+- the next command was `sudo -l`, listing the current users sudo permissions
+- wintermute then executes `sudo /bin/bash` and we're dropped into an interactive root shell
+
 
 ## High-Level Description
 
@@ -40,7 +59,13 @@ $ cp .env.example .env
 
 # IMPORTANT: setup your OpenAI API key, the VM's IP and credentials within .env
 $ vi .env
+~~~
 
+## Usage
+
+It's just a simple python script, so..
+
+~~~ bash
 # start wintermute
 $ python wintermute.py
 ~~~
@@ -52,24 +77,6 @@ It's quite minimal, see `wintermute.py` for a rough overview and then check `/te
 The script uses `fabric` to do the SSH-connection. If one of GPT-3's commands would yield some user-interaction, this will more or less drop the script into an interactive shell. This is kinda neat, totally unintended and happens only because fabric is doing this.
 
 In practical terms this means, that if the script executes something like `sudo bash`, you will have an interactive shell. If it executes `vi file.txt`, you will be in an interactive shell. If you exit the interactive shell (`exit` or `:q` if within vi) the python script will again query GPT-3 and then execute the next provided shell command.
-
-# Example run
-
-This happened during a recent run:
-
-![Example wintermute run](example_run.png)
-
-Some things to note:
-
-- prompts for GPT-3 are prefixed with `openai-prompt`, the returned command from GPT-3 is prefixed with `openai-next-command` and the result from executing the command with `server-output`
-- the used SSH-library also displays the output produced by the commands executed through SSH --- this is why some stuff appears twice
-- I've added a simple callback that automatically enters the configured account's credentials if sudo prompts for a password
-
-So, what is acutally happening when executing wintermute?
-
-- wintermute executed `id` initially to get the user's id
-- the next command was `sudo -l`, listing the current users sudo permissions
-- wintermute then executes `sudo /bin/bash` and we're dropped into an interactive root shell
 
 # Disclaimers
 

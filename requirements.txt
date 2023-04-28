@@ -20,7 +20,9 @@ paramiko==3.1.0
 pycparser==2.21
 PyNaCl==1.5.0
 python-dotenv==1.0.0
+regex==2023.3.23
 requests==2.28.2
+tiktoken==0.3.3
 tqdm==4.65.0
 urllib3==1.26.15
 yarl==1.9.2

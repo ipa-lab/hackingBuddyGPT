@@ -21,7 +21,7 @@ initial_user = conn.run("whoami")
 
 while True:
 
-    next_cmd = create_and_ask_prompt('gpt_query.txt', "next-cmd", user=initial_user, history=cmd_history.dump())
+    next_cmd = create_and_ask_prompt('gpt_query.txt', "next-cmd", user=initial_user, history=cmd_history.get_history())
 
     # disable this for now, it's tragic because the AI won't tell me why it had chosen something
     # create_and_ask_prompt("why.txt", "why", user=initial_user, history=cmd_history.dump(), next_cmd=next_cmd)

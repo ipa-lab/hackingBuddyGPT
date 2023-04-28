@@ -1,63 +1,36 @@
 #!/usr/bin/python
 
-import os
-import openai
-
 from dotenv import load_dotenv
-from mako.template import Template
 
 from history import ResultHistory
-from ssh import SSHHostConn
-from logwriter import LogHelper
+from targets.ssh import get_ssh_connection
+from llms.openai import openai_config
+from prompt_helper import create_and_ask_prompt
 
-logs = LogHelper()
-
-load_dotenv()
-
-openai.api_key = os.getenv('OPENAI_KEY')
-model = os.getenv('MODEL')
-
-conn = SSHHostConn(os.getenv('TARGET_IP'), os.getenv('TARGET_USER'), os.getenv('TARGET_PASSWORD'))
-conn.connect()
-
-initial_user = conn.run("whoami")
-
-def get_openai_response(cmd):
-    completion = openai.ChatCompletion.create(model=model, messages=[{"role": "user", "content" : cmd}])
-    result = completion.choices[0].message.content
-    return result
-
+# setup some infrastructure
 cmd_history = ResultHistory()
 
-mytemplate = Template(filename='templates/gpt_query.txt')
-whytemplate = Template(filename='templates/why.txt')
-furthertemplate = Template(filename='templates/further_information.txt')
+# read configuration from env and configure system parts
+load_dotenv()
+openai_config()
+conn = get_ssh_connection()
+conn.connect()
+
+print("Get initial user from virtual machine:")
+initial_user = conn.run("whoami")
 
 while True:
 
-    cmd = mytemplate.render(user=initial_user, history=cmd_history.dump())
-    logs.warning("openai-prompt", cmd)
+    next_cmd = create_and_ask_prompt('gpt_query.txt', "next-cmd", user=initial_user, history=cmd_history.dump())
 
-    print("now thinking..")
-    next_cmd = get_openai_response(cmd)
-    logs.warning("openai-next-command", next_cmd)
+    # disable this for now, it's tragic because the AI won't tell me why it had chosen something
+    # create_and_ask_prompt("why.txt", "why", user=initial_user, history=cmd_history.dump(), next_cmd=next_cmd)
 
-    if False:
-        # disable this for now, it's tragic because the AI won't tell me why it had chosen something
-        print("now thinking why did I choose this? can we put both questions into a single prompt?")
-        why = whytemplate.render(user=initial_user, history=cmd_history.dump(), next_cmd=next_cmd)
-        why_response = get_openai_response(why)
-        logs.warning("why", why_response)
-
-
-    print("running the command..")
     resp = conn.run(next_cmd)
-    logs.warning("server-output", resp)
-
-    print("now thinking about more exploits")
-    vulns = furthertemplate.render(user=initial_user, next_cmd=next_cmd, resp=resp)
-    print(vulns)
-    vulns_resp = get_openai_response(vulns)
-    logs.warning("vulns", vulns_resp)
-
     cmd_history.append(next_cmd, resp)
+
+    # this will already by output by conn.run
+    # logs.warning("server-output", resp)
+
+    # this asks for additional vulnerabilities identifiable in the last command output
+    # create_and_ask_prompt('further_information.txt', 'vulns', user=initial_user, next_cmd=next_cmd, resp=resp)

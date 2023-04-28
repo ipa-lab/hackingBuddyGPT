@@ -1,5 +1,17 @@
+import os
+
 from fabric import Connection
 from invoke import Responder
+
+def get_ssh_connection():
+    ip = os.getenv('TARGET_IP')
+    user = os.getenv('TARGET_USER')
+    password = os.getenv('TARGET_PASSWORD')
+
+    if ip != '' and user != '' and password != '':
+        return SSHHostConn(ip, user, password)
+    else:
+        raise Exception("Please configure SSH through environment variables (TARGET_IP, TARGET_USER, TARGET_PASSWORD)")
 
 class SSHHostConn:
 

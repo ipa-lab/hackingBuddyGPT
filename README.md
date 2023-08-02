@@ -6,6 +6,29 @@ This is a small python script that I use to prototype some potential use-cases w
 
 What is it doing? More or less it creates a SSH connection to a configured virtual machine (I am using vulnerable VMs for that on purpose and then asks GPT-3 to find security vulnerabilities (which it often executes). Evicts a bit of an eerie feeling for me.
 
+### Vision Paper
+
+hackingBuddyGPT is described in the paper [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121).
+
+If you cite this repository/paper, please use:
+
+~~~ bibtex
+@inproceedings{getting_pwned,
+author = {Happe, Andreas and Jürgen, Cito},
+title = {Getting pwn’d by AI: Penetration Testing with Large Language Models},
+year = {2023},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3611643.3613083},
+doi = {10.1145/3611643.3613083},
+booktitle = {Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
+numpages = {5},
+keywords = {machine learning, penetration testing},
+location = {San Francisco, USA},
+series = {ESEC/FSE 2023}
+}
+~~~
+
 # Example run
 
 This happened during a recent run:

@@ -8,14 +8,12 @@ from dotenv import load_dotenv
 from history import ResultHistory, num_tokens_from_string
 from targets.ssh import get_ssh_connection, SSHHostConn
 from llms.openai_rest import openai_config, get_openai_response
-from prompt_helper import create_and_ask_prompt
+from prompt_helper import LLM
 
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.json import JSON
-
-from mako.template import Template
 
 # setup some infrastructure
 cmd_history = ResultHistory()
@@ -28,6 +26,8 @@ conn.connect()
 
 print("Get initial user from virtual machine:")
 initial_user = conn.run("whoami")
+
+llm = LLM(get_openai_response)
 
 sysinfo = "This is a linux-based system."
 
@@ -57,7 +57,7 @@ while True:
     state_size = num_tokens_from_string(state)
 
     tic = time.perf_counter()
-    next_cmd = create_and_ask_prompt('query_next_command.txt', "next-cmd", user=initial_user, password=os.getenv("TARGET_PASSWORD"), history=cmd_history.get_history(limit=context_size-state_size), state=state)
+    next_cmd = llm.create_and_ask_prompt('query_next_command.txt', "next-cmd", user=initial_user, password=os.getenv("TARGET_PASSWORD"), history=cmd_history.get_history(limit=context_size-state_size), state=state)
     toc = time.perf_counter()
     diff = str(toc-tic)
 
@@ -69,7 +69,7 @@ while True:
 
         console.print(Panel(resp, title=cmd))
 
-        resp_success = create_and_ask_prompt('successfull.txt', 'success?', cmd=cmd, resp=resp, facts=state)
+        resp_success = llm.create_and_ask_prompt('successfull.txt', 'success?', cmd=cmd, resp=resp, facts=state)
         table.add_row("cmd", diff, cmd, str(len(resp)), resp_success["success"], resp_success["reason"])
 
         state = "\n".join(map(lambda x: "- " + x, resp_success["facts"]))

@@ -31,8 +31,6 @@ class SSHHostConn:
             connect_kwargs={"password": self.password},
         )
         self.conn=conn
-
-    def test(self):
         self.conn.open()
 
     def run(self, cmd):

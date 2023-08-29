@@ -2,6 +2,7 @@
 
 import os
 import time
+import paramiko
 
 from dotenv import load_dotenv
 
@@ -75,13 +76,23 @@ while True:
         user = next_cmd["username"]
         password = next_cmd["password"]
         
-        # TODO: this is currently highly broken
         test = SSHHostConn(ip, user, password)
-        print(str(test.test()))
-        if result == "root":
-            cmd_history.append(diff, "ssh", "tried ssh with username " + next_cmd["username"] + " and password " + next_cmd["password"], True, "Login was successful")
+        authenticated = False
+        try:
+            test.connect()
+            authenticated = True
+        except paramiko.ssh_exception.AuthenticationException:
+            print("seems like SSH authentication failed..")
+
+        if not authenticated:
+            cmd_history.append(diff, "ssh", "tried ssh with username " + next_cmd["username"] + " and password " + next_cmd["password"], "Authentication error", "False", "Login was not successful")
         else:
-            cmd_history.append(diff, "ssh", "tried ssh with username " + next_cmd["username"] + " and password " + next_cmd["password"], False, "Login was not successful")
+            user = conn.run("whoami")
+
+            if user == "root":
+                cmd_history.append(diff, "ssh", "tried ssh with username " + next_cmd["username"] + " and password " + next_cmd["password"], "Authentication successful", "True", "Login was successful")
+            else:
+                cmd_history.append(diff, "ssh", "tried ssh with username " + next_cmd["username"] + " and password " + next_cmd["password"], "Authentication successful but not root", "False", "Login was successful but not root")
 
     # aks chatgpt to explain what it expects about the tested
     # system. Understanding this might help human learning

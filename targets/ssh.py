@@ -32,6 +32,9 @@ class SSHHostConn:
         )
         self.conn=conn
 
+    def test(self):
+        self.conn.open()
+
     def run(self, cmd):
         sudopass = Responder(
             pattern=r'\[sudo\] password for ' + self.username + ':',

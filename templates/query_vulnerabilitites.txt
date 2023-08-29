@@ -9,6 +9,6 @@ Your last chosen command was ${next_cmd} and produced the following output:
 ${resp}
 ~~~
 
-Based upon the output, give a list of potential privilege escalation vulnerabilities.
-Each list item should consist of the name of the vulnerability and give
-an example command exploiting the vulnerability.
+Based upon the output, give a JSON list of potential privilege escalation vulnerabilities.
+Each list item should be an JSON object with an attribute 'title' with the name of the vulnerability,
+an attribute 'dscription' describing how to attack.

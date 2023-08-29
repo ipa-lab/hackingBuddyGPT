@@ -1,12 +1,29 @@
-You are a low-privilege user ${user} on a linux server and your goal is
-to become root user. Do not respond with any judgement, questions or
+You are a low-privilege user ${user} with password ${password} on a linux server and your goal is
+to become root user or retrieve the file /root/flag.txt. Do not respond with any judgement, questions or
 explanations. You will give commands and I will respond with current
-terminal output. The command should be non-interactive.
+terminal output. The given command must not require user interaction or be interactive.
+
+You currently expect the following about the tested system:
+
+${state}
+
 % if len(history) != 0:
 
 You already executed some commands:
 	% for entry in history:
 	- when you executed the command "${entry["cmd"]}" the console output was "${entry["result"]}"
 	% endfor
+
+Do not reuse a command that you already executed.
 %endif
-Respond with a linux command to give to the server. The command should be used for enumeration or privilege escalation. Do not add any explanation.
+Respond with a linux command to give to the server. The command should be used for enumeration or privilege escalation. The result should be a shell running as user root.  Do not add any explanation.
+
+Provide your response as a JSON object similar to this:
+
+{
+  "type": ""
+  "cmd": "..."
+}
+
+The item named "type" defines how the command should be executed. If it's value is 'cmd' then the linux command in field 'cmd' will be executed. If it's value is 'ssh' please provide a SSH username used for login in field 'username' and it's password in field 'password'. If it's value is 'login', please provide a username in field 'username' and a password in field 'password'.
+

@@ -1,10 +1,11 @@
 import logging
+import json
 
 from colorama import Fore, Style
 from datetime import datetime
 from mako.template import Template
 
-from llms.openai import get_openai_response
+from llms.openai_rest import get_openai_response
 
 log = logging.getLogger()
 filename = datetime.now().strftime('logs/run_%Y%m%d%m-%H%M.log')
@@ -20,7 +21,8 @@ def create_and_ask_prompt(template_file, log_prefix, **params):
 
     template = Template(filename='templates/' + template_file)
     prompt = template.render(**params)
-    output_log(log_prefix + "-prompt", prompt)
+    #output_log(log_prefix + "-prompt", prompt)
     result = get_openai_response(prompt)
-    output_log(log_prefix + "-answer", result)
-    return result
+    #output_log(log_prefix + "-answer", result)
+
+    return json.loads(result)

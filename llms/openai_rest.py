@@ -1,23 +1,12 @@
-import os
+import config
 import requests
 
-openapi_model : str = ''
-openapi_key : str = ''
-
-def openai_config():
-    global openapi_model, openapi_key
-
-    api_key = os.getenv('OPENAI_KEY')
-    model = os.getenv('MODEL')
-
-    if api_key != '' and model != '':
-        openapi_model = model
-        openapi_key = api_key
-    else:
-        raise Exception("please set OPENAI_KEY and MODEL through environment variables!")
 
 def get_openai_response(cmd):
-    global openapi_model, openapi_key
+    if config.model() == '' and config.openai_key() == '':
+        raise Exception("please set OPENAI_KEY and MODEL through environment variables!")
+    openapi_key = config.openai_key()
+    openapi_model = config.model()
 
     headers = {"Authorization": f"Bearer {openapi_key}"}
     data = {'model': openapi_model, 'messages': [{'role': 'user', 'content': cmd}]}

@@ -1,26 +1,25 @@
 #!/usr/bin/python
 
-import os
+import config
 import time
 import paramiko
+from rich.console import Console
+from rich.panel import Panel
 
 from dotenv import load_dotenv
 
 from history import ResultHistory, num_tokens_from_string
 from targets.ssh import get_ssh_connection, SSHHostConn
-from llms.openai_rest import openai_config, get_openai_response
+from llms.openai_rest import get_openai_response
 from prompt_helper import LLM
-
-from rich.console import Console
-from rich.panel import Panel
 
 # setup some infrastructure
 cmd_history = ResultHistory()
 
 # read configuration from env and configure system parts
-load_dotenv()
-openai_config()
-conn = get_ssh_connection()
+config.check_config()
+
+conn = get_ssh_connection(config.target_ip(), config.target_user(), config.target_password())
 conn.connect()
 
 print("Get initial user from virtual machine:")
@@ -32,8 +31,8 @@ sysinfo = "This is a linux-based system."
 
 console = Console()
 
-context_size = int(os.getenv("CONTEXT_SIZE"))
-print("used model: " + os.getenv("MODEL") + " context-size: " + os.getenv("CONTEXT_SIZE"))
+context_size = config.context_size()
+print("used model: " + config.model() + " context-size: " + str(config.context_size()))
 
 state = """
 - this is a linux system
@@ -42,14 +41,13 @@ state = """
 
 # maybe generate list of potential vulnerabilities based upon the system facts
 
-
 while True:
     # todo: take the list of potential vulnerabilities, go through each element and try up to 10 times to exploit the vulnerability
 
     state_size = num_tokens_from_string(state)
 
     tic = time.perf_counter()
-    next_cmd = llm.create_and_ask_prompt('query_next_command.txt', "next-cmd", user=initial_user, password=os.getenv("TARGET_PASSWORD"), history=cmd_history.get_history(limit=context_size-state_size), state=state)
+    next_cmd = llm.create_and_ask_prompt('query_next_command.txt', "next-cmd", user=initial_user, password=config.target_password(), history=cmd_history.get_history(limit=context_size-state_size), state=state)
     toc = time.perf_counter()
     diff = str(toc-tic)
 
@@ -72,11 +70,10 @@ while True:
         # console.print(Panel(str(next_vulns), title="Next Vulns"))
 
     elif next_cmd["type"] == "ssh":
-        ip = os.getenv('TARGET_IP')
         user = next_cmd["username"]
         password = next_cmd["password"]
         
-        test = SSHHostConn(ip, user, password)
+        test = SSHHostConn(config.target_ip(), user, password)
         authenticated = False
         try:
             test.connect()

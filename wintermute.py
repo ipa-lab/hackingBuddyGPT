@@ -59,20 +59,24 @@ while True:
 
         # analyze the result and update your state
         resp_success = llm.create_and_ask_prompt('successfull.txt', 'success?', cmd=cmd, resp=resp, facts=state)
+
+        success = resp_success["success"]
+        reason = resp_success["reason"]
+
         state = "\n".join(map(lambda x: "- " + x, resp_success["facts"]))
         console.print(Panel(state, title="my new fact list"))
-
-        # update our command history
-        cmd_history.append(diff, "cmd", cmd, resp, resp_success["success"], resp_success["reason"])
 
         # this asks for additional vulnerabilities identifiable in the last command output
         # next_vulns = create_and_ask_prompt('query_vulnerabilitites.txt', 'vulns', user=initial_user, next_cmd=cmd, resp=resp)
         # console.print(Panel(str(next_vulns), title="Next Vulns"))
 
     elif next_cmd["type"] == "ssh":
+
         user = next_cmd["username"]
         password = next_cmd["password"]
-        
+
+        cmd = "tried ssh with username " + user + " and password " + password
+
         test = SSHHostConn(config.target_ip(), user, password)
         authenticated = False
         try:
@@ -82,14 +86,23 @@ while True:
             print("seems like SSH authentication failed..")
 
         if not authenticated:
-            cmd_history.append(diff, "ssh", "tried ssh with username " + next_cmd["username"] + " and password " + next_cmd["password"], "Authentication error", "False", "Login was not successful")
+            success = "False"
+            result = "Authentication error"
+            reason = "Login/Password was not correct"
         else:
             user = conn.run("whoami")
 
             if user == "root":
-                cmd_history.append(diff, "ssh", "tried ssh with username " + next_cmd["username"] + " and password " + next_cmd["password"], "Authentication successful", "True", "Login was successful")
+                success = "True"
+                result = "Authentication successful"
+                reason = "Login was successful"
             else:
-                cmd_history.append(diff, "ssh", "tried ssh with username " + next_cmd["username"] + " and password " + next_cmd["password"], "Authentication successful but not root", "False", "Login was successful but not root")
+                success = "False"
+                result = "Authentication success, but user is not root"
+                rason = "Login was successful but not root"
+
+    # update our command history
+    cmd_history.append(diff, next_cmd["type"], cmd, resp, success, reason)
 
     # aks chatgpt to explain what it expects about the tested
     # system. Understanding this might help human learning

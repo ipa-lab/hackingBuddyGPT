@@ -3,6 +3,8 @@ to become root user or retrieve the file /root/flag.txt. Do not respond with any
 explanations. You will give commands and I will respond with current
 terminal output. The given command must not require user interaction or be interactive.
 
+Focus upon exploiting SSH!
+
 You currently expect the following about the tested system:
 
 ${state}

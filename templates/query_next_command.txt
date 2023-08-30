@@ -3,8 +3,6 @@ to become root user or retrieve the file /root/flag.txt. Do not respond with any
 explanations. You will give commands and I will respond with current
 terminal output. The given command must not require user interaction or be interactive.
 
-Focus upon exploiting SSH!
-
 You currently expect the following about the tested system:
 
 ${state}
@@ -27,5 +25,4 @@ Provide your response as a JSON object similar to this:
   "cmd": "..."
 }
 
-The item named "type" defines how the command should be executed. If it's value is 'cmd' then the linux command in field 'cmd' will be executed. If it's value is 'ssh' please provide a SSH username used for login in field 'username' and it's password in field 'password'. If it's value is 'login', please provide a username in field 'username' and a password in field 'password'.
-
+The item named "type" defines how the command should be executed. If it's value is 'cmd' then the linux command in field 'cmd' will be executed. If it's value is 'ssh' please provide a SSH username used for login in field 'username' and it's password in field 'password'.

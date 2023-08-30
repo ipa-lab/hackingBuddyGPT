@@ -1,5 +1,6 @@
 import logging
 import json
+import time
 
 from datetime import datetime
 from mako.template import Template
@@ -20,7 +21,9 @@ class LLM:
         template = Template(filename='templates/' + template_file)
         prompt = template.render(**params)
         self.log.warning("[" + log_prefix + "-prompt] " + prompt)
+        tic = time.perf_counter()
         result = self.get_openai_response(prompt)
+        toc = time.perf_counter()
         self.log.warning("[" + log_prefix + "-answer] " + result)
 
-        return json.loads(result)
+        return json.loads(result), str(toc-tic)

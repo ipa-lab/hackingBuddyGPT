@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Happe"
+  given-names: "Andreas"
+  orcid: "https://orcid.org/0009-0000-2484-0109"
+- family-names: "Cito"
+  given-names: "Jürgen"
+  orcid: "https://orcid.org/0000-0001-8619-1271"
+title: "hackingBuddyGPT"
+version: 0.1.0
+doi: 10.5281/zenodo.1234
+date-released: 2023-04-28
+url: "https://github.com/ipa-lab/hackingBuddyGPT"
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Happe"
+    given-names: "Andreas"
+    orcid: "https://orcid.org/0009-0000-2484-0109"
+  - family-names: "Cito"
+    given-names: "Jürgen"
+    orcid: "https://orcid.org/0000-0001-8619-1271"
+  doi: "10.1145/3611643.3613083"
+  publisher: "Association for Computing Machinery"
+  booktitle: "Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering"
+  title: "Getting pwn’d by AI: Penetration Testing with Large Language Models"
+  year: 2023

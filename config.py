@@ -22,3 +22,6 @@ def target_user():
 
 def openai_key():
     return os.getenv('OPENAI_KEY')
+
+def oobabooga_url():
+    return os.getenv('OOBABOOGA_URL')

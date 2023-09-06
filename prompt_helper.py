@@ -1,26 +1,29 @@
 import logging
+import json
+import time
 
-from colorama import Fore, Style
 from datetime import datetime
 from mako.template import Template
 
-from llms.openai import get_openai_response
+class LLM:
+    def __init__(self, llm_connection):
+        self.connection = llm_connection
 
-log = logging.getLogger()
-filename = datetime.now().strftime('logs/run_%Y%m%d%m-%H%M.log')
-log.addHandler(logging.FileHandler(filename))
+        # prepare logging
+        self.log = logging.getLogger()
+        filename = datetime.now().strftime('logs/run_%Y%m%d%m-%H%M.log')
+        self.log.addHandler(logging.FileHandler(filename))
+        self.get_openai_response = llm_connection
 
-def output_log(kind, msg):
-    print("[" + Fore.RED + kind + Style.RESET_ALL +"]: " + msg)
-    log.warning("[" + kind + "] " + msg)
+    # helper for generating and executing LLM prompts from a template
+    def create_and_ask_prompt(self, template_file, log_prefix, **params):
 
-# helper for generating and executing LLM prompts from a template
-def create_and_ask_prompt(template_file, log_prefix, **params):
-    global logs
+        template = Template(filename='templates/' + template_file)
+        prompt = template.render(**params)
+        self.log.warning("[" + log_prefix + "-prompt] " + prompt)
+        tic = time.perf_counter()
+        result = self.get_openai_response(prompt)
+        toc = time.perf_counter()
+        self.log.warning("[" + log_prefix + "-answer] " + result)
 
-    template = Template(filename='templates/' + template_file)
-    prompt = template.render(**params)
-    output_log(log_prefix + "-prompt", prompt)
-    result = get_openai_response(prompt)
-    output_log(log_prefix + "-answer", result)
-    return result
+        return json.loads(result), str(toc-tic)

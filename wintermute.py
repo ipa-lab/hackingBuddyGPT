@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 # setup dotenv
 load_dotenv()
 
-
 # setup some infrastructure
 cmd_history = ResultHistory()
 console = Console()
@@ -57,7 +56,10 @@ def handle_ssh(input):
     except paramiko.ssh_exception.AuthenticationException:
         return cmd, "Authentication error, credentials are wrong"
 
-while True:
+round : int = 0
+max_rounds : int = config.max_rounds()
+
+while round < max_rounds:
 
     state_size = num_tokens_from_string(state)
 
@@ -83,3 +85,5 @@ while True:
     # update our command history and output it
     cmd_history.append(diff, next_cmd["type"], cmd, result, success, reason)
     console.print(cmd_history.create_history_table())
+
+    round += 1

@@ -17,3 +17,6 @@ def target_user():
 
 def llm_connection():
     return os.getenv("LLM_CONNECTION")
+
+def max_rounds():
+    return int(os.getenv("MAX_ROUNDS"))

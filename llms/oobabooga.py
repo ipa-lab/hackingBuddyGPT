@@ -1,20 +1,23 @@
 import html
 import json
-import re
+import os
 
 import requests
 
-from config import oobabooga_url
-
 # For local streaming, the websockets are hosted without ssl - http://
-url = oobabooga_url()
-URI = f'{HOST}/api/v1/chat'
+url : str = 'unkown'
 
 # For reverse-proxied streaming, the remote will likely host with ssl - https://
 # URI = 'https://your-uri-here.trycloudflare.com/api/v1/chat'
 
 
+def get_oobabooga_setup():
+    return "oobabooga", verify_config, get_openai_response
+
 def run(user_input, history):
+
+    global url
+
     request = {
         'user_input': user_input,
         'max_new_tokens': 250,
@@ -71,7 +74,7 @@ def run(user_input, history):
         'stopping_strings': []
     }
 
-    response = requests.post(URI, json=request)
+    response = requests.post(url, json=request)
 
     if response.status_code == 200:
         return response.json()['results'][0]['history']
@@ -97,3 +100,12 @@ def get_openai_response(cmd):
         return str(json.dumps({ "type" : "cmd", "cmd" : tmp.replace("\\\"", "\"")}))
 
     return html.unescape(result['visible'][-1][1])
+
+def verify_config():
+    global url
+
+    url = os.getenv('OOBABOOGA_URL')
+
+    if url == '':
+        raise Exception("please set OOBABOOGA_URL through environmental variables")
+    return True

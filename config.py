@@ -1,10 +1,5 @@
 import os
 
-from dotenv import load_dotenv
-
-def check_config():
-    load_dotenv()
-
 def model():
     return os.getenv("MODEL")
 
@@ -20,8 +15,5 @@ def target_password():
 def target_user():
     return os.getenv('TARGET_USER')
 
-def openai_key():
-    return os.getenv('OPENAI_KEY')
-
-def oobabooga_url():
-    return os.getenv('OOBABOOGA_URL')
+def llm_connection():
+    return os.getenv("LLM_CONNECTION")

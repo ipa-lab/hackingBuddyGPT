@@ -7,22 +7,24 @@ from rich.panel import Panel
 
 from history import ResultHistory, num_tokens_from_string
 from targets.ssh import get_ssh_connection, SSHHostConn
-from llms.openai_rest import get_openai_response
 from prompt_helper import LLM
+from llms.manager import get_llm_connection
+from dotenv import load_dotenv
+
+# setup dotenv
+load_dotenv()
+
 
 # setup some infrastructure
 cmd_history = ResultHistory()
 console = Console()
-
-# read configuration from env and configure system parts
-config.check_config()
 
 # open SSH connection to target
 conn = get_ssh_connection(config.target_ip(), config.target_user(), config.target_password())
 conn.connect()
 
 # initialize LLM connection
-llm = LLM(get_openai_response)
+llm = LLM(get_llm_connection(config.llm_connection()))
 
 context_size = config.context_size()
 print("used model: " + config.model() + " context-size: " + str(config.context_size()))

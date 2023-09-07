@@ -1,5 +1,6 @@
 import tiktoken
 import os
+import sqlite3
 
 from rich.table import Table
 
@@ -12,7 +13,29 @@ def num_tokens_from_string(string: str) -> int:
 
 class ResultHistory:
     def __init__(self):
+        self.db = sqlite3.connect(":memory:")
+        self.cursor = self.db.cursor()
+        self.cursor.execute("CREATE TABLE runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER)")
+        self.cursor.execute("CREATE TABLE commands (id INTEGER PRIMARY KEY, name string)")
+        self.cursor.execute("CREATE TABLE queries (run_id INTEGER, round INTEGER, cmd_id INTEGER, query TEXT, response TEXT)")
+
+        # insert commands
+        self.cursor.execute("INSERT INTO commands (name) VALUES (?)", ("query_cmd", ))
+        self.query_cmd_id = self.cursor.lastrowid
+
+        self.cursor.execute("INSERT INTO commands (name) VALUES (?)", ("update_state", ))
+        self.state_update_id = self.cursor.lastrowid
+
+        # insert a new run
+        self.cursor.execute("INSERT INTO runs (model, context_size) VALUES (?, ?)", (os.getenv("MODEL"), os.getenv("CONTEXT_SIZE")))
+        self.run_id = self.cursor.lastrowid
         self.data = []
+
+    def append_query(self, round, cmd_type, cmd, result):
+        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response) VALUES (?, ?, ?, ?, ?)", (self.run_id, round, cmd_type, cmd, result))
+
+        results = self.cursor.execute("SELECT * FROM queries WHERE run_id = ?", (self.run_id,)).fetchall()
+        print(str(results))
 
     def append(self, think_time, cmd_type, cmd, result, success, reasoning):
         self.data.append({
@@ -20,7 +43,7 @@ class ResultHistory:
             "result": result,
             "think_time": think_time,
             "cmd_type": cmd_type,
-            "success": success,
+            "success": str(success),
             "reasoning": reasoning
         })
 

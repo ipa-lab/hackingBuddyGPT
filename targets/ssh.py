@@ -29,10 +29,17 @@ class SSHHostConn:
         self.conn.open()
 
     def run(self, cmd):
+        gotRoot = False
         sudopass = Responder(
             pattern=r'\[sudo\] password for ' + self.username + ':',
             response=self.password + '\n',
         )
-        resp = self.conn.run(cmd, pty=True, warn=True, watchers=[sudopass])
+        rootdetected = Responder(
+            pattern=r'^# ',
+            response="hostname;id;exit; echo #IamRoot\n"
+        )
+        resp = self.conn.run(cmd, pty=True, warn=True, watchers=[sudopass,rootdetected])
         tmp = resp.stdout
-        return tmp.replace('[sudo] password for ' + self.username + ':', '').strip()
+        if 'IamRoot' in tmp:
+            gotRoot = True
+        return tmp.replace('[sudo] password for ' + self.username + ':', '').strip(), gotRoot

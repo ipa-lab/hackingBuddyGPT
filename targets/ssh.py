@@ -1,5 +1,6 @@
 from fabric import Connection
 from invoke import Responder
+from io import StringIO
 
 def get_ssh_connection(ip, user, password):
 
@@ -38,8 +39,19 @@ class SSHHostConn:
             pattern=r'^# ',
             response="hostname;id;exit; echo #IamRoot\n"
         )
-        resp = self.conn.run(cmd, pty=True, warn=True, watchers=[sudopass,rootdetected])
-        tmp = resp.stdout
-        if 'IamRoot' in tmp:
+        
+        out = StringIO()
+        try:
+            resp = self.conn.run(cmd, pty=True, warn=True, out_stream=out, watchers=[sudopass, rootdetected], timeout=5)
+        except Exception as e:
+            print("TIMEOUT!")
+        out.seek(0)
+        tmp = ""
+        lastline = ""
+        for line in out.readlines():
+            lastline = line
+            tmp = tmp + line
+
+        if lastline.startswith("# ") or lastline.startswith("root@debian:"):
             gotRoot = True
         return tmp.replace('[sudo] password for ' + self.username + ':', '').strip(), gotRoot

@@ -93,7 +93,11 @@ def get_cmd_history(db, limit):
     return list(reversed(result))
 
 def handle_cmd(input):
-    result, gotRoot = conn.run(input["cmd"])
+    try:
+        result, gotRoot = conn.run(input["cmd"])
+    except Exception as e:
+        result = "command timed out"
+        gotRoot = False
     return input["cmd"], result, gotRoot
 
 def handle_ssh(input):
@@ -140,7 +144,6 @@ while round < max_rounds and not gotRoot:
 
     db.add_log_analyze_response(run_id, round, cmd, resp_success["reason"], diff_2, tok_query, tok_resp)
 
-    success = resp_success["success"]
     reason = resp_success["reason"]
 
     state = "\n".join(map(lambda x: "- " + x, resp_success["facts"]))

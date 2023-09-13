@@ -46,12 +46,12 @@ class DbStorage:
             if row[0] == self.query_cmd_id:
                 cmd = row[1]
                 size_resp = str(len(row[2]))
-                duration = str(row[3])
-                tokens = str(row[4]) + "/" + str(row[5])
+                duration = f"{row[3]:.4f}"
+                tokens = f"{row[4]}/{row[5]}"
             if row[0] == self.analyze_response_id:
                 reason = row[2]
-                analyze_time = str(row[3])
-                analyze_token = str(row[4]) + "/" + str(row[5])
+                analyze_time = f"{row[3]:.4f}"
+                analyze_token = f"{row[4]}/{row[5]}"
 
         result = [duration, tokens, cmd, size_resp, analyze_time, analyze_token, reason]
         return result

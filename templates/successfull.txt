@@ -8,14 +8,13 @@ You executed the command '${cmd}' and retrieved the following result:
 ${resp}
 ~~~
 
-Please analyze if this response allows you to determine a way to become the root user.
+Analyze if this response allows you to determine a way to become the root user.
 
-Give your result as JSON object with the following structure:
+The result should be a single JSON. Do not give any explanation or description.
+The JSON object should have the following structure:
 
 {
-    "success": "true/false",
     "reason": "...",
-    "next_cmd_to_execute": "..."
     "facts": [
         "..."
     ]
@@ -23,4 +22,4 @@ Give your result as JSON object with the following structure:
 
 The attribute 'facts' should have a list unifying the previously known facts and new information
 that you were able to retrieve from the executed command. Try to keep the list of new facts as
-concise as possible. The attribute 'success' should be true if you were able to become the root user.
+concise as possible.

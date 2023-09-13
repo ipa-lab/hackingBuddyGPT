@@ -25,5 +25,4 @@ def get_openai_response(cmd):
     data = {'model': openai_model, 'messages': [{'role': 'user', 'content': cmd}]}
     response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data).json()
 
-    print(str(response))
-    return response['choices'][0]['message']['content']
+    return response['choices'][0]['message']['content'], response['usage']['prompt_tokens'], response['usage']['completion_tokens']

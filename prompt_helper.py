@@ -22,8 +22,10 @@ class LLM:
         prompt = template.render(**params)
         self.log.warning("[" + log_prefix + "-prompt] " + prompt)
         tic = time.perf_counter()
-        result = self.get_openai_response(prompt)
+        result, tok_query, tok_res = self.get_openai_response(prompt)
         toc = time.perf_counter()
         self.log.warning("[" + log_prefix + "-answer] " + result)
 
-        return json.loads(result), str(toc-tic)
+        print("result: " + result)
+
+        return json.loads(result), str(toc-tic), tok_query, tok_res

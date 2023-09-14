@@ -35,14 +35,10 @@ class SSHHostConn:
             pattern=r'\[sudo\] password for ' + self.username + ':',
             response=self.password + '\n',
         )
-        rootdetected = Responder(
-            pattern=r'^# ',
-            response="hostname;id;exit; echo #IamRoot\n"
-        )
         
         out = StringIO()
         try:
-            resp = self.conn.run(cmd, pty=True, warn=True, out_stream=out, watchers=[sudopass, rootdetected], timeout=5)
+            resp = self.conn.run(cmd, pty=True, warn=True, out_stream=out, watchers=[sudopass], timeout=5)
         except Exception as e:
             print("TIMEOUT!")
         out.seek(0)
@@ -52,6 +48,10 @@ class SSHHostConn:
             lastline = line
             tmp = tmp + line
 
-        if lastline.startswith("# ") or lastline.startswith("root@debian:"):
+        print(f"lastline was: '{lastline}'")
+
+        if lastline.startswith("# "):
+            gotRoot = True
+        if  lastline.startswith('root@debian:'):
             gotRoot = True
         return tmp.replace('[sudo] password for ' + self.username + ':', '').strip(), gotRoot

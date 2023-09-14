@@ -2,17 +2,17 @@
 
 import config
 import os
-import paramiko
 from rich.console import Console
 from rich.panel import Panel
 
-from targets.ssh import get_ssh_connection, SSHHostConn
-from prompt_helper import LLM
+from targets.ssh import get_ssh_connection
 from llms.manager import get_llm_connection
 from dotenv import load_dotenv
 from db_storage import DbStorage
 
+from handlers import handle_cmd, handle_ssh
 from helper import *
+from llm_with_state import LLMWithState
 
 # setup dotenv
 load_dotenv()
@@ -21,6 +21,8 @@ load_dotenv()
 db = DbStorage()
 db.connect()
 db.setup_db()
+
+# create an identifier for this session/run
 run_id = db.create_new_run(os.getenv("MODEL"), os.getenv("CONTEXT_SIZE"))
 
 # setup some infrastructure
@@ -30,57 +32,25 @@ console = Console()
 conn = get_ssh_connection(config.target_ip(), config.target_user(), config.target_password())
 conn.connect()
 
-# initialize LLM connection
-llm = LLM(get_llm_connection(config.llm_connection()))
+# setup LLM connection and internal model representation
+llm_connection = get_llm_connection(config.llm_connection())
+console.log(llm_connection.output_metadata())
+llm_gpt = LLMWithState(run_id, llm_connection, db, config.target_user(), config.target_password())
 
-context_size = config.context_size()
-print("used model: " + config.model() + " context-size: " + str(config.context_size()))
-
-# prepare an initial state
-state = """
-- this is a linux system
-- your low privilege user credentials are lowpriv:trustno1
-"""
-
-def handle_cmd(input):
-    try:
-        result, gotRoot = conn.run(input["cmd"])
-    except Exception as e:
-        result = "command timed out"
-        gotRoot = False
-    return input["cmd"], result, gotRoot
-
-def handle_ssh(input):
-    user = input["username"]
-    password = input["password"]
-
-    cmd = "tried ssh with username " + user + " and password " + password
-
-    test = SSHHostConn(config.target_ip(), user, password)
-    try:
-        test.connect()
-        user = conn.run("whoami")
-
-        if user == "root":
-            return cmd, "Login as root was successful"
-        else:
-            return cmd, "Authentication successful, but user is not root"
-
-    except paramiko.ssh_exception.AuthenticationException:
-        return cmd, "Authentication error, credentials are wrong"
-
+# setup round meta-data
 round : int = 0
 max_rounds : int = config.max_rounds()
-
 gotRoot = False
+
+# and start everything up
 while round < max_rounds and not gotRoot:
 
-    state_size = num_tokens_from_string(state)
+    console.log(f"Starting round {round} of {max_rounds}")
 
-    next_cmd, diff, tok_query, tok_res = llm.create_and_ask_prompt('query_next_command.txt', "next-cmd", user=config.target_user(), password=config.target_password(), history=get_cmd_history(run_id, db, context_size-state_size), state=state)
+    next_cmd, diff, tok_query, tok_res = llm_gpt.get_next_cmd()
 
     if next_cmd["type"]  == "cmd":
-        cmd, result, gotRoot = handle_cmd(next_cmd)
+        cmd, result, gotRoot = handle_cmd(conn, next_cmd)
     elif next_cmd["type"] == "ssh":
         cmd, result = handle_ssh(next_cmd)
 
@@ -90,13 +60,11 @@ while round < max_rounds and not gotRoot:
     console.print(Panel(result, title=cmd))
 
     # analyze the result and update your state
-    resp_success, diff_2, tok_query, tok_resp = llm.create_and_ask_prompt('successfull.txt', 'success?', cmd=cmd, resp=result, facts=state)
-
+    resp_success, diff_2, tok_query, tok_resp = llm_gpt.analyze_result(cmd, result)
     db.add_log_analyze_response(run_id, round, cmd, resp_success["reason"], diff_2, tok_query, tok_resp)
 
-    state = "\n".join(map(lambda x: "- " + x, resp_success["facts"]))
+    state = llm_gpt.update_state()
     console.print(Panel(state, title="my new fact list"))
-
     db.add_log_update_state(run_id, round, "", state, 0, 0, 0)
 
     # update our command history and output it

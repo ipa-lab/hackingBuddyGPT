@@ -8,22 +8,28 @@ class DbStorage:
         self.db = sqlite3.connect(self.connection_string)
         self.cursor = self.db.cursor()
 
+    def insert_or_select_cmd(self, name:str) -> int:
+        results = self.cursor.execute("SELECT id, name FROM commands WHERE name = ?", (name, )).fetchall()
 
+        if len(results) == 0:
+            self.cursor.execute("INSERT INTO commands (name) VALUES (?)", ("query_cmd", ))
+            return self.cursor.lastrowid
+        elif len(results) == 1:
+            return results[0][0]
+        else:
+            print("this should not be happening: " + str(results))
+            return -1
+    
     def setup_db(self):
         # create tables
-        self.cursor.execute("CREATE TABLE runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER)")
-        self.cursor.execute("CREATE TABLE commands (id INTEGER PRIMARY KEY, name string)")
-        self.cursor.execute("CREATE TABLE queries (run_id INTEGER, round INTEGER, cmd_id INTEGER, query TEXT, response TEXT, duration REAL, tokens_query INTEGER, tokens_response INTEGER)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS commands (id INTEGER PRIMARY KEY, name string unique)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS queries (run_id INTEGER, round INTEGER, cmd_id INTEGER, query TEXT, response TEXT, duration REAL, tokens_query INTEGER, tokens_response INTEGER)")
 
         # insert commands
-        self.cursor.execute("INSERT INTO commands (name) VALUES (?)", ("query_cmd", ))
-        self.query_cmd_id = self.cursor.lastrowid
-
-        self.cursor.execute("INSERT INTO commands (name) VALUES (?)", ("analyze_response", ))
-        self.analyze_response_id = self.cursor.lastrowid
-
-        self.cursor.execute("INSERT INTO commands (name) VALUES (?)", ("update_state", ))
-        self.state_update_id = self.cursor.lastrowid
+        self.query_cmd_id = self.insert_or_select_cmd('query_cmd')
+        self.analyze_response_id = self.insert_or_select_cmd('analyze_response')
+        self.state_update_id = self.insert_or_select_cmd('update_state')
 
     def create_new_run(self, model, context_size):
         self.cursor.execute("INSERT INTO runs (model, context_size) VALUES (?, ?)", (model, context_size))
@@ -68,3 +74,7 @@ class DbStorage:
             result.append([row[0], row[1]])
 
         return result
+    
+
+    def commit(self):
+        self.db.commit()

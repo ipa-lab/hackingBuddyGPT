@@ -18,7 +18,7 @@ from llm_with_state import LLMWithState
 load_dotenv()
 
 # setup in-memory storage for command history
-db = DbStorage()
+db = DbStorage('test.sqlite3')
 db.connect()
 db.setup_db()
 
@@ -72,4 +72,7 @@ while round < max_rounds and not gotRoot:
 
     # update command history and output it
     console.print(get_history_table(run_id, db, round))
+
+    # finish round and commit logs to storage
+    db.commit()
     round += 1

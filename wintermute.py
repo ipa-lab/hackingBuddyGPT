@@ -20,7 +20,7 @@ load_dotenv()
 # perform argument parsing
 # for defaults we are using .env but allow overwrite through cli arguments
 parser = argparse.ArgumentParser(description='Run an LLM vs a SSH connection.')
-parser.add_argument('--log', nargs=1, help='sqlite3 db for storing log files', default=os.getenv("LOG_DESTINATION") or ':memory')
+parser.add_argument('--log', nargs=1, help='sqlite3 db for storing log files', default=os.getenv("LOG_DESTINATION") or ':memory:')
 parser.add_argument('--target-ip', nargs=1, help='ssh hostname to use to connect to target system', default=os.getenv("TARGET_IP") or '127.0.0.1')
 parser.add_argument('--target-user', nargs=1, help='ssh username to use to connect to target system', default=os.getenv("TARGET_USER") or 'lowpriv')
 parser.add_argument('--target-password', nargs=1, help='ssh password to use to connect to target system', default=os.getenv("TARGET_PASSWORD") or 'trustno1')

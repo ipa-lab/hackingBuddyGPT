@@ -32,10 +32,8 @@ class LLMWithState:
 
     def analyze_result(self, cmd, result):
         result = self.create_and_ask_prompt('successfull.txt', cmd=cmd, resp=result, facts=self.state)
-
-        print("new state: " + str(result.result["facts"]))
+        
         self.tmp_state = result.result["facts"]
-
         return result
 
     def update_state(self):
@@ -51,7 +49,7 @@ class LLMWithState:
         tic = time.perf_counter()
         result, tok_query, tok_res = self.llm_connection.exec_query(prompt)
         toc = time.perf_counter()
-        print(str(result))
+        print("debug[the plain result]: " + str(result))
         json_answer = json.loads(result)
         
         return LLMResult(json_answer, toc-tic, tok_query, tok_res)

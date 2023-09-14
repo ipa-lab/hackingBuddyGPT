@@ -17,7 +17,7 @@ from llm_with_state import LLMWithState
 # setup dotenv
 load_dotenv()
 
-# setup in-memory storage
+# setup in-memory storage for command history
 db = DbStorage()
 db.connect()
 db.setup_db()
@@ -25,7 +25,7 @@ db.setup_db()
 # create an identifier for this session/run
 run_id = db.create_new_run(os.getenv("MODEL"), os.getenv("CONTEXT_SIZE"))
 
-# setup some infrastructure
+# setup some infrastructure for outputing information
 console = Console()
 
 # open SSH connection to target
@@ -46,26 +46,30 @@ gotRoot = False
 while round < max_rounds and not gotRoot:
 
     console.log(f"Starting round {round} of {max_rounds}")
-    answer = llm_gpt.get_next_cmd()
+    with console.status("[bold green]Asking LLM for a new command...") as status:
+        answer = llm_gpt.get_next_cmd()
 
-    if answer.result["type"]  == "cmd":
-        cmd, result, gotRoot = handle_cmd(conn, answer.result)
-    elif answer.result["type"] == "ssh":
-        cmd, result = handle_ssh(answer.result)
+    with console.status("[bold green]Executing that command...") as status:
+        if answer.result["type"]  == "cmd":
+            cmd, result, gotRoot = handle_cmd(conn, answer.result)
+        elif answer.result["type"] == "ssh":
+            cmd, result = handle_ssh(answer.result)
 
     db.add_log_query(run_id, round, cmd, result, answer)
  
     # output the command and it's result
     console.print(Panel(result, title=cmd))
 
-    # analyze the result and update your state
-    answer = llm_gpt.analyze_result(cmd, result)
-    db.add_log_analyze_response(run_id, round, cmd, answer.result["reason"], answer)
+    # analyze the result..
+    with console.status("[bold green]Analyze it's result...") as status:
+        answer = llm_gpt.analyze_result(cmd, result)
+        db.add_log_analyze_response(run_id, round, cmd, answer.result["reason"], answer)
 
-    state = llm_gpt.update_state()
-    console.print(Panel(state.result, title="my new fact list"))
-    db.add_log_update_state(run_id, round, "", state.result, None)
+        # .. and let our local model representatino update its state
+        state = llm_gpt.update_state()
+        console.print(Panel(state.result, title="my new fact list"))
+        db.add_log_update_state(run_id, round, "", state.result, None)
 
-    # update our command history and output it
+    # update command history and output it
     console.print(get_history_table(run_id, db, round))
     round += 1

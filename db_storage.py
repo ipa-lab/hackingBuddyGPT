@@ -12,7 +12,7 @@ class DbStorage:
         results = self.cursor.execute("SELECT id, name FROM commands WHERE name = ?", (name, )).fetchall()
 
         if len(results) == 0:
-            self.cursor.execute("INSERT INTO commands (name) VALUES (?)", ("query_cmd", ))
+            self.cursor.execute("INSERT INTO commands (name) VALUES (?)", (name, ))
             return self.cursor.lastrowid
         elif len(results) == 1:
             return results[0][0]

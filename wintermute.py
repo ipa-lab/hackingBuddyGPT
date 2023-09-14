@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
-import config
+import argparse
 import os
 from rich.console import Console
 from rich.panel import Panel
 
 from targets.ssh import get_ssh_connection
-from llms.manager import get_llm_connection
+from llms.manager import get_llm_connection, get_potential_llm_connections
 from dotenv import load_dotenv
 from db_storage import DbStorage
 
@@ -17,35 +17,51 @@ from llm_with_state import LLMWithState
 # setup dotenv
 load_dotenv()
 
+# perform argument parsing
+# for defaults we are using .env but allow overwrite through cli arguments
+parser = argparse.ArgumentParser(description='Run an LLM vs a SSH connection.')
+parser.add_argument('--log', nargs=1, help='sqlite3 db for storing log files', default=os.getenv("LOG_DESTINATION") or ':memory')
+parser.add_argument('--target-ip', nargs=1, help='ssh hostname to use to connect to target system', default=os.getenv("TARGET_IP") or '127.0.0.1')
+parser.add_argument('--target-user', nargs=1, help='ssh username to use to connect to target system', default=os.getenv("TARGET_USER") or 'lowpriv')
+parser.add_argument('--target-password', nargs=1, help='ssh password to use to connect to target system', default=os.getenv("TARGET_PASSWORD") or 'trustno1')
+parser.add_argument('--max-rounds', type=int, help='how many cmd-rounds to execute at max', default=int(os.getenv("MAX_ROUNDS")) or 10)
+parser.add_argument('--llm-connection', nargs=1, help='which LLM driver to use', choices=get_potential_llm_connections(), default=os.getenv("LLM_CONNECTION"))
+parser.add_argument('--model', nargs=1, help='which LLM to use', default=os.getenv("MODEL") or "gpt-3.5-turbo")
+parser.add_argument('--context-size', type=int, help='model context size to use', default=int(os.getenv("CONTEXT_SIZE")) or 3000)
+
+args = parser.parse_args()
+
+print("config-data: " + str(args))
+
 # setup in-memory storage for command history
-db = DbStorage('test.sqlite3')
+db = DbStorage(args.log)
+print(f"using {args.log} for log storage")
 db.connect()
 db.setup_db()
 
 # create an identifier for this session/run
-run_id = db.create_new_run(os.getenv("MODEL"), os.getenv("CONTEXT_SIZE"))
+run_id = db.create_new_run(args.model, args.context_size)
 
 # setup some infrastructure for outputing information
 console = Console()
 
 # open SSH connection to target
-conn = get_ssh_connection(config.target_ip(), config.target_user(), config.target_password())
+conn = get_ssh_connection(args.target_ip, args.target_user, args.target_password)
 conn.connect()
 
 # setup LLM connection and internal model representation
-llm_connection = get_llm_connection(config.llm_connection())
+llm_connection = get_llm_connection(args.llm_connection, args.model, args.context_size)
 console.log(llm_connection.output_metadata())
-llm_gpt = LLMWithState(run_id, llm_connection, db, config.target_user(), config.target_password())
+llm_gpt = LLMWithState(run_id, llm_connection, db, args.target_user, args.target_password)
 
 # setup round meta-data
 round : int = 0
-max_rounds : int = config.max_rounds()
 gotRoot = False
 
 # and start everything up
-while round < max_rounds and not gotRoot:
+while round < args.max_rounds and not gotRoot:
 
-    console.log(f"Starting round {round} of {max_rounds}")
+    console.log(f"Starting round {round} of {args.max_rounds}")
     with console.status("[bold green]Asking LLM for a new command...") as status:
         answer = llm_gpt.get_next_cmd()
 
@@ -53,7 +69,7 @@ while round < max_rounds and not gotRoot:
         if answer.result["type"]  == "cmd":
             cmd, result, gotRoot = handle_cmd(conn, answer.result)
         elif answer.result["type"] == "ssh":
-            cmd, result = handle_ssh(answer.result)
+            cmd, result = handle_ssh(args.target_ip, answer.result)
 
     db.add_log_query(run_id, round, cmd, result, answer)
  

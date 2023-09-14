@@ -26,9 +26,9 @@ class LLMWithState:
 """
 
     def get_next_cmd(self):
-        state_size = num_tokens_from_string(self.state)
+        state_size = num_tokens_from_string(self.llm_connection.get_model(), self.state)
 
-        return self.create_and_ask_prompt('query_next_command.txt', user=self.initial_user, password=self.initial_password, history=get_cmd_history(self.run_id, self.db, self.llm_connection.get_context_size()-state_size), state=self.state)
+        return self.create_and_ask_prompt('query_next_command.txt', user=self.initial_user, password=self.initial_password, history=get_cmd_history(self.llm_connection.get_model(), self.run_id, self.db, self.llm_connection.get_context_size()-state_size), state=self.state)
 
     def analyze_result(self, cmd, result):
         result = self.create_and_ask_prompt('successfull.txt', cmd=cmd, resp=result, facts=self.state)
@@ -47,7 +47,7 @@ class LLMWithState:
         template = Template(filename='templates/' + template_file)
         prompt = template.render(**params)
         tic = time.perf_counter()
-        result, tok_query, tok_res = self.llm_connection.exec_query(prompt)
+        result, tok_query, tok_res = self.llm_connection.exec_query(self.llm_connection.get_model(), self.llm_connection.get_context_size(), prompt)
         toc = time.perf_counter()
         try:
             json_answer = json.loads(result)
@@ -55,4 +55,4 @@ class LLMWithState:
             print("there as an exception with JSON parsing: " + str(e))
             print("debug[the plain result]: " + str(result))
     
-        return LLMResult(json_answer, toc-tic, tok_query, tok_res)
+        return LLMResult(json_answer, toc - tic, tok_query, tok_res)

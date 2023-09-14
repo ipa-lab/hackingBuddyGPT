@@ -1,4 +1,3 @@
-import config
 import paramiko
 
 from targets.ssh import SSHHostConn
@@ -8,13 +7,13 @@ def handle_cmd(conn, input):
     return input["cmd"], result, gotRoot
 
 
-def handle_ssh(input):
+def handle_ssh(target_host, input):
     user = input["username"]
     password = input["password"]
 
     cmd = "tried ssh with username " + user + " and password " + password
 
-    test = SSHHostConn(config.target_ip(), user, password)
+    test = SSHHostConn(target_host, user, password)
     try:
         test.connect()
         user = test.run("whoami")

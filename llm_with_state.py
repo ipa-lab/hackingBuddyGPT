@@ -32,7 +32,7 @@ class LLMWithState:
 
     def analyze_result(self, cmd, result):
         result = self.create_and_ask_prompt('successfull.txt', cmd=cmd, resp=result, facts=self.state)
-        
+
         self.tmp_state = result.result["facts"]
         return result
 
@@ -49,7 +49,10 @@ class LLMWithState:
         tic = time.perf_counter()
         result, tok_query, tok_res = self.llm_connection.exec_query(prompt)
         toc = time.perf_counter()
-        print("debug[the plain result]: " + str(result))
-        json_answer = json.loads(result)
-        
+        try:
+            json_answer = json.loads(result)
+        except Exception as e:
+            print("there as an exception with JSON parsing: " + str(e))
+            print("debug[the plain result]: " + str(result))
+    
         return LLMResult(json_answer, toc-tic, tok_query, tok_res)

@@ -73,11 +73,11 @@ while round < args.max_rounds and not gotRoot:
 
     db.add_log_query(run_id, round, cmd, result, answer)
  
-    # output the command and it's result
+    # output the command and its result
     console.print(Panel(result, title=cmd))
 
     # analyze the result..
-    with console.status("[bold green]Analyze it's result...") as status:
+    with console.status("[bold green]Analyze its result...") as status:
         answer = llm_gpt.analyze_result(cmd, result)
         db.add_log_analyze_response(run_id, round, cmd, answer.result["reason"], answer)
 

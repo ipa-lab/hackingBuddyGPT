@@ -1,8 +1,17 @@
 import json
 import time
+import typing
 
+from dataclasses import dataclass
 from mako.template import Template
 from helper import *
+
+@dataclass
+class LLMResult:
+    result: typing.Any
+    duration: float = 0
+    tokens_query: int = 0
+    tokens_response: int = 0
 
 class LLMWithState:
     def __init__(self, run_id, llm_connection, history, initial_user, initial_password):
@@ -19,20 +28,19 @@ class LLMWithState:
     def get_next_cmd(self):
         state_size = num_tokens_from_string(self.state)
 
-        next_cmd, diff, tok_query, tok_res = self.create_and_ask_prompt('query_next_command.txt', user=self.initial_user, password=self.initial_password, history=get_cmd_history(self.run_id, self.db, self.llm_connection.get_context_size()-state_size), state=self.state)
-        
-        return next_cmd, diff, tok_query, tok_res
+        return self.create_and_ask_prompt('query_next_command.txt', user=self.initial_user, password=self.initial_password, history=get_cmd_history(self.run_id, self.db, self.llm_connection.get_context_size()-state_size), state=self.state)
 
     def analyze_result(self, cmd, result):
-        resp_success, diff_2, tok_query, tok_resp = self.create_and_ask_prompt('successfull.txt', cmd=cmd, resp=result, facts=self.state)
+        result = self.create_and_ask_prompt('successfull.txt', cmd=cmd, resp=result, facts=self.state)
 
-        self.tmp_state = resp_success["facts"]
+        print("new state: " + str(result.result["facts"]))
+        self.tmp_state = result.result["facts"]
 
-        return resp_success, diff_2, tok_query, tok_resp
+        return result
 
     def update_state(self):
         self.state = "\n".join(map(lambda x: "- " + x, self.tmp_state))
-        return self.state
+        return LLMResult(self.state, 0, 0, 0)
 
     def get_current_state(self):
         return self.state
@@ -44,4 +52,6 @@ class LLMWithState:
         result, tok_query, tok_res = self.llm_connection.exec_query(prompt)
         toc = time.perf_counter()
         print(str(result))
-        return json.loads(result), str(toc-tic), tok_query, tok_res
+        json_answer = json.loads(result)
+        
+        return LLMResult(json_answer, toc-tic, tok_query, tok_res)

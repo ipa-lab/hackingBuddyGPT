@@ -46,26 +46,25 @@ gotRoot = False
 while round < max_rounds and not gotRoot:
 
     console.log(f"Starting round {round} of {max_rounds}")
+    answer = llm_gpt.get_next_cmd()
 
-    next_cmd, diff, tok_query, tok_res = llm_gpt.get_next_cmd()
+    if answer.result["type"]  == "cmd":
+        cmd, result, gotRoot = handle_cmd(conn, answer.result)
+    elif answer.result["type"] == "ssh":
+        cmd, result = handle_ssh(answer.result)
 
-    if next_cmd["type"]  == "cmd":
-        cmd, result, gotRoot = handle_cmd(conn, next_cmd)
-    elif next_cmd["type"] == "ssh":
-        cmd, result = handle_ssh(next_cmd)
-
-    db.add_log_query(run_id, round, cmd, result, diff, tok_query, tok_res)
+    db.add_log_query(run_id, round, cmd, result, answer)
  
     # output the command and it's result
     console.print(Panel(result, title=cmd))
 
     # analyze the result and update your state
-    resp_success, diff_2, tok_query, tok_resp = llm_gpt.analyze_result(cmd, result)
-    db.add_log_analyze_response(run_id, round, cmd, resp_success["reason"], diff_2, tok_query, tok_resp)
+    answer = llm_gpt.analyze_result(cmd, result)
+    db.add_log_analyze_response(run_id, round, cmd, answer.result["reason"], answer)
 
     state = llm_gpt.update_state()
-    console.print(Panel(state, title="my new fact list"))
-    db.add_log_update_state(run_id, round, "", state, 0, 0, 0)
+    console.print(Panel(state.result, title="my new fact list"))
+    db.add_log_update_state(run_id, round, "", state.result, None)
 
     # update our command history and output it
     console.print(get_history_table(run_id, db, round))

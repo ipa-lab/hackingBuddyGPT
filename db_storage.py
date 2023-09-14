@@ -29,15 +29,18 @@ class DbStorage:
         self.cursor.execute("INSERT INTO runs (model, context_size) VALUES (?, ?)", (model, context_size))
         return self.cursor.lastrowid
 
-    def add_log_query(self, run_id, round, cmd, result, duration=0, tokens_query=0, tokens_response=0):
-        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.query_cmd_id, cmd, result, duration, tokens_query, tokens_response))
+    def add_log_query(self, run_id, round, cmd, result, answer):
+        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.query_cmd_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response))
 
-    def add_log_analyze_response(self, run_id, round, cmd, result, duration=0, tokens_query=0, tokens_response=0):
-        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.analyze_response_id, cmd, result, duration, tokens_query, tokens_response))
+    def add_log_analyze_response(self, run_id, round, cmd, result, answer):
+        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.analyze_response_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response))
 
-    def add_log_update_state(self, run_id, round, cmd, result, duration=0, tokens_query=0, tokens_response=0):
-        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.state_update_id, cmd, result, duration, tokens_query, tokens_response))
+    def add_log_update_state(self, run_id, round, cmd, result, answer):
 
+        if answer != None:
+            self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.state_update_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response))
+        else:
+            self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.state_update_id, cmd, result, 0, 0, 0))
 
     def get_round_data(self, run_id, round):
         rows = self.cursor.execute("select cmd_id, query, response, duration, tokens_query, tokens_response from queries where run_id = ? and round = ?", (run_id, round)).fetchall()

@@ -6,6 +6,15 @@ This is a small python script that I use to prototype some potential use-cases w
 
 What is it doing? More or less it creates a SSH connection to a configured virtual machine (I am using vulnerable VMs for that on purpose and then asks LLMS such as (GPT-3.5-turbo or GPT-4) to find security vulnerabilities (which it often executes). Evicts a bit of an eerie feeling for me.
 
+Current features:
+
+- connects over SSH
+- supports multiple openai models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
+- beautiful console output
+- log storage in sqlite either into a file or in-memory
+- automatic (very rough) root detection
+- can limit rounds (how often the LLM will be asked for a new command)
+
 ### Vision Paper
 
 hackingBuddyGPT is described in the paper [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121).
@@ -31,6 +40,8 @@ series = {ESEC/FSE 2023}
 
 # Example runs
 
+- more can be seen at [history notes](https://github.com/ipa-lab/hackingBuddyGPT/blob/v3/history_notes.md)
+
 ## updated version using GPT-4
 
 This happened during a recent run:
@@ -44,25 +55,6 @@ Some things to note:
 - in the bottom you see the last executed command (`/tmp/bash -p`) and it's output.
 
 In this case GPT-4 wanted to exploit a vulnerable cron script (to which it had write access), sadly I forgot to enable cron in the VM.
-
-## initial version (tagged as fse23-ivr) using gpt-3.5-turbo
-
-This happened during a recent run:
-
-![Example wintermute run](example_run.png)
-
-Some things to note:
-
-- prompts for GPT-3 are prefixed with `openai-prompt`, the returned command from GPT-3 is prefixed with `openai-next-command` and the result from executing the command with `server-output`
-- the used SSH-library also displays the output produced by the commands executed through SSH --- this is why some stuff appears twice
-- I've added a simple callback that automatically enters the configured account's credentials if sudo prompts for a password
-
-So, what is acutally happening when executing wintermute?
-
-- wintermute executed `id` initially to get the user's id
-- the next command was `sudo -l`, listing the current users sudo permissions
-- wintermute then executes `sudo /bin/bash` and we're dropped into an interactive root shell
-
 
 ## High-Level Description
 

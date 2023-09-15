@@ -1,12 +1,11 @@
 import openai
-import config
+import os
 
-def get_openai_response(cmd):
+def get_openai_response(model, cmd):
+    openai.api_key = os.getenv("OPENAI_KEY")
 
-    if config.model() == '' and config.openai_key() == '':
+    if model == '' and openai.api_key == '':
         raise Exception("please set OPENAI_KEY and MODEL through environment variables!")
 
-    openai.api_key = config.openai_key()
-
-    completion = openai.ChatCompletion.create(model=config.model(), messages=[{"role": "user", "content" : cmd}])
+    completion = openai.ChatCompletion.create(model=model, messages=[{"role": "user", "content" : cmd}])
     return completion.choices[0].message.content

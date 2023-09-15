@@ -1,83 +1,103 @@
 #!/usr/bin/python
 
-import config
-import paramiko
+import argparse
+import os
 from rich.console import Console
 from rich.panel import Panel
 
-from history import ResultHistory, num_tokens_from_string
-from targets.ssh import get_ssh_connection, SSHHostConn
-from llms.openai_rest import get_openai_response
-from prompt_helper import LLM
+from targets.ssh import get_ssh_connection
+from llms.manager import get_llm_connection, get_potential_llm_connections
+from dotenv import load_dotenv
+from db_storage import DbStorage
 
-# setup some infrastructure
-cmd_history = ResultHistory()
+from handlers import handle_cmd, handle_ssh
+from helper import *
+from llm_with_state import LLMWithState
+
+# setup dotenv
+load_dotenv()
+
+# perform argument parsing
+# for defaults we are using .env but allow overwrite through cli arguments
+parser = argparse.ArgumentParser(description='Run an LLM vs a SSH connection.')
+parser.add_argument('--log', type=str, help='sqlite3 db for storing log files', default=os.getenv("LOG_DESTINATION") or ':memory:')
+parser.add_argument('--target-ip', type=str, help='ssh hostname to use to connect to target system', default=os.getenv("TARGET_IP") or '127.0.0.1')
+parser.add_argument('--target-user', type=str, help='ssh username to use to connect to target system', default=os.getenv("TARGET_USER") or 'lowpriv')
+parser.add_argument('--target-password', type=str, help='ssh password to use to connect to target system', default=os.getenv("TARGET_PASSWORD") or 'trustno1')
+parser.add_argument('--max-rounds', type=int, help='how many cmd-rounds to execute at max', default=int(os.getenv("MAX_ROUNDS")) or 10)
+parser.add_argument('--llm-connection', type=str, help='which LLM driver to use', choices=get_potential_llm_connections(), default=os.getenv("LLM_CONNECTION"))
+parser.add_argument('--model', type=str, help='which LLM to use', default=os.getenv("MODEL") or "gpt-3.5-turbo")
+parser.add_argument('--tag', type=str, help='tag run with string', default="")
+parser.add_argument('--context-size', type=int, help='model context size to use', default=int(os.getenv("CONTEXT_SIZE")) or 3000)
+
+args = parser.parse_args()
+
+print("config-data: " + str(args))
+
+# setup in-memory storage for command history
+db = DbStorage(args.log)
+print(f"using {args.log} for log storage")
+db.connect()
+db.setup_db()
+
+# create an identifier for this session/run
+run_id = db.create_new_run(args.model, args.context_size, args.tag)
+
+# setup some infrastructure for outputing information
 console = Console()
 
-# read configuration from env and configure system parts
-config.check_config()
-
 # open SSH connection to target
-conn = get_ssh_connection(config.target_ip(), config.target_user(), config.target_password())
+conn = get_ssh_connection(args.target_ip, args.target_user, args.target_password)
 conn.connect()
 
-# initialize LLM connection
-llm = LLM(get_openai_response)
+# setup LLM connection and internal model representation
+llm_connection = get_llm_connection(args.llm_connection, args.model, args.context_size)
+console.log(llm_connection.output_metadata())
+llm_gpt = LLMWithState(run_id, llm_connection, db, args.target_user, args.target_password)
 
-context_size = config.context_size()
-print("used model: " + config.model() + " context-size: " + str(config.context_size()))
+# setup round meta-data
+round : int = 0
+gotRoot = False
 
-# prepare an initial state
-state = """
-- this is a linux system
-- your low privilege user credentials are lowpriv:trustno1
-"""
+# and start everything up
+while round < args.max_rounds and not gotRoot:
 
-def handle_cmd(input):
-    return input["cmd"], conn.run(input["cmd"])
+    console.log(f"Starting round {round} of {args.max_rounds}")
+    with console.status("[bold green]Asking LLM for a new command...") as status:
+        answer = llm_gpt.get_next_cmd()
 
-def handle_ssh(input):
-    user = input["username"]
-    password = input["password"]
+    with console.status("[bold green]Executing that command...") as status:
+        if answer.result["type"]  == "cmd":
+            cmd, result, gotRoot = handle_cmd(conn, answer.result)
+        elif answer.result["type"] == "ssh":
+            cmd, result = handle_ssh(args.target_ip, answer.result)
 
-    cmd = "tried ssh with username " + user + " and password " + password
-
-    test = SSHHostConn(config.target_ip(), user, password)
-    try:
-        test.connect()
-        user = conn.run("whoami")
-
-        if user == "root":
-            return cmd, "Login as root was successful"
-        else:
-            return cmd, "Authentication successful, but user is not root"
-
-    except paramiko.ssh_exception.AuthenticationException:
-        return cmd, "Authentication error, credentials are wrong"
-
-while True:
-
-    state_size = num_tokens_from_string(state)
-
-    next_cmd, diff = llm.create_and_ask_prompt('query_next_command.txt', "next-cmd", user=config.target_user(), password=config.target_password(), history=cmd_history.get_history(limit=context_size-state_size), state=state)
-
-    if next_cmd["type"]  == "cmd":
-        cmd, result = handle_cmd(next_cmd)
-    elif next_cmd["type"] == "ssh":
-        cmd, result = handle_ssh(next_cmd)
-
-    # output the command and it's result
+    db.add_log_query(run_id, round, cmd, result, answer)
+ 
+    # output the command and its result
     console.print(Panel(result, title=cmd))
 
-    # analyze the result and update your state
-    resp_success, diff_2 = llm.create_and_ask_prompt('successfull.txt', 'success?', cmd=cmd, resp=result, facts=state)
+    # analyze the result..
+    with console.status("[bold green]Analyze its result...") as status:
+        answer = llm_gpt.analyze_result(cmd, result)
+        db.add_log_analyze_response(run_id, round, cmd, answer.result["reason"], answer)
 
-    success = resp_success["success"]
-    reason = resp_success["reason"]
+        # .. and let our local model representation update its state
+        state = llm_gpt.update_state()
+        db.add_log_update_state(run_id, round, "", state.result, None)
+        
+        # Output Round Data
+        console.print(get_history_table(run_id, db, round))
+        console.print(Panel(state.result, title="What does the LLM Know about the system?"))
 
-    state = "\n".join(map(lambda x: "- " + x, resp_success["facts"]))
-    console.print(Panel(state, title="my new fact list"))
 
-    # update our command history and output it
-    cmd_history.append(diff, next_cmd["type"], cmd, result, success, reason)
-    console.print(cmd_history.create_history_table())
+    # finish round and commit logs to storage
+    db.commit()
+    round += 1
+
+if gotRoot:
+    db.run_was_success(run_id)
+    console.print(Panel("Got Root!", title="Run finished"))
+else:
+    db.run_was_failure(run_id)
+    console.print(Panel("maximum round number reached", title="Run finished"))

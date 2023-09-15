@@ -82,13 +82,14 @@ while round < args.max_rounds and not gotRoot:
         answer = llm_gpt.analyze_result(cmd, result)
         db.add_log_analyze_response(run_id, round, cmd, answer.result["reason"], answer)
 
-        # .. and let our local model representatino update its state
+        # .. and let our local model representation update its state
         state = llm_gpt.update_state()
-        console.print(Panel(state.result, title="my new fact list"))
         db.add_log_update_state(run_id, round, "", state.result, None)
+        
+        # Output Round Data
+        console.print(get_history_table(run_id, db, round))
+        console.print(Panel(state.result, title="What does the LLM Know about the system?"))
 
-    # update command history and output it
-    console.print(get_history_table(run_id, db, round))
 
     # finish round and commit logs to storage
     db.commit()
@@ -96,5 +97,7 @@ while round < args.max_rounds and not gotRoot:
 
 if gotRoot:
     db.run_was_success(run_id)
+    console.print(Panel("Got Root!", title="Run finished"))
 else:
     db.run_was_failure(run_id)
+    console.print(Panel("maximum round number reached", title="Run finished"))

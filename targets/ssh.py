@@ -1,3 +1,5 @@
+import re
+
 from fabric import Connection
 from invoke import Responder
 from io import StringIO
@@ -45,13 +47,19 @@ class SSHHostConn:
         tmp = ""
         lastline = ""
         for line in out.readlines():
-            lastline = line
-            tmp = tmp + line
+            if not line.startswith('[sudo] password for ' + self.username + ':'):
+                line = line.replace("\r", "")
+                lastline = line
+                tmp = tmp + line
 
-        print(f"lastline was: '{lastline}'")
+        # remove ansi shell codes
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        lastline = ansi_escape.sub('', lastline)
 
         if lastline.startswith("# "):
             gotRoot = True
-        if  lastline.startswith('root@debian:'):
+        if lastline.startswith('root@debian:'):
             gotRoot = True
-        return tmp.replace('[sudo] password for ' + self.username + ':', '').strip(), gotRoot
+        if lastline.startswith("bash-5.2# "):
+            gotRoot = True
+        return tmp, gotRoot

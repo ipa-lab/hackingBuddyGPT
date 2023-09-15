@@ -9,7 +9,7 @@ def num_tokens_from_string(model: str, string: str) -> int:
     return len(encoding.encode(string))
 
 def get_history_table(run_id: int, db: DbStorage, round: int) -> Table:
-    table = Table(show_header=True, show_lines=True)
+    table = Table(title="Executed Command History", show_header=True, show_lines=True)
     table.add_column("ThinkTime", style="dim")
     table.add_column("Tokens", style="dim")
     table.add_column("Cmd")

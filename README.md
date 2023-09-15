@@ -56,25 +56,6 @@ Some things to note:
 
 In this case GPT-4 wanted to exploit a vulnerable cron script (to which it had write access), sadly I forgot to enable cron in the VM.
 
-## initial version (tagged as fse23-ivr) using gpt-3.5-turbo
-
-This happened during a recent run:
-
-![Example wintermute run](example_run.png)
-
-Some things to note:
-
-- prompts for GPT-3 are prefixed with `openai-prompt`, the returned command from GPT-3 is prefixed with `openai-next-command` and the result from executing the command with `server-output`
-- the used SSH-library also displays the output produced by the commands executed through SSH --- this is why some stuff appears twice
-- I've added a simple callback that automatically enters the configured account's credentials if sudo prompts for a password
-
-So, what is acutally happening when executing wintermute?
-
-- wintermute executed `id` initially to get the user's id
-- the next command was `sudo -l`, listing the current users sudo permissions
-- wintermute then executes `sudo /bin/bash` and we're dropped into an interactive root shell
-
-
 ## High-Level Description
 
 This tool uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalatation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..

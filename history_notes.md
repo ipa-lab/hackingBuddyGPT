@@ -1,3 +1,21 @@
+# initial version (tagged as fse23-ivr) using gpt-3.5-turbo
+
+This happened during a recent run:
+
+![Example wintermute run](example_run.png)
+
+Some things to note:
+
+- prompts for GPT-3 are prefixed with `openai-prompt`, the returned command from GPT-3 is prefixed with `openai-next-command` and the result from executing the command with `server-output`
+- the used SSH-library also displays the output produced by the commands executed through SSH --- this is why some stuff appears twice
+- I've added a simple callback that automatically enters the configured account's credentials if sudo prompts for a password
+
+So, what is acutally happening when executing wintermute?
+
+- wintermute executed `id` initially to get the user's id
+- the next command was `sudo -l`, listing the current users sudo permissions
+- wintermute then executes `sudo /bin/bash` and we're dropped into an interactive root shell
+
 # inital running version (~0.0.1)
 
 - simple limitiation to 3k tokens for history

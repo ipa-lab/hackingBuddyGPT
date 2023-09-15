@@ -6,6 +6,15 @@ This is a small python script that I use to prototype some potential use-cases w
 
 What is it doing? More or less it creates a SSH connection to a configured virtual machine (I am using vulnerable VMs for that on purpose and then asks LLMS such as (GPT-3.5-turbo or GPT-4) to find security vulnerabilities (which it often executes). Evicts a bit of an eerie feeling for me.
 
+Current features:
+
+- connects over SSH
+- supports multiple openai models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
+- beautiful console output
+- log storage in sqlite either into a file or in-memory
+- automatic (very rough) root detection
+- can limit rounds (how often the LLM will be asked for a new command)
+
 ### Vision Paper
 
 hackingBuddyGPT is described in the paper [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121).
@@ -30,6 +39,8 @@ series = {ESEC/FSE 2023}
 ~~~
 
 # Example runs
+
+- more can be seen at [history notes](https://github.com/ipa-lab/hackingBuddyGPT/blob/v3/history_notes.md)
 
 ## updated version using GPT-4
 

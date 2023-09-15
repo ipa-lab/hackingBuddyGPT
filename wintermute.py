@@ -20,13 +20,14 @@ load_dotenv()
 # perform argument parsing
 # for defaults we are using .env but allow overwrite through cli arguments
 parser = argparse.ArgumentParser(description='Run an LLM vs a SSH connection.')
-parser.add_argument('--log', nargs=1, help='sqlite3 db for storing log files', default=os.getenv("LOG_DESTINATION") or ':memory:')
+parser.add_argument('--log', type=str, help='sqlite3 db for storing log files', default=os.getenv("LOG_DESTINATION") or ':memory:')
 parser.add_argument('--target-ip', nargs=1, help='ssh hostname to use to connect to target system', default=os.getenv("TARGET_IP") or '127.0.0.1')
 parser.add_argument('--target-user', nargs=1, help='ssh username to use to connect to target system', default=os.getenv("TARGET_USER") or 'lowpriv')
 parser.add_argument('--target-password', nargs=1, help='ssh password to use to connect to target system', default=os.getenv("TARGET_PASSWORD") or 'trustno1')
 parser.add_argument('--max-rounds', type=int, help='how many cmd-rounds to execute at max', default=int(os.getenv("MAX_ROUNDS")) or 10)
 parser.add_argument('--llm-connection', nargs=1, help='which LLM driver to use', choices=get_potential_llm_connections(), default=os.getenv("LLM_CONNECTION"))
 parser.add_argument('--model', nargs=1, help='which LLM to use', default=os.getenv("MODEL") or "gpt-3.5-turbo")
+parser.add_argument('--tag', type=str, help='tag run with string', default="")
 parser.add_argument('--context-size', type=int, help='model context size to use', default=int(os.getenv("CONTEXT_SIZE")) or 3000)
 
 args = parser.parse_args()
@@ -40,7 +41,7 @@ db.connect()
 db.setup_db()
 
 # create an identifier for this session/run
-run_id = db.create_new_run(args.model, args.context_size)
+run_id = db.create_new_run(args.model, args.context_size, args.tag)
 
 # setup some infrastructure for outputing information
 console = Console()
@@ -92,3 +93,8 @@ while round < args.max_rounds and not gotRoot:
     # finish round and commit logs to storage
     db.commit()
     round += 1
+
+if gotRoot:
+    db.run_was_success(run_id)
+else:
+    db.run_was_failure(run_id)

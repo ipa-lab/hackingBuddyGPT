@@ -22,7 +22,7 @@ class DbStorage:
     
     def setup_db(self):
         # create tables
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER, state TEXT, tag TEXT)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS commands (id INTEGER PRIMARY KEY, name string unique)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS queries (run_id INTEGER, round INTEGER, cmd_id INTEGER, query TEXT, response TEXT, duration REAL, tokens_query INTEGER, tokens_response INTEGER)")
 
@@ -31,8 +31,8 @@ class DbStorage:
         self.analyze_response_id = self.insert_or_select_cmd('analyze_response')
         self.state_update_id = self.insert_or_select_cmd('update_state')
 
-    def create_new_run(self, model, context_size):
-        self.cursor.execute("INSERT INTO runs (model, context_size) VALUES (?, ?)", (model, context_size))
+    def create_new_run(self, model, context_size, tag=''):
+        self.cursor.execute("INSERT INTO runs (model, context_size, state, tag) VALUES (?, ?, ?, ?)", (model, context_size, "in progress", tag))
         return self.cursor.lastrowid
 
     def add_log_query(self, run_id, round, cmd, result, answer):
@@ -75,6 +75,13 @@ class DbStorage:
 
         return result
     
+    def run_was_success(self, run_id):
+        self.cursor.execute("update runs set state=? where id = ?", ("got root", run_id))
+        self.db.commit()
+
+    def run_was_failure(self, run_id):
+        self.cursor.execute("update runs set state=? where id = ?", ("reached max runs", run_id))
+        self.db.commit()
 
     def commit(self):
         self.db.commit()

@@ -11,7 +11,7 @@ def handle_ssh(target_host, input):
     user = input["username"]
     password = input["password"]
 
-    cmd = "tried ssh with username " + user + " and password " + password
+    cmd = f"tried ssh with username {user} and password {password}\n"
 
     test = SSHHostConn(target_host, user, password)
     try:
@@ -19,9 +19,9 @@ def handle_ssh(target_host, input):
         user = test.run("whoami")
 
         if user == "root":
-            return cmd, "Login as root was successful"
+            return cmd, "Login as root was successful\n"
         else:
-            return cmd, "Authentication successful, but user is not root"
+            return cmd, "Authentication successful, but user is not root\n"
 
     except paramiko.ssh_exception.AuthenticationException:
-        return cmd, "Authentication error, credentials are wrong"
+        return cmd, "Authentication error, credentials are wrong\n"

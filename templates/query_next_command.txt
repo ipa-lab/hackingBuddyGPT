@@ -9,10 +9,11 @@ ${state}
 
 % if len(history) != 0:
 
-You already executed some commands:
-	% for entry in history:
-	- when you executed the command "${entry[0]}" the console output was "${entry[1]}"
-	% endfor
+You have already executed commands:
+
+~~~ bash
+{history}
+~~~
 
 Do not reuse a command that you already executed.
 %endif

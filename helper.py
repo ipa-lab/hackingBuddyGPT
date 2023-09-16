@@ -23,6 +23,7 @@ def get_history_table(run_id: int, db: DbStorage, round: int) -> Table:
 
     return table
 
+# return a list with cmd/result pairs, trimmed to context_size
 def get_cmd_history(model: str, run_id: int, db: DbStorage, limit: int) -> list[str]:
     result = []
     rest = limit
@@ -47,3 +48,30 @@ def get_cmd_history(model: str, run_id: int, db: DbStorage, limit: int) -> list[
                 })
             return list(reversed(result))
     return list(reversed(result))
+
+STEP_CUT_TOKENS : int = 32
+SAFETY_MARGIN : int = 128
+
+# create the command history. Initially create the full command history, then
+# try to trim it down
+def get_cmd_history_v3(model: str, ctx_size: int, run_id: int, db: DbStorage, token_overhead: int) -> str:
+    result: str = ""
+
+    # get commands from db
+    cmds = db.get_cmd_history(run_id)
+
+    # create the full history
+    for itm in cmds:
+        result = result + '$ ' + itm[0] + "\n" + itm[1]
+
+    # trim it down if too large
+    cur_size = num_tokens_from_string(model, result) + token_overhead + SAFETY_MARGIN
+        
+    while cur_size > ctx_size:
+        diff = cur_size - ctx_size
+        step = min(diff, STEP_CUT_TOKENS)
+        result = result[:-step]
+        cur_size = num_tokens_from_string(model, result) + token_overhead + SAFETY_MARGIN
+    
+    return result
+        

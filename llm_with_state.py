@@ -26,9 +26,18 @@ class LLMWithState:
 """
 
     def get_next_cmd(self):
-        state_size = num_tokens_from_string(self.llm_connection.get_model(), self.state)
 
-        return self.create_and_ask_prompt('query_next_command.txt', user=self.initial_user, password=self.initial_password, history=get_cmd_history(self.llm_connection.get_model(), self.run_id, self.db, self.llm_connection.get_context_size()-state_size), state=self.state)
+        template_file = 'query_next_command.txt'
+        model = self.llm_connection.get_model()
+
+        state_size = num_tokens_from_string(model, self.state)
+
+        template = Template(filename='templates/' + template_file)
+        template_size = num_tokens_from_string(model, template.source)
+
+        history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size)
+
+        return self.create_and_ask_prompt(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state)
 
     def analyze_result(self, cmd, result):
         result = self.create_and_ask_prompt('successfull.txt', cmd=cmd, resp=result, facts=self.state)

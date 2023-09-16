@@ -7,13 +7,13 @@ def handle_cmd(conn, input):
     return input["cmd"], result, gotRoot
 
 
-def handle_ssh(target_host, input):
+def handle_ssh(target_host, target_hostname, input):
     user = input["username"]
     password = input["password"]
 
     cmd = f"tried ssh with username {user} and password {password}\n"
 
-    test = SSHHostConn(target_host, user, password)
+    test = SSHHostConn(target_host, target_hostname, user, password)
     try:
         test.connect()
         user = test.run("whoami")

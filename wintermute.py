@@ -22,6 +22,7 @@ load_dotenv()
 parser = argparse.ArgumentParser(description='Run an LLM vs a SSH connection.')
 parser.add_argument('--log', type=str, help='sqlite3 db for storing log files', default=os.getenv("LOG_DESTINATION") or ':memory:')
 parser.add_argument('--target-ip', type=str, help='ssh hostname to use to connect to target system', default=os.getenv("TARGET_IP") or '127.0.0.1')
+parser.add_argument('--target-hostname', type=str, help='safety: what hostname to exepct at the target IP', default=os.getenv("TARGET_HOSTNAME") or "debian")
 parser.add_argument('--target-user', type=str, help='ssh username to use to connect to target system', default=os.getenv("TARGET_USER") or 'lowpriv')
 parser.add_argument('--target-password', type=str, help='ssh password to use to connect to target system', default=os.getenv("TARGET_PASSWORD") or 'trustno1')
 parser.add_argument('--max-rounds', type=int, help='how many cmd-rounds to execute at max', default=int(os.getenv("MAX_ROUNDS")) or 10)
@@ -47,7 +48,7 @@ run_id = db.create_new_run(args.model, args.context_size, args.tag)
 console = Console()
 
 # open SSH connection to target
-conn = get_ssh_connection(args.target_ip, args.target_user, args.target_password)
+conn = get_ssh_connection(args.target_ip, args.target_hostname, args.target_user, args.target_password)
 conn.connect()
 
 # setup LLM connection and internal model representation
@@ -70,7 +71,7 @@ while round < args.max_rounds and not gotRoot:
         if answer.result["type"]  == "cmd":
             cmd, result, gotRoot = handle_cmd(conn, answer.result)
         elif answer.result["type"] == "ssh":
-            cmd, result = handle_ssh(args.target_ip, answer.result)
+            cmd, result = handle_ssh(args.target_ip, args.target_hostname, answer.result)
 
     db.add_log_query(run_id, round, cmd, result, answer)
  

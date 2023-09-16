@@ -4,17 +4,18 @@ from fabric import Connection
 from invoke import Responder
 from io import StringIO
 
-def get_ssh_connection(ip, user, password):
+def get_ssh_connection(ip, hostname, user, password):
 
-    if ip != '' and user != '' and password != '':
-        return SSHHostConn(ip, user, password)
+    if ip != '' and user != '' and password != '' and hostname != '':
+        return SSHHostConn(ip, hostname, user, password)
     else:
         raise Exception("Please configure SSH through environment variables (TARGET_IP, TARGET_USER, TARGET_PASSWORD)")
 
 class SSHHostConn:
 
-    def __init__(self, host, username, password):
+    def __init__(self, host, hostname, username, password):
         self.host = host
+        self.hostname = hostname
         self.username = username
         self.password = password
 
@@ -58,7 +59,7 @@ class SSHHostConn:
 
         if lastline.startswith("# "):
             gotRoot = True
-        if lastline.startswith('root@debian:'):
+        if lastline.startswith(f'root@{self.hostname}:'):
             gotRoot = True
         if lastline.startswith("bash-5.2# "):
             gotRoot = True

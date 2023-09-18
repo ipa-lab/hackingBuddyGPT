@@ -28,6 +28,9 @@ class LLMResult:
     tokens_query: int = 0
     tokens_response: int = 0
 
+def get_empty_result():
+    return LLMResult('', '', '', 0, 0, 0)
+
 class LLMWithState:
     def __init__(self, run_id, llm_connection, history, initial_user, initial_password):
         self.llm_connection = llm_connection
@@ -54,21 +57,43 @@ class LLMWithState:
 
         history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size+num_tokens_from_string(model, str(commands)))
 
-        return self.create_and_ask_prompt(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, commands=commands, hint=hints[hostname])
+        # hint = hints[hostname]
+        hint =''
+        return self.create_and_ask_prompt(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, commands=commands, hint=hint)
 
     def analyze_result(self, cmd, result):
-        result = self.create_and_ask_prompt('successfull.txt', cmd=cmd, resp=result, facts=self.state)
 
-        self.tmp_state = result.result["facts"]
+        model = self.llm_connection.get_model()
+        ctx = self.llm_connection.get_context_size()
+
+        # ugly, but cut down result to fit context size
+        while num_tokens_from_string(model, result) > (ctx + 512):
+            result = result[128:]
+
+
+        result = self.create_and_ask_prompt_text('analyze_cmd.txt', cmd=cmd, resp=result, facts=self.state)
         return result
 
-    def update_state(self):
-        self.state = "\n".join(map(lambda x: "- " + x, self.tmp_state))
-        return LLMResult(self.state, '', '', 0, 0, 0)
+    def update_state(self, cmd, result):
+        result = self.create_and_ask_prompt_text('update_state.txt', cmd=cmd, resp=result, facts=self.state)
+        self.state = result.result
+        return result
+
+        #self.state = "\n".join(map(lambda x: "- " + x, self.tmp_state))
+        #return LLMResult(self.state, '', '', 0, 0, 0)
 
     def get_current_state(self):
         return self.state
     
+    def create_and_ask_prompt_text(self, template_file, **params):
+        template = Template(filename='templates/' + template_file)
+        prompt = template.render(**params)
+        tic = time.perf_counter()
+        result, tok_query, tok_res = self.llm_connection.exec_query(self.llm_connection.get_model(), self.llm_connection.get_context_size(), prompt)
+        toc = time.perf_counter()    
+        return LLMResult(result, prompt, result, toc - tic, tok_query, tok_res)
+
+
     def create_and_ask_prompt(self, template_file, **params):
         template = Template(filename='templates/' + template_file)
         prompt = template.render(**params)

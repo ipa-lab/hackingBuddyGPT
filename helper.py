@@ -14,9 +14,11 @@ def get_history_table(run_id: int, db: DbStorage, round: int) -> Table:
     table.add_column("Tokens", style="dim")
     table.add_column("Cmd")
     table.add_column("Resp. Size", justify="right")
-    table.add_column("ThinkTime", style="dim")
+    table.add_column("ThinkingTime", style="dim")
     table.add_column("Tokens", style="dim")
     table.add_column("Reason")
+    table.add_column("StateTime", style="dim")
+    table.add_column("StateTokens", style="dim")
 
     for i in range(0, round+1):
         table.add_row(*db.get_round_data(run_id, i))
@@ -69,7 +71,7 @@ def get_cmd_history_v3(model: str, ctx_size: int, run_id: int, db: DbStorage, to
         
     while cur_size > ctx_size:
         diff = cur_size - ctx_size
-        step = min(diff, STEP_CUT_TOKENS)
+        step = int((diff + STEP_CUT_TOKENS)/2)
         result = result[:-step]
         cur_size = num_tokens_from_string(model, result) + token_overhead + SAFETY_MARGIN
     

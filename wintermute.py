@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import time
 from rich.console import Console
 from rich.panel import Panel
 
@@ -12,7 +13,7 @@ from db_storage import DbStorage
 
 from handlers import handle_cmd, handle_ssh
 from helper import *
-from llm_with_state import LLMWithState
+from llm_with_state import LLMWithState, get_empty_result
 
 # setup dotenv
 load_dotenv()
@@ -80,17 +81,19 @@ while round < args.max_rounds and not gotRoot:
 
     # analyze the result..
     with console.status("[bold green]Analyze its result...") as status:
-        answer = llm_gpt.analyze_result(cmd, result)
-        db.add_log_analyze_response(run_id, round, cmd.strip("\n\r"), answer.result["reason"].strip("\n\r"), answer)
+        answer = get_empty_result()
+        # answer = llm_gpt.analyze_result(cmd, result)
+        db.add_log_analyze_response(run_id, round, cmd.strip("\n\r"), answer.result.strip("\n\r"), answer)
 
+    with console.status("[bold green]Updating fact list..") as staus:
+        # state = get_empty_result()
         # .. and let our local model representation update its state
-        state = llm_gpt.update_state()
-        db.add_log_update_state(run_id, round, "", state.result, None)
-        
-        # Output Round Data
-        console.print(get_history_table(run_id, db, round))
-        console.print(Panel(state.result, title="What does the LLM Know about the system?"))
-
+        state = llm_gpt.update_state(cmd, result)
+        db.add_log_update_state(run_id, round, "", state.result, state)
+    
+    # Output Round Data
+    console.print(get_history_table(run_id, db, round))
+    console.print(Panel(llm_gpt.get_current_state(), title="What does the LLM Know about the system?"))
 
     # finish round and commit logs to storage
     db.commit()

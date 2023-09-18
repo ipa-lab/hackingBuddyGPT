@@ -61,8 +61,11 @@ class DbStorage:
                 reason = row[2]
                 analyze_time = f"{row[3]:.4f}"
                 analyze_token = f"{row[4]}/{row[5]}"
+            if row[0] == self.state_update_id:
+                state_time = f"{row[3]:.4f}"
+                state_token = f"{row[4]}/{row[5]}"
 
-        result = [duration, tokens, cmd, size_resp, analyze_time, analyze_token, reason]
+        result = [duration, tokens, cmd, size_resp, analyze_time, analyze_token, reason, state_time, state_token]
         return result
 
     def get_cmd_history(self, run_id):

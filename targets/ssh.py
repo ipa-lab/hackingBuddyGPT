@@ -40,7 +40,7 @@ class SSHHostConn:
         
         out = StringIO()
         try:
-            resp = self.conn.run(cmd, pty=True, warn=True, out_stream=out, watchers=[sudopass], timeout=5)
+            resp = self.conn.run(cmd, pty=True, warn=True, out_stream=out, watchers=[sudopass], timeout=10)
         except Exception as e:
             print("TIMEOUT!")
         out.seek(0)

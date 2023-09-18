@@ -25,9 +25,8 @@ class SSHHostConn:
             "{username}@{ip}:{port}".format(
                 username=self.username,
                 ip=self.host,
-                port=22,
-            ),
-            connect_kwargs={"password": self.password},
+                port=22),
+            connect_kwargs={"password": self.password, "look_for_keys": False, "allow_agent": False},
         )
         self.conn=conn
         self.conn.open()

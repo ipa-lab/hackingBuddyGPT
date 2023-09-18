@@ -81,7 +81,7 @@ while round < args.max_rounds and not gotRoot:
     # analyze the result..
     with console.status("[bold green]Analyze its result...") as status:
         answer = llm_gpt.analyze_result(cmd, result)
-        db.add_log_analyze_response(run_id, round, cmd, answer.result["reason"], answer)
+        db.add_log_analyze_response(run_id, round, cmd.strip("\n\r"), answer.result["reason"].strip("\n\r"), answer)
 
         # .. and let our local model representation update its state
         state = llm_gpt.update_state()

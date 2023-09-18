@@ -71,7 +71,7 @@ while round < args.max_rounds and not gotRoot:
         if answer.result["type"]  == "cmd":
             cmd, result, gotRoot = handle_cmd(conn, answer.result)
         elif answer.result["type"] == "ssh":
-            cmd, result = handle_ssh(args.target_ip, args.target_hostname, answer.result)
+            cmd, result, gotRoot = handle_ssh(args.target_ip, args.target_hostname, answer.result)
 
     db.add_log_query(run_id, round, cmd, result, answer)
  
@@ -97,8 +97,8 @@ while round < args.max_rounds and not gotRoot:
     round += 1
 
 if gotRoot:
-    db.run_was_success(run_id)
+    db.run_was_success(run_id, round)
     console.print(Panel("Got Root!", title="Run finished"))
 else:
-    db.run_was_failure(run_id)
+    db.run_was_failure(run_id, round)
     console.print(Panel("maximum round number reached", title="Run finished"))

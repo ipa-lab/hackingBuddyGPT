@@ -21,6 +21,17 @@ def get_openai_response(model, context_size, cmd):
 
     headers = {"Authorization": f"Bearer {openai_key}"}
     data = {'model': model, 'messages': [{'role': 'user', 'content': cmd}]}
-    response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data).json()
+
+    retry = 3
+    successfull = False
+    response = None
+    while retry >= 0 and not successfull:
+        try:
+            response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data, timeout=120).json()
+            successfull = True
+        except requests.exceptions.Timeout:
+            print("Timeout while contacting LLM REST endpoint")
+        retry -= 1
+
 
     return response['choices'][0]['message']['content'], response['usage']['prompt_tokens'], response['usage']['completion_tokens']

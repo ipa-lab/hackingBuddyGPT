@@ -65,7 +65,7 @@ while round < args.max_rounds and not gotRoot:
 
     console.log(f"Starting round {round} of {args.max_rounds}")
     with console.status("[bold green]Asking LLM for a new command...") as status:
-        answer = llm_gpt.get_next_cmd()
+        answer = llm_gpt.get_next_cmd(args.target_hostname)
 
     with console.status("[bold green]Executing that command...") as status:
         if answer.result["type"]  == "cmd":

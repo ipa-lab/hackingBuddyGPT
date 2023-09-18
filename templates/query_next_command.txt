@@ -17,6 +17,10 @@ You currently expect the following about the tested system:
 
 ${state}
 
+% if len(hint) > 0:
+You are provided a hint: ${hint}
+%endif
+
 Respond with a linux command to give to the server. The command should be used for enumeration or privilege escalation. The result should be a shell running as user root.  Do not add any explanation.
 
 Provide your response as a JSON object with this structure:

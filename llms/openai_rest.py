@@ -29,11 +29,11 @@ def get_openai_response(model, context_size, cmd):
         try:
             response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data, timeout=120)
 
-            if response.status == 429:
+            if response.status_code == 429:
                 print("[RestAPI-Connector] running into rate-limits, waiting for a minute")
                 response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data, timeout=120)
 
-            if response.status != 200:
+            if response.status_code != 200:
                 print("[Warning] REST API response code != 200")
                 print(str(response))
 

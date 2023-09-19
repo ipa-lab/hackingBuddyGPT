@@ -27,11 +27,22 @@ def get_openai_response(model, context_size, cmd):
     response = None
     while retry >= 0 and not successfull:
         try:
-            response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data, timeout=120).json()
+            response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data, timeout=120)
+
+            if response.status == 429:
+                print("[RestAPI-Connector] running into rate-limits, waiting for a minute")
+                response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data, timeout=120)
+
+            if response.status != 200:
+                print("[Warning] REST API response code != 200")
+                print(str(response))
+
             successfull = True
         except requests.exceptions.Timeout:
             print("Timeout while contacting LLM REST endpoint")
         retry -= 1
 
-
+    # now extract the JSON status message
+    # TODO: error handling..
+    response = response.json()
     return response['choices'][0]['message']['content'], response['usage']['prompt_tokens'], response['usage']['completion_tokens']

@@ -1,8 +1,11 @@
 import os
 import requests
+import time
 
 openai_model : str = 'gpt-3.5-turbo'
 openai_key : str = 'none'
+
+RATE_LIMIT_BACKOFF = 60
 
 def get_openai_rest_connection_data():
     return "openai_rest", verify_config, get_openai_response
@@ -30,7 +33,8 @@ def get_openai_response(model, context_size, cmd):
             response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data, timeout=120)
 
             if response.status_code == 429:
-                print("[RestAPI-Connector] running into rate-limits, waiting for a minute")
+                print(f"[RestAPI-Connector] running into rate-limits, waiting for {RATE_LIMIT_BACKOFF} seconds")
+                time.sleep(RATE_LIMIT_BACKOFF)
                 response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data, timeout=120)
 
             if response.status_code != 200:

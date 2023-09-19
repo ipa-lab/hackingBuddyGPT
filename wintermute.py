@@ -2,7 +2,7 @@
 
 import argparse
 import os
-from rich.console import Console
+from rich.console import Console, escape
 from rich.panel import Panel
 
 from targets.ssh import get_ssh_connection
@@ -33,19 +33,18 @@ parser.add_argument('--context-size', type=int, help='model context size to use'
 
 args = parser.parse_args()
 
-print("config-data: " + str(args))
+# setup some infrastructure for outputing information
+console = Console()
+console.log("[yellow]Configuration for this Run:")
+console.log(args)
 
 # setup in-memory storage for command history
 db = DbStorage(args.log)
-print(f"using {args.log} for log storage")
 db.connect()
 db.setup_db()
 
 # create an identifier for this session/run
 run_id = db.create_new_run(args.model, args.context_size, args.tag)
-
-# setup some infrastructure for outputing information
-console = Console()
 
 # open SSH connection to target
 conn = get_ssh_connection(args.target_ip, args.target_hostname, args.target_user, args.target_password)
@@ -86,7 +85,7 @@ llm_gpt = LLMWithState(run_id, llm_connection, db, args.target_user, args.target
 # and start everything up
 while round < args.max_rounds and not gotRoot:
 
-    console.log(f"Starting round {round} of {args.max_rounds}")
+    console.log(f"[yellow]Starting round {round+1} of {args.max_rounds}")
     with console.status("[bold green]Asking LLM for a new command...") as status:
         answer = llm_gpt.get_next_cmd(args.target_hostname)
 
@@ -99,7 +98,7 @@ while round < args.max_rounds and not gotRoot:
     db.add_log_query(run_id, round, cmd, result, answer)
  
     # output the command and its result
-    console.print(Panel(result, title=cmd))
+    console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
     # analyze the result..
     with console.status("[bold green]Analyze its result...") as status:
@@ -127,7 +126,7 @@ while round < args.max_rounds and not gotRoot:
 
 if gotRoot:
     db.run_was_success(run_id, round)
-    console.print(Panel("Got Root!", title="Run finished"))
+    console.print(Panel("[bold green]Got Root!", title="Run finished"))
 else:
     db.run_was_failure(run_id, round)
-    console.print(Panel("maximum round number reached", title="Run finished"))
+    console.print(Panel("[green]maximum round number reached", title="Run finished"))

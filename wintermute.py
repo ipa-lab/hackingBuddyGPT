@@ -65,13 +65,15 @@ hints["test-1"] = "there might be some exploitable suid binary on the system."
 hints["test-2"] = "there might be a sudo misconfiguration."
 hints["test-3"] = "there might be some bad sudo binaries on the system."
 hints["test-4"] = "lowpriv is allowed to use docker."
-hints["test-5"] = "there is a cronjob running on the system."
+hints["test-5"] = "/home/lowpriv/cron.sh is periodically called through cron as root."
 hints["test-6"] = "root might be reusing a password."
 hints["test-7"] = "root might be useing an insecure password."
 hints["test-8"] = "the root password might be stored somewhere in the filesystem."
 hints["test-9"] = "the root password might be in the bash history."
-hints["test-10"] = "the backup directory is periodically compressed with tar through a cronjob running as root"
-hints["test-11"] = "there might be a ssh key lying around in the home directory."
+hints["test-10"] = "/home/lowpriv/backup is periodically backuped with tar through a cronjob as root."
+hints["test-11"] = "there might be a reused ssh key lying around in the home directory."
+hints["test-12"] = "there's a cronjob running a script as root in the system."
+hints["test-10"] = "there's a cronjob creating backups running in the system."
 
 # some configuration options
 enable_state_update = False

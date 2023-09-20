@@ -47,7 +47,7 @@ db.connect()
 db.setup_db()
 
 # create an identifier for this session/run
-run_id = db.create_new_run(args.model, args.context_size, args.tag)
+run_id = db.create_new_run(args)
 
 # open SSH connection to target
 conn = get_ssh_connection(args.target_ip, args.target_hostname, args.target_user, args.target_password)
@@ -71,10 +71,10 @@ if args.hints:
             console.print(f"[bold green]Using the following hint: '{hint}'")
     except:
         console.print("[yellow]Was not able to load hint file")
+
 # some configuration options
 enable_state_update = False
 enable_result_explanation = False
-# hints = None
 
 # instantiate the concrete LLM model
 llm_gpt = LLMWithState(run_id, llm_connection, db, args.target_user, args.target_password, hint = hint)

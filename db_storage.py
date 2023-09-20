@@ -22,7 +22,7 @@ class DbStorage:
     
     def setup_db(self):
         # create tables
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER, state TEXT, tag TEXT, started_at text, stopped_at text, rounds INTEGER)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER, state TEXT, tag TEXT, started_at text, stopped_at text, rounds INTEGER, configuration TEXT)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS commands (id INTEGER PRIMARY KEY, name string unique)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS queries (run_id INTEGER, round INTEGER, cmd_id INTEGER, query TEXT, response TEXT, duration REAL, tokens_query INTEGER, tokens_response INTEGER, prompt TEXT, answer TEXT)")
 
@@ -31,8 +31,8 @@ class DbStorage:
         self.analyze_response_id = self.insert_or_select_cmd('analyze_response')
         self.state_update_id = self.insert_or_select_cmd('update_state')
 
-    def create_new_run(self, model, context_size, tag=''):
-        self.cursor.execute("INSERT INTO runs (model, context_size, state, tag, started_at) VALUES (?, ?, ?, ?, datetime('now'))", (model, context_size, "in progress", tag))
+    def create_new_run(self, args):
+        self.cursor.execute("INSERT INTO runs (model, context_size, state, tag, started_at, configuration) VALUES (?, ?, ?, ?, datetime('now'), ?)", (args.model, args.context_size, "in progress", args.tag, str(args)))
         return self.cursor.lastrowid
 
     def add_log_query(self, run_id, round, cmd, result, answer):

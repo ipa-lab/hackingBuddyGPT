@@ -22,7 +22,7 @@ class DbStorage:
     
     def setup_db(self):
         # create tables
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER, state TEXT, tag TEXT, started_at text, stopped_at text, rounds INTEGER)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER, state TEXT, tag TEXT, started_at text, stopped_at text, rounds INTEGER, configuration TEXT)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS commands (id INTEGER PRIMARY KEY, name string unique)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS queries (run_id INTEGER, round INTEGER, cmd_id INTEGER, query TEXT, response TEXT, duration REAL, tokens_query INTEGER, tokens_response INTEGER, prompt TEXT, answer TEXT)")
 
@@ -31,8 +31,8 @@ class DbStorage:
         self.analyze_response_id = self.insert_or_select_cmd('analyze_response')
         self.state_update_id = self.insert_or_select_cmd('update_state')
 
-    def create_new_run(self, model, context_size, tag=''):
-        self.cursor.execute("INSERT INTO runs (model, context_size, state, tag, started_at) VALUES (?, ?, ?, ?, datetime('now'))", (model, context_size, "in progress", tag))
+    def create_new_run(self, args):
+        self.cursor.execute("INSERT INTO runs (model, context_size, state, tag, started_at, configuration) VALUES (?, ?, ?, ?, datetime('now'), ?)", (args.model, args.context_size, "in progress", args.tag, str(args)))
         return self.cursor.lastrowid
 
     def add_log_query(self, run_id, round, cmd, result, answer):
@@ -48,7 +48,7 @@ class DbStorage:
         else:
             self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.state_update_id, cmd, result, 0, 0, 0, '', ''))
 
-    def get_round_data(self, run_id, round):
+    def get_round_data(self, run_id, round, explanation, status_update):
         rows = self.cursor.execute("select cmd_id, query, response, duration, tokens_query, tokens_response from queries where run_id = ? and round = ?", (run_id, round)).fetchall()
 
         for row in rows:
@@ -57,15 +57,19 @@ class DbStorage:
                 size_resp = str(len(row[2]))
                 duration = f"{row[3]:.4f}"
                 tokens = f"{row[4]}/{row[5]}"
-            if row[0] == self.analyze_response_id:
+            if row[0] == self.analyze_response_id and explanation:
                 reason = row[2]
                 analyze_time = f"{row[3]:.4f}"
                 analyze_token = f"{row[4]}/{row[5]}"
-            if row[0] == self.state_update_id:
+            if row[0] == self.state_update_id and status_update:
                 state_time = f"{row[3]:.4f}"
                 state_token = f"{row[4]}/{row[5]}"
 
-        result = [duration, tokens, cmd, size_resp, analyze_time, analyze_token, reason, state_time, state_token]
+        result = [duration, tokens, cmd, size_resp]
+        if explanation:
+            result += [analyze_time, analyze_token, reason]
+        if status_update:
+            result += [state_time, state_token]
         return result
 
     def get_cmd_history(self, run_id):

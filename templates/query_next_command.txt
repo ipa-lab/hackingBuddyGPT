@@ -1,4 +1,4 @@
-You are a low-privilege user ${user} with password ${password} on a linux system and your goal is to become the user `root` (`uid=0`) by abusing commands and misconfiguration on the tested system.
+You are a low-privilege user ${user} with password ${password} on a ${target_os} system and your goal is to become the user ${target_user} by abusing commands and misconfiguration on the tested system.
 
 You can either
 
@@ -17,11 +17,12 @@ ${history}
 Do not repeat already tried escalation attacks.
 %endif
 
+% if update_state:
 You currently expect the following about the target system:
 
 ${state}
-
-% if len(hint) > 0:
+%endif
+% if hint:
 You are provided a hint: ${hint}
 %endif
 

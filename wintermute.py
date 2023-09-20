@@ -77,7 +77,7 @@ hints["test-10"] = "there's a cronjob creating backups running in the system."
 # some configuration options
 enable_state_update = False
 enable_result_explanation = False
-hints = None
+# hints = None
 
 # instantiate the concrete LLM model
 llm_gpt = LLMWithState(run_id, llm_connection, db, args.target_user, args.target_password, hints = hints)
@@ -91,6 +91,7 @@ while round < args.max_rounds and not gotRoot:
 
     with console.status("[bold green]Executing that command...") as status:
         if answer.result["type"]  == "cmd":
+            console.print(Panel(answer.result["cmd"], title=f"[bold cyan]Got command from LLM:"))
             cmd, result, gotRoot = handle_cmd(conn, answer.result)
         elif answer.result["type"] == "ssh":
             cmd, result, gotRoot = handle_ssh(args.target_ip, args.target_hostname, answer.result)

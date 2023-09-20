@@ -1,6 +1,5 @@
 import html
 import json
-import os
 
 import requests
 
@@ -104,8 +103,4 @@ def get_openai_response(cmd):
 def verify_config(config):
     global url
 
-    url = os.getenv('OOBABOOGA_URL')
-
-    if url == '':
-        raise Exception("please set OOBABOOGA_URL through environmental variables")
-    return True
+    url = f"{config.llm_server_base_url}/api/v1/chat"

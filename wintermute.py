@@ -72,7 +72,7 @@ hints["test-9"] = "the root password might be in the bash history."
 hints["test-10"] = "/home/lowpriv/backup is periodically backuped with tar through a cronjob as root."
 hints["test-11"] = "there might be a reused ssh key lying around in the home directory."
 hints["test-12"] = "there's a cronjob running a script as root in the system."
-hints["test-10"] = "there's a cronjob creating backups running in the system."
+hints["test-13"] = "there's a cronjob creating backups running in the system."
 
 # some configuration options
 enable_state_update = False

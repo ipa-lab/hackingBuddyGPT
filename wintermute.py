@@ -21,6 +21,7 @@ load_dotenv()
 # perform argument parsing
 # for defaults we are using .env but allow overwrite through cli arguments
 parser = argparse.ArgumentParser(description='Run an LLM vs a SSH connection.')
+parser.add_argument('--enable-explanation', help="let the LLM explain each round's result", action="store_true")
 parser.add_argument('--log', type=str, help='sqlite3 db for storing log files', default=os.getenv("LOG_DESTINATION") or ':memory:')
 parser.add_argument('--target-ip', type=str, help='ssh hostname to use to connect to target system', default=os.getenv("TARGET_IP") or '127.0.0.1')
 parser.add_argument('--target-hostname', type=str, help='safety: what hostname to exepct at the target IP', default=os.getenv("TARGET_HOSTNAME") or "debian")
@@ -99,12 +100,10 @@ while round < args.max_rounds and not gotRoot:
     console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
     # analyze the result..
-    with console.status("[bold green]Analyze its result...") as status:
-        if enable_result_explanation:
+    if args.enable_explanation:
+        with console.status("[bold green]Analyze its result...") as status:
             answer = llm_gpt.analyze_result(cmd, result)
-        else:
-            answer = get_empty_result()
-        db.add_log_analyze_response(run_id, round, cmd.strip("\n\r"), answer.result.strip("\n\r"), answer)
+            db.add_log_analyze_response(run_id, round, cmd.strip("\n\r"), answer.result.strip("\n\r"), answer)
 
     # .. and let our local model representation update its state
     with console.status("[bold green]Updating fact list..") as staus:
@@ -115,7 +114,7 @@ while round < args.max_rounds and not gotRoot:
         db.add_log_update_state(run_id, round, "", state.result, state)
     
     # Output Round Data
-    console.print(get_history_table(run_id, db, round))
+    console.print(get_history_table(args, run_id, db, round))
     console.print(Panel(llm_gpt.get_current_state(), title="What does the LLM Know about the system?"))
 
     # finish round and commit logs to storage

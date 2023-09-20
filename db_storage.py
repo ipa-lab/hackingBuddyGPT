@@ -48,8 +48,12 @@ class DbStorage:
         else:
             self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.state_update_id, cmd, result, 0, 0, 0, '', ''))
 
-    def get_round_data(self, run_id, round):
+    def get_round_data(self, run_id, round, enable_explanation):
         rows = self.cursor.execute("select cmd_id, query, response, duration, tokens_query, tokens_response from queries where run_id = ? and round = ?", (run_id, round)).fetchall()
+
+        analyze_time = '0'
+        analyze_token = '0'
+        reason = ''
 
         for row in rows:
             if row[0] == self.query_cmd_id:
@@ -57,7 +61,7 @@ class DbStorage:
                 size_resp = str(len(row[2]))
                 duration = f"{row[3]:.4f}"
                 tokens = f"{row[4]}/{row[5]}"
-            if row[0] == self.analyze_response_id:
+            if row[0] == self.analyze_response_id and enable_explanation:
                 reason = row[2]
                 analyze_time = f"{row[3]:.4f}"
                 analyze_token = f"{row[4]}/{row[5]}"
@@ -65,7 +69,10 @@ class DbStorage:
                 state_time = f"{row[3]:.4f}"
                 state_token = f"{row[4]}/{row[5]}"
 
-        result = [duration, tokens, cmd, size_resp, analyze_time, analyze_token, reason, state_time, state_token]
+        result = [duration, tokens, cmd, size_resp]
+        if enable_explanation:
+            result += [analyze_time, analyze_token, reason]
+        result += [state_time, state_token]
         return result
 
     def get_cmd_history(self, run_id):

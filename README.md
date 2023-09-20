@@ -8,7 +8,7 @@ What is it doing? More or less it creates a SSH connection to a configured virtu
 
 Current features:
 
-- connects over SSH
+- connects over SSH (linux targets) or SMB/PSExec (windows targets)
 - supports multiple openai models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
 - supports locally running LLMs
 - beautiful console output

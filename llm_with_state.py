@@ -18,13 +18,14 @@ def get_empty_result():
     return LLMResult('', '', '', 0, 0, 0)
 
 class LLMWithState:
-    def __init__(self, run_id, llm_connection, history, initial_user, initial_password, update_state, hint=None):
+    def __init__(self, run_id, llm_connection, history, initial_user, initial_password, update_state, target_os, hint=None):
         self.llm_connection = llm_connection
         self.initial_user = initial_user
         self.initial_password = initial_password
         self.db = history
         self.run_id = run_id
         self.enable_update_state = update_state
+        self.target_os = target_os
         self.state = f"""
 - this is a linux system
 - your low privilege user credentials are {initial_user}:{initial_password}
@@ -46,7 +47,12 @@ class LLMWithState:
 
         history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size)
 
-        result = self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=self.hint, update_state=self.enable_update_state)
+        if self.target_os == "linux":
+            target_user = "root"
+        else:
+            target_user = "Administrator"
+
+        result = self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=self.hint, update_state=self.enable_update_state, target_os=self.target_os, target_user=target_user)
 
         # make result backwards compatible
         if result.result.startswith("test_credentials"):

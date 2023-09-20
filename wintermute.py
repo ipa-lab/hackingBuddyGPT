@@ -3,10 +3,12 @@
 import json
 import argparse
 import os
-from rich.console import Console, escape
+from rich.console import Console
 from rich.panel import Panel
 
 from targets.ssh import get_ssh_connection
+from targets.psexec import get_smb_connection
+
 from llms.llm_connection import get_llm_connection, get_potential_llm_connections
 from dotenv import load_dotenv
 from db_storage import DbStorage
@@ -30,6 +32,7 @@ parser.add_argument('--target-user', type=str, help='ssh username to use to conn
 parser.add_argument('--target-password', type=str, help='ssh password to use to connect to target system', default=os.getenv("TARGET_PASSWORD") or 'trustno1')
 parser.add_argument('--max-rounds', type=int, help='how many cmd-rounds to execute at max', default=int(os.getenv("MAX_ROUNDS")) or 10)
 parser.add_argument('--llm-connection', type=str, help='which LLM driver to use', choices=get_potential_llm_connections(), default=os.getenv("LLM_CONNECTION") or "openai_rest")
+parser.add_argument('--target-os', type=str, help='What is the target operating system?', choices=["linux", "windows"], default="linux")
 parser.add_argument('--model', type=str, help='which LLM to use', default=os.getenv("MODEL") or "gpt-3.5-turbo")
 parser.add_argument('--llm-server-base-url', type=str, help='which LLM server to use', default=os.getenv("LLM_SERVER_BASE_URL") or "https://api.openai.com")
 parser.add_argument('--tag', type=str, help='tag run with string', default="")
@@ -51,9 +54,13 @@ db.setup_db()
 # create an identifier for this session/run
 run_id = db.create_new_run(args)
 
-# open SSH connection to target
-conn = get_ssh_connection(args.target_ip, args.target_hostname, args.target_user, args.target_password)
-conn.connect()
+if args.target_os == 'linux':
+    # open SSH connection to target
+    conn = get_ssh_connection(args.target_ip, args.target_hostname, args.target_user, args.target_password)
+    conn.connect()
+else:
+    conn = get_smb_connection(args.target_ip, args.target_hostname, args.target_user, args.target_password)
+    conn.connect()
 
 # setup LLM connection and internal model representation
 llm_connection = get_llm_connection(args)
@@ -78,7 +85,7 @@ if args.hints:
 enable_state_update = False
 
 # instantiate the concrete LLM model
-llm_gpt = LLMWithState(run_id, llm_connection, db, args.target_user, args.target_password, args.enable_update_state, hint = hint)
+llm_gpt = LLMWithState(run_id, llm_connection, db, args.target_user, args.target_password, args.enable_update_state, args.target_os, hint = hint)
 
 # and start everything up
 while round < args.max_rounds and not gotRoot:

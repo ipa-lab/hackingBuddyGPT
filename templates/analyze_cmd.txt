@@ -1,0 +1,7 @@
+You executed the command '${cmd}' and retrieved the following result:
+
+~~~ bash
+${resp}
+~~~
+
+Analyze if this response allows you to determine a way to escalate your privileges into a root shell. Be as concise as possible.

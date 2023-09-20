@@ -10,11 +10,11 @@ connections = [
 def get_potential_llm_connections():
     return list(map(lambda x: x[0], connections))
 
-def get_llm_connection(name, model, context_size):
+def get_llm_connection(config):
     for i in connections:
-        if i[0] == name:
-            if i[1]() == True:
-                return LLMConnection(name, model, context_size, i[2])
+        if i[0] == config.llm_connection:
+            if i[1](config) == True:
+                return LLMConnection(config, i[2])
             else:
                 print("Parameter for connection missing")
                 return None
@@ -22,10 +22,10 @@ def get_llm_connection(name, model, context_size):
     return None
 
 class LLMConnection:
-    def __init__(self, conn, model, context_size, exec_query):
-        self.conn = conn
-        self.model = model
-        self.context_size = context_size
+    def __init__(self, config, exec_query):
+        self.conn = config.llm_connection
+        self.model = config.model
+        self.context_size = config.context_size
         self.exec_query = exec_query
     
     def exec_query(self, query):

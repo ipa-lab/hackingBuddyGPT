@@ -22,9 +22,9 @@ class DbStorage:
     
     def setup_db(self):
         # create tables
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER, state TEXT, tag TEXT)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER, state TEXT, tag TEXT, started_at text, stopped_at text, rounds INTEGER)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS commands (id INTEGER PRIMARY KEY, name string unique)")
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS queries (run_id INTEGER, round INTEGER, cmd_id INTEGER, query TEXT, response TEXT, duration REAL, tokens_query INTEGER, tokens_response INTEGER)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS queries (run_id INTEGER, round INTEGER, cmd_id INTEGER, query TEXT, response TEXT, duration REAL, tokens_query INTEGER, tokens_response INTEGER, prompt TEXT, answer TEXT)")
 
         # insert commands
         self.query_cmd_id = self.insert_or_select_cmd('query_cmd')
@@ -32,21 +32,21 @@ class DbStorage:
         self.state_update_id = self.insert_or_select_cmd('update_state')
 
     def create_new_run(self, model, context_size, tag=''):
-        self.cursor.execute("INSERT INTO runs (model, context_size, state, tag) VALUES (?, ?, ?, ?)", (model, context_size, "in progress", tag))
+        self.cursor.execute("INSERT INTO runs (model, context_size, state, tag, started_at) VALUES (?, ?, ?, ?, datetime('now'))", (model, context_size, "in progress", tag))
         return self.cursor.lastrowid
 
     def add_log_query(self, run_id, round, cmd, result, answer):
-        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.query_cmd_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response))
+        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.query_cmd_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response, answer.prompt, answer.answer))
 
     def add_log_analyze_response(self, run_id, round, cmd, result, answer):
-        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.analyze_response_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response))
+        self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.analyze_response_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response, answer.prompt, answer.answer))
 
     def add_log_update_state(self, run_id, round, cmd, result, answer):
 
         if answer != None:
-            self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.state_update_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response))
+            self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.state_update_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response, answer.prompt, answer.answer))
         else:
-            self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.state_update_id, cmd, result, 0, 0, 0))
+            self.cursor.execute("INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (run_id, round, self.state_update_id, cmd, result, 0, 0, 0, '', ''))
 
     def get_round_data(self, run_id, round):
         rows = self.cursor.execute("select cmd_id, query, response, duration, tokens_query, tokens_response from queries where run_id = ? and round = ?", (run_id, round)).fetchall()
@@ -61,8 +61,11 @@ class DbStorage:
                 reason = row[2]
                 analyze_time = f"{row[3]:.4f}"
                 analyze_token = f"{row[4]}/{row[5]}"
+            if row[0] == self.state_update_id:
+                state_time = f"{row[3]:.4f}"
+                state_token = f"{row[4]}/{row[5]}"
 
-        result = [duration, tokens, cmd, size_resp, analyze_time, analyze_token, reason]
+        result = [duration, tokens, cmd, size_resp, analyze_time, analyze_token, reason, state_time, state_token]
         return result
 
     def get_cmd_history(self, run_id):
@@ -75,12 +78,12 @@ class DbStorage:
 
         return result
     
-    def run_was_success(self, run_id):
-        self.cursor.execute("update runs set state=? where id = ?", ("got root", run_id))
+    def run_was_success(self, run_id, round):
+        self.cursor.execute("update runs set state=?,stopped_at=datetime('now'), rounds=? where id = ?", ("got root", round, run_id))
         self.db.commit()
 
-    def run_was_failure(self, run_id):
-        self.cursor.execute("update runs set state=? where id = ?", ("reached max runs", run_id))
+    def run_was_failure(self, run_id, round):
+        self.cursor.execute("update runs set state=?, stopped_at=datetime('now'), rounds=? where id = ?", ("reached max runs", round, run_id))
         self.db.commit()
 
     def commit(self):

@@ -1,4 +1,3 @@
-import json
 import time
 import typing
 
@@ -9,50 +8,106 @@ from helper import *
 @dataclass
 class LLMResult:
     result: typing.Any
+    prompt: str
+    answer: str
     duration: float = 0
     tokens_query: int = 0
     tokens_response: int = 0
 
+def get_empty_result():
+    return LLMResult('', '', '', 0, 0, 0)
+
 class LLMWithState:
-    def __init__(self, run_id, llm_connection, history, initial_user, initial_password):
+    def __init__(self, run_id, llm_connection, history, initial_user, initial_password, hints=None):
         self.llm_connection = llm_connection
         self.initial_user = initial_user
         self.initial_password = initial_password
         self.db = history
         self.run_id = run_id
-        self.state = """
+        self.state = f"""
 - this is a linux system
-- your low privilege user credentials are lowpriv:trustno1
+- your low privilege user credentials are {initial_user}:{initial_password}
 """
+        self.hints = hints
 
-    def get_next_cmd(self):
-        state_size = num_tokens_from_string(self.llm_connection.get_model(), self.state)
+    def get_next_cmd(self, hostname=''):
 
-        return self.create_and_ask_prompt('query_next_command.txt', user=self.initial_user, password=self.initial_password, history=get_cmd_history(self.llm_connection.get_model(), self.run_id, self.db, self.llm_connection.get_context_size()-state_size), state=self.state)
+        template_file = 'query_next_command.txt'
+        model = self.llm_connection.get_model()
 
-    def analyze_result(self, cmd, result):
-        result = self.create_and_ask_prompt('successfull.txt', cmd=cmd, resp=result, facts=self.state)
+        state_size = num_tokens_from_string(model, self.state)
 
-        self.tmp_state = result.result["facts"]
+        template = Template(filename='templates/' + template_file)
+        template_size = num_tokens_from_string(model, template.source)
+
+        history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size)
+
+        if self.hints != None:
+            hint = self.hints[hostname]
+        else:
+            hint =''
+        result = self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=hint)
+
+        # make result backwards compatible
+        if result.result.startswith("test_credentials"):
+            result.result = {
+                "type" : "ssh",
+                "username" : result.result.split(" ")[1],
+                "password" : result.result.split(" ")[2]
+            }
+        else:
+            result.result = {
+                "type" : "cmd",
+                "cmd" : cmd_output_fixer(result.result)
+            }
+
         return result
 
-    def update_state(self):
-        self.state = "\n".join(map(lambda x: "- " + x, self.tmp_state))
-        return LLMResult(self.state, 0, 0, 0)
+    def analyze_result(self, cmd, result):
+
+        model = self.llm_connection.get_model()
+        ctx = self.llm_connection.get_context_size()
+
+        # ugly, but cut down result to fit context size
+        # don't do this linearly as this can take too long
+        CUTOFF_STEP = 128
+        current_size = num_tokens_from_string(model, result)
+        while current_size > (ctx + 512):
+            cut_off = int(((current_size - (ctx + 512)) + CUTOFF_STEP)/2)
+            result = result[cut_off:]
+            current_size = num_tokens_from_string(model, result)
+
+        result = self.create_and_ask_prompt_text('analyze_cmd.txt', cmd=cmd, resp=result, facts=self.state)
+        return result
+
+    def update_state(self, cmd, result):
+        result = self.create_and_ask_prompt_text('update_state.txt', cmd=cmd, resp=result, facts=self.state)
+        self.state = result.result
+        return result
 
     def get_current_state(self):
         return self.state
     
-    def create_and_ask_prompt(self, template_file, **params):
+    def create_and_ask_prompt_text(self, template_file, **params):
+        # prepare the prompt
         template = Template(filename='templates/' + template_file)
         prompt = template.render(**params)
+
+        if not self.llm_connection.get_model().startswith("gpt-"):
+            prompt = wrap_it_for_llama(prompt)
+
+        # and execute it
         tic = time.perf_counter()
         result, tok_query, tok_res = self.llm_connection.exec_query(self.llm_connection.get_model(), self.llm_connection.get_context_size(), prompt)
         toc = time.perf_counter()
-        try:
-            json_answer = json.loads(result)
-        except Exception as e:
-            print("there as an exception with JSON parsing: " + str(e))
-            print("debug[the plain result]: " + str(result))
     
-        return LLMResult(json_answer, toc - tic, tok_query, tok_res)
+        return LLMResult(result, prompt, result, toc - tic, tok_query, tok_res)
+    
+def wrap_it_for_llama(prompt):
+    return f"""### System:
+you are a concise but helful learning tool that aids students trying to find security vulnerabilities
+
+### User:
+{prompt}
+
+### Assistant:"""

@@ -59,7 +59,7 @@ class LLMWithState:
         else:
             result.result = {
                 "type" : "cmd",
-                "cmd" : result.result
+                "cmd" : cmd_output_fixer(result.result)
             }
 
         return result

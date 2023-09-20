@@ -76,4 +76,18 @@ def get_cmd_history_v3(model: str, ctx_size: int, run_id: int, db: DbStorage, to
         cur_size = num_tokens_from_string(model, result) + token_overhead + SAFETY_MARGIN
     
     return result
-        
+
+def remove_wrapping_characters(cmd, wrappers):
+    if cmd[0] == cmd[-1] and cmd[0] in wrappers:
+        print("will remove a wrapper from: " + cmd)
+        return remove_wrapping_characters(cmd[1:-1], wrappers)
+    return cmd
+
+# often the LLM produces a wrapped command
+def cmd_output_fixer(cmd):
+    cmd = remove_wrapping_characters(cmd, "`'\"")
+
+    if cmd.startswith("$ "):
+        cmd = cmd[2:]
+    
+    return cmd

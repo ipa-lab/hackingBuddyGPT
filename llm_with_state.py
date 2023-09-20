@@ -47,7 +47,7 @@ class LLMWithState:
             hint = self.hints[hostname]
         else:
             hint =''
-        result =  self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=hint)
+        result = self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=hint)
 
         # make result backwards compatible
         if result.result.startswith("test_credentials"):

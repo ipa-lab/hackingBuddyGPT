@@ -89,9 +89,25 @@ class LLMWithState:
         return self.state
     
     def create_and_ask_prompt_text(self, template_file, **params):
+        # prepare the prompt
         template = Template(filename='templates/' + template_file)
         prompt = template.render(**params)
+
+        if not self.llm_connection.get_model().startswith("gpt-"):
+            prompt = wrap_it_for_llama(prompt)
+
+        # and execute it
         tic = time.perf_counter()
         result, tok_query, tok_res = self.llm_connection.exec_query(self.llm_connection.get_model(), self.llm_connection.get_context_size(), prompt)
-        toc = time.perf_counter()    
+        toc = time.perf_counter()
+    
         return LLMResult(result, prompt, result, toc - tic, tok_query, tok_res)
+    
+def wrap_it_for_llama(prompt):
+    return f"""### System:
+you are a concise but helful learning tool that aids students trying to find security vulnerabilities
+
+### User:
+{prompt}
+
+### Assistant:"""

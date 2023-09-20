@@ -10,6 +10,7 @@ Current features:
 
 - connects over SSH
 - supports multiple openai models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
+- supports locally running LLMs
 - beautiful console output
 - log storage in sqlite either into a file or in-memory
 - automatic (very rough) root detection

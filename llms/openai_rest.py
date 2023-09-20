@@ -2,31 +2,25 @@ import os
 import requests
 import time
 
-openai_model : str = 'gpt-3.5-turbo'
 openai_key : str = ''
 openai_url : str = ''
 
 RATE_LIMIT_BACKOFF = 60
-BASE_URL="https://api.openai.com"
 
 def get_openai_rest_connection_data():
     return "openai_rest", verify_config, get_openai_response
 
-def verify_config():
-    global openai_key, openai_model, openai_url
+def verify_config(config):
+    global openai_key, openai_url
 
     openai_key = os.getenv("OPENAI_KEY")
     if openai_key == '' or openai_key == None:
         raise Exception("please set OPENAI_KEY through environment variables!")
     
-    openai_base_url = os.getenv("OPENAI_BASE_URL")
-    if openai_base_url == None or openai_base_url == '':
-        openai_base_url = BASE_URL
-    openai_url = f'{openai_base_url}/v1/chat/completions'
-
+    openai_url = f'{config.llm_server_base_url}/v1/chat/completions'
     return True
 
-OPENAI_TIMEOUT=120
+OPENAI_TIMEOUT=240
 def get_openai_response(model, context_size, cmd):
     global openai_key, openai_url
 

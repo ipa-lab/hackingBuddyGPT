@@ -101,7 +101,7 @@ def get_openai_response(cmd):
 
     return html.unescape(result['visible'][-1][1])
 
-def verify_config():
+def verify_config(config):
     global url
 
     url = os.getenv('OOBABOOGA_URL')

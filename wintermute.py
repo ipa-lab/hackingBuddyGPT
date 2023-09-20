@@ -28,8 +28,9 @@ parser.add_argument('--target-password', type=str, help='ssh password to use to 
 parser.add_argument('--max-rounds', type=int, help='how many cmd-rounds to execute at max', default=int(os.getenv("MAX_ROUNDS")) or 10)
 parser.add_argument('--llm-connection', type=str, help='which LLM driver to use', choices=get_potential_llm_connections(), default=os.getenv("LLM_CONNECTION"))
 parser.add_argument('--model', type=str, help='which LLM to use', default=os.getenv("MODEL") or "gpt-3.5-turbo")
+parser.add_argument('--llm-server-base-url', type=str, help='which LLM server to use', default=os.getenv("LLM_SERVER_BASE_URL") or "https://api.openai.com")
 parser.add_argument('--tag', type=str, help='tag run with string', default="")
-parser.add_argument('--context-size', type=int, help='model context size to use', default=int(os.getenv("CONTEXT_SIZE")) or 3000)
+parser.add_argument('--context-size', type=int, help='model context size to use', default=int(os.getenv("CONTEXT_SIZE")) or 4096)
 
 args = parser.parse_args()
 
@@ -51,7 +52,7 @@ conn = get_ssh_connection(args.target_ip, args.target_hostname, args.target_user
 conn.connect()
 
 # setup LLM connection and internal model representation
-llm_connection = get_llm_connection(args.llm_connection, args.model, args.context_size)
+llm_connection = get_llm_connection(args)
 console.log(llm_connection.output_metadata())
 
 # setup round meta-data

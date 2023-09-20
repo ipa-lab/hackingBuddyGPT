@@ -1,4 +1,3 @@
-import json
 import time
 import typing
 
@@ -96,18 +95,3 @@ class LLMWithState:
         result, tok_query, tok_res = self.llm_connection.exec_query(self.llm_connection.get_model(), self.llm_connection.get_context_size(), prompt)
         toc = time.perf_counter()    
         return LLMResult(result, prompt, result, toc - tic, tok_query, tok_res)
-
-
-    def create_and_ask_prompt(self, template_file, **params):
-        template = Template(filename='templates/' + template_file)
-        prompt = template.render(**params)
-        tic = time.perf_counter()
-        result, tok_query, tok_res = self.llm_connection.exec_query(self.llm_connection.get_model(), self.llm_connection.get_context_size(), prompt)
-        toc = time.perf_counter()
-        try:
-            json_answer = json.loads(result)
-        except Exception as e:
-            print("there as an exception with JSON parsing: " + str(e))
-            print("debug[the plain result]: " + str(result))
-    
-        return LLMResult(json_answer, prompt, result, toc - tic, tok_query, tok_res)

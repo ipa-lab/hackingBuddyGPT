@@ -11,6 +11,11 @@ def get_ssh_connection(ip, hostname, user, password):
     else:
         raise Exception("Please configure SSH through environment variables (TARGET_IP, TARGET_USER, TARGET_PASSWORD)")
 
+GOT_ROOT_REXEXPs = [
+    re.compile("^# $"),
+    re.compile("^bash-\d+\.\d# $")
+]
+
 class SSHHostConn:
 
     def __init__(self, host, hostname, username, password):
@@ -56,10 +61,9 @@ class SSHHostConn:
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         lastline = ansi_escape.sub('', lastline)
 
-        if lastline.startswith("# "):
-            gotRoot = True
+        for i in GOT_ROOT_REXEXPs:
+            if i.fullmatch(lastline):
+                gotRoot = True
         if lastline.startswith(f'root@{self.hostname}:'):
-            gotRoot = True
-        if lastline.startswith("bash-5.2# "):
             gotRoot = True
         return tmp, gotRoot

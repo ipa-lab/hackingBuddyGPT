@@ -26,7 +26,7 @@ parser.add_argument('--target-hostname', type=str, help='safety: what hostname t
 parser.add_argument('--target-user', type=str, help='ssh username to use to connect to target system', default=os.getenv("TARGET_USER") or 'lowpriv')
 parser.add_argument('--target-password', type=str, help='ssh password to use to connect to target system', default=os.getenv("TARGET_PASSWORD") or 'trustno1')
 parser.add_argument('--max-rounds', type=int, help='how many cmd-rounds to execute at max', default=int(os.getenv("MAX_ROUNDS")) or 10)
-parser.add_argument('--llm-connection', type=str, help='which LLM driver to use', choices=get_potential_llm_connections(), default=os.getenv("LLM_CONNECTION"))
+parser.add_argument('--llm-connection', type=str, help='which LLM driver to use', choices=get_potential_llm_connections(), default=os.getenv("LLM_CONNECTION") or "openai_rest")
 parser.add_argument('--model', type=str, help='which LLM to use', default=os.getenv("MODEL") or "gpt-3.5-turbo")
 parser.add_argument('--llm-server-base-url', type=str, help='which LLM server to use', default=os.getenv("LLM_SERVER_BASE_URL") or "https://api.openai.com")
 parser.add_argument('--tag', type=str, help='tag run with string', default="")

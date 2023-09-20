@@ -5,7 +5,13 @@ from rich.table import Table
 
 def num_tokens_from_string(model: str, string: str) -> int:
     """Returns the number of tokens in a text string."""
-    encoding = tiktoken.encoding_for_model(model)
+
+    # I know this is crappy for all non-openAI models but sadly this
+    # has to be good enough for now
+    if model.startswith("gpt-"):
+        encoding = tiktoken.encoding_for_model(model)
+    else:
+        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
     return len(encoding.encode(string))
 
 def get_history_table(run_id: int, db: DbStorage, round: int) -> Table:

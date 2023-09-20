@@ -20,15 +20,16 @@ def get_history_table(args, run_id: int, db: DbStorage, round: int) -> Table:
     table.add_column("Tokens", style="dim")
     table.add_column("Cmd")
     table.add_column("Resp. Size", justify="right")
-    table.add_column("ThinkingTime", style="dim")
-    table.add_column("Tokens", style="dim")
     if args.enable_explanation:
-        table.add_column("Reason")
-        table.add_column("StateTime", style="dim")
-        table.add_column("StateTokens", style="dim")
+        table.add_column("Explanation")
+        table.add_column("ExplTime", style="dim")
+        table.add_column("ExplTokens", style="dim")
+    if args.enable_update_state:
+        table.add_column("StateUpdTime", style="dim")
+        table.add_column("StateUpdTokens", style="dim")
 
     for i in range(0, round+1):
-        table.add_row(*db.get_round_data(run_id, i, args.enable_explanation))
+        table.add_row(*db.get_round_data(run_id, i, args.enable_explanation, args.enable_update_state))
 
     return table
 

@@ -18,31 +18,35 @@ def get_empty_result():
     return LLMResult('', '', '', 0, 0, 0)
 
 class LLMWithState:
-    def __init__(self, run_id, llm_connection, history, initial_user, initial_password, hint=None):
+    def __init__(self, run_id, llm_connection, history, initial_user, initial_password, update_state, hint=None):
         self.llm_connection = llm_connection
         self.initial_user = initial_user
         self.initial_password = initial_password
         self.db = history
         self.run_id = run_id
+        self.enable_update_state = update_state
         self.state = f"""
 - this is a linux system
 - your low privilege user credentials are {initial_user}:{initial_password}
 """
         self.hint = hint
 
-    def get_next_cmd(self, hostname=''):
+    def get_next_cmd(self):
 
         template_file = 'query_next_command.txt'
         model = self.llm_connection.get_model()
 
-        state_size = num_tokens_from_string(model, self.state)
+        if self.enable_update_state:
+            state_size = num_tokens_from_string(model, self.state)
+        else:
+            state_size = 0
 
         template = Template(filename='templates/' + template_file)
         template_size = num_tokens_from_string(model, template.source)
 
         history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size)
 
-        result = self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=self.hint)
+        result = self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=self.hint, update_state=self.enable_update_state)
 
         # make result backwards compatible
         if result.result.startswith("test_credentials"):

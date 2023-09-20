@@ -17,10 +17,11 @@ ${history}
 Do not repeat already tried escalation attacks.
 %endif
 
+% if update_state:
 You currently expect the following about the target system:
 
 ${state}
-
+%endif
 % if hint:
 You are provided a hint: ${hint}
 %endif

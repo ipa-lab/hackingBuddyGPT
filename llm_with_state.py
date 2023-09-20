@@ -18,7 +18,7 @@ def get_empty_result():
     return LLMResult('', '', '', 0, 0, 0)
 
 class LLMWithState:
-    def __init__(self, run_id, llm_connection, history, initial_user, initial_password, hints=None):
+    def __init__(self, run_id, llm_connection, history, initial_user, initial_password, hint=None):
         self.llm_connection = llm_connection
         self.initial_user = initial_user
         self.initial_password = initial_password
@@ -28,7 +28,7 @@ class LLMWithState:
 - this is a linux system
 - your low privilege user credentials are {initial_user}:{initial_password}
 """
-        self.hints = hints
+        self.hint = hint
 
     def get_next_cmd(self, hostname=''):
 
@@ -42,11 +42,7 @@ class LLMWithState:
 
         history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size)
 
-        if self.hints != None:
-            hint = self.hints[hostname]
-        else:
-            hint =''
-        result = self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=hint)
+        result = self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=self.hint)
 
         # make result backwards compatible
         if result.result.startswith("test_credentials"):

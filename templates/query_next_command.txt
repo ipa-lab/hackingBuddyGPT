@@ -21,7 +21,7 @@ You currently expect the following about the target system:
 
 ${state}
 
-% if len(hint) > 0:
+% if hint:
 You are provided a hint: ${hint}
 %endif
 

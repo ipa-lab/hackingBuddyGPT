@@ -41,7 +41,7 @@ series = {ESEC/FSE 2023}
 
 # Example runs
 
-- more can be seen at [history notes](https://github.com/ipa-lab/hackingBuddyGPT/blob/v3/history_notes.md)
+- more can be seen at [history notes](https://github.com/ipa-lab/hackingBuddyGPT/blob/v3/docs/history_notes.md)
 
 ## updated version using GPT-4
 

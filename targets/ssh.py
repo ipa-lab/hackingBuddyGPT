@@ -47,7 +47,7 @@ class SSHHostConn:
         try:
             resp = self.conn.run(cmd, pty=True, warn=True, out_stream=out, watchers=[sudopass], timeout=10)
         except Exception as e:
-            print("TIMEOUT!")
+            print("TIMEOUT! Could we have become root?")
         out.seek(0)
         tmp = ""
         lastline = ""
@@ -60,6 +60,13 @@ class SSHHostConn:
         # remove ansi shell codes
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         lastline = ansi_escape.sub('', lastline)
+
+        stupidity = re.compile(r"^[ \n\r]*```.*\n(.*)\n```$", re.MULTILINE)
+        if stupidity.fullmatch(tmp):
+            print("this would have been captured by the multi-line regex 1")
+        stupidity = re.compile(r"^[ \n\r]*~~~.*\n(.*)\n~~~$", re.MULTILINE)
+        if stupidity.fullmatch(tmp):
+            print("this would have been captured by the multi-line regex 2")
 
         for i in GOT_ROOT_REXEXPs:
             if i.fullmatch(lastline):

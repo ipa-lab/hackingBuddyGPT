@@ -33,9 +33,6 @@ class LLMConnection:
     
     def get_context_size(self):
         return self.context_size
-
-    def output_metadata(self):
-        return f"connection: {self.conn} using {self.model} with context-size {self.context_size}"
     
     def get_model(self) -> str:
         return self.model

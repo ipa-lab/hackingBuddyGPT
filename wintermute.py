@@ -31,7 +31,7 @@ def get_history_table(config, run_id: int, db: DbStorage, round: int) -> Table:
 
     return table
 
-# setup some infrastructure for outputing information
+# setup infrastructure for outputing information
 console = Console()
 
 # parse arguments
@@ -47,9 +47,9 @@ db.setup_db()
 run_id = db.create_new_run(config)
 
 # create the connection to the target
-conn = create_target_connection(config.target)
+target = create_target_connection(config.target)
 
-# setup LLM connection and internal model representation
+# setup the connection to the LLM server
 llm_connection = get_llm_connection(config)
 
 # instantiate the concrete LLM model
@@ -57,7 +57,7 @@ llm_gpt = LLMWithState(run_id, llm_connection, db, config)
 
 # setup round meta-data
 round : int = 0
-gotRoot = False
+gotRoot : bool = False
 
 # and start everything up
 while round < config.max_rounds and not gotRoot:
@@ -71,7 +71,7 @@ while round < config.max_rounds and not gotRoot:
             cmd, result, gotRoot = handle_ssh(config.target, answer.result)
         else:
             console.print(Panel(answer.result, title=f"[bold cyan]Got command from LLM:"))
-            cmd, result, gotRoot = handle_cmd(conn, answer.result)
+            cmd, result, gotRoot = handle_cmd(target, answer.result)
 
     db.add_log_query(run_id, round, cmd, result, answer)
  

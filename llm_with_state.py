@@ -15,6 +15,11 @@ class LLMResult:
     tokens_query: int = 0
     tokens_response: int = 0
 
+
+TPL_NEXT = Template(filename='templates/query_next_command.txt')
+TPL_ANALYZE = Template(filename="templates/analyze_cmd.txt")
+TPL_STATE = Template(filename="templates/update_state.txt")
+    
 class LLMWithState:
     def __init__(self, run_id, llm_connection, history, config):
         self.llm_connection = llm_connection
@@ -35,13 +40,10 @@ class LLMWithState:
 
     def get_next_cmd(self):
 
-        template_file = 'query_next_command.txt'
         model = self.llm_connection.get_model()
 
         state_size = self.get_state_size(model)
-
-        template = Template(filename='templates/' + template_file)
-        template_size = num_tokens_from_string(model, template.source)
+        template_size = num_tokens_from_string(model, TPL_NEXT.source)
 
         history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size)
 
@@ -50,7 +52,7 @@ class LLMWithState:
         else:
             target_user = "Administrator"
 
-        return self.create_and_ask_prompt_text(template_file, history=history, state=self.state, target=self.target, update_state=self.enable_update_state, target_user=target_user)
+        return self.create_and_ask_prompt_text(TPL_NEXT, history=history, state=self.state, target=self.target, update_state=self.enable_update_state, target_user=target_user)
 
     def analyze_result(self, cmd, result):
 
@@ -66,20 +68,19 @@ class LLMWithState:
             result = result[cut_off:]
             current_size = num_tokens_from_string(model, result)
 
-        result = self.create_and_ask_prompt_text('analyze_cmd.txt', cmd=cmd, resp=result, facts=self.state)
+        result = self.create_and_ask_prompt_text(TPL_ANALYZE, cmd=cmd, resp=result, facts=self.state)
         return result
 
     def update_state(self, cmd, result):
-        result = self.create_and_ask_prompt_text('update_state.txt', cmd=cmd, resp=result, facts=self.state)
+        result = self.create_and_ask_prompt_text(TPL_STATE, cmd=cmd, resp=result, facts=self.state)
         self.state = result.result
         return result
 
     def get_current_state(self):
         return self.state
     
-    def create_and_ask_prompt_text(self, template_file, **params):
+    def create_and_ask_prompt_text(self, template, **params):
         # prepare the prompt
-        template = Template(filename='templates/' + template_file)
         prompt = template.render(**params)
 
         if not self.llm_connection.get_model().startswith("gpt-"):

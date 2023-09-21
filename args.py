@@ -2,10 +2,35 @@ import argparse
 import json
 import os
 
+from dataclasses import dataclass
 from dotenv import load_dotenv
 from llms.llm_connection import get_potential_llm_connections
 
-def parse_args_and_env():
+@dataclass
+class ConfigTarget:
+    ip : str = None
+    hostname : str = None
+    user : str = None
+    password : str = None
+    os : str = None
+    hint : str = None
+
+@dataclass
+class Config:
+    enable_explanation : bool = False
+    enable_update_state : bool = False
+
+    target : ConfigTarget = None
+
+    log : str = ':memory:'
+    max_rounds : int = 10
+    llm_connection : str = None
+    llm_server_base_url : str = None
+    model : str = None
+    context_size : int = 4096
+    tag : str = None
+    
+def parse_args_and_env(console) -> Config:
     # setup dotenv
     load_dotenv()
 
@@ -28,8 +53,12 @@ def parse_args_and_env():
     parser.add_argument('--context-size', type=int, help='model context size to use', default=int(os.getenv("CONTEXT_SIZE")) or 4096)
     parser.add_argument('--hints', type=argparse.FileType('r', encoding='latin-1'), help='json file with a hint per tested hostname', default=None)
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    hint = get_hint(args, console)
 
+    target = ConfigTarget(args.target_ip, args.target_hostname, args.target_user, args.target_password, args.target_os, hint)
+
+    return Config(args.enable_explanation, args.enable_update_state, target, args.log, args.max_rounds, args.llm_connection, args.llm_server_base_url, args.model, args.context_size, args.tag)
 
 def get_hint(args, console):
     if args.hints:

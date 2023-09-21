@@ -1,15 +1,9 @@
 import re
 
+from args import ConfigTarget
 from fabric import Connection
 from invoke import Responder
 from io import StringIO
-
-def get_ssh_connection(ip, hostname, user, password):
-
-    if ip != '' and user != '' and password != '' and hostname != '':
-        return SSHHostConn(ip, hostname, user, password)
-    else:
-        raise Exception("Please configure SSH through environment variables (TARGET_IP, TARGET_USER, TARGET_PASSWORD)")
 
 GOT_ROOT_REXEXPs = [
     re.compile("^# $"),
@@ -18,11 +12,11 @@ GOT_ROOT_REXEXPs = [
 
 class SSHHostConn:
 
-    def __init__(self, host, hostname, username, password):
-        self.host = host
-        self.hostname = hostname
-        self.username = username
-        self.password = password
+    def __init__(self, target):
+        self.host = target.ip
+        self.hostname = target.hostname
+        self.username = target.user
+        self.password = target.password
 
     def connect(self):
         # create the SSH Connection
@@ -74,3 +68,10 @@ class SSHHostConn:
         if lastline.startswith(f'root@{self.hostname}:'):
             gotRoot = True
         return tmp, gotRoot
+
+def get_ssh_connection(target:ConfigTarget) -> SSHHostConn:
+
+    if target.ip != '' and target.user != '' and target.password != '' and target.hostname != '':
+        return SSHHostConn(target)
+    else:
+        raise Exception("Please configure SSH through environment variables (TARGET_IP, TARGET_USER, TARGET_PASSWORD)")

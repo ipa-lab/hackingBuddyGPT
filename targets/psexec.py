@@ -1,3 +1,4 @@
+from args import ConfigTarget
 from pypsexec.client import Client
 
 def get_smb_connection(ip, hostname, username, password):
@@ -7,11 +8,11 @@ def get_smb_connection(ip, hostname, username, password):
 #  - TODO: why is timeout not working?
 class SMBHostConn:
 
-    def __init__(self, host, hostname, username, password):
-        self.host = host
-        self.hostname = hostname
-        self.username = username
-        self.password = password
+    def __init__(self, target):
+        self.host = target.ip
+        self.hostname = target.hostname
+        self.username = target.username
+        self.password = target.password
 
     def connect(self):
         self.client = Client(self.host, username=self.username, password=self.password)

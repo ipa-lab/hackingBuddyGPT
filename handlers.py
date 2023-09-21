@@ -1,3 +1,4 @@
+import dataclasses
 import paramiko
 
 from targets.ssh import SSHHostConn
@@ -8,14 +9,12 @@ def handle_cmd(conn, input):
     return cmd, result, gotRoot
 
 
-def handle_ssh(target_host, target_hostname, input):
+def handle_ssh(target, input):
     cmd_parts = input.split(" ")
     assert(cmd_parts[0] == "test_credentials")
 
-    user = cmd_parts[1]
-    password = cmd_parts[2]
-
-    test = SSHHostConn(target_host, target_hostname, user, password)
+    test_target = dataclasses.replace(target, user=cmd_parts[1], password=cmd_parts[2])
+    test = SSHHostConn(test_target)
     try:
         test.connect()
         user = test.run("whoami")[0].strip('\n\r ')

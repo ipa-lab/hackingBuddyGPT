@@ -1,12 +1,12 @@
+from args import ConfigTarget
 from targets.ssh import get_ssh_connection
 from targets.psexec import get_smb_connection
 
-def create_target_connection(args):
-    if args.target_os == 'linux':
-        # open SSH connection to target
-        conn = get_ssh_connection(args.target_ip, args.target_hostname, args.target_user, args.target_password)
+def create_target_connection(target:ConfigTarget):
+    if target.os == 'linux':
+        conn = get_ssh_connection(target)
         conn.connect()
     else:
-        conn = get_smb_connection(args.target_ip, args.target_hostname, args.target_user, args.target_password)
+        conn = get_smb_connection(target)
         conn.connect()
     return conn

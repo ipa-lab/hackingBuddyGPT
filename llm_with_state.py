@@ -16,18 +16,15 @@ class LLMResult:
     tokens_response: int = 0
 
 class LLMWithState:
-    def __init__(self, run_id, llm_connection, history, args, hint):
+    def __init__(self, run_id, llm_connection, history, config):
         self.llm_connection = llm_connection
-        self.initial_user = args.target_user
-        self.initial_password = args.target_password
+        self.target = config.target
         self.db = history
         self.run_id = run_id
-        self.enable_update_state = args.enable_update_state
-        self.target_os = args.target_os
-        self.hint = hint
+        self.enable_update_state = config.enable_update_state
         self.state = f"""
-- this is a {self.target_os} system
-- your low privilege user credentials are {self.initial_user}:{self.initial_password}
+- this is a {self.target.os} system
+- your low privilege user credentials are {self.target.user}:{self.target.password}
 """
 
     def get_state_size(self, model):
@@ -48,12 +45,12 @@ class LLMWithState:
 
         history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size)
 
-        if self.target_os == "linux":
+        if self.target.os == "linux":
             target_user = "root"
         else:
             target_user = "Administrator"
 
-        return self.create_and_ask_prompt_text(template_file, user=self.initial_user, password=self.initial_password, history=history, state=self.state, hint=self.hint, update_state=self.enable_update_state, target_os=self.target_os, target_user=target_user)
+        return self.create_and_ask_prompt_text(template_file, history=history, state=self.state, target=self.target, update_state=self.enable_update_state, target_user=target_user)
 
     def analyze_result(self, cmd, result):
 

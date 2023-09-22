@@ -1,5 +1,6 @@
 import dataclasses
 import paramiko
+import re
 
 from targets.ssh import SSHHostConn
 
@@ -35,6 +36,21 @@ def remove_wrapping_characters(cmd, wrappers):
 
 # often the LLM produces a wrapped command
 def cmd_output_fixer(cmd):
+
+    stupidity = re.compile(r"^[ \n\r]*```.*\n(.*)\n```$", re.MULTILINE)
+    result = stupidity.search(cmd)
+    if result:
+        print("this would have been captured by the multi-line regex 1")
+        cmd = result.group(1)
+        print("new command: " + cmd)
+    stupidity = re.compile(r"^[ \n\r]*~~~.*\n(.*)\n~~~$", re.MULTILINE)
+    result = stupidity.search(cmd)
+    if result:
+        print("this would have been captured by the multi-line regex 2")
+        cmd = result.group(1)
+        print("new command: " + cmd)
+    stupidity = re.compile(r"^[ \n\r]*~~~.*\n(.*)\n~~~$", re.MULTILINE)
+
     cmd = remove_wrapping_characters(cmd, "`'\"")
 
     if cmd.startswith("$ "):

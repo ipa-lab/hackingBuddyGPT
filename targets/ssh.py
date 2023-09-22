@@ -7,7 +7,7 @@ from io import StringIO
 
 GOT_ROOT_REXEXPs = [
     re.compile("^# $"),
-    re.compile("^bash-\d+\.\d# $")
+    re.compile("^bash-[0-9]+.[0-9]# $")
 ]
 
 class SSHHostConn:
@@ -54,13 +54,6 @@ class SSHHostConn:
         # remove ansi shell codes
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         lastline = ansi_escape.sub('', lastline)
-
-        stupidity = re.compile(r"^[ \n\r]*```.*\n(.*)\n```$", re.MULTILINE)
-        if stupidity.fullmatch(tmp):
-            print("this would have been captured by the multi-line regex 1")
-        stupidity = re.compile(r"^[ \n\r]*~~~.*\n(.*)\n~~~$", re.MULTILINE)
-        if stupidity.fullmatch(tmp):
-            print("this would have been captured by the multi-line regex 2")
 
         for i in GOT_ROOT_REXEXPs:
             if i.fullmatch(lastline):

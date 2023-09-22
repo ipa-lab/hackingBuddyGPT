@@ -22,8 +22,8 @@ You currently expect the following about the target system:
 
 ${state}
 %endif
-% if hint:
-You are provided a hint: ${hint}
+% if target.hint:
+You are provided a hint: ${target.hint}
 %endif
 
 Give your command. Do not add any explanation or add an initial `$`.

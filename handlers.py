@@ -14,6 +14,9 @@ def handle_ssh(target, input):
     cmd_parts = input.split(" ")
     assert(cmd_parts[0] == "test_credentials")
 
+    if len(cmd_parts) != 3:
+        return input, "didn't provide username/password", False
+
     test_target = dataclasses.replace(target, user=cmd_parts[1], password=cmd_parts[2])
     test = SSHHostConn(test_target)
     try:
@@ -36,6 +39,9 @@ def remove_wrapping_characters(cmd, wrappers):
 
 # often the LLM produces a wrapped command
 def cmd_output_fixer(cmd):
+
+    if len(cmd) < 2:
+        return cmd
 
     stupidity = re.compile(r"^[ \n\r]*```.*\n(.*)\n```$", re.MULTILINE)
     result = stupidity.search(cmd)

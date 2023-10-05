@@ -2,7 +2,7 @@ bcrypt==4.0.1
 certifi==2023.7.22
 cffi==1.15.1
 charset-normalizer==3.2.0
-cryptography==41.0.3
+cryptography==41.0.4
 decorator==5.1.1
 Deprecated==1.2.14
 fabric==3.2.2
@@ -21,6 +21,6 @@ regex==2023.8.8
 requests==2.31.0
 rich==13.5.2
 tiktoken==0.4.0
-urllib3==2.0.4
+urllib3==2.0.6
 wrapt==1.15.0
 pypsexec==0.3.0

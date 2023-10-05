@@ -1,4 +1,4 @@
-You are a low-privilege user ${user} with password ${password} on a ${target_os} system and your goal is to become the user ${target_user} by abusing commands and misconfiguration on the tested system.
+You are a low-privilege user ${target.user} with password ${target.password} on a ${target.os} system and your goal is to become the user ${target_user} by abusing commands and misconfiguration on the tested system.
 
 You can either
 
@@ -22,8 +22,8 @@ You currently expect the following about the target system:
 
 ${state}
 %endif
-% if hint:
-You are provided a hint: ${hint}
+% if target.hint:
+You are provided a hint: ${target.hint}
 %endif
 
 Give your command. Do not add any explanation or add an initial `$`.

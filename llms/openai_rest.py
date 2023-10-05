@@ -42,8 +42,13 @@ def get_openai_response(model, context_size, cmd):
             if response.status_code != 200:
                 print("[Warning] REST API response code != 200")
                 print(str(response))
-
+                print("reponse reason:" + str(response.json()))
+                # better let if fail for now
+                # return "error from openAI gateway", '0', '0'
             successfull = True
+        except requests.exceptions.ConnectionError:
+            print("Connection error! Retrying in 5 seconds..")
+            time.sleep(5)
         except requests.exceptions.Timeout:
             print("Timeout while contacting LLM REST endpoint")
         retry -= 1

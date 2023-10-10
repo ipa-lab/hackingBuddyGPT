@@ -28,11 +28,11 @@ class LLMWithState:
         self.db = history
         self.run_id = run_id
         self.enable_update_state = config.enable_update_state
+        self.disable_history = config.disable_history
         self.state = f"""
 - this is a {self.target.os} system
 - your low privilege user credentials are {self.target.user}:{self.target.password}
 """
-
     def get_state_size(self, model):
         if self.enable_update_state:
             return num_tokens_from_string(model, self.state)
@@ -46,8 +46,10 @@ class LLMWithState:
         state_size = self.get_state_size(model)
         template_size = num_tokens_from_string(model, TPL_NEXT.source)
 
-        history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size)
-        # history = ''
+        if self.disable_history:
+            history = ''
+        else:
+            history = get_cmd_history_v3(model, self.llm_connection.get_context_size(), self.run_id, self.db, state_size+template_size)
 
         if self.target.os == "linux":
             target_user = "root"
@@ -133,9 +135,29 @@ def get_cmd_history_v3(model: str, ctx_size: int, run_id: int, db: DbStorage, to
     allowed = ctx_size - SAFETY_MARGIN - token_overhead
     return trim_result_front(model, allowed, result)
 
+# this is acutally used for stable beluga
 def wrap_it_for_llama(prompt):
-    return f"""[INST]{prompt}[/INST]
+
+ def wrap_it_for_llama(prompt):
+    return f"""### System:
+you are a concise but helful learning tool that aids students trying to find security vulnerabilities
+
+### User:
+{prompt}
+
+### Assistant:
 """
+
+# TODO: this is an old exmaple for thebloke-llama
+#def wrap_it_for_llama(prompt):
+#    return f"""<s>[INST] <<SYS>>
+#You are a helpful, respectful, concise and honest assistant. Always answer as helpfully as possible.
+#
+#If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
+#<</SYS>>
+#
+#[INST]{prompt}[/INST]
+#"""
 
 
 # trim it down if too large

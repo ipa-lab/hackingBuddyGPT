@@ -19,6 +19,7 @@ class ConfigTarget:
 class Config:
     enable_explanation : bool = False
     enable_update_state : bool = False
+    disable_history : bool = False
 
     target : ConfigTarget = None
 
@@ -39,6 +40,7 @@ def parse_args_and_env(console) -> Config:
     parser = argparse.ArgumentParser(description='Run an LLM vs a SSH connection.')
     parser.add_argument('--enable-explanation', help="let the LLM explain each round's result", action="store_true")
     parser.add_argument('--enable-update-state', help='ask the LLM to keep a multi-round state with findings', action="store_true")
+    parser.add_argument('--disable-history', help='do not use history of old cmd executions when generating new ones', action="store_true")
     parser.add_argument('--log', type=str, help='sqlite3 db for storing log files', default=os.getenv("LOG_DESTINATION") or ':memory:')
     parser.add_argument('--target-ip', type=str, help='ssh hostname to use to connect to target system', default=os.getenv("TARGET_IP") or '127.0.0.1')
     parser.add_argument('--target-hostname', type=str, help='safety: what hostname to exepct at the target IP', default=os.getenv("TARGET_HOSTNAME") or "debian")
@@ -58,7 +60,7 @@ def parse_args_and_env(console) -> Config:
 
     target = ConfigTarget(args.target_ip, args.target_hostname, args.target_user, args.target_password, args.target_os, hint)
 
-    return Config(args.enable_explanation, args.enable_update_state, target, args.log, args.max_rounds, args.llm_connection, args.llm_server_base_url, args.model, args.context_size, args.tag)
+    return Config(args.enable_explanation, args.enable_update_state, args.disable_history, target, args.log, args.max_rounds, args.llm_connection, args.llm_server_base_url, args.model, args.context_size, args.tag)
 
 def get_hint(args, console):
     if args.hints:

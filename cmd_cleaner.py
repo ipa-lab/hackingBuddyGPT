@@ -1,6 +1,8 @@
 import re
 
 def remove_wrapping_characters(cmd:str, wrappers:str) -> str:
+    if len(cmd) < 2:
+        return cmd
     if cmd[0] == cmd[-1] and cmd[0] in wrappers:
         print("will remove a wrapper from: " + cmd)
         return remove_wrapping_characters(cmd[1:-1], wrappers)
@@ -9,12 +11,9 @@ def remove_wrapping_characters(cmd:str, wrappers:str) -> str:
 # often the LLM produces a wrapped command
 def cmd_output_fixer(cmd:str) -> str:
 
+    cmd = cmd.strip(" \n")
     if len(cmd) < 2:
         return cmd
-
-    cmd = cmd.replace("<<CMD>>", "")
-    cmd = cmd.replace("<<SUCCESS>>", "")
-    cmd = cmd.lstrip(" \n")
 
     stupidity = re.compile(r"^[ \n\r]*```.*\n(.*)\n```$", re.MULTILINE)
     result = stupidity.search(cmd)

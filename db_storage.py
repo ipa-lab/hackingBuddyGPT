@@ -72,6 +72,37 @@ class DbStorage:
             result += [state_time, state_token]
         return result
 
+    def get_max_round_for(self, run_id):
+        run = self.cursor.execute("select max(round) from queries where run_id = ?", (run_id,)).fetchone()
+        if run != None:
+            return run[0]
+        else:
+            return None
+
+    def get_run_data(self, run_id):
+        run = self.cursor.execute("select * from runs where id = ?", (run_id,)).fetchone()
+        if run != None:
+            return run[1], run[2], run[4], run[3], run[7], run[8]
+        else:
+            return None
+
+    def get_log_overview(self):
+        result = {}
+
+        max_rounds = self.cursor.execute("select run_id, max(round) from queries group by run_id").fetchall()
+        for row in max_rounds:
+            state = self.cursor.execute("select state from runs where id = ?", (row[0],)).fetchone()
+            last_cmd = self.cursor.execute("select query from queries where run_id = ? and round = ?", (row[0], row[1])).fetchone()
+
+            result[row[0]] = {
+                     "max_round" : int(row[1])+1,
+                     "state": state[0],
+                     "last_cmd": last_cmd[0]
+            }
+
+        return result
+
+
     def get_cmd_history(self, run_id):
         rows = self.cursor.execute("select query, response from queries where run_id = ? and cmd_id = ? order by round asc", (run_id, self.query_cmd_id)).fetchall()
 

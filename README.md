@@ -53,7 +53,7 @@ Some things to note:
 
 - initially the current configuration is output. Yay, so many colors!
 - "Got command from LLM" shows the generated command while the panel afterwards has the given command as title and the command's output as content.
-- the tabel contains all executed commands. ThinkTime denotes the time that was needed to generate the command (Tokens show the token count for the prompt and its response). StateUpdTime shows the time that was needed to generate a new state (the next column also gives the token count)
+- the table contains all executed commands. ThinkTime denotes the time that was needed to generate the command (Tokens show the token count for the prompt and its response). StateUpdTime shows the time that was needed to generate a new state (the next column also gives the token count)
 - "What does the LLM know about the system?" gives an LLM generated list of system facts. To generate it, it is given the latest executed command (and it's output) as well as the current list of system facts. This is the operation which time/token usage is shown in the overview table as StateUpdTime/StateUpdTokens. As the state update takes forever, this is disabled by default and has to be enabled through a command line switch.
 - Then the next round starts. The next given command (`sudo tar`) will lead to a pwn'd system BTW.
 

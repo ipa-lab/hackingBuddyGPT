@@ -1,12 +1,14 @@
 # HackingBuddyGPT
 
-## About
+This is a small python script that I use to prototype some potential use-cases when integrating large language models, such as GPT-3.5-turbo or GPT-4, with security-related tasks.
 
-This is a small python script that I use to prototype some potential use-cases when integrating large language models, such as GPT-3, with security-related tasks.
+What is it doing? it uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
 
-What is it doing? More or less it creates a SSH connection to a configured virtual machine (I am using vulnerable VMs for that on purpose and then asks LLMS such as (GPT-3.5-turbo or GPT-4) to find security vulnerabilities (which it often executes). Evicts a bit of an eerie feeling for me.
+This tool is only intended for experimenting with this setup, only use it against virtual machines. Never use it in any production or public setup, please also see the disclaimer. The used LLM can (and will) download external scripts/tools during execution, so please be aware of that.
 
-Current features:
+For information about its implemenation, please see our [implemenation notes](docs/implementation_notes.md). All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
+
+## Current features:
 
 - connects over SSH (linux targets) or SMB/PSExec (windows targets)
 - supports multiple openai models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
@@ -16,7 +18,7 @@ Current features:
 - automatic (very rough) root detection
 - can limit rounds (how often the LLM will be asked for a new command)
 
-### Vision Paper
+## Vision Paper
 
 hackingBuddyGPT is described in the paper [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121).
 
@@ -24,7 +26,7 @@ If you cite this repository/paper, please use:
 
 ~~~ bibtex
 @inproceedings{getting_pwned,
-author = {Happe, Andreas and Jürgen, Cito},
+author = {Happe, Andreas and Cito, Jürgen},
 title = {Getting pwn’d by AI: Penetration Testing with Large Language Models},
 year = {2023},
 publisher = {Association for Computing Machinery},
@@ -39,11 +41,9 @@ series = {ESEC/FSE 2023}
 }
 ~~~
 
-# Example runs
+## Example run
 
-- more can be seen at [history notes](docs/history_notes.md)
-
-## updated version using GPT-4
+This is a simple example run of `wintermute.py` using GPT-4 against a vulnerable VM. More example runs can be seen in [our collection of historic runs](docs/old_runs/old_runs.md).
 
 This happened during a recent run:
 
@@ -57,13 +57,7 @@ Some things to note:
 - "What does the LLM know about the system?" gives an LLM generated list of system facts. To generate it, it is given the latest executed command (and it's output) as well as the current list of system facts. This is the operation which time/token usage is shown in the overview table as StateUpdTime/StateUpdTokens. As the state update takes forever, this is disabled by default and has to be enabled through a command line switch.
 - Then the next round starts. The next given command (`sudo tar`) will lead to a pwn'd system BTW.
 
-## High-Level Description
-
-This tool uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalatation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
-
-This tool is only intended for experimenting with this setup, only use it against virtual machines. Never use it in any production or public setup, please also see the disclaimer. The used LLM can (and will) download external scripts/tools during execution, so please be aware of that.
-
-## Setup
+## Setup and Usage
 
 You'll need:
 
@@ -93,7 +87,7 @@ $ cp .env.example .env
 $ vi .env
 ~~~
 
-## Usage
+### Usage
 
 It's just a simple python script, so..
 
@@ -102,21 +96,13 @@ It's just a simple python script, so..
 $ python wintermute.py
 ~~~
 
-## Overview of the script
-
-It's quite minimal, see `wintermute.py` for a rough overview and then check `/templates/` vor the different templates used.
-
-The script uses `fabric` to do the SSH-connection. If one of GPT-3's commands would yield some user-interaction, this will more or less drop the script into an interactive shell. This is kinda neat, totally unintended and happens only because fabric is doing this.
-
-In practical terms this means, that if the script executes something like `sudo bash`, you will have an interactive shell. If it executes `vi file.txt`, you will be in an interactive shell. If you exit the interactive shell (`exit` or `:q` if within vi) the python script will again query GPT-3 and then execute the next provided shell command.
-
 # Disclaimers
 
 Please note and accept all of them.
 
 ### Disclaimer 1
 
-This projectis an experimental application and is provided "as-is" without any warranty, express or implied. By using this software, you agree to assume all risks associated with its use, including but not limited to data loss, system failure, or any other issues that may arise.
+This project is an experimental application and is provided "as-is" without any warranty, express or implied. By using this software, you agree to assume all risks associated with its use, including but not limited to data loss, system failure, or any other issues that may arise.
 
 The developers and contributors of this project do not accept any responsibility or liability for any losses, damages, or other consequences that may occur as a result of using this software. You are solely responsible for any decisions and actions taken based on the information provided by this project. 
 

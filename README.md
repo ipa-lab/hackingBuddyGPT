@@ -6,16 +6,16 @@ What is it doing? it uses SSH to connect to a (presumably) vulnerable virtual ma
 
 This tool is only intended for experimenting with this setup, only use it against virtual machines. Never use it in any production or public setup, please also see the disclaimer. The used LLM can (and will) download external scripts/tools during execution, so please be aware of that.
 
-For information about its implemenation, please see our [implemenation notes](docs/implementation_notes.md). All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
+For information about its implementation, please see our [implementation notes](docs/implementation_notes.md). All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
 
 ## Current features:
 
 - connects over SSH (linux targets) or SMB/PSExec (windows targets)
-- supports multiple openai models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
+- supports OpenAI REST-API compatible models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
 - supports locally running LLMs
 - beautiful console output
-- log storage in sqlite either into a file or in-memory
-- automatic (very rough) root detection
+- logs run data through sqlite either into a file or in-memory
+- automatic root detection
 - can limit rounds (how often the LLM will be asked for a new command)
 
 ## Vision Paper
@@ -25,27 +25,36 @@ hackingBuddyGPT is described in the paper [Getting pwn'd by AI: Penetration Test
 If you cite this repository/paper, please use:
 
 ~~~ bibtex
-@inproceedings{getting_pwned,
-author = {Happe, Andreas and Cito, Jürgen},
-title = {Getting pwn’d by AI: Penetration Testing with Large Language Models},
-year = {2023},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/3611643.3613083},
-doi = {10.1145/3611643.3613083},
-booktitle = {Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
-numpages = {5},
-keywords = {machine learning, penetration testing},
-location = {San Francisco, USA},
-series = {ESEC/FSE 2023}
+@inproceedings{Happe_2023, series={ESEC/FSE ’23},
+   title={Getting pwn’d by AI: Penetration Testing with Large Language Models},
+   url={http://dx.doi.org/10.1145/3611643.3613083},
+   DOI={10.1145/3611643.3613083},
+   booktitle={Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
+   publisher={ACM},
+   author={Happe, Andreas and Cito, Jürgen},
+   year={2023},
+   month=nov, collection={ESEC/FSE ’23}
+}
+~~~
+
+This work is partially based upon our empiric research into [how hackers work](https://arxiv.org/abs/2308.07057):
+
+~~~ bibtex
+@inproceedings{Happe_2023, series={ESEC/FSE ’23},
+   title={Understanding Hackers’ Work: An Empirical Study of Offensive Security Practitioners},
+   url={http://dx.doi.org/10.1145/3611643.3613900},
+   DOI={10.1145/3611643.3613900},
+   booktitle={Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
+   publisher={ACM},
+   author={Happe, Andreas and Cito, Jürgen},
+   year={2023},
+   month=nov, collection={ESEC/FSE ’23}
 }
 ~~~
 
 ## Example run
 
 This is a simple example run of `wintermute.py` using GPT-4 against a vulnerable VM. More example runs can be seen in [our collection of historic runs](docs/old_runs/old_runs.md).
-
-This happened during a recent run:
 
 ![Example wintermute run](example_run_gpt4.png)
 
@@ -59,14 +68,13 @@ Some things to note:
 
 ## Setup and Usage
 
-You'll need:
+We try to keep our python dependencies as light as possible. This should allow for easier experimentation. To run the main priv-escalation program (which is called `wintermute`) together with an OpenAI-based model you need:
 
-1. a vulnerable virtual machine, I am currenlty using [Lin.Security.1](https://www.vulnhub.com/entry/linsecurity-1,244/) as a target.
-    - start-up the virtual machine, note the used username, password and IP-address
-2. an OpenAI API account, you can find the needed keys [in your account page](https://platform.openai.com/account/api-keys)
+1. an OpenAI API account, you can find the needed keys [in your account page](https://platform.openai.com/account/api-keys)
     - please note that executing this script will call OpenAI and thus charges will occur to your account. Please keep track of those.
+2. a potential target that is accessible over SSH. You can either use a deliberately vulnerable machine such as [Lin.Security.1](https://www.vulnhub.com/entry/) or a security benchmark such as our [own priv-esc benchmark](https://github.com/ipa-lab/hacking-benchmark).
 
-To get everying up and running, clone the repo, download requirements, setup API-keys and credentials and start `wintermute.py`:
+To get everything up and running, clone the repo, download requirements, setup API-keys and credentials and start `wintermute.py`:
 
 ~~~ bash
 # clone the repository
@@ -85,14 +93,8 @@ $ cp .env.example .env
 
 # IMPORTANT: setup your OpenAI API key, the VM's IP and credentials within .env
 $ vi .env
-~~~
 
-### Usage
-
-It's just a simple python script, so..
-
-~~~ bash
-# start wintermute
+# start wintermute, i.e., attack the configured virtual machine
 $ python wintermute.py
 ~~~
 

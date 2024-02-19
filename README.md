@@ -1,12 +1,12 @@
 # HackingBuddyGPT
 
-This is a small python script that I use to prototype some potential use-cases when integrating large language models, such as GPT-3.5-turbo or GPT-4, with security-related tasks.
+How can LLMs aid or even emulate hackers? Threat actors are already using LLMs, so we need to create testbeds and ground truth for whitehats to learn and prepare. Currently we are using linux privilege escalation attacks as test use-case, but we are branching out into web-security and Active Directory testing too.
 
-What is it doing? it uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
+How are we doing this? We are providng testbeds as well as tools. The initial tool `wintermute` targets linux priv-esc attacks. It uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
 
 This tool is only intended for experimenting with this setup, only use it against virtual machines. Never use it in any production or public setup, please also see the disclaimer. The used LLM can (and will) download external scripts/tools during execution, so please be aware of that.
 
-For information about its implementation, please see our [implementation notes](docs/implementation_notes.md). All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
+We release all tooling, testbeds and findings as open-source as this is the only way that comprehensive information will find their way to defenders. APTs have access to more sophisticated resources, so we are only leveling the playing field for blue teams. For information about the implementation, please see our [implementation notes](docs/implementation_notes.md). All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
 
 ## Current features:
 
@@ -18,11 +18,9 @@ For information about its implementation, please see our [implementation notes](
 - automatic root detection
 - can limit rounds (how often the LLM will be asked for a new command)
 
-## Vision Paper
+## Academic Research/Expsoure
 
-hackingBuddyGPT is described in the paper [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121).
-
-If you cite this repository/paper, please use:
+hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121):
 
 ~~~ bibtex
 @inproceedings{Happe_2023, series={ESEC/FSE ’23},
@@ -34,6 +32,19 @@ If you cite this repository/paper, please use:
    author={Happe, Andreas and Cito, Jürgen},
    year={2023},
    month=nov, collection={ESEC/FSE ’23}
+}
+~~~
+
+Preliminary results for the linux privilege escalation use-case can be found in [Evaluating LLMs for Privilege-Escalation Scenarios](https://arxiv.org/abs/2310.11409):
+
+~~~ bibtex
+@misc{happe2023evaluating,
+      title={Evaluating LLMs for Privilege-Escalation Scenarios}, 
+      author={Andreas Happe and Aaron Kaplan and Jürgen Cito},
+      year={2023},
+      eprint={2310.11409},
+      archivePrefix={arXiv},
+      primaryClass={cs.CR}
 }
 ~~~
 

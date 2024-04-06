@@ -67,7 +67,7 @@ This work is partially based upon our empiric research into [how hackers work](h
 
 This is a simple example run of `wintermute.py` using GPT-4 against a vulnerable VM. More example runs can be seen in [our collection of historic runs](docs/old_runs/old_runs.md).
 
-![Example wintermute run](example_run_gpt4.png)
+![Example wintermute run](docs/example_run_gpt4.png)
 
 Some things to note:
 
@@ -105,8 +105,13 @@ $ cp .env.example .env
 # IMPORTANT: setup your OpenAI API key, the VM's IP and credentials within .env
 $ vi .env
 
-# start wintermute, i.e., attack the configured virtual machine
+# if you start wintermute without parameters, it will list all available use cases
 $ python wintermute.py
+usage: wintermute.py [-h] {linux_privesc,windows privesc} ...
+wintermute.py: error: the following arguments are required: {linux_privesc,windows privesc}
+
+# start wintermute, i.e., attack the configured virtual machine
+$ python wintermute.py linux_privesc --enable_explanation true --enable_update_state true
 ~~~
 
 # Disclaimers

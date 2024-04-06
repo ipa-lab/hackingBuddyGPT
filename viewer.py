@@ -3,7 +3,7 @@
 import argparse
 import os
 
-from db_storage import DbStorage
+from utils.db_storage import DbStorage
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table

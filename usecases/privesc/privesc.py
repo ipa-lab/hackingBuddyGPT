@@ -13,7 +13,9 @@ from usecases.usecase import use_case, UseCase
 from usecases.usecase.roundbased import RoundBasedUseCase
 
 template_dir = pathlib.Path(__file__).parent / "templates"
-
+template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
+template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
+template_state = Template(filename=str(template_dir / "update_state.txt"))
 
 @dataclass
 class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
@@ -91,7 +93,7 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
 
     def get_next_command(self):
         state_size = self.get_state_size()
-        template_size = self.llm.count_tokens(self.get_next_command_template().source)
+        template_size = self.llm.count_tokens(template_next_cmd.source)
 
         history = ''
         if not self.disable_history:
@@ -103,7 +105,7 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
             allowed = self.llm.context_size - llm_util.SAFETY_MARGIN - state_size - template_size
             history = llm_util.trim_result_front(self.llm, allowed, result)
 
-        cmd = self.llm.get_response(self.get_next_command_template(), _capabilities=self._capabilities, history=history, state=self._state, conn=self.conn, system=self.system, update_state=self.enable_update_state, target_user="root", hint=self._hint)
+        cmd = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, state=self._state, conn=self.conn, system=self.system, update_state=self.enable_update_state, target_user="root", hint=self._hint)
         cmd.result = llm_util.cmd_output_fixer(cmd.result)
         return cmd
 
@@ -113,7 +115,7 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
 
         # ugly, but cut down result to fit context size
         result = llm_util.trim_result_front(self.llm, target_size, result)
-        return self.llm.get_response(self.get_analyze_template(), cmd=cmd, resp=result, facts=self._state)
+        return self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state)
 
     def update_state(self, cmd, result):
         # ugly, but cut down result to fit context size
@@ -123,19 +125,9 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
         target_size = ctx - llm_util.SAFETY_MARGIN - state_size
         result = llm_util.trim_result_front(self.llm, target_size, result)
 
-        result = self.llm.get_response(self.get_update_state_template(), cmd=cmd, resp=result, facts=self._state)
+        result = self.llm.get_response(template_state, cmd=cmd, resp=result, facts=self._state)
         self._state = result.result
         return result
-
-    def get_next_command_template(self):
-        return Template(filename=str(template_dir / "query_next_command.txt"))
-
-    def get_analyze_template(self):
-        return Template(filename=str(template_dir / "analyze_cmd.txt"))
-
-    def get_update_state_template(self):
-        return Template(filename=str(template_dir / "update_state.txt"))
-
 
 @use_case("linux_privesc", "Linux Privilege Escalation")
 @dataclass

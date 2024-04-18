@@ -11,6 +11,7 @@ from capabilities import Capability, SSHRunCommand, SSHTestCredential, PSExecRun
 from utils import SSHConnection, PSExecConnection, llm_util, ui
 from usecases.usecase import use_case, UseCase
 from usecases.usecase.roundbased import RoundBasedUseCase
+from utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent / "templates"
 template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
@@ -25,7 +26,8 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
     enable_update_state: bool = False
     disable_history: bool = False
     hints: str = ""
-
+    
+    _sliding_history: SlidingCliHistory = None
     _state: str = ""
     _hint: str = None
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
@@ -43,6 +45,9 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
                         self.console.print(f"[bold green]Using the following hint: '{self._hint}'")
             except:
                 self.console.print("[yellow]Was not able to load hint file")
+        
+        if self.disable_history == False:
+            self._sliding_history = SlidingCliHistory(self.llm)
 
     def perform_round(self, turn):
         got_root : bool = False
@@ -60,6 +65,8 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
 
         # log and output the command and its result
         self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
+        if self._sliding_history:
+            self._sliding_history.add_command(cmd, result)
         self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
         # analyze the result..
@@ -98,13 +105,7 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
 
         history = ''
         if not self.disable_history:
-            result: str = ""
-            for itm in self.log_db.get_cmd_history(self._run_id):
-                result += f"$ {itm[0]}\n{itm[1]}"
-
-            # trim it down if too large
-            allowed = self.llm.context_size - llm_util.SAFETY_MARGIN - state_size - template_size
-            history = llm_util.trim_result_front(self.llm, allowed, result)
+            history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - state_size - template_size)
 
         cmd = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, state=self._state, conn=self.conn, system=self.system, update_state=self.enable_update_state, target_user="root", hint=self._hint)
         cmd.result = llm_util.cmd_output_fixer(cmd.result)

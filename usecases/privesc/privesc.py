@@ -18,7 +18,7 @@ template_dir = pathlib.Path(__file__).parent / "templates"
 @dataclass
 class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
 
-    system: str
+    system: str = ''
     enable_explanation: bool = False
     enable_update_state: bool = False
     disable_history: bool = False
@@ -149,7 +149,7 @@ class LinuxPrivesc(Privesc):
         self._capabilities["test_credential"] = SSHTestCredential(conn=self.conn)
 
 
-@use_case("windows privesc", "Windows Privilege Escalation")
+@use_case("windows_privesc", "Windows Privilege Escalation")
 @dataclass
 class WindowsPrivesc(Privesc):
     conn: PSExecConnection = None

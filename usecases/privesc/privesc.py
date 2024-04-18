@@ -8,36 +8,30 @@ from mako.template import Template
 from rich.panel import Panel
 
 from capabilities import Capability, SSHRunCommand, SSHTestCredential, PSExecRunCommand, PSExecTestCredential
-from utils.openai.openai_llm import OpenAIConnection
-from utils import SSHConnection, Console, DbStorage, PSExecConnection, llm_util, ui
+from utils import SSHConnection, PSExecConnection, llm_util, ui
 from usecases.usecase import use_case, UseCase
+from usecases.usecase.roundbased import RoundBasedUseCase
 
 template_dir = pathlib.Path(__file__).parent / "templates"
 
 
 @dataclass
-class Privesc(UseCase, abc.ABC):
-    log_db: DbStorage
-    console: Console
+class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
+
     system: str
-    llm: OpenAIConnection = None
     enable_explanation: bool = False
     enable_update_state: bool = False
     disable_history: bool = False
-    max_turns: int = 10
-    tag: str = ""
     hints: str = ""
 
     _state: str = ""
-    _run_id: int = 0
     _hint: str = None
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
 
     def init(self):
         super().init()
 
-        self._run_id = self.log_db.create_new_run(self.llm.model, self.llm.context_size, self.tag)
-
+    def setup(self):
         if self.hints != "":
             try:
                 with open(self.hints, "r") as hint_file:
@@ -48,58 +42,46 @@ class Privesc(UseCase, abc.ABC):
             except:
                 self.console.print("[yellow]Was not able to load hint file")
 
-    def run(self):
-        turn = 1
-        got_root = False
-        while turn <= self.max_turns and not got_root:
-            self.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
-            with self.console.status("[bold green]Asking LLM for a new command..."):
-                answer = self.get_next_command()
-            cmd = answer.result
+    def perform_round(self, turn):
+        got_root : bool = False
 
-            with self.console.status("[bold green]Executing that command..."):
-                if answer.result.startswith("test_credential"):
-                    result, got_root = self._capabilities["test_credential"](cmd)
-                else:
-                    self.console.print(Panel(answer.result, title=f"[bold cyan]Got command from LLM:"))
-                    result, got_root = self._capabilities["run_command"](cmd)
+        with self.console.status("[bold green]Asking LLM for a new command..."):
+            answer = self.get_next_command()
+        cmd = answer.result
 
-            self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
+        with self.console.status("[bold green]Executing that command..."):
+            if answer.result.startswith("test_credential"):
+                result, got_root = self._capabilities["test_credential"](cmd)
+            else:
+                self.console.print(Panel(answer.result, title=f"[bold cyan]Got command from LLM:"))
+                result, got_root = self._capabilities["run_command"](cmd)
 
-            # output the command and its result
-            self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+        self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
 
-            # analyze the result..
-            if self.enable_explanation:
-                with self.console.status("[bold green]Analyze its result..."):
-                    answer = self.analyze_result(cmd, result)
-                    self.log_db.add_log_analyze_response(self._run_id, turn, cmd, answer.result, answer)
+        # output the command and its result
+        self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
-            # .. and let our local model representation update its state
-            if self.enable_update_state:
-                # this must happen before the table output as we might include the
-                # status processing time in the table..
-                with self.console.status("[bold green]Updating fact list.."):
-                    state = self.update_state(cmd, result)
-                    self.log_db.add_log_update_state(self._run_id, turn, "", state.result, state)
+        # analyze the result..
+        if self.enable_explanation:
+            with self.console.status("[bold green]Analyze its result..."):
+                answer = self.analyze_result(cmd, result)
+                self.log_db.add_log_analyze_response(self._run_id, turn, cmd, answer.result, answer)
 
-            # Output Round Data
-            self.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self._run_id, self.log_db, turn))
+        # .. and let our local model representation update its state
+        if self.enable_update_state:
+            # this must happen before the table output as we might include the
+            # status processing time in the table..
+            with self.console.status("[bold green]Updating fact list.."):
+                state = self.update_state(cmd, result)
+                self.log_db.add_log_update_state(self._run_id, turn, "", state.result, state)
 
-            if self.enable_update_state:
-                self.console.print(Panel(self._state, title="What does the LLM Know about the system?"))
+        # Output Round Data
+        self.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self._run_id, self.log_db, turn))
 
-            # finish turn and commit logs to storage
-            self.log_db.commit()
-            turn += 1
+        if self.enable_update_state:
+            self.console.print(Panel(self._state, title="What does the LLM Know about the system?"))
 
-        # write the final result to the database and console
-        if got_root:
-            self.log_db.run_was_success(self._run_id, turn)
-            self.console.print(Panel("[bold green]Got Root!", title="Run finished"))
-        else:
-            self.log_db.run_was_failure(self._run_id, turn)
-            self.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
+        return got_root
 
     def get_state_size(self):
         if self.enable_update_state:
@@ -144,7 +126,6 @@ class Privesc(UseCase, abc.ABC):
         result = self.llm.get_response(self.get_update_state_template(), cmd=cmd, resp=result, facts=self._state)
         self._state = result.result
         return result
-
 
     def get_next_command_template(self):
         return Template(filename=str(template_dir / "query_next_command.txt"))

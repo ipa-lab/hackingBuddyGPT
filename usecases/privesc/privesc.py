@@ -58,9 +58,8 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
                 self.console.print(Panel(answer.result, title=f"[bold cyan]Got command from LLM:"))
                 result, got_root = self._capabilities["run_command"](cmd)
 
+        # log and output the command and its result
         self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
-
-        # output the command and its result
         self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
         # analyze the result..
@@ -69,7 +68,7 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
                 answer = self.analyze_result(cmd, result)
                 self.log_db.add_log_analyze_response(self._run_id, turn, cmd, answer.result, answer)
 
-        # .. and let our local model representation update its state
+        # .. and let our local model update its state
         if self.enable_update_state:
             # this must happen before the table output as we might include the
             # status processing time in the table..
@@ -77,12 +76,14 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
                 state = self.update_state(cmd, result)
                 self.log_db.add_log_update_state(self._run_id, turn, "", state.result, state)
 
-        # Output Round Data
+        # Output Round Data..
         self.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self._run_id, self.log_db, turn))
 
+        # .. and output the updated state
         if self.enable_update_state:
             self.console.print(Panel(self._state, title="What does the LLM Know about the system?"))
 
+        # if we got root, we can stop the loop
         return got_root
 
     def get_state_size(self):

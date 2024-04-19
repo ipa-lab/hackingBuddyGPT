@@ -106,7 +106,7 @@ class LinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
         return cmd
 ~~~
 
-## Academic Research/Expsoure
+## Academic Research/Exposure
 
 hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121):
 

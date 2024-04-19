@@ -60,7 +60,7 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
             if answer.result.startswith("test_credential"):
                 result, got_root = self._capabilities["test_credential"](cmd)
             else:
-                self.console.print(Panel(answer.result, title=f"[bold cyan]Got command from LLM:"))
+                self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
                 result, got_root = self._capabilities["run_command"](cmd)
 
         # log and output the command and its result

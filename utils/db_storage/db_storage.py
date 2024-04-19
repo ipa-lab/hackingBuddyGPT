@@ -1,11 +1,11 @@
 import sqlite3
 
-from utils.configurable import configurable
+from utils.configurable import configurable, parameter
 
 
 @configurable("db_storage", "Stores the results of the experiments in a SQLite database")
 class DbStorage:
-    def __init__(self, connection_string: str = ":memory:"):
+    def __init__(self, connection_string: str = parameter(desc="sqlite3 database connection string for logs", default=":memory:")):
         self.connection_string = connection_string
 
     def init(self):

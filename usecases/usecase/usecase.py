@@ -3,7 +3,7 @@ import argparse
 from dataclasses import dataclass
 from typing import Dict, Type
 
-from utils.configurable import get_parameters, ParameterDefinitions, build_parser, get_arguments
+from utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters
 
 
 class UseCase(abc.ABC):
@@ -66,7 +66,7 @@ def use_case(name: str, desc: str):
     def inner(cls: Type[UseCase]):
         if name in use_cases:
             raise IndexError(f"Use case with name {name} already exists")
-        use_cases[name] = _WrappedUseCase(name, desc, cls, get_parameters(cls.__init__, name))
+        use_cases[name] = _WrappedUseCase(name, desc, cls, get_class_parameters(cls, name))
 
         return cls
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import tiktoken
 
-from utils.configurable import configurable
+from utils.configurable import configurable, parameter
 from utils.llm_util import LLMResult, LLM
 
 
@@ -20,13 +20,13 @@ class OpenAIConnection(LLM):
     If you really must use it, you can import it directly from the utils.openai.openai_llm module, which will later on
     show you, that you did not specialize yet.
     """
-    api_key: str
-    model: str
-    context_size: int
-    api_url: str = "https://api.openai.com"
-    api_timeout: int = 240
-    api_backoff: int = 60
-    api_retries: int = 3
+    api_key: str = parameter(desc="OpenAI API Key")
+    model: str = parameter(desc="OpenAI model name")
+    context_size: int = parameter(desc="Maximum context size for the model, only used internally for things like trimming to the context size")
+    api_url: str = parameter(desc="URL of the OpenAI API", default="https://api.openai.com")
+    api_timeout: int = parameter(desc="Timeout for the API request", default=240)
+    api_backoff: int = parameter(desc="Backoff time in seconds when running into rate-limits", default=60)
+    api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=3)
 
     def get_response(self, prompt, *, retry: int = 0, **kwargs) -> LLMResult:
         if retry >= self.api_retries:

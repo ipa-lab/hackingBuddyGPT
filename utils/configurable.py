@@ -1,4 +1,5 @@
 import argparse
+import dataclasses
 import inspect
 import os
 from dataclasses import dataclass
@@ -10,6 +11,16 @@ from typing import Type
 
 
 load_dotenv()
+
+
+def parameter(*, desc: str, default=dataclasses.MISSING, init: bool = True, repr: bool = True, hash=None,
+              compare: bool = True, metadata: Dict = None, kw_only: bool = dataclasses.MISSING) -> dataclasses.Field:
+    if metadata is None:
+        metadata = dict()
+    metadata["desc"] = desc
+
+    return dataclasses.field(default=default, default_factory=dataclasses.MISSING, init=init, repr=repr, hash=hash,
+                             compare=compare, metadata=metadata, kw_only=kw_only)
 
 
 def get_default(key, default):
@@ -24,12 +35,14 @@ class ParameterDefinition:
     name: str
     type: Type
     default: Any
+    description: str
 
     def parser(self, basename: str, parser: argparse.ArgumentParser):
         name = f"{basename}{self.name}"
         default = get_default(name, self.default)
 
-        parser.add_argument(f"--{name}", type=self.type, default=default, required=default is None)
+        parser.add_argument(f"--{name}", type=self.type, default=default, required=default is None,
+                            help=self.description)
 
     def get(self, basename: str, args: argparse.Namespace):
         return getattr(args, f"{basename}{self.name}")
@@ -62,7 +75,18 @@ class ComplexParameterDefinition(ParameterDefinition):
         return parameter
 
 
-def get_parameters(fun, basename: str) -> ParameterDefinitions:
+def get_class_parameters(cls, name: str = None, fields: Dict[str, dataclasses.Field] = None) -> ParameterDefinitions:
+    if name is None:
+        name = cls.__name__
+    if fields is None and hasattr(cls, "__dataclass_fields__"):
+        fields = cls.__dataclass_fields__
+    return get_parameters(cls.__init__, name, fields)
+
+
+def get_parameters(fun, basename: str, fields: Dict[str, dataclasses.Field] = None) -> ParameterDefinitions:
+    if fields is None:
+        fields = dict()
+
     sig = inspect.signature(fun)
     params: ParameterDefinitions = {}
     for name, param in sig.parameters.items():
@@ -73,13 +97,27 @@ def get_parameters(fun, basename: str) -> ParameterDefinitions:
             raise ValueError(f"Parameter {name} of {basename}.{fun.__name__} must have a type annotation")
 
         default = param.default if param.default != inspect.Parameter.empty else None
+        description = None
+        type = param.annotation
 
-        if hasattr(param.annotation, "__parameters__"):
-            params[name] = ComplexParameterDefinition(name, param.annotation, default, get_parameters(param.annotation, f"{basename}.{fun.__name__}"))
-        elif param.annotation in (str, int, bool):
-            params[name] = ParameterDefinition(name, param.annotation, default)
+        field = None
+        if isinstance(default, dataclasses.Field):
+            field = default
+            default = field.default
+        elif name in fields:
+            field = fields[name]
+
+        if field is not None:
+            description = field.metadata.get("desc", None)
+            if field.type is not None:
+                type = field.type
+
+        if hasattr(type, "__parameters__"):
+            params[name] = ComplexParameterDefinition(name, type, default, description, get_class_parameters(type, f"{basename}.{fun.__name__}"))
+        elif type in (str, int, bool):
+            params[name] = ParameterDefinition(name, type, default, description)
         else:
-            raise ValueError(f"Parameter {name} of {basename}.{fun.__name__} must have str, int, bool, or a __parameters__ class as type, not {param.annotation}")
+            raise ValueError(f"Parameter {name} of {basename}.{fun.__name__} must have str, int, bool, or a __parameters__ class as type, not {type}")
 
     return params
 
@@ -106,7 +144,7 @@ def configurable(service_name: str, service_desc: str):
         cls.name = service_name
         cls.description = service_desc
         cls.__service__ = True
-        cls.__parameters__ = get_parameters(cls.__init__, cls.__name__)
+        cls.__parameters__ = get_class_parameters(cls)
 
         return cls
 

@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import argparse
-import os
 
 from utils.db_storage import DbStorage
 from rich.console import Console
@@ -50,8 +49,8 @@ round : int = 0
 # read run data
 
 run = db.get_run_data(run_id)
-while run != None:
-    if run[4] == None:
+while run is not None:
+    if run[4] is None:
         console.print(Panel(f"run: {run[0]}/{run[1]}\ntest: {run[2]}\nresult: {run[3]}", title="Run Data"))
     else:
         console.print(Panel(f"run: {run[0]}/{run[1]}\ntest: {run[2]}\nresult: {run[3]} after {run[4]} rounds", title="Run Data"))

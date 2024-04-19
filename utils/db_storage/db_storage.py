@@ -62,7 +62,7 @@ class DbStorage:
 
     def add_log_update_state(self, run_id, round, cmd, result, answer):
 
-        if answer != None:
+        if answer is not None:
             self.cursor.execute(
                 "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (run_id, round, self.state_update_id, cmd, result, answer.duration, answer.tokens_query,
@@ -102,14 +102,14 @@ class DbStorage:
 
     def get_max_round_for(self, run_id):
         run = self.cursor.execute("select max(round) from queries where run_id = ?", (run_id,)).fetchone()
-        if run != None:
+        if run is not None:
             return run[0]
         else:
             return None
 
     def get_run_data(self, run_id):
         run = self.cursor.execute("select * from runs where id = ?", (run_id,)).fetchone()
-        if run != None:
+        if run is not None:
             return run[1], run[2], run[4], run[3], run[7], run[8]
         else:
             return None

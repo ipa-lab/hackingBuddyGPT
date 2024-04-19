@@ -72,7 +72,6 @@ def cmd_output_fixer(cmd: str) -> str:
 
     return cmd
 
-
 # this is ugly, but basically we only have an approximation how many tokens
 # we are currently using. So we cannot just cut down to the desired size
 # what we're doing is:

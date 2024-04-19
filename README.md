@@ -1,14 +1,32 @@
 # HackingBuddyGPT
 
-How can LLMs aid or even emulate hackers? Threat actors are already using LLMs, so we need to create testbeds and ground truth for whitehats to learn and prepare. Currently we are using linux privilege escalation attacks as test use-case, but we are branching out into web-security and Active Directory testing too.
+How can LLMs aid or even emulate hackers? Threat actors are [already using LLMs](https://arxiv.org/abs/2307.00691),
+creating the danger that defenders will not be prepared for this new threat.
 
-How are we doing this? We are providng testbeds as well as tools. The initial tool `wintermute` targets linux priv-esc attacks. It uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
+We aim to become **THE** framework for testing LLM-based agents for security testing.
+To create common ground truth, we strive to create common security testbeds and
+benchmarks, evaluate multiple LLMs and techniques against those, and publish our
+prototypes and findings as open-source/open-access reports.
 
-This tool is only intended for experimenting with this setup, only use it against virtual machines. Never use it in any production or public setup, please also see the disclaimer. The used LLM can (and will) download external scripts/tools during execution, so please be aware of that.
+We strive to make our code-base as accessible as possible to allow for easy experimentation.
+Our experiments are structured into `use-cases`, e.g., privilege escalation attacks. A researcher
+wanting to create a new experiment would just create a new use-case that mostly consists
+of the control loop and corresponding prompt templates. We provide multiple helper and base
+classes, so that a new experiment can be implemented in a few dozens lines of code as
+connecting to the LLM, logging, etc. is taken care of by our framework. For further information (esp. if you want to contribute use-cases), please take a look at [docs/use_case.md](docs/use_case.md).
+
+
+Our initial forays were focused upon evaluating the efficiency of LLMs for [linux
+privilege escalation attacks](https://arxiv.org/abs/2310.11409) and we are currently breaching out into evaluation
+the use of LLMs for web penetration-testing and web api testing.
 
 We release all tooling, testbeds and findings as open-source as this is the only way that comprehensive information will find their way to defenders. APTs have access to more sophisticated resources, so we are only leveling the playing field for blue teams. For information about the implementation, please see our [implementation notes](docs/implementation_notes.md). All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
 
-## Current features:
+## Privilege Escalation Attacks
+
+How are we doing this? The initial tool `wintermute` targets linux priv-esc attacks. It uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
+
+### Current features (wintermute):
 
 - connects over SSH (linux targets) or SMB/PSExec (windows targets)
 - supports OpenAI REST-API compatible models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
@@ -17,6 +35,21 @@ We release all tooling, testbeds and findings as open-source as this is the only
 - logs run data through sqlite either into a file or in-memory
 - automatic root detection
 - can limit rounds (how often the LLM will be asked for a new command)
+
+### Example run
+
+This is a simple example run of `wintermute.py` using GPT-4 against a vulnerable VM. More example runs can be seen in [our collection of historic runs](docs/old_runs/old_runs.md).
+
+![Example wintermute run](docs/example_run_gpt4.png)
+
+Some things to note:
+
+- initially the current configuration is output. Yay, so many colors!
+- "Got command from LLM" shows the generated command while the panel afterwards has the given command as title and the command's output as content.
+- the table contains all executed commands. ThinkTime denotes the time that was needed to generate the command (Tokens show the token count for the prompt and its response). StateUpdTime shows the time that was needed to generate a new state (the next column also gives the token count)
+- "What does the LLM know about the system?" gives an LLM generated list of system facts. To generate it, it is given the latest executed command (and it's output) as well as the current list of system facts. This is the operation which time/token usage is shown in the overview table as StateUpdTime/StateUpdTokens. As the state update takes forever, this is disabled by default and has to be enabled through a command line switch.
+- Then the next round starts. The next given command (`sudo tar`) will lead to a pwn'd system BTW.
+
 
 ## Academic Research/Expsoure
 
@@ -62,20 +95,6 @@ This work is partially based upon our empiric research into [how hackers work](h
    month=nov, collection={ESEC/FSE ’23}
 }
 ~~~
-
-## Example run
-
-This is a simple example run of `wintermute.py` using GPT-4 against a vulnerable VM. More example runs can be seen in [our collection of historic runs](docs/old_runs/old_runs.md).
-
-![Example wintermute run](docs/example_run_gpt4.png)
-
-Some things to note:
-
-- initially the current configuration is output. Yay, so many colors!
-- "Got command from LLM" shows the generated command while the panel afterwards has the given command as title and the command's output as content.
-- the table contains all executed commands. ThinkTime denotes the time that was needed to generate the command (Tokens show the token count for the prompt and its response). StateUpdTime shows the time that was needed to generate a new state (the next column also gives the token count)
-- "What does the LLM know about the system?" gives an LLM generated list of system facts. To generate it, it is given the latest executed command (and it's output) as well as the current list of system facts. This is the operation which time/token usage is shown in the overview table as StateUpdTime/StateUpdTokens. As the state update takes forever, this is disabled by default and has to be enabled through a command line switch.
-- Then the next round starts. The next given command (`sudo tar`) will lead to a pwn'd system BTW.
 
 ## Setup and Usage
 

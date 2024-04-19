@@ -114,6 +114,10 @@ wintermute.py: error: the following arguments are required: {linux_privesc,windo
 $ python wintermute.py linux_privesc --enable_explanation true --enable_update_state true
 ~~~
 
+## Contribution
+
+If you want to contribute additional use-cases, please take a look at [docs/use_case.md](docs/use_case.md) for a start on how to extend this codebase.
+
 # Disclaimers
 
 Please note and accept all of them.

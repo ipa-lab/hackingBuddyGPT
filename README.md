@@ -50,6 +50,61 @@ Some things to note:
 - "What does the LLM know about the system?" gives an LLM generated list of system facts. To generate it, it is given the latest executed command (and it's output) as well as the current list of system facts. This is the operation which time/token usage is shown in the overview table as StateUpdTime/StateUpdTokens. As the state update takes forever, this is disabled by default and has to be enabled through a command line switch.
 - Then the next round starts. The next given command (`sudo tar`) will lead to a pwn'd system BTW.
 
+## Create your own use-case (agent)
+
+The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and is able to connect to a linux target over SSH for fully-autonomous command execution (as well as password guessing).
+
+~~~ python
+template_dir = pathlib.Path(__file__).parent / "templates"
+template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
+
+@use_case("linux_privesc", "Linux Privilege Escalation")
+@dataclass
+class LinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
+
+    system: str = 'linux'
+    
+    _sliding_history: SlidingCliHistory = None
+    _capabilities: Dict[str, Capability] = field(default_factory=dict)
+
+    def init(self):
+        super().init()
+        # provide a shell history of limited size to the LLM
+        self._sliding_history = SlidingCliHistory(self.llm)
+
+    def perform_round(self, turn):
+        got_root : bool = False
+
+        with self.console.status("[bold green]Asking LLM for a new command..."):
+            answer = self.get_next_command()
+        cmd = answer.result
+
+        with self.console.status("[bold green]Executing that command..."):
+            if answer.result.startswith("test_credential"):
+                result, got_root = self._capabilities["test_credential"](cmd)
+            else:
+                self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
+                result, got_root = self._capabilities["run_command"](cmd)
+
+        # log and output the command and its result
+        self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
+        self._sliding_history.add_command(cmd, result)
+        self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+
+        # Output Round Data..
+        self.console.print(ui.get_history_table(False, False, self._run_id, self.log_db, turn))
+
+        # if we got root, we can stop the loop
+        return got_root
+
+    def get_next_command(self):
+        template_size = self.llm.count_tokens(template_next_cmd.source)
+        history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - template_size)
+
+        cmd = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, conn=self.conn, system=self.system, target_user="root")
+        cmd.result = llm_util.cmd_output_fixer(cmd.result)
+        return cmd
+~~~
 
 ## Academic Research/Expsoure
 

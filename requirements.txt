@@ -6,7 +6,7 @@ cryptography==42.0.5
 decorator==5.1.1
 Deprecated==1.2.14
 fabric==3.2.2
-idna==3.6
+idna==3.7
 invoke==2.2.0
 Mako==1.3.2
 markdown-it-py==3.0.0

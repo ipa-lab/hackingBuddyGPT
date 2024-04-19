@@ -13,7 +13,8 @@ Our experiments are structured into `use-cases`, e.g., privilege escalation atta
 wanting to create a new experiment would just create a new use-case that mostly consists
 of the control loop and corresponding prompt templates. We provide multiple helper and base
 classes, so that a new experiment can be implemented in a few dozens lines of code as
-connecting to the LLM, logging, etc. is taken care of by our framework. Enjoy!
+connecting to the LLM, logging, etc. is taken care of by our framework. For further information (esp. if you want to contribute use-cases), please take a look at [docs/use_case.md](docs/use_case.md).
+
 
 Our initial forays were focused upon evaluating the efficiency of LLMs for [linux
 privilege escalation attacks](https://arxiv.org/abs/2310.11409) and we are currently breaching out into evaluation
@@ -131,10 +132,6 @@ wintermute.py: error: the following arguments are required: {linux_privesc,windo
 # start wintermute, i.e., attack the configured virtual machine
 $ python wintermute.py linux_privesc --enable_explanation true --enable_update_state true
 ~~~
-
-## Contribution
-
-If you want to contribute additional use-cases, please take a look at [docs/use_case.md](docs/use_case.md) for a start on how to extend this codebase.
 
 # Disclaimers
 

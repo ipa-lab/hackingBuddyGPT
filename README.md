@@ -22,6 +22,21 @@ the use of LLMs for web penetration-testing and web api testing.
 
 We release all tooling, testbeds and findings as open-source as this is the only way that comprehensive information will find their way to defenders. APTs have access to more sophisticated resources, so we are only leveling the playing field for blue teams. For information about the implementation, please see our [implementation notes](docs/implementation_notes.md). All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
 
+hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121):
+
+~~~ bibtex
+@inproceedings{Happe_2023, series={ESEC/FSE ’23},
+   title={Getting pwn’d by AI: Penetration Testing with Large Language Models},
+   url={http://dx.doi.org/10.1145/3611643.3613083},
+   DOI={10.1145/3611643.3613083},
+   booktitle={Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
+   publisher={ACM},
+   author={Happe, Andreas and Cito, Jürgen},
+   year={2023},
+   month=nov, collection={ESEC/FSE ’23}
+}
+~~~
+
 ## Privilege Escalation Attacks
 
 How are we doing this? The initial tool `wintermute` targets linux priv-esc attacks. It uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
@@ -50,31 +65,15 @@ Some things to note:
 - "What does the LLM know about the system?" gives an LLM generated list of system facts. To generate it, it is given the latest executed command (and it's output) as well as the current list of system facts. This is the operation which time/token usage is shown in the overview table as StateUpdTime/StateUpdTokens. As the state update takes forever, this is disabled by default and has to be enabled through a command line switch.
 - Then the next round starts. The next given command (`sudo tar`) will lead to a pwn'd system BTW.
 
-
-## Academic Research/Expsoure
-
-hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121):
-
-~~~ bibtex
-@inproceedings{Happe_2023, series={ESEC/FSE ’23},
-   title={Getting pwn’d by AI: Penetration Testing with Large Language Models},
-   url={http://dx.doi.org/10.1145/3611643.3613083},
-   DOI={10.1145/3611643.3613083},
-   booktitle={Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
-   publisher={ACM},
-   author={Happe, Andreas and Cito, Jürgen},
-   year={2023},
-   month=nov, collection={ESEC/FSE ’23}
-}
-~~~
+### Academic Publications on Priv-Esc Attacks
 
 Preliminary results for the linux privilege escalation use-case can be found in [Evaluating LLMs for Privilege-Escalation Scenarios](https://arxiv.org/abs/2310.11409):
 
 ~~~ bibtex
-@misc{happe2023evaluating,
-      title={Evaluating LLMs for Privilege-Escalation Scenarios}, 
+@misc{happe2024llms,
+      title={LLMs as Hackers: Autonomous Linux Privilege Escalation Attacks}, 
       author={Andreas Happe and Aaron Kaplan and Jürgen Cito},
-      year={2023},
+      year={2024},
       eprint={2310.11409},
       archivePrefix={arXiv},
       primaryClass={cs.CR}
@@ -94,6 +93,62 @@ This work is partially based upon our empiric research into [how hackers work](h
    year={2023},
    month=nov, collection={ESEC/FSE ’23}
 }
+~~~
+
+## Create your own use-case (agent)
+
+The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and is able to connect to a linux target over SSH for fully-autonomous command execution (as well as password guessing).
+
+~~~ python
+template_dir = pathlib.Path(__file__).parent / "templates"
+template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
+
+@use_case("linux_privesc", "Linux Privilege Escalation")
+@dataclass
+class LinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
+
+    system: str = 'linux'
+    
+    _sliding_history: SlidingCliHistory = None
+    _capabilities: Dict[str, Capability] = field(default_factory=dict)
+
+    def init(self):
+        super().init()
+        # provide a shell history of limited size to the LLM
+        self._sliding_history = SlidingCliHistory(self.llm)
+
+    def perform_round(self, turn):
+        got_root : bool = False
+
+        with self.console.status("[bold green]Asking LLM for a new command..."):
+            answer = self.get_next_command()
+        cmd = answer.result
+
+        with self.console.status("[bold green]Executing that command..."):
+            if answer.result.startswith("test_credential"):
+                result, got_root = self._capabilities["test_credential"](cmd)
+            else:
+                self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
+                result, got_root = self._capabilities["run_command"](cmd)
+
+        # log and output the command and its result
+        self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
+        self._sliding_history.add_command(cmd, result)
+        self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+
+        # Output Round Data..
+        self.console.print(ui.get_history_table(False, False, self._run_id, self.log_db, turn))
+
+        # if we got root, we can stop the loop
+        return got_root
+
+    def get_next_command(self):
+        template_size = self.llm.count_tokens(template_next_cmd.source)
+        history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - template_size)
+
+        cmd = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, conn=self.conn, system=self.system, target_user="root")
+        cmd.result = llm_util.cmd_output_fixer(cmd.result)
+        return cmd
 ~~~
 
 ## Setup and Usage
@@ -143,7 +198,7 @@ This project is an experimental application and is provided "as-is" without any 
 
 The developers and contributors of this project do not accept any responsibility or liability for any losses, damages, or other consequences that may occur as a result of using this software. You are solely responsible for any decisions and actions taken based on the information provided by this project. 
 
-**Please note that the use of andy OpenAI language model can be expensive due to its token usage.** By utilizing this project, you acknowledge that you are responsible for monitoring and managing your own token usage and the associated costs. It is highly recommended to check your OpenAI API usage regularly and set up any necessary limits or alerts to prevent unexpected charges.
+**Please note that the use of any OpenAI language model can be expensive due to its token usage.** By utilizing this project, you acknowledge that you are responsible for monitoring and managing your own token usage and the associated costs. It is highly recommended to check your OpenAI API usage regularly and set up any necessary limits or alerts to prevent unexpected charges.
 
 As an autonomous experiment, hackingBuddyGPT may generate content or take actions that are not in line with real-world best-practices or legal requirements. It is your responsibility to ensure that any actions or decisions made based on the output of this software comply with all applicable laws, regulations, and ethical standards. The developers and contributors of this project shall not be held responsible for any consequences arising from the use of this software.
 

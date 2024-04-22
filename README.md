@@ -22,6 +22,21 @@ the use of LLMs for web penetration-testing and web api testing.
 
 We release all tooling, testbeds and findings as open-source as this is the only way that comprehensive information will find their way to defenders. APTs have access to more sophisticated resources, so we are only leveling the playing field for blue teams. For information about the implementation, please see our [implementation notes](docs/implementation_notes.md). All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
 
+hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121):
+
+~~~ bibtex
+@inproceedings{Happe_2023, series={ESEC/FSE ’23},
+   title={Getting pwn’d by AI: Penetration Testing with Large Language Models},
+   url={http://dx.doi.org/10.1145/3611643.3613083},
+   DOI={10.1145/3611643.3613083},
+   booktitle={Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
+   publisher={ACM},
+   author={Happe, Andreas and Cito, Jürgen},
+   year={2023},
+   month=nov, collection={ESEC/FSE ’23}
+}
+~~~
+
 ## Privilege Escalation Attacks
 
 How are we doing this? The initial tool `wintermute` targets linux priv-esc attacks. It uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
@@ -49,6 +64,36 @@ Some things to note:
 - the table contains all executed commands. ThinkTime denotes the time that was needed to generate the command (Tokens show the token count for the prompt and its response). StateUpdTime shows the time that was needed to generate a new state (the next column also gives the token count)
 - "What does the LLM know about the system?" gives an LLM generated list of system facts. To generate it, it is given the latest executed command (and it's output) as well as the current list of system facts. This is the operation which time/token usage is shown in the overview table as StateUpdTime/StateUpdTokens. As the state update takes forever, this is disabled by default and has to be enabled through a command line switch.
 - Then the next round starts. The next given command (`sudo tar`) will lead to a pwn'd system BTW.
+
+### Academic Publications on Priv-Esc Attacks
+
+Preliminary results for the linux privilege escalation use-case can be found in [Evaluating LLMs for Privilege-Escalation Scenarios](https://arxiv.org/abs/2310.11409):
+
+~~~ bibtex
+@misc{happe2024llms,
+      title={LLMs as Hackers: Autonomous Linux Privilege Escalation Attacks}, 
+      author={Andreas Happe and Aaron Kaplan and Jürgen Cito},
+      year={2024},
+      eprint={2310.11409},
+      archivePrefix={arXiv},
+      primaryClass={cs.CR}
+}
+~~~
+
+This work is partially based upon our empiric research into [how hackers work](https://arxiv.org/abs/2308.07057):
+
+~~~ bibtex
+@inproceedings{Happe_2023, series={ESEC/FSE ’23},
+   title={Understanding Hackers’ Work: An Empirical Study of Offensive Security Practitioners},
+   url={http://dx.doi.org/10.1145/3611643.3613900},
+   DOI={10.1145/3611643.3613900},
+   booktitle={Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
+   publisher={ACM},
+   author={Happe, Andreas and Cito, Jürgen},
+   year={2023},
+   month=nov, collection={ESEC/FSE ’23}
+}
+~~~
 
 ## Create your own use-case (agent)
 
@@ -104,51 +149,6 @@ class LinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
         cmd = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, conn=self.conn, system=self.system, target_user="root")
         cmd.result = llm_util.cmd_output_fixer(cmd.result)
         return cmd
-~~~
-
-## Academic Research/Exposure
-
-hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121):
-
-~~~ bibtex
-@inproceedings{Happe_2023, series={ESEC/FSE ’23},
-   title={Getting pwn’d by AI: Penetration Testing with Large Language Models},
-   url={http://dx.doi.org/10.1145/3611643.3613083},
-   DOI={10.1145/3611643.3613083},
-   booktitle={Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
-   publisher={ACM},
-   author={Happe, Andreas and Cito, Jürgen},
-   year={2023},
-   month=nov, collection={ESEC/FSE ’23}
-}
-~~~
-
-Preliminary results for the linux privilege escalation use-case can be found in [Evaluating LLMs for Privilege-Escalation Scenarios](https://arxiv.org/abs/2310.11409):
-
-~~~ bibtex
-@misc{happe2023evaluating,
-      title={Evaluating LLMs for Privilege-Escalation Scenarios}, 
-      author={Andreas Happe and Aaron Kaplan and Jürgen Cito},
-      year={2023},
-      eprint={2310.11409},
-      archivePrefix={arXiv},
-      primaryClass={cs.CR}
-}
-~~~
-
-This work is partially based upon our empiric research into [how hackers work](https://arxiv.org/abs/2308.07057):
-
-~~~ bibtex
-@inproceedings{Happe_2023, series={ESEC/FSE ’23},
-   title={Understanding Hackers’ Work: An Empirical Study of Offensive Security Practitioners},
-   url={http://dx.doi.org/10.1145/3611643.3613900},
-   DOI={10.1145/3611643.3613900},
-   booktitle={Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
-   publisher={ACM},
-   author={Happe, Andreas and Cito, Jürgen},
-   year={2023},
-   month=nov, collection={ESEC/FSE ’23}
-}
 ~~~
 
 ## Setup and Usage

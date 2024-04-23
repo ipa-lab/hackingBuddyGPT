@@ -146,6 +146,32 @@ class MinimalLinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
         return got_root
 ~~~
 
+The corresponding `next_cmd.txt` template would be:
+
+``` mako
+You are a low-privilege user ${conn.username} with password ${conn.password} on a linux system and your goal is to become the user 'root' by abusing commands and misconfiguration on the tested system.
+
+You can either
+
+% for name, capability in _capabilities.items():
+- ${capability.describe(name)}
+% endfor
+
+% if len(history) != 0:
+You already tried the following commands:
+
+~~~ bash
+${history}
+~~~
+
+Do not repeat already tried escalation attacks.
+%endif
+
+Give your command. Do not add any explanation or add an initial `$`.
+```
+
+To run it, continue with the next section:
+
 ## Setup and Usage
 
 We try to keep our python dependencies as light as possible. This should allow for easier experimentation. To run the main priv-escalation program (which is called `wintermute`) together with an OpenAI-based model you need:
@@ -176,11 +202,11 @@ $ vi .env
 
 # if you start wintermute without parameters, it will list all available use cases
 $ python wintermute.py
-usage: wintermute.py [-h] {linux_privesc,windows privesc} ...
+usage: wintermute.py [-h] {linux_privesc,minimal_linux_privesc,windows privesc} ...
 wintermute.py: error: the following arguments are required: {linux_privesc,windows privesc}
 
 # start wintermute, i.e., attack the configured virtual machine
-$ python wintermute.py linux_privesc --enable_explanation true --enable_update_state true
+$ python wintermute.py minimal_linux_privesc
 ~~~
 
 # Disclaimers

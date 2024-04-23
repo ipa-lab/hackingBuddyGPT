@@ -100,29 +100,35 @@ This work is partially based upon our empiric research into [how hackers work](h
 The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and is able to connect to a linux target over SSH for fully-autonomous command execution (as well as password guessing).
 
 ~~~ python
-template_dir = pathlib.Path(__file__).parent / "templates"
-template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
+template_dir = pathlib.Path(__file__).parent
+template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))
 
-@use_case("linux_privesc", "Linux Privilege Escalation")
+@use_case("minimal_linux_privesc", "Showcase Minimal Linux Priv-Escalation")
 @dataclass
-class LinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
+class MinimalLinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
 
-    system: str = 'linux'
+    conn: SSHConnection = None
     
     _sliding_history: SlidingCliHistory = None
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
 
     def init(self):
         super().init()
-        # provide a shell history of limited size to the LLM
         self._sliding_history = SlidingCliHistory(self.llm)
+        self._capabilities["run_command"] = SSHRunCommand(conn=self.conn)
+        self._capabilities["test_credential"] = SSHTestCredential(conn=self.conn)
+        self._template_size = self.llm.count_tokens(template_next_cmd.source)
 
     def perform_round(self, turn):
         got_root : bool = False
 
         with self.console.status("[bold green]Asking LLM for a new command..."):
-            answer = self.get_next_command()
-        cmd = answer.result
+            # get as much history as fits into the target context size
+            history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size)
+
+            # get the next command from the LLM
+            answer = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, conn=self.conn)
+            cmd = llm_util.cmd_output_fixer(cmd.result)
 
         with self.console.status("[bold green]Executing that command..."):
             if answer.result.startswith("test_credential"):
@@ -136,19 +142,8 @@ class LinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
         self._sliding_history.add_command(cmd, result)
         self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
-        # Output Round Data..
-        self.console.print(ui.get_history_table(False, False, self._run_id, self.log_db, turn))
-
         # if we got root, we can stop the loop
         return got_root
-
-    def get_next_command(self):
-        template_size = self.llm.count_tokens(template_next_cmd.source)
-        history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - template_size)
-
-        cmd = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, conn=self.conn, system=self.system, target_user="root")
-        cmd.result = llm_util.cmd_output_fixer(cmd.result)
-        return cmd
 ~~~
 
 ## Setup and Usage

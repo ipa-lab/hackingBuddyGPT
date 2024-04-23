@@ -7,7 +7,7 @@ class SlidingCliHistory:
     maximum_target_size: int = 0
     sliding_history: str = ''
 
-    def init(self, used_model: LLM):
+    def __init__(self, used_model: LLM):
         self.model = used_model
         self.maximum_target_size = self.model.context_size
 

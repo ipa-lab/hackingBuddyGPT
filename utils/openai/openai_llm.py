@@ -9,7 +9,6 @@ import tiktoken
 from utils.configurable import configurable, parameter
 from utils.llm_util import LLMResult, LLM
 
-
 @configurable("openai-compatible-llm-api", "OpenAI-compatible LLM API")
 @dataclass
 class OpenAIConnection(LLM):
@@ -69,7 +68,13 @@ class OpenAIConnection(LLM):
         return LLMResult(result, prompt, result, toc - tic, tok_query, tok_res)
 
     def encode(self, query) -> list[int]:
-        return tiktoken.encoding_for_model(self.model).encode(query)
+        # I know this is crappy for all non-openAI models but sadly this
+        # has to be good enough for now
+        if self.model.startswith("gpt-"):
+            encoding = tiktoken.encoding_for_model(self.model)
+        else:
+            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        return encoding.encode(query)
 
 
 @configurable("openai/gpt-3.5-turbo", "OpenAI GPT-3.5 Turbo")

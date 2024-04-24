@@ -128,7 +128,7 @@ class MinimalLinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
 
             # get the next command from the LLM
             answer = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, conn=self.conn)
-            cmd = llm_util.cmd_output_fixer(cmd.result)
+            cmd = llm_util.cmd_output_fixer(answer.result)
 
         with self.console.status("[bold green]Executing that command..."):
             if answer.result.startswith("test_credential"):

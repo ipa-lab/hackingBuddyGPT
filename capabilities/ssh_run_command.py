@@ -4,6 +4,7 @@ from typing import Tuple
 
 from invoke import Responder
 
+from io import StringIO
 from utils import SSHConnection
 from .capability import Capability
 
@@ -28,15 +29,18 @@ class SSHRunCommand(Capability):
             response=self.conn.password + '\n',
         )
 
+        out = StringIO()
+
         try:
-            stdout, stderr, rc = self.conn.run(command, pty=True, warn=True, watchers=[sudo_pass], timeout=10)
+            resp = self.conn.run(command, pty=True, warn=True, out_stream=out, watchers=[sudo_pass], timeout=10)
         except Exception as e:
             print("TIMEOUT! Could we have become root?")
-            stdout, stderr, rc = "", "", -1
+        out.seek(0)
         tmp = ""
         last_line = ""
-        for line in stdout.splitlines():
+        for line in out.readlines():
             if not line.startswith('[sudo] password for ' + self.conn.username + ':'):
+                line.replace("\r", "")
                 last_line = line
                 tmp = tmp + line
 

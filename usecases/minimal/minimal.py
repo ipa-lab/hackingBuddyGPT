@@ -1,4 +1,3 @@
-import abc
 import pathlib
 from dataclasses import dataclass, field
 from typing import Dict
@@ -7,8 +6,8 @@ from mako.template import Template
 from rich.panel import Panel
 
 from capabilities import Capability, SSHRunCommand, SSHTestCredential
-from utils import SSHConnection, llm_util, ui
-from usecases.usecase import use_case, UseCase
+from utils import SSHConnection, llm_util
+from usecases.usecase import use_case
 from usecases.usecase.roundbased import RoundBasedUseCase
 from utils.cli_history import SlidingCliHistory
 
@@ -17,7 +16,7 @@ template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))
 
 @use_case("minimal_linux_privesc", "Showcase Minimal Linux Priv-Escalation")
 @dataclass
-class MinimalLinuxPrivesc(RoundBasedUseCase, UseCase, abc.ABC):
+class MinimalLinuxPrivesc(RoundBasedUseCase):
 
     conn: SSHConnection = None
     

@@ -40,10 +40,10 @@ the use of LLMs for web penetration-testing and web api testing.
 
 | Name | Description | Screenshot |
 | -- | -- | -- |
-| minimal | A minimal 50 LoC Linux Priv-Esc example | |
+| minimal | A minimal 50 LoC Linux Priv-Esc example. This is the usecase from [Build your own Agent/Usecase](#build-your-own-agentusecase) | ![A very minimal run](docs/usecase_minimal.png) |
 | [linux-privesc](docs/linux_privesc.md) | Given a SSH-connection for a low-privilege user, task the LLM to become the root user. This would be a typical Linux privilege escalation attack. We published two academic papers about this: [paper #1](https://arxiv.org/abs/2308.00121) and [paper #2](https://arxiv.org/abs/2310.11409)  | ![Example wintermute run](docs/example_run_gpt4.png) |
-| web-pentest | Directly hack a webpage | |
-| web-api-pentest | An Web-API focues usecase | |
+| web-pentest (WIP) | Directly hack a webpage | |
+| web-api-pentest (WIP) | An Web-API focues usecase | |
 
 ## Build your own Agent/Usecase
 

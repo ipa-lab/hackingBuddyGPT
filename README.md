@@ -1,26 +1,18 @@
 # HackingBuddyGPT
 
+*Helping Ethical Hackers use LLMs in 50 Lines of Code or less..*
+
+[![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)
+
+## Introduction
+
 How can LLMs aid or even emulate hackers? Threat actors are [already using LLMs](https://arxiv.org/abs/2307.00691),
 creating the danger that defenders will not be prepared for this new threat.
 
 We aim to become **THE** framework for testing LLM-based agents for security testing.
 To create common ground truth, we strive to create common security testbeds and
 benchmarks, evaluate multiple LLMs and techniques against those, and publish our
-prototypes and findings as open-source/open-access reports.
-
-We strive to make our code-base as accessible as possible to allow for easy experimentation.
-Our experiments are structured into `use-cases`, e.g., privilege escalation attacks. A researcher
-wanting to create a new experiment would just create a new use-case that mostly consists
-of the control loop and corresponding prompt templates. We provide multiple helper and base
-classes, so that a new experiment can be implemented in a few dozens lines of code as
-connecting to the LLM, logging, etc. is taken care of by our framework. For further information (esp. if you want to contribute use-cases), please take a look at [docs/use_case.md](docs/use_case.md).
-
-
-Our initial forays were focused upon evaluating the efficiency of LLMs for [linux
-privilege escalation attacks](https://arxiv.org/abs/2310.11409) and we are currently breaching out into evaluation
-the use of LLMs for web penetration-testing and web api testing.
-
-We release all tooling, testbeds and findings as open-source as this is the only way that comprehensive information will find their way to defenders. APTs have access to more sophisticated resources, so we are only leveling the playing field for blue teams. For information about the implementation, please see our [implementation notes](docs/implementation_notes.md). All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
+prototypes and findings as open-source/open-access reports. All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
 
 hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121):
 
@@ -37,11 +29,25 @@ hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with L
 }
 ~~~
 
-## Privilege Escalation Attacks
+## Existing Agents/Usecases
+
+We strive to make our code-base as accessible as possible to allow for easy experimentation.
+Our experiments are structured into `use-cases`, e.g., privilege escalation attacks. A researcher
+wanting to create a new experiment would just create a new use-case that mostly consists
+of the control loop and corresponding prompt templates. We provide multiple helper and base
+classes, so that a new experiment can be implemented in a few dozens lines of code as
+connecting to the LLM, logging, etc. is taken care of by our framework. For further information (esp. if you want to contribute use-cases), please take a look at [docs/use_case.md](docs/use_case.md).
+
+
+Our initial forays were focused upon evaluating the efficiency of LLMs for [linux
+privilege escalation attacks](https://arxiv.org/abs/2310.11409) and we are currently breaching out into evaluation
+the use of LLMs for web penetration-testing and web api testing.
+
+### Privilege Escalation Attacks
 
 How are we doing this? The initial tool `wintermute` targets linux priv-esc attacks. It uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
 
-### Current features (wintermute):
+#### Current features (wintermute):
 
 - connects over SSH (linux targets) or SMB/PSExec (windows targets)
 - supports OpenAI REST-API compatible models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
@@ -51,7 +57,7 @@ How are we doing this? The initial tool `wintermute` targets linux priv-esc atta
 - automatic root detection
 - can limit rounds (how often the LLM will be asked for a new command)
 
-### Example run
+#### Example run
 
 This is a simple example run of `wintermute.py` using GPT-4 against a vulnerable VM. More example runs can be seen in [our collection of historic runs](docs/old_runs/old_runs.md).
 
@@ -65,7 +71,7 @@ Some things to note:
 - "What does the LLM know about the system?" gives an LLM generated list of system facts. To generate it, it is given the latest executed command (and it's output) as well as the current list of system facts. This is the operation which time/token usage is shown in the overview table as StateUpdTime/StateUpdTokens. As the state update takes forever, this is disabled by default and has to be enabled through a command line switch.
 - Then the next round starts. The next given command (`sudo tar`) will lead to a pwn'd system BTW.
 
-### Academic Publications on Priv-Esc Attacks
+#### Academic Publications on Priv-Esc Attacks
 
 Preliminary results for the linux privilege escalation use-case can be found in [Evaluating LLMs for Privilege-Escalation Scenarios](https://arxiv.org/abs/2310.11409):
 
@@ -95,7 +101,7 @@ This work is partially based upon our empiric research into [how hackers work](h
 }
 ~~~
 
-## Create your own use-case (agent)
+## Build your own Agent/Usecase
 
 The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and is able to connect to a linux target over SSH for fully-autonomous command execution (as well as password guessing).
 
@@ -172,7 +178,7 @@ Give your command. Do not add any explanation or add an initial `$`.
 
 To run it, continue with the next section:
 
-## Setup and Usage
+### Setup and Usage
 
 We try to keep our python dependencies as light as possible. This should allow for easier experimentation. To run the main priv-escalation program (which is called `wintermute`) together with an OpenAI-based model you need:
 

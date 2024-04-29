@@ -1,10 +1,7 @@
-# HackingBuddyGPT
+# HackingBuddyGPT [![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)
+
 
 *Helping Ethical Hackers use LLMs in 50 Lines of Code or less..*
-
-[![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)
-
-## Introduction
 
 How can LLMs aid or even emulate hackers? Threat actors are [already using LLMs](https://arxiv.org/abs/2307.00691),
 creating the danger that defenders will not be prepared for this new threat.
@@ -14,7 +11,7 @@ To create common ground truth, we strive to create common security testbeds and
 benchmarks, evaluate multiple LLMs and techniques against those, and publish our
 prototypes and findings as open-source/open-access reports. All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
 
-hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121):
+hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121), help us by citing it through:
 
 ~~~ bibtex
 @inproceedings{Happe_2023, series={ESEC/FSE ’23},
@@ -32,7 +29,7 @@ hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with L
 ## Existing Agents/Usecases
 
 We strive to make our code-base as accessible as possible to allow for easy experimentation.
-Our experiments are structured into `use-cases`, e.g., privilege escalation attacks, allowing Ethical Hackers to quickly write new use-cases (agens).
+Our experiments are structured into `use-cases`, e.g., privilege escalation attacks, allowing Ethical Hackers to quickly write new use-cases (agents).
 
 Our initial forays were focused upon evaluating the efficiency of LLMs for [linux
 privilege escalation attacks](https://arxiv.org/abs/2310.11409) and we are currently breaching out into evaluation
@@ -47,11 +44,8 @@ the use of LLMs for web penetration-testing and web api testing.
 
 ## Build your own Agent/Usecase
 
-A researcher
-wanting to create a new experiment would just create a new use-case that mostly consists
-of the control loop and corresponding prompt templates. We provide multiple helper and base
-classes, so that a new experiment can be implemented in a few dozens lines of code as
-connecting to the LLM, logging, etc. is taken care of by our framework. For further information (esp. if you want to contribute use-cases), please take a look at [docs/use_case.md](docs/use_case.md).
+So you want to create your own LLM hacking agent? Create a new [use case](docs/use_case.md) that implements `perform_round` and add a markdown template with the prompt. We provide multiple helper and base classes, so that a new experiment can be implemented in a few dozens lines of code. Tedious tasks, such as
+connecting to the LLM, logging, etc. is taken care of by our framework.
 
 The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and is able to connect to a linux target over SSH for fully-autonomous command execution (as well as password guessing).
 

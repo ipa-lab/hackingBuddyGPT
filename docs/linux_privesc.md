@@ -22,7 +22,7 @@ Please note, that the last 3-4 features are slowly migrated directly into the fr
 
 This is a simple example run of `wintermute.py` using GPT-4 against a vulnerable VM. More example runs can be seen in [our collection of historic runs](docs/old_runs/old_runs.md).
 
-![Example wintermute run](docs/old_runs/example_run_gpt4.png)
+![Example wintermute run](/docs/old_runs/example_run_gpt4.png)
 
 Some things to note:
 

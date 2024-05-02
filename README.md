@@ -43,8 +43,10 @@ the use of LLMs for web penetration-testing and web api testing.
 
 ## Build your own Agent/Usecase
 
-So you want to create your own LLM hacking agent? Create a new [use case](docs/use_case.md) that implements `perform_round` and add a markdown template with the prompt. We provide multiple helper and base classes, so that a new experiment can be implemented in a few dozens lines of code. Tedious tasks, such as
-connecting to the LLM, logging, etc. is taken care of by our framework.
+So you want to create your own LLM hacking agent? We've got you covered and taken care of the tedious ground work.
+
+Create a new usecase and implement `perform_round` containing all system/LLM interactions. We provide multiple helper and base classes, so that a new experiment can be implemented in a few dozens lines of code. Tedious tasks, such as
+connecting to the LLM, logging, etc. are taken care of by our framework. Check our [developer quickstart quide](docs/dev_quickstart.md) for more information.
 
 The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and is able to connect to a linux target over SSH for fully-autonomous command execution (as well as password guessing).
 

@@ -1,15 +1,12 @@
-# HackingBuddyGPT [![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)
-
+# [HackingBuddyGPT](https://github.com/ipa-lab/hackingbuddyGPT) [![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)
 
 *Helping Ethical Hackers use LLMs in 50 Lines of Code or less..*
 
-How can LLMs aid or even emulate hackers? Threat actors are [already using LLMs](https://arxiv.org/abs/2307.00691),
-creating the danger that defenders will not be prepared for this new threat.
+How can LLMs aid or even emulate hackers? Threat actors are [already using LLMs](https://arxiv.org/abs/2307.00691), to better protect against this new threat we must learn more about LLMs' capabilities and help blue teams to prepare for them.
 
-We aim to become **THE** framework for testing LLM-based agents for security testing.
-To create common ground truth, we strive to create common security testbeds and
-benchmarks, evaluate multiple LLMs and techniques against those, and publish our
-prototypes and findings as open-source/open-access reports. All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
+We aim to become **THE go-to framework for security researchers** and pen-testers interested in using LLMs or LLM-based autonomous agents for security testing. To aid their experiments, we also offer re-usable [linux priv-esc benchmarks](https://github.com/ipa-lab/benchmark-privesc-linux) and publish all our findings as open-access reports. All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
+
+To ground our research in reality, we performed a comprehensive analysis into [understanding hackers' work](https://arxiv.org/abs/2308.07057). There seems to be a mismatch between some academic research and the daily work of penetration testers, please help us to create more visibility for this issue by citing this paper (if suitable and fitting).
 
 hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121), help us by citing it through:
 
@@ -25,6 +22,8 @@ hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with L
    month=nov, collection={ESEC/FSE ’23}
 }
 ~~~
+
+The project originally started with [Andreas](https://github.com/andreashappe) asking himself a the simple question during a rainy weekend: *Can LLMs be used to hack systems?* Initial results were promising (or disturbing, depends whom you ask) and led to the creation of our motley group of academics and professinal pen-testers at TU Wien's [IPA-Lab](https://ipa-lab.github.io/).
 
 ## Existing Agents/Usecases
 
@@ -128,7 +127,7 @@ We try to keep our python dependencies as light as possible. This should allow f
 
 1. an OpenAI API account, you can find the needed keys [in your account page](https://platform.openai.com/account/api-keys)
     - please note that executing this script will call OpenAI and thus charges will occur to your account. Please keep track of those.
-2. a potential target that is accessible over SSH. You can either use a deliberately vulnerable machine such as [Lin.Security.1](https://www.vulnhub.com/entry/) or a security benchmark such as our [own priv-esc benchmark](https://github.com/ipa-lab/hacking-benchmark).
+2. a potential target that is accessible over SSH. You can either use a deliberately vulnerable machine such as [Lin.Security.1](https://www.vulnhub.com/entry/) or a security benchmark such as our [linux priv-esc benchmark](https://github.com/ipa-lab/benchmark-privesc-linux).
 
 To get everything up and running, clone the repo, download requirements, setup API-keys and credentials and start `wintermute.py`:
 
@@ -158,6 +157,15 @@ wintermute.py: error: the following arguments are required: {linux_privesc,windo
 # start wintermute, i.e., attack the configured virtual machine
 $ python wintermute.py minimal_linux_privesc
 ~~~
+
+## Publications about hackingBuddyGPT
+
+Being academics, we surely wrote papers about this:
+
+- [Understanding Hackers' Work: An Empirical Study of Offensive Security Practitioners](https://arxiv.org/abs/2308.07057), presented at [FSE'23](https://2023.esec-fse.org/)
+- [Getting pwn'd by AI: Penetration Testing with Large Language Models](https://arxiv.org/abs/2308.00121), presented at [FSE'23](https://2023.esec-fse.org/) 
+- [Got root? A Linux Privilege-Escalation Benchmark](), currently searching for a suitable conference/journal
+- [LLMs as Hackers: Autonomous Linux Privilege Escalation Attacks](https://arxiv.org/abs/2310.11409), currently searching for a suitable conference/journal
 
 # Disclaimers
 

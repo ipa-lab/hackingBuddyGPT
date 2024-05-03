@@ -1,4 +1,8 @@
 import abc
+import inspect
+from typing import Union, Type
+
+from pydantic import create_model, BaseModel
 
 
 class Capability(abc.ABC):
@@ -33,3 +37,29 @@ class Capability(abc.ABC):
         implementation are well typed, as this will make it easier to support full function calling soon.
         """
         pass
+
+    def to_instructor(self, name: str):
+        sig = inspect.signature(self.__call__)
+        fields = {param: (param_info.annotation, ...) for param, param_info in sig.parameters.items()}
+        model_type = create_model(self.__class__.__name__, __doc__=self.describe(name), **fields)
+
+        def execute(model):
+            return self(**model.dict())
+        model_type.execute = execute
+
+        return model_type
+
+
+class Action(BaseModel):
+    action: BaseModel
+
+
+def capabilities_to_instructor(capabilities: dict) -> Type[Action]:
+    class Model(Action):
+        action: Union[tuple([capability.to_instructor(name) for name, capability in capabilities.items()])]
+
+        def execute(self):
+            return self.action.execute()
+
+    return Model
+

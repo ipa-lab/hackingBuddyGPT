@@ -26,3 +26,4 @@ smbprotocol==1.13.0
 tiktoken==0.6.0
 urllib3==2.2.1
 wrapt==1.16.0
+instructor==1.2.2

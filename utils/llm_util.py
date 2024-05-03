@@ -3,6 +3,7 @@ import re
 import typing
 from dataclasses import dataclass
 
+from openai.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam, ChatCompletionToolMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionFunctionMessageParam
 
 SAFETY_MARGIN = 128
 STEP_CUT_TOKENS = 128
@@ -34,6 +35,26 @@ class LLM(abc.ABC):
 
     def count_tokens(self, query) -> int:
         return len(self.encode(query))
+
+
+def system_message(content: str) -> ChatCompletionSystemMessageParam:
+    return {"role": "system", "content": content}
+
+
+def user_message(content: str) -> ChatCompletionUserMessageParam:
+    return {"role": "user", "content": content}
+
+
+def assistant_message(content: str) -> ChatCompletionAssistantMessageParam:
+    return {"role": "assistant", "content": content}
+
+
+def tool_message(content: str, tool_call_id: str) -> ChatCompletionToolMessageParam:
+    return {"role": "tool", "content": content, "tool_call_id": tool_call_id}
+
+
+def function_message(content: str, name: str) -> ChatCompletionFunctionMessageParam:
+    return {"role": "function", "content": content, "name": name}
 
 
 def remove_wrapping_characters(cmd: str, wrappers: str) -> str:

@@ -7,7 +7,7 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
 
 from capabilities import Capability
-from capabilities.capability import capabilities_to_instructor
+from capabilities.capability import capabilities_to_action_model
 from capabilities.http_request import HTTPRequest
 from capabilities.record_note import RecordNote
 from capabilities.submit_flag import SubmitFlag
@@ -59,10 +59,10 @@ class MinimalWebTesting(RoundBasedUseCase):
 
     def perform_round(self, turn: int):
         with self.console.status("[bold green]Asking LLM for a new command..."):
-            prompt = self._prompt_history  # TODO: # in the future, this should do some context truncation
+            prompt = self._prompt_history  # TODO: in the future, this should do some context truncation
 
             tic = time.perf_counter()
-            response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model, messages=prompt, response_model=capabilities_to_instructor(self._capabilities))
+            response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model, messages=prompt, response_model=capabilities_to_action_model(self._capabilities))
             toc = time.perf_counter()
 
             message = completion.choices[0].message

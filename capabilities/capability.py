@@ -1,6 +1,6 @@
 import abc
 import inspect
-from typing import Union, Type
+from typing import Union, Type, Dict
 
 from pydantic import create_model, BaseModel
 
@@ -38,7 +38,13 @@ class Capability(abc.ABC):
         """
         pass
 
-    def to_instructor(self, name: str):
+    def to_model(self, name: str) -> BaseModel:
+        """
+        Converts the parameters of the `__call__` function of the capability to a pydantic model, that can be used to
+        interface with an LLM using eg instructor or the openAI function calling API.
+        The model will have the same name as the capability class and will have the same fields as the `__call__`,
+        the `__call__` method can then be accessed by calling the `execute` method of the model.
+        """
         sig = inspect.signature(self.__call__)
         fields = {param: (param_info.annotation, ...) for param, param_info in sig.parameters.items()}
         model_type = create_model(self.__class__.__name__, __doc__=self.describe(name), **fields)
@@ -50,16 +56,25 @@ class Capability(abc.ABC):
         return model_type
 
 
+# An Action is the base class to allow proper typing information of the generated class in `capabilities_to_action_mode`
+# This description should not be moved into a docstring inside the class, as it will otherwise be provided in the LLM prompt
 class Action(BaseModel):
     action: BaseModel
 
+    def execute(self):
+        return self.action.execute()
 
-def capabilities_to_instructor(capabilities: dict) -> Type[Action]:
+
+def capabilities_to_action_model(capabilities: Dict[str, Capability]) -> Type[Action]:
+    """
+    When one of multiple capabilities should be used, then an action model can be created with this function.
+    This action model is a pydantic model, where all possible capabilities are represented by their respective models in
+    a union type for the action field.
+    This allows the LLM to define an action to be used, which can then simply be called using the `execute` function on
+    the model returned from here.
+    """
     class Model(Action):
-        action: Union[tuple([capability.to_instructor(name) for name, capability in capabilities.items()])]
-
-        def execute(self):
-            return self.action.execute()
+        action: Union[tuple([capability.to_model(name) for name, capability in capabilities.items()])]
 
     return Model
 

@@ -26,7 +26,7 @@ Context = Any
 @dataclass
 class MinimalWebTesting(RoundBasedUseCase):
     llm: OpenAILib
-    host: str = parameter(desc="The host to test", default="http://localhost")
+    host: str = parameter(desc="The host to test", default="https://api.restful-api.dev/objects")
     flag_format_description: str = parameter(desc="Description of the flag provided to the LLM", default="a string starting with 'FLAG.' and ending with '.GALF'")
     flag_template: str = parameter(desc="The template of the flags, whereby {flag} is replaced with the flags", default="FLAG.{flag}.GALF")
     flags: str = parameter(desc="A comma (,) separated list of flags to find", default="hostname,dir,username,rootfile,secretfile,adminpass")
@@ -77,6 +77,8 @@ class MinimalWebTesting(RoundBasedUseCase):
             result = response.execute()
             self.console.print(Panel(result, title="tool"))
             self._prompt_history.append(tool_message(result, tool_call_id))
+            for i in self._prompt_history:
+                print(f'i:{i}')
 
         self.log_db.add_log_query(self._run_id, turn, command, result, answer)
         return self._all_flags_found

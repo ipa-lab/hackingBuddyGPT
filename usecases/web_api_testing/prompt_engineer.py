@@ -1,23 +1,26 @@
-from dataclasses import field
+
 
 from utils import openai
-
 
 class PromptEngineer(object):
     '''Prompt engineer that creates prompts of different types'''
 
-    def __init__(self, strategy, api_key, history=None):
+    def __init__(self, strategy, api_key, host, flag_format_description, history):
         """
         Initializes the PromptEngineer with a specific strategy and API key.
 
         Args:
             strategy (PromptStrategy): The prompt engineering strategy to use.
             api_key (str): The API key for OpenAI.
+            host (str): The host for OpenAI API.
+            flag_format_description (str): Description format for flag.
             history (dict, optional): The history of chats. Defaults to None.
 
         Attributes:
             strategy (PromptStrategy): Stores the provided strategy.
             api_key (str): Stores the provided API key.
+            host (str): Stores the provided host for OpenAI API.
+            flag_format_description (str): Stores the provided flag description format.
             prompt_history (list): A list that keeps track of the conversation history.
             initial_prompt (str): The initial prompt used for conversation.
             prompt (str): The current prompt to be used.
@@ -27,15 +30,14 @@ class PromptEngineer(object):
         self.api_key = api_key
         # Set the OpenAI API key
         openai.api_key = self.api_key
+        self.round = 0
+
+        self.host = host
+        self.flag_format_description = flag_format_description
 
         # Initialize prompt history
-        if history is not None:
-            self.prompt_history = history
-        else:
-            self.prompt_history = []
-            self.initial_prompt = self.generate_initial_prompt()
-
-        self.prompt = self.prompt_history
+        self._prompt_history = history
+        self.prompt = self._prompt_history
 
         # Set up strategy map
         self.strategies = {
@@ -55,7 +57,9 @@ class PromptEngineer(object):
         prompt_func = self.strategies.get(self.strategy)
         if prompt_func:
             prompt = prompt_func()
-            return prompt
+            self._prompt_history[self.round]["content"] = prompt
+            self.round = self.round +1
+            return self._prompt_history
             #self.get_response(prompt)
 
     def get_response(self, prompt):
@@ -78,7 +82,7 @@ class PromptEngineer(object):
         )
         # Update history
         response_text = response.choices[0].text.strip()
-        self.prompt_history.extend([f"[User]: {prompt}", f"[System]: {response_text}"])
+        self._prompt_history.extend([f"[User]: {prompt}", f"[System]: {response_text}"])
 
         return response_text
 
@@ -89,7 +93,15 @@ class PromptEngineer(object):
         Returns:
             None
         """
-        pass
+        self._prompt_history.append(
+            {
+                "role": "system",
+                "content": f"You are a senior penetration tester, having received a new project of testing a website at {self.host}."
+                           f"Your goal is first to explore the website, building up your knowledge about its parts and inner workings, and then try to plan and execute possible exploitations.\n"
+                           f"Make sure to take lots of notes about the pages you visit, so that you can later more easily work through the page.\n"
+                           f"Do not brute-force anything, all information that you might need can be found on the webserver.\n"
+                           f"THE MOST IMPORTANT THING TO DO IS, that if you see a flag ({self.flag_format_description}), you should submit it immediately."})
+
 
     def in_context_learning(self):
         """
@@ -101,7 +113,7 @@ class PromptEngineer(object):
         Returns:
             str: The generated prompt.
         """
-        return "\n".join(self.prompt_history + [self.prompt])
+        return str("\n".join(self._prompt_history[self.round]["content"] + [self.prompt]))
 
     def chain_of_thought(self):
         """
@@ -115,7 +127,7 @@ class PromptEngineer(object):
         chain_of_thought_steps = [
             "Let's think step by step." # zero shot prompt
         ]
-        return "\n".join([self.prompt] + chain_of_thought_steps)
+        return "\n".join([self._prompt_history[self.round]["content"]] + chain_of_thought_steps)
 
 
 
@@ -137,7 +149,7 @@ class PromptEngineer(object):
             "If any expert realizes they're wrong at any point, they will leave.\n"
             "The question is: "
         )]
-        return "\n".join([self.prompt] + tree_of_thoughts_steps)
+        return "\n".join([self._prompt_history[self.round]["content"]] + tree_of_thoughts_steps)
 
 
 

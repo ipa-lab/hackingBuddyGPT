@@ -1,19 +1,18 @@
-
+from openai.types.chat import ChatCompletionMessage
 
 from utils import openai
 
 class PromptEngineer(object):
     '''Prompt engineer that creates prompts of different types'''
 
-    def __init__(self, strategy, api_key, host, flag_format_description, history):
+    def __init__(self, strategy, api_key,  history):
         """
         Initializes the PromptEngineer with a specific strategy and API key.
 
         Args:
             strategy (PromptStrategy): The prompt engineering strategy to use.
             api_key (str): The API key for OpenAI.
-            host (str): The host for OpenAI API.
-            flag_format_description (str): Description format for flag.
+
             history (dict, optional): The history of chats. Defaults to None.
 
         Attributes:
@@ -32,8 +31,7 @@ class PromptEngineer(object):
         openai.api_key = self.api_key
         self.round = 0
 
-        self.host = host
-        self.flag_format_description = flag_format_description
+
 
         # Initialize prompt history
         self._prompt_history = history
@@ -56,8 +54,10 @@ class PromptEngineer(object):
         # Directly call the method using the strategy mapping
         prompt_func = self.strategies.get(self.strategy)
         if prompt_func:
-            prompt = prompt_func()
-            self._prompt_history[self.round]["content"] = prompt
+            print(f'prompt history:{self._prompt_history[self.round]}')
+            if not isinstance(self._prompt_history[self.round],ChatCompletionMessage ):
+                prompt = prompt_func()
+                self._prompt_history[self.round]["content"] = prompt
             self.round = self.round +1
             return self._prompt_history
             #self.get_response(prompt)
@@ -86,21 +86,6 @@ class PromptEngineer(object):
 
         return response_text
 
-    def generate_initial_prompt(self):
-        """
-        Generates the initial prompt history based on OpenAPI specification.
-
-        Returns:
-            None
-        """
-        self._prompt_history.append(
-            {
-                "role": "system",
-                "content": f"You are a senior penetration tester, having received a new project of testing a website at {self.host}."
-                           f"Your goal is first to explore the website, building up your knowledge about its parts and inner workings, and then try to plan and execute possible exploitations.\n"
-                           f"Make sure to take lots of notes about the pages you visit, so that you can later more easily work through the page.\n"
-                           f"Do not brute-force anything, all information that you might need can be found on the webserver.\n"
-                           f"THE MOST IMPORTANT THING TO DO IS, that if you see a flag ({self.flag_format_description}), you should submit it immediately."})
 
 
     def in_context_learning(self):
@@ -124,10 +109,13 @@ class PromptEngineer(object):
         Returns:
             str: The generated prompt.
         """
+        previous_prompt = self._prompt_history[self.round]["content"]
         chain_of_thought_steps = [
             "Let's think step by step." # zero shot prompt
         ]
-        return "\n".join([self._prompt_history[self.round]["content"]] + chain_of_thought_steps)
+        #if previous_prompt == "Not a valid flag":
+        #    return previous_prompt
+        return "\n".join([previous_prompt] + chain_of_thought_steps)
 
 
 

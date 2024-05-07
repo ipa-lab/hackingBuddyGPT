@@ -1,15 +1,16 @@
-# HackingBuddyGPT [![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)
-
+# [HackingBuddyGPT](https://github.com/ipa-lab/hackingbuddyGPT) [![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)
 
 *Helping Ethical Hackers use LLMs in 50 Lines of Code or less..*
 
-How can LLMs aid or even emulate hackers? Threat actors are [already using LLMs](https://arxiv.org/abs/2307.00691),
-creating the danger that defenders will not be prepared for this new threat.
+HackingBuddyGPT helps security researchers use LLMs to discover new attack vectors and save the world (or earn bug bounties) in 50 lines of code or less. In the long run, we hope to make the world a safer place by empowering security  professionals to get more hacking done by using AI. The more testing they can do, the safer all of us will get.
 
-We aim to become **THE** framework for testing LLM-based agents for security testing.
-To create common ground truth, we strive to create common security testbeds and
-benchmarks, evaluate multiple LLMs and techniques against those, and publish our
-prototypes and findings as open-source/open-access reports. All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
+We aim to become **THE go-to framework for security researchers** and pen-testers interested in using LLMs or LLM-based autonomous agents for security testing. To aid their experiments, we also offer re-usable [linux priv-esc benchmarks](https://github.com/ipa-lab/benchmark-privesc-linux) and publish all our findings as open-access reports. All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).
+
+How can LLMs aid or even emulate hackers? Threat actors are [already using LLMs](https://arxiv.org/abs/2307.00691), to better protect against this new threat we must learn more about LLMs' capabilities and help blue teams to prepare for them.
+
+**Join us / Help us, more people need to be involved in the future of LLM-assisted pen-testing:**
+
+To ground our research in reality, we performed a comprehensive analysis into [understanding hackers' work](https://arxiv.org/abs/2308.07057). There seems to be a mismatch between some academic research and the daily work of penetration testers, please help us to create more visibility for this issue by citing this paper (if suitable and fitting).
 
 hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with Large Language Models ](https://arxiv.org/abs/2308.00121), help us by citing it through:
 
@@ -26,6 +27,17 @@ hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with L
 }
 ~~~
 
+### Let's get connected!
+
+The project originally started with [Andreas](https://github.com/andreashappe) asking himself a the simple question during a rainy weekend: *Can LLMs be used to hack systems?* Initial results were promising (or disturbing, depends whom you ask) and led to the creation of our motley group of academics and professinal pen-testers at TU Wien's [IPA-Lab](https://ipa-lab.github.io/).
+
+Feel free to connect or talk with us on various platforms:
+
+- Andreas Happe: [github](https://github.com/andreashappe), [linkedin](https://at.linkedin.com/in/andreashappe), [twitter/x](https://twitter.com/andreashappe), [Google Scholar](https://scholar.google.at/citations?user=Xy_UZUUAAAAJ&hl=de)
+- Juergen Cito, [github](https://github.com/citostyle), [linkedin](https://at.linkedin.com/in/jcito), [twitter/x](https://twitter.com/citostyle), [Google Scholar](https://scholar.google.ch/citations?user=fj5MiWsAAAAJ&hl=en)
+- Manuel Reinsperger, [github](https://github.com/Neverbolt), [linkedin](https://www.linkedin.com/in/manuel-reinsperger-7110b8113/), [twitter/x](https://twitter.com/neverbolt)
+- we have a [discord server were we talk about all things AI + Offensive Security](https://discord.gg/vr4PhSM8yN)
+
 ## Existing Agents/Usecases
 
 We strive to make our code-base as accessible as possible to allow for easy experimentation.
@@ -39,7 +51,7 @@ the use of LLMs for web penetration-testing and web api testing.
 | -- | -- | -- |
 | minimal | A minimal 50 LoC Linux Priv-Esc example. This is the usecase from [Build your own Agent/Usecase](#build-your-own-agentusecase) | ![A very minimal run](docs/usecase_minimal.png) |
 | [linux-privesc](docs/linux_privesc.md) | Given a SSH-connection for a low-privilege user, task the LLM to become the root user. This would be a typical Linux privilege escalation attack. We published two academic papers about this: [paper #1](https://arxiv.org/abs/2308.00121) and [paper #2](https://arxiv.org/abs/2310.11409)  | ![Example wintermute run](docs/example_run_gpt4.png) |
-| web-pentest (WIP) | Directly hack a webpage | |
+| [web-pentest (WIP)](docs/web_page.md)  | Directly hack a webpage. Currently in heavy development and pre-alpha stage. | ![Test Run for a simple Blog Page](docs/usecase_web_page_run.png) |
 | web-api-pentest (WIP) | An Web-API focues usecase | |
 
 ## Build your own Agent/Usecase
@@ -130,7 +142,7 @@ We try to keep our python dependencies as light as possible. This should allow f
 
 1. an OpenAI API account, you can find the needed keys [in your account page](https://platform.openai.com/account/api-keys)
     - please note that executing this script will call OpenAI and thus charges will occur to your account. Please keep track of those.
-2. a potential target that is accessible over SSH. You can either use a deliberately vulnerable machine such as [Lin.Security.1](https://www.vulnhub.com/entry/) or a security benchmark such as our [own priv-esc benchmark](https://github.com/ipa-lab/hacking-benchmark).
+2. a potential target that is accessible over SSH. You can either use a deliberately vulnerable machine such as [Lin.Security.1](https://www.vulnhub.com/entry/) or a security benchmark such as our [linux priv-esc benchmark](https://github.com/ipa-lab/benchmark-privesc-linux).
 
 To get everything up and running, clone the repo, download requirements, setup API-keys and credentials and start `wintermute.py`:
 
@@ -160,6 +172,15 @@ wintermute.py: error: the following arguments are required: {linux_privesc,windo
 # start wintermute, i.e., attack the configured virtual machine
 $ python wintermute.py minimal_linux_privesc
 ~~~
+
+## Publications about hackingBuddyGPT
+
+Being academics, we surely wrote papers about this:
+
+- [Understanding Hackers' Work: An Empirical Study of Offensive Security Practitioners](https://arxiv.org/abs/2308.07057), presented at [FSE'23](https://2023.esec-fse.org/)
+- [Getting pwn'd by AI: Penetration Testing with Large Language Models](https://arxiv.org/abs/2308.00121), presented at [FSE'23](https://2023.esec-fse.org/) 
+- [Got root? A Linux Privilege-Escalation Benchmark](https://arxiv.org/abs/2405.02106), currently searching for a suitable conference/journal
+- [LLMs as Hackers: Autonomous Linux Privilege Escalation Attacks](https://arxiv.org/abs/2310.11409), currently searching for a suitable conference/journal
 
 # Disclaimers
 

@@ -58,3 +58,4 @@ class RoundBasedUseCase(UseCase, abc.ABC):
             self.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
 
         self.teardown()
+        return self._got_root

@@ -6,3 +6,4 @@ __pycache__/
 .idea/
 *.sqlite3
 *.sqlite3-jounal
+*.sqlite

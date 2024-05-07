@@ -28,7 +28,7 @@ class RoundBasedUseCase(UseCase, abc.ABC):
 
     # callback
     @abc.abstractmethod
-    def perform_round(self):
+    def perform_round(self, turn: int):
         pass
 
     # callback

@@ -1,24 +1,28 @@
 # Agent: Linux Privilege-Escalation Attacks
 
-How are we doing this? The initial tool `wintermute` targets linux priv-esc attacks. It uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
+Historically speaking, this was our first hacking agent and has a special place in my heart (:
 
-The script uses `fabric` to do the SSH-connection. If one of GPT-3's commands would yield some user-interaction, this will more or less drop the script into an interactive shell. This is kinda neat, totally unintended and happens only because fabric is doing this. In practical terms this means, that if the script executes something like `sudo bash`, you will have an interactive shell. If it executes `vi file.txt`, you will be in an interactive shell. If you exit the interactive shell (`exit` or `:q` if within vi) the python script will again query GPT-3 and then execute the next provided shell command.
+It uses SSH to connect to a (presumably) vulnerable virtual machine and then asks OpenAI GPT to suggest linux commands that could be used for finding security vulnerabilities or privilege escalation. The provided command is then executed within the virtual machine, the output fed back to the LLM and, finally, a new command is requested from it..
 
-## Current features (wintermute):
+The script uses `fabric` to do the SSH-connection and uses some heuristics to detect if the generated response time-outs or indicates an elevation of privileges (in other words: we have become root).
+
+## Current features
 
 - connects over SSH (linux targets) or SMB/PSExec (windows targets)
 - supports OpenAI REST-API compatible models (gpt-3.5-turbo, gpt4, gpt-3.5-turbo-16k, etc.)
-- supports locally running LLMs
+- supports locally running LLMs, e.g., through ollama's OpenAI-compatible API
 - beautiful console output
 - logs run data through sqlite either into a file or in-memory
 - automatic root detection
 - can limit rounds (how often the LLM will be asked for a new command)
 
+Please note, that the last 3-4 features are slowly migrated directly into the framework so that all agents can enjoy them. 
+
 ## Example run
 
 This is a simple example run of `wintermute.py` using GPT-4 against a vulnerable VM. More example runs can be seen in [our collection of historic runs](docs/old_runs/old_runs.md).
 
-![Example wintermute run](docs/old_runs/example_run_gpt4.png)
+![Example wintermute run](/docs/old_runs/example_run_gpt4.png)
 
 Some things to note:
 
@@ -58,9 +62,28 @@ This work is partially based upon our empiric research into [how hackers work](h
 }
 ~~~
 
-## ethical problems
+## Some Implementation Notes
 
-- gpt-3.5-turbo will chose a next command, but will not tell me why for ethical reasons
+Let's highlight some implementation details that might impact the tested LLM's performance.
+
+### LLMs not able to provide concise answers.
+
+While we prompt the LLM for a single command to execute, not all LLMs were able to heed this. They added quotation characters or framed the command in Markdown code blocks in either inline back-ticks or multi-line code-blocks. Sometimes LLMs enter a LLM-splaining mode and drone on about potential exploits. In those cases, \textit{wintermute} searches for a contained code-block and executes that. Oftentimes a leading \$ character was added by the LLMs (while being explicitly forbidden in the prompt), mimicking typical example shell prompts: \textit{wintermute} removes those. A review showed that those auto-fixes did extract the supposedly intended commands.
+
+### Identifying Root Access
+
+One particular challenge is dealing with interactive programs.
+We use the *fabric* library to execute commands over SSH. It executes the command, waits for its completion, and finally gathers the resulting output. Priv-esc attacks commonly drop the attacker into an interactive root shell: the executed command is turned into an interactive shell with which the attacker subsequently communicates. From *fabric*'s point-of-view this means that the original command is still executing, thus *fabric* would wait indefinitely for its result and thus blocks.
+
+To solve this, **wintermute** adds a timeout to each command execution. If the timeout is reached, the current SSH screen's contents are captured and the SSH connection reset. Regular expressions are used to analyze if the captured output indicates that a privilege-escalation has occurred. If not, the captured output is added as the command's result to the history for further processing.
+
+This approach elegantly deals with wintermute executing interactive shell commands such as *less* or with long-running tasks: they trigger the timeout, no priv-esc is detected and their current output used as base for subsequent wintermute rounds. This allows wintermute to execute *vi* without needing to know how to exit it.
+
+One special provision was made for *sudo*: if wintermute detects that sudo is asking for the current user's password, the password is automatically supplied as our scenarios assumes that the attacker has knowledge of this password.
+
+### Ethical Problems
+
+- gpt-3.5-turbo will sometimes chose a next command, but will not tell me why for ethical reasons
 
 After generating the next command, I used the following prompt (or
 rather tried to use this prompt) to get an explanation why the GPT-3.5

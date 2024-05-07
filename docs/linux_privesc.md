@@ -62,7 +62,26 @@ This work is partially based upon our empiric research into [how hackers work](h
 }
 ~~~
 
-## ethical problems
+## Some Implementation Notes
+
+Let's highlight some implementation details that might impact the tested LLM's performance.
+
+### LLMs not able to provide concise answers.
+
+While we prompt the LLM for a single command to execute, not all LLMs were able to heed this. They added quotation characters or framed the command in Markdown code blocks in either inline back-ticks or multi-line code-blocks. Sometimes LLMs enter a LLM-splaining mode and drone on about potential exploits. In those cases, \textit{wintermute} searches for a contained code-block and executes that. Oftentimes a leading \$ character was added by the LLMs (while being explicitly forbidden in the prompt), mimicking typical example shell prompts: \textit{wintermute} removes those. A review showed that those auto-fixes did extract the supposedly intended commands.
+
+### Identifying Root Access
+
+One particular challenge is dealing with interactive programs.
+We use the *fabric* library to execute commands over SSH. It executes the command, waits for its completion, and finally gathers the resulting output. Priv-esc attacks commonly drop the attacker into an interactive root shell: the executed command is turned into an interactive shell with which the attacker subsequently communicates. From *fabric*'s point-of-view this means that the original command is still executing, thus *fabric* would wait indefinitely for its result and thus blocks.
+
+To solve this, **wintermute** adds a timeout to each command execution. If the timeout is reached, the current SSH screen's contents are captured and the SSH connection reset. Regular expressions are used to analyze if the captured output indicates that a privilege-escalation has occurred. If not, the captured output is added as the command's result to the history for further processing.
+
+This approach elegantly deals with wintermute executing interactive shell commands such as *less* or with long-running tasks: they trigger the timeout, no priv-esc is detected and their current output used as base for subsequent wintermute rounds. This allows wintermute to execute *vi* without needing to know how to exit it.
+
+One special provision was made for *sudo*: if wintermute detects that sudo is asking for the current user's password, the password is automatically supplied as our scenarios assumes that the attacker has knowledge of this password.
+
+### Ethical Problems
 
 - gpt-3.5-turbo will sometimes chose a next command, but will not tell me why for ethical reasons
 

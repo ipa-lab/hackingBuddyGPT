@@ -1,1 +1,2 @@
-from .privesc import LinuxPrivesc, WindowsPrivesc
+from .linux import *
+from .windows import *

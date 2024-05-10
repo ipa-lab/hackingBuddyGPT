@@ -7,8 +7,8 @@ from rich.panel import Panel
 
 from capabilities import Capability, SSHRunCommand, SSHTestCredential
 from utils import SSHConnection, llm_util
-from usecases.usecase import use_case
-from usecases.usecase.roundbased import RoundBasedUseCase
+from usecases.base import use_case
+from usecases.common_patterns import RoundBasedUseCase
 from utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent

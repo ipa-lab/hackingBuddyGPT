@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from usecases import use_cases
+from usecases.base import use_cases
 
 
 def main():

@@ -2,7 +2,7 @@ import abc
 
 from dataclasses import dataclass
 from rich.panel import Panel
-from usecases.usecase import UseCase
+from usecases.base import UseCase
 from utils import Console, DbStorage
 from utils.openai.openai_llm import OpenAIConnection
 

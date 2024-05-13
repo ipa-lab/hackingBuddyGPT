@@ -1,6 +1,5 @@
 import pathlib
 from dataclasses import dataclass, field
-from typing import Dict
 
 from mako.template import Template
 from rich.panel import Panel
@@ -16,18 +15,17 @@ template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))
 
 @use_case("minimal_linux_privesc", "Showcase Minimal Linux Priv-Escalation")
 @dataclass
-class MinimalLinuxPrivesc(RoundBasedUseCase):
+class MinimalLinuxPrivesc(Agent):
 
     conn: SSHConnection = None
     
     _sliding_history: SlidingCliHistory = None
-    _capabilities: Dict[str, Capability] = field(default_factory=dict)
 
     def init(self):
         super().init()
         self._sliding_history = SlidingCliHistory(self.llm)
-        self._capabilities["run_command"] = SSHRunCommand(conn=self.conn)
-        self._capabilities["test_credential"] = SSHTestCredential(conn=self.conn)
+        self.add_capability(SSHRunCommand(conn=self.conn), default=True)
+        self.add_capability(SSHTestCredential(conn=self.conn))
         self._template_size = self.llm.count_tokens(template_next_cmd.source)
 
     def perform_round(self, turn):
@@ -38,15 +36,12 @@ class MinimalLinuxPrivesc(RoundBasedUseCase):
             history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size)
 
             # get the next command from the LLM
-            answer = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, conn=self.conn)
+            answer = self.llm.get_response(template_next_cmd, _capabilities=self.get_capabilty_block(), history=history, conn=self.conn)
             cmd = llm_util.cmd_output_fixer(answer.result)
 
         with self.console.status("[bold green]Executing that command..."):
-            if answer.result.startswith("test_credential"):
-                result, got_root = self._capabilities["test_credential"](cmd)
-            else:
                 self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-                result, got_root = self._capabilities["run_command"](cmd)
+                result, got_root = self.get_capability(cmd.split(" ", 1))(cmd)
 
         # log and output the command and its result
         self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)

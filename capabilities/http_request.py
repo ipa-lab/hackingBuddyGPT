@@ -19,7 +19,7 @@ class HTTPRequest(Capability):
         if not self.use_cookie_jar:
             self._client = requests
 
-    def describe(self, name: str = None) -> str:
+    def describe(self) -> str:
         return f"Sends a request to the host {self.host} and returns the response."
 
     def __call__(self,

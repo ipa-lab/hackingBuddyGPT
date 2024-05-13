@@ -8,7 +8,7 @@ from capabilities import Capability
 class RecordNote(Capability):
     registry: List[Tuple[str, str]] = field(default_factory=list)
 
-    def describe(self, name: str = None) -> str:
+    def describe(self) -> str:
         return "Records a note, which is useful for keeping track of information that you may need later."
 
     def __call__(self, title: str, content: str) -> str:

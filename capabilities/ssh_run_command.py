@@ -19,7 +19,7 @@ GOT_ROOT_REXEXPs = [
 class SSHRunCommand(Capability):
     conn: SSHConnection
 
-    def describe(self, name: str = None) -> str:
+    def describe(self) -> str:
         return f"give a command to be executed on the shell and I will respond with the terminal output when running this command on the linux server. The given command must not require user interaction. Only state the to be executed command. The command should be used for enumeration or privilege escalation."
 
     def __call__(self, command: str, timeout:int=10) -> Tuple[str, bool]:

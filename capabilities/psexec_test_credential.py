@@ -10,8 +10,11 @@ from .capability import Capability
 class PSExecTestCredential(Capability):
     conn: PSExecConnection
 
-    def describe(self, name: str = None) -> str:
-        return f"give credentials to be tested by stating `{name} username password`"
+    def describe(self) -> str:
+        return f"give credentials to be tested by stating `{self.get_name()} username password`"
+
+    def get_name(self) -> str:
+        return "test_credential"
 
     def __call__(self, username: str, password: str) -> Tuple[str, bool]:
         try:

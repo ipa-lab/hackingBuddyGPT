@@ -1,5 +1,4 @@
 import abc
-import json
 import pathlib
 from dataclasses import dataclass, field
 from typing import Dict
@@ -7,16 +6,17 @@ from typing import Dict
 from mako.template import Template
 from rich.panel import Panel
 
-from capabilities import Capability, SSHRunCommand, SSHTestCredential, PSExecRunCommand, PSExecTestCredential
-from utils import SSHConnection, PSExecConnection, llm_util, ui
-from usecases.usecase import use_case, UseCase
-from usecases.usecase.roundbased import RoundBasedUseCase
+from capabilities import Capability
+from utils import llm_util, ui
+from usecases.base import UseCase
+from usecases.common_patterns import RoundBasedUseCase
 from utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent / "templates"
 template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
 template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_state = Template(filename=str(template_dir / "update_state.txt"))
+template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
 
 @dataclass
 class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
@@ -25,26 +25,18 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
     enable_explanation: bool = False
     enable_update_state: bool = False
     disable_history: bool = False
-    hints: str = ""
+    hint: str = ""
     
     _sliding_history: SlidingCliHistory = None
     _state: str = ""
-    _hint: str = None
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
 
     def init(self):
         super().init()
 
     def setup(self):
-        if self.hints != "":
-            try:
-                with open(self.hints, "r") as hint_file:
-                    hints = json.load(hint_file)
-                    if self.conn.hostname in hints:
-                        self._hint = hints[self.conn.hostname]
-                        self.console.print(f"[bold green]Using the following hint: '{self._hint}'")
-            except:
-                self.console.print("[yellow]Was not able to load hint file")
+        if self.hint != "":
+            self.console.print(f"[bold green]Using the following hint: '{self.hint}'")
         
         if self.disable_history == False:
             self._sliding_history = SlidingCliHistory(self.llm)
@@ -107,7 +99,7 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
         if not self.disable_history:
             history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - state_size - template_size)
 
-        cmd = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, state=self._state, conn=self.conn, system=self.system, update_state=self.enable_update_state, target_user="root", hint=self._hint)
+        cmd = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, state=self._state, conn=self.conn, system=self.system, update_state=self.enable_update_state, target_user="root", hint=self.hint)
         cmd.result = llm_util.cmd_output_fixer(cmd.result)
         return cmd
 
@@ -130,26 +122,3 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
         result = self.llm.get_response(template_state, cmd=cmd, resp=result, facts=self._state)
         self._state = result.result
         return result
-
-@use_case("linux_privesc", "Linux Privilege Escalation")
-@dataclass
-class LinuxPrivesc(Privesc):
-    conn: SSHConnection = None
-    system: str = "linux"
-
-    def init(self):
-        super().init()
-        self._capabilities["run_command"] = SSHRunCommand(conn=self.conn)
-        self._capabilities["test_credential"] = SSHTestCredential(conn=self.conn)
-
-
-@use_case("windows_privesc", "Windows Privilege Escalation")
-@dataclass
-class WindowsPrivesc(Privesc):
-    conn: PSExecConnection = None
-    system: str = "Windows"
-
-    def init(self):
-        super().init()
-        self._capabilities["run_command"] = PSExecRunCommand(conn=self.conn)
-        self._capabilities["test_credential"] = PSExecTestCredential(conn=self.conn)

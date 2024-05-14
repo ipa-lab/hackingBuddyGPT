@@ -6,26 +6,6 @@ from usecases.base import UseCase
 from utils import Console, DbStorage
 from utils.openai.openai_llm import OpenAIConnection
 
-@dataclass
-class Agent(RoundBasedUseCase):
-
-    _capabilities: Dict[str, Capability] = field(default_factory=dict)
-    _default_capability: Capability = None
-
-    def init(self):
-        super().init()
-
-    def add_capability(self, cap:Capability, default:bool=False):
-        self._capabilities[cap.get_name()] = cap
-        if default:
-            self._default_capability = cap
-
-    def get_capability(self, name:str) -> Capability:
-        return self._capabilities.get(name, self._default_capability)
-
-    def get_capabilty_block(self) -> str:
-        return "You can either\n\n" + "\n".join(map(lambda i: f"- {i.describe()}", self._capabilities.values()))
-
 # this set ups all the console and database stuff, and runs the main loop for a bounded amount of turns
 @dataclass
 class RoundBasedUseCase(UseCase, abc.ABC):

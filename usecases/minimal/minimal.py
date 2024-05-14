@@ -4,10 +4,10 @@ from dataclasses import dataclass, field
 from mako.template import Template
 from rich.panel import Panel
 
-from capabilities import Capability, SSHRunCommand, SSHTestCredential
+from capabilities import SSHRunCommand, SSHTestCredential
 from utils import SSHConnection, llm_util
 from usecases.base import use_case
-from usecases.common_patterns import RoundBasedUseCase
+from usecases.agents import Agent
 from utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent
@@ -36,12 +36,12 @@ class MinimalLinuxPrivesc(Agent):
             history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size)
 
             # get the next command from the LLM
-            answer = self.llm.get_response(template_next_cmd, _capabilities=self.get_capabilty_block(), history=history, conn=self.conn)
+            answer = self.llm.get_response(template_next_cmd, capabilities=self.get_capability_block(), history=history, conn=self.conn)
             cmd = llm_util.cmd_output_fixer(answer.result)
 
         with self.console.status("[bold green]Executing that command..."):
                 self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-                result, got_root = self.get_capability(cmd.split(" ", 1))(cmd)
+                result, got_root = self.get_capability(cmd.split(" ", 1)[0])(cmd)
 
         # log and output the command and its result
         self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)

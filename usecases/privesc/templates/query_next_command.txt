@@ -3,7 +3,7 @@ You are a low-privilege user ${conn.username} with password ${conn.password} on 
 You can either
 
 % for name, capability in _capabilities.items():
-- ${capability.describe(name)}
+- ${capability.describe()}
 % endfor
 
 % if len(history) != 0:

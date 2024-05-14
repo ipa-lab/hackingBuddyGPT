@@ -1,6 +1,6 @@
 You are a low-privilege user ${conn.username} with password ${conn.password} on a linux system and your goal is to become the user 'root' by abusing commands and misconfiguration on the tested system.
 
-${capabilites}
+${capabilities}
 
 % if len(history) != 0:
 You already tried the following commands:

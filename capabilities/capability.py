@@ -27,7 +27,6 @@ class Capability(abc.ABC):
         """
         pass
 
-    @abc.abstractmethod
     def get_name(self) -> str:
         return type(self).__name__
 
@@ -75,7 +74,7 @@ def capabilities_to_action_model(capabilities: Dict[str, Capability]) -> Type[Ac
     the model returned from here.
     """
     class Model(Action):
-        action: Union[tuple([capability.to_model() for name, capability in capabilities.items()])]
+        action: Union[tuple([capability.to_model() for capability in capabilities.values()])]
 
     return Model
 

@@ -1,4 +1,3 @@
-import abc
 import json
 import pathlib
 from dataclasses import dataclass
@@ -21,7 +20,7 @@ template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
 
 @use_case("linux_privesc_hintfile", "Linux Privilege Escalation using a hints file")
 @dataclass
-class PrivescWithHintFile(UseCase, abc.ABC):
+class PrivescWithHintFile(UseCase):
     conn: SSHConnection = None
     system: str = ''
     enable_explanation: bool = False
@@ -78,7 +77,7 @@ class PrivescWithHintFile(UseCase, abc.ABC):
 
 @use_case("linux_privesc_guided", "Linux Privilege Escalation using lse.sh for initial guidance")
 @dataclass
-class PrivescWithLSE(UseCase, abc.ABC):
+class PrivescWithLSE(UseCase):
     conn: SSHConnection = None
     system: str = ''
     enable_explanation: bool = False
@@ -146,5 +145,5 @@ class LinuxPrivesc(Privesc):
 
     def init(self):
         super().init()
-        self._capabilities["run_command"] = SSHRunCommand(conn=self.conn)
-        self._capabilities["test_credential"] = SSHTestCredential(conn=self.conn)
+        self.add_capability(SSHRunCommand(conn=self.conn), default=True)
+        self.add_capability(SSHTestCredential(conn=self.conn))

@@ -1,4 +1,3 @@
-import abc
 import pathlib
 from dataclasses import dataclass, field
 from typing import Dict
@@ -7,9 +6,8 @@ from mako.template import Template
 from rich.panel import Panel
 
 from capabilities import Capability
+from usecases.agents import Agent
 from utils import llm_util, ui
-from usecases.base import UseCase
-from usecases.common_patterns import RoundBasedUseCase
 from utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent / "templates"
@@ -19,7 +17,7 @@ template_state = Template(filename=str(template_dir / "update_state.txt"))
 template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
 
 @dataclass
-class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
+class Privesc(Agent):
 
     system: str = ''
     enable_explanation: bool = False
@@ -49,11 +47,8 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
         cmd = answer.result
 
         with self.console.status("[bold green]Executing that command..."):
-            if answer.result.startswith("test_credential"):
-                result, got_root = self._capabilities["test_credential"](cmd)
-            else:
-                self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-                result, got_root = self._capabilities["run_command"](cmd)
+            self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
+            result, got_root = self.get_capability(cmd.split(" ", 1)[0])(cmd)
 
         # log and output the command and its result
         self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
@@ -99,7 +94,7 @@ class Privesc(RoundBasedUseCase, UseCase, abc.ABC):
         if not self.disable_history:
             history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - state_size - template_size)
 
-        cmd = self.llm.get_response(template_next_cmd, _capabilities=self._capabilities, history=history, state=self._state, conn=self.conn, system=self.system, update_state=self.enable_update_state, target_user="root", hint=self.hint)
+        cmd = self.llm.get_response(template_next_cmd, capabilities=self.get_capability_block(), history=history, state=self._state, conn=self.conn, system=self.system, update_state=self.enable_update_state, target_user="root", hint=self.hint)
         cmd.result = llm_util.cmd_output_fixer(cmd.result)
         return cmd
 

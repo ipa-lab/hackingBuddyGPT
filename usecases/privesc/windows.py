@@ -14,5 +14,5 @@ class WindowsPrivesc(Privesc):
 
     def init(self):
         super().init()
-        self._capabilities["run_command"] = PSExecRunCommand(conn=self.conn)
-        self._capabilities["test_credential"] = PSExecTestCredential(conn=self.conn)
+        self.add_capability(PSExecRunCommand(conn=self.conn), default=True)
+        self.add_capability(PSExecTestCredential(conn=self.conn))

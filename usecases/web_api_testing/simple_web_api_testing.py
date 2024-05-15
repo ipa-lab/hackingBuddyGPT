@@ -36,7 +36,7 @@ class SimpleWebAPITesting(RoundBasedUseCase):
     # Parameter specifying the template used to format HTTP methods in API requests
     http_method_template: str = parameter(
         desc="Template used to format HTTP methods in API requests. The {method} placeholder will be replaced by actual HTTP method names.",
-        default="{method} request"
+        default="{method}"
     )
 
     # Parameter specifying the expected HTTP methods as a comma-separated list
@@ -67,10 +67,12 @@ class SimpleWebAPITesting(RoundBasedUseCase):
 
         self._context["host"] = self.host
         sett = set(self.http_method_template.format(method=method) for method in self.http_methods.split(","))
-        self._capabilities = {
-            "submit_http_method": SubmitFlag(self.http_method_description,
+        flag = SubmitFlag(self.http_method_description,
                                       sett,
-                                      success_function=self.all_http_methods_found),
+                                      success_function=self.all_http_methods_found)
+        print(f'Valid flags:{flag.valid_flags}')
+        self._capabilities = {
+            "submit_http_method": flag,
             "http_request": HTTPRequest(self.host),
             "record_note": RecordNote(self._context["notes"]),
         }
@@ -83,6 +85,7 @@ class SimpleWebAPITesting(RoundBasedUseCase):
         with self.console.status("[bold green]Asking LLM for a new command..."):
             # generate prompt
             prompt = self.prompt_engineer.generate_prompt()
+
 
             tic = time.perf_counter()
             response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,

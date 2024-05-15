@@ -127,9 +127,22 @@ class PromptEngineer(object):
             "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
             ]
         else:
-            chain_of_thought_steps = [
-                "Let's think step by step."  # zero shot prompt
-            ]
+            if round == 0:
+                chain_of_thought_steps = [
+                "Let's think step by step." # zero shot prompt
+                ]
+            elif self.round <= 5:
+                chain_of_thought_steps = ["Just Focus on the endpoints for now."]
+            elif self.round >5 and self.round <= 10:
+                chain_of_thought_steps = ["Just Focus on the HTTP method GET for now."]
+            elif self.round > 10 and self.round <= 15:
+                chain_of_thought_steps = ["Just Focus on the HTTP method POST and PUT for now."]
+            elif self.round > 15 and self.round <= 20:
+                chain_of_thought_steps = ["Just Focus on the HTTP method DELETE for now."]
+            else:
+                chain_of_thought_steps = ["Look for exploits."]
+
+
         return "\n".join([previous_prompt] + chain_of_thought_steps)
 
 

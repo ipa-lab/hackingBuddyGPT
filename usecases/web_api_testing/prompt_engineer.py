@@ -118,10 +118,11 @@ class PromptEngineer(object):
         else:
             chain_of_thought_steps = [
             "Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",
-            "Identify all available endpoints (e.g., `/posts`, `/comments`, `/albums`, etc.).",
-            "Use a tool like Postman or curl to interact with the API by making GET, POST, PUT, DELETE requests to understand the responses.",
+            "Identify all available endpoints.",
+            "Create GET, POST, PUT, DELETE requests to understand the responses.",
             "Note down the response structures, status codes, and headers for each endpoint.",
-            "For each endpoint, document the following details: URL, HTTP method (GET, POST, etc.), query parameters and path variables, expected request body structure for POST and PUT requests, response structure for successful and error responses.",
+            "For each endpoint, document the following details: URL, HTTP method (GET, POST, PUT, DELETE), query parameters and path variables, expected request body structure for POST and PUT requests, response structure for successful and error responses.",
+            "First execute the GET requests, then POST, then PUT and DELETE. "
             "Identify common data structures returned by various endpoints and define them as reusable schemas. Determine the type of each field (e.g., integer, string, array) and define common response structures as components that can be referenced in multiple endpoint definitions.",
             "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
             "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",

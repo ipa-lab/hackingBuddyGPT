@@ -62,14 +62,14 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
             "description": "Automatically generated description of the API."
         },
         "servers": [{"url": "https://jsonplaceholder.typicode.com"}],
-        "paths": {}
+        "endpoints": {}
     }
         self._prompt_history.append(
             {
                 "role": "system",
                 "content": f"You're tasked with documenting the REST APIs of a website hosted at {self.host}. "
                            f"Your main goal is to comprehensively explore the APIs endpoints and responses, and then document your findings in form of a OpenAPI specification."
-                           f"Start with an empty OpenAPI specification. This thorough documentation will facilitate analysis later on.\n"
+                           f"Start with an empty OpenAPI specification.\n"
                            f"Maintain meticulousness in documenting your observations as you traverse the APIs. This will streamline the documentation process.\n"
                            f"Avoid resorting to brute-force methods. All essential information should be accessible through the API endpoints.\n"
 
@@ -99,6 +99,8 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
         with self.console.status("[bold green]Asking LLM for a new command..."):
             # generate prompt
             prompt = self.prompt_engineer.generate_prompt()
+            print("----------------------------PROMPT----------------------------")
+            print(f' {prompt}')
 
             tic = time.perf_counter()
             response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
@@ -165,9 +167,9 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
             path = request.path
             method = request.method
             if path and method:
-                if path not in self.openapi_spec['paths'] :#and self.has_no_numbers(path):
-                    self.openapi_spec['paths'][path] = {}
-                self.openapi_spec['paths'][path][method.lower()] = {
+                if path not in self.openapi_spec['endpoints']:#and self.has_no_numbers(path):
+                    self.openapi_spec['endpoints'][path] = {}
+                self.openapi_spec['endpoints'][path][method.lower()] = {
                     "summary": f"{method} operation on {path}",
                     "responses": {
                         "200": {
@@ -188,7 +190,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
                 "openapi": self.openapi_spec["openapi"],
                 "info": self.openapi_spec["info"],
                 "servers": self.openapi_spec["servers"],
-                "paths": self.openapi_spec["paths"]
+                "paths": self.openapi_spec["endpoints"]
             }
 
             # Ensure the directory exists

@@ -1,0 +1,97 @@
+info:
+  description: Automatically generated description of the API.
+  title: Generated API Documentation
+  version: '1.0'
+openapi: 3.0.0
+paths:
+  /albums:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /albums
+  /albums/1:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /albums/1
+  /comments:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /comments
+  /comments/1:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /comments/1
+    put:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: PUT operation on /comments/1
+  /posts:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /posts
+  /todos:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /todos
+  /todos/1:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /todos/1
+  /users:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /users
+servers:
+- url: https://jsonplaceholder.typicode.com

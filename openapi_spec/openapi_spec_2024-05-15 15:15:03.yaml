@@ -1,0 +1,166 @@
+info:
+  description: Automatically generated description of the API.
+  title: Generated API Documentation
+  version: '1.0'
+openapi: 3.0.0
+paths:
+  /albums:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /albums
+  /albums/1:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /albums/1
+  /comments:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /comments
+  /comments/1:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /comments/1
+  /photos:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /photos
+  /photos/1:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /photos/1
+  /posts:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /posts
+  /posts/1:
+    delete:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: DELETE operation on /posts/1
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /posts/1
+    put:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: PUT operation on /posts/1
+  /posts/1/comments:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /posts/1/comments
+  /todos:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /todos
+  /todos/1:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /todos/1
+  /users:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /users
+  /users/1:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /users/1
+  /users/1/albums:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Successful response
+      summary: GET operation on /users/1/albums
+servers:
+- url: https://jsonplaceholder.typicode.com

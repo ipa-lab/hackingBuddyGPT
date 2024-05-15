@@ -99,11 +99,10 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
         with self.console.status("[bold green]Asking LLM for a new command..."):
             # generate prompt
-            prompt = self.prompt_engineer.generate_prompt()
-            print("----------------------------PROMPT----------------------------")
-            print(f' {prompt}')
+            prompt = self.prompt_engineer.generate_prompt(doc=True)
 
             tic = time.perf_counter()
+
             response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
                                                                                                messages=prompt,
                                                                                                response_model=capabilities_to_action_model(
@@ -119,11 +118,9 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
             self._prompt_history.append(message)
             content = completion.choices[0].message.content
 
-            # print(f'message:{message}')
             answer = LLMResult(content, str(prompt),
                                content, toc - tic, completion.usage.prompt_tokens,
                                completion.usage.completion_tokens)
-            # print(f'answer: {answer}')
 
         with self.console.status("[bold green]Executing that command..."):
             result = response.execute()
@@ -135,7 +132,6 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
                 self.update_openapi_spec(response )
 
         self.log_db.add_log_query(self._run_id, turn, command, result, answer)
-        # if self._all_http_methods_found or turn == FINAL_ROUND:
         self.write_openapi_to_yaml()
         return self._all_http_methods_found
 

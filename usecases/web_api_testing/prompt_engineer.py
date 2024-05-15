@@ -44,7 +44,7 @@ class PromptEngineer(object):
             PromptStrategy.TREE_OF_THOUGHT: self.tree_of_thought
         }
 
-    def generate_prompt(self):
+    def generate_prompt(self, doc=False):
         """
         Generates a prompt based on the specified strategy and gets a response.
 
@@ -56,7 +56,7 @@ class PromptEngineer(object):
         if prompt_func:
             print(f'prompt history:{self._prompt_history[self.round]}')
             if not isinstance(self._prompt_history[self.round],ChatCompletionMessage ):
-                prompt = prompt_func()
+                prompt = prompt_func(doc)
                 self._prompt_history[self.round]["content"] = prompt
             self.round = self.round +1
             return self._prompt_history
@@ -88,7 +88,7 @@ class PromptEngineer(object):
 
 
 
-    def in_context_learning(self):
+    def in_context_learning(self, doc=False):
         """
         Generates a prompt for in-context learning.
 
@@ -100,7 +100,7 @@ class PromptEngineer(object):
         """
         return str("\n".join(self._prompt_history[self.round]["content"] + [self.prompt]))
 
-    def chain_of_thought(self,zero_shot = False):
+    def chain_of_thought(self, doc=False):
         """
         Generates a prompt using the chain-of-thought strategy. https://www.promptingguide.ai/techniques/cot
 
@@ -111,33 +111,30 @@ class PromptEngineer(object):
         """
 
         previous_prompt = self._prompt_history[self.round]["content"]
-        if zero_shot:
-            chain_of_thought_steps = [
-                "Let's think step by step."  # zero shot prompt
-            ]
-        else:
+
+        if doc :
             chain_of_thought_steps = [
             "Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",
             "Identify all available endpoints.",
             "Create GET, POST, PUT, DELETE requests to understand the responses.",
             "Note down the response structures, status codes, and headers for each endpoint.",
             "For each endpoint, document the following details: URL, HTTP method (GET, POST, PUT, DELETE), query parameters and path variables, expected request body structure for POST and PUT requests, response structure for successful and error responses.",
-            "First execute the GET requests, then POST, then PUT and DELETE. "
+            "First execute the GET requests, then POST, then PUT and DELETE."
             "Identify common data structures returned by various endpoints and define them as reusable schemas. Determine the type of each field (e.g., integer, string, array) and define common response structures as components that can be referenced in multiple endpoint definitions.",
             "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
             "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",
             "Refine the document based on feedback and additional testing, share the draft with others, gather feedback, and make necessary adjustments. Regularly update the specification as the API evolves.",
             "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
             ]
-
-
-        #if previous_prompt == "Not a valid flag":
-        #    return previous_prompt
+        else:
+            chain_of_thought_steps = [
+                "Let's think step by step."  # zero shot prompt
+            ]
         return "\n".join([previous_prompt] + chain_of_thought_steps)
 
 
 
-    def tree_of_thought(self):
+    def tree_of_thought(self, doc=False):
         """
         Generates a prompt using the tree-of-thought strategy. https://github.com/dave1010/tree-of-thought-prompting
 

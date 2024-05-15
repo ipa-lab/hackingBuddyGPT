@@ -55,8 +55,9 @@ class SimpleWebAPITesting(RoundBasedUseCase):
         self._prompt_history.append(
             {
                 "role": "system",
-                "content": f"You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at {self.host}. Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, and then devise and execute potential exploits.\n"
-                           f"Be diligent in documenting your findings as you navigate through the APIs. This will streamline your analysis process later on.\n"
+                "content": f"You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at {self.host}. "
+                           f"Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, and then devise and execute potential exploits.\n"
+                           f"Be diligent in documenting your findings as you navigate through the APIs..\n"
                            f"Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves.\n"
                            f"Remember, if you encounter a http methods ({self.http_method_description}), promptly submit it as it is of utmost importance."
             })

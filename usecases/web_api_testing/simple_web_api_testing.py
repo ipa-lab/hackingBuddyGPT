@@ -8,13 +8,14 @@ from capabilities.capability import capabilities_to_action_model
 from capabilities.http_request import HTTPRequest
 from capabilities.record_note import RecordNote
 from capabilities.submit_flag import SubmitFlag
+from usecases.common_patterns import RoundBasedUseCase
 from usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
 from utils import LLMResult, tool_message, ui
 from utils.configurable import parameter
 from utils.openai.openai_lib import OpenAILib
 from rich.panel import Panel
 from usecases import use_case
-from usecases.usecase.roundbased import RoundBasedUseCase
+
 import pydantic_core
 
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
@@ -25,7 +26,7 @@ Context = Any
 @dataclass
 class SimpleWebAPITesting(RoundBasedUseCase):
     llm: OpenAILib
-    host: str = parameter(desc="The host to test", default="https://api.restful-api.dev")
+    host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     # Parameter specifying the pattern description for expected HTTP methods in the API response
     http_method_description: str = parameter(
         desc="Pattern description for expected HTTP methods in the API response",
@@ -81,7 +82,6 @@ class SimpleWebAPITesting(RoundBasedUseCase):
         with self.console.status("[bold green]Asking LLM for a new command..."):
             # generate prompt
             prompt = self.prompt_engineer.generate_prompt()
-            print(f'Prompt:{prompt}')
 
             tic = time.perf_counter()
             response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
@@ -94,7 +94,6 @@ class SimpleWebAPITesting(RoundBasedUseCase):
             tool_call_id = message.tool_calls[0].id
             command = pydantic_core.to_json(response).decode()
             self.console.print(Panel(command, title="assistant"))
-            print(f'message: {message}')
             self._prompt_history.append(message)
 
             answer = LLMResult(completion.choices[0].message.content, str(prompt),
@@ -104,7 +103,26 @@ class SimpleWebAPITesting(RoundBasedUseCase):
         with self.console.status("[bold green]Executing that command..."):
             result = response.execute()
             self.console.print(Panel(result, title="tool"))
-            self._prompt_history.append(tool_message(result, tool_call_id))
+            result_str = self.parse_http_status_line(result)
+            self._prompt_history.append(tool_message(result_str, tool_call_id))
+
 
         self.log_db.add_log_query(self._run_id, turn, command, result, answer)
         return self._all_http_methods_found
+
+    def parse_http_status_line(self, status_line):
+        if status_line is None or status_line == "Not a valid flag":
+            return status_line
+        else:
+            # Split the status line into components
+            parts = status_line.split(' ', 2)
+
+            # Check if the parts are at least three in number
+            if len(parts) >= 3:
+                protocol = parts[0]  # e.g., "HTTP/1.1"
+                status_code = parts[1]  # e.g., "200"
+                status_message = parts[2].split("\r\n")[0]  # e.g., "OK"
+                print(f'status code:{status_code}, status msg:{status_message}')
+                return str(status_code + " " + status_message)
+            else:
+                raise ValueError("Invalid HTTP status line")

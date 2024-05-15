@@ -10,13 +10,14 @@ from capabilities.capability import capabilities_to_action_model
 from capabilities.http_request import HTTPRequest
 from capabilities.record_note import RecordNote
 from capabilities.submit_flag import SubmitFlag
+from usecases.common_patterns import RoundBasedUseCase
 from usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
 from utils import LLMResult, tool_message, ui
 from utils.configurable import parameter
 from utils.openai.openai_lib import OpenAILib
 from rich.panel import Panel
 from usecases import use_case
-from usecases.usecase.roundbased import RoundBasedUseCase
+
 import pydantic_core
 import yaml
 

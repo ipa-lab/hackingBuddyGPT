@@ -12,8 +12,8 @@ from capabilities.http_request import HTTPRequest
 from capabilities.record_note import RecordNote
 from capabilities.submit_flag import SubmitFlag
 from utils import LLMResult, tool_message
-from usecases.usecase import use_case
-from usecases.usecase.roundbased import RoundBasedUseCase
+from usecases.base import use_case
+from usecases.common_patterns import RoundBasedUseCase
 from utils.configurable import parameter
 from utils.openai.openai_lib import OpenAILib
 

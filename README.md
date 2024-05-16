@@ -2,7 +2,7 @@
 
 *Helping Ethical Hackers use LLMs in 50 Lines of Code or less..*
 
-[Join us on discord!](https://discord.gg/vr4PhSM8yN)
+[Read the Docs](https://docs.hackingbuddy.ai) | [Join us on discord!](https://discord.gg/vr4PhSM8yN)
 
 HackingBuddyGPT helps security researchers use LLMs to discover new attack vectors and save the world (or earn bug bounties) in 50 lines of code or less. In the long run, we hope to make the world a safer place by empowering security  professionals to get more hacking done by using AI. The more testing they can do, the safer all of us will get.
 

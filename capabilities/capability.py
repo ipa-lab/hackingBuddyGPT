@@ -16,19 +16,19 @@ class Capability(abc.ABC):
     way of providing a json schema for the capabilities, which can then be used for function-calling LLMs.
     """
     @abc.abstractmethod
-    def describe(self, name: str = None) -> str:
+    def describe(self) -> str:
         """
         describe should return a string that describes the capability. This is used to generate the help text for the
         LLM.
-        I don't like, that at the moment the name under which the capability is available to the LLM is allowed to be
-        passed in, but it is necessary at the moment, to be backwards compatible. Please do not use the name if you
-        don't really have to, then we can see if we can remove it in the future.
-
+ 
         This is a method and not just a simple property on purpose (though it could become a @property in the future, if
         we don't need the name parameter anymore), so that it can template in some of the capabilities parameters into
         the description.
         """
         pass
+
+    def get_name(self) -> str:
+        return type(self).__name__
 
     @abc.abstractmethod
     def __call__(self, *args, **kwargs):
@@ -38,7 +38,7 @@ class Capability(abc.ABC):
         """
         pass
 
-    def to_model(self, name: str) -> BaseModel:
+    def to_model(self) -> BaseModel:
         """
         Converts the parameters of the `__call__` function of the capability to a pydantic model, that can be used to
         interface with an LLM using eg instructor or the openAI function calling API.
@@ -47,7 +47,7 @@ class Capability(abc.ABC):
         """
         sig = inspect.signature(self.__call__)
         fields = {param: (param_info.annotation, ...) for param, param_info in sig.parameters.items()}
-        model_type = create_model(self.__class__.__name__, __doc__=self.describe(name), **fields)
+        model_type = create_model(self.__class__.__name__, __doc__=self.describe(), **fields)
 
         def execute(model):
             return self(**model.dict())
@@ -74,7 +74,7 @@ def capabilities_to_action_model(capabilities: Dict[str, Capability]) -> Type[Ac
     the model returned from here.
     """
     class Model(Action):
-        action: Union[tuple([capability.to_model(name) for name, capability in capabilities.items()])]
+        action: Union[tuple([capability.to_model() for capability in capabilities.values()])]
 
     return Model
 

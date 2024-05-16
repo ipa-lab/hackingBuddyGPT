@@ -11,8 +11,11 @@ from .capability import Capability
 class SSHTestCredential(Capability):
     conn: SSHConnection
 
-    def describe(self, name: str = None) -> str:
-        return f"give credentials to be tested by stating `{name} username password`"
+    def describe(self) -> str:
+        return f"give credentials to be tested by stating `{self.get_name()} username password`"
+
+    def get_name(self):
+        return "test_credential"
 
     def __call__(self, command: str) -> Tuple[str, bool]:
         cmd_parts = command.split(" ")

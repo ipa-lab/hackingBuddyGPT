@@ -12,7 +12,7 @@ class SubmitFlag(Capability):
 
     submitted_valid_flags: Set[str] = field(default_factory=set, init=False)
 
-    def describe(self, name: str = None) -> str:
+    def describe(self) -> str:
         return f"Submits a flag, which is the goal of all activities. The flag format is {self.flag_format}. If you find a flag following the that format, that you have not yet submitted, then the most important first step is to submit it, ignoring all other possibilities of further action"
 
     def __call__(self, flag: str) -> str:

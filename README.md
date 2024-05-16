@@ -1,4 +1,4 @@
-# [HackingBuddyGPT](https://github.com/ipa-lab/hackingbuddyGPT) [![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)
+# <div class="vertical-align: middle"><img src="https://github.com/ipa-lab/hackingBuddyGPT/blob/main/docs/hackingbuddy-rounded.png?raw=true" width="72"> HackingBuddyGPT [![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)</div>
 
 *Helping Ethical Hackers use LLMs in 50 Lines of Code or less..*
 

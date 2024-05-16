@@ -13,7 +13,7 @@ class RoundBasedUseCase(UseCase, abc.ABC):
     console: Console
     llm: OpenAIConnection = None
     tag: str = ""
-    max_turns: int = 10
+    max_turns: int =10
 
     _got_root: bool = False
     _run_id: int = 0

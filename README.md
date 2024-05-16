@@ -2,6 +2,8 @@
 
 *Helping Ethical Hackers use LLMs in 50 Lines of Code or less..*
 
+[Join us on discord!](https://discord.gg/vr4PhSM8yN)
+
 HackingBuddyGPT helps security researchers use LLMs to discover new attack vectors and save the world (or earn bug bounties) in 50 lines of code or less. In the long run, we hope to make the world a safer place by empowering security  professionals to get more hacking done by using AI. The more testing they can do, the safer all of us will get.
 
 We aim to become **THE go-to framework for security researchers** and pen-testers interested in using LLMs or LLM-based autonomous agents for security testing. To aid their experiments, we also offer re-usable [linux priv-esc benchmarks](https://github.com/ipa-lab/benchmark-privesc-linux) and publish all our findings as open-access reports. All source code can be found on [github](https://github.com/ipa-lab/hackingbuddyGPT).

@@ -8,7 +8,7 @@ HackingBuddyGPT helps security researchers use LLMs to discover new attack vecto
 
 We aim to become **THE go-to framework for security researchers** and pen-testers interested in using LLMs or LLM-based autonomous agents for security testing. To aid their experiments, we also offer re-usable [linux priv-esc benchmarks](https://github.com/ipa-lab/benchmark-privesc-linux) and publish all our findings as open-access reports.
 
-How can LLMs aid or even emulate hackers? Threat actors are [already using LLMs](https://arxiv.org/abs/2307.00691), to better protect against this new threat we must learn more about LLMs' capabilities and help blue teams to prepare for them.
+How can LLMs aid or even emulate hackers? Threat actors are [already using LLMs](https://arxiv.org/abs/2307.00691), to better protect against this new threat we must learn more about LLMs' capabilities and help blue teams preparing for them.
 
 **[Join us](https://discord.gg/vr4PhSM8yN) / Help us, more people need to be involved in the future of LLM-assisted pen-testing:**
 
@@ -32,11 +32,11 @@ hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with L
 
 ## Getting help
 
-If you need help or want to chat about using AI for security or eduction, please join our [discord server were we talk about all things AI + Offensive Security](https://discord.gg/vr4PhSM8yN)!
+If you need help or want to chat about using AI for security or education, please join our [discord server where we talk about all things AI + Offensive Security](https://discord.gg/vr4PhSM8yN)!
 
 ### Main Contributors
 
-The project originally started with [Andreas](https://github.com/andreashappe) asking himself a the simple question during a rainy weekend: *Can LLMs be used to hack systems?* Initial results were promising (or disturbing, depends whom you ask) and led to the creation of our motley group of academics and professinal pen-testers at TU Wien's [IPA-Lab](https://ipa-lab.github.io/).
+The project originally started with [Andreas](https://github.com/andreashappe) asking himself a the simple question during a rainy weekend: *Can LLMs be used to hack systems?* Initial results were promising (or disturbing, depends whom you ask) and led to the creation of our motley group of academics and professional pen-testers at TU Wien's [IPA-Lab](https://ipa-lab.github.io/).
 
 Over time, more contributors joined:
 
@@ -57,18 +57,18 @@ the use of LLMs for web penetration-testing and web api testing.
 | Name                                             | Description                                                                                                                                                                                                                                                                                  | Screenshot                                                                                                                                                    |
 |--------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [minimal](https://docs.hackingbuddy.ai/docs/dev-guide/dev-quickstart) | A minimal 50 LoC Linux Priv-Esc example. This is the usecase from [Build your own Agent/Usecase](#build-your-own-agentusecase)                                                                                                                                                               | ![A very minimal run](https://docs.hackingbuddy.ai/run_archive/2024-04-29_minimal.png)                                                                                                               |
-| [linux-privesc](https://docs.hackingbuddy.ai/docs/usecases/linux-priv-esc) | Given a SSH-connection for a low-privilege user, task the LLM to become the root user. This would be a typical Linux privilege escalation attack. We published two academic papers about this: [paper #1](https://arxiv.org/abs/2308.00121) and [paper #2](https://arxiv.org/abs/2310.11409) | ![Example wintermute run](https://docs.hackingbuddy.ai/run_archive/2024-04-06_linux.png)                                                                                                          |
+| [linux-privesc](https://docs.hackingbuddy.ai/docs/usecases/linux-priv-esc) | Given an SSH-connection for a low-privilege user, task the LLM to become the root user. This would be a typical Linux privilege escalation attack. We published two academic papers about this: [paper #1](https://arxiv.org/abs/2308.00121) and [paper #2](https://arxiv.org/abs/2310.11409) | ![Example wintermute run](https://docs.hackingbuddy.ai/run_archive/2024-04-06_linux.png)                                                                                                          |
 | [web-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web) | Directly hack a webpage. Currently in heavy development and pre-alpha stage.                                                                                                                                                                                                                 | ![Test Run for a simple Blog Page](https://docs.hackingbuddy.ai/run_archive/2024-05-03_web.png)                                                                                             |
 | [web-api-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web-api) | Directly test a REST API. Currently in heavy development and pre-alpha stage. (Documentation and testing of REST API.)                                                                                                                                                                       | Documentation:![web_api_documentation.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api_documentation.png) Testing:![web_api_testing.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api.png) |
 
 ## Build your own Agent/Usecase
 
-So you want to create your own LLM hacking agent? We've got you covered and taken care of the tedious ground work.
+So you want to create your own LLM hacking agent? We've got you covered and taken care of the tedious groundwork.
 
-Create a new usecase and implement `perform_round` containing all system/LLM interactions. We provide multiple helper and base classes, so that a new experiment can be implemented in a few dozens lines of code. Tedious tasks, such as
+Create a new usecase and implement `perform_round` containing all system/LLM interactions. We provide multiple helper and base classes so that a new experiment can be implemented in a few dozen lines of code. Tedious tasks, such as
 connecting to the LLM, logging, etc. are taken care of by our framework. Check our [developer quickstart quide](https://docs.hackingbuddy.ai/docs/dev-guide/dev-quickstart) for more information.
 
-The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and is able to connect to a linux target over SSH for fully-autonomous command execution (as well as password guessing).
+The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and can connect to a linux target over SSH for fully-autonomous command execution (as well as password guessing).
 
 ~~~ python
 template_dir = pathlib.Path(__file__).parent
@@ -143,7 +143,7 @@ We try to keep our python dependencies as light as possible. This should allow f
     - please note that executing this script will call OpenAI and thus charges will occur to your account. Please keep track of those.
 2. a potential target that is accessible over SSH. You can either use a deliberately vulnerable machine such as [Lin.Security.1](https://www.vulnhub.com/entry/) or a security benchmark such as our [linux priv-esc benchmark](https://github.com/ipa-lab/benchmark-privesc-linux).
 
-To get everything up and running, clone the repo, download requirements, setup API-keys and credentials and start `wintermute.py`:
+To get everything up and running, clone the repo, download requirements, setup API keys and credentials, and start `wintermute.py`:
 
 ~~~ bash
 # clone the repository
@@ -174,7 +174,7 @@ $ python wintermute.py minimal_linux_privesc
 
 ## Publications about hackingBuddyGPT
 
-Being academics, we surely wrote papers about this:
+Given our background in academia, we have authored papers that lay the groundwork and report on our efforts:
 
 - [Understanding Hackers' Work: An Empirical Study of Offensive Security Practitioners](https://arxiv.org/abs/2308.07057), presented at [FSE'23](https://2023.esec-fse.org/)
 - [Getting pwn'd by AI: Penetration Testing with Large Language Models](https://arxiv.org/abs/2308.00121), presented at [FSE'23](https://2023.esec-fse.org/) 
@@ -199,4 +199,4 @@ By using hackingBuddyGPT, you agree to indemnify, defend, and hold harmless the 
 
 ### Disclaimer 2
 
-Usage of hackingBuddyGPT for attacking targets without prior mutual consent is illegal. It's the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program. Only use for educational purposes.
+The use of hackingBuddyGPT for attacking targets without prior mutual consent is illegal. It's the end user's responsibility to obey all applicable local, state, and federal laws. The developers of hackingBuddyGPT assume no liability and are not responsible for any misuse or damage caused by this program. Only use it for educational purposes.

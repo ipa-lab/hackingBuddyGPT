@@ -20,7 +20,7 @@ pypsexec==0.3.0
 pyspnego==0.10.2
 python-dotenv==1.0.1
 regex==2023.12.25
-requests==2.31.0
+requests==2.32.0
 rich==13.7.1
 smbprotocol==1.13.0
 tiktoken==0.6.0

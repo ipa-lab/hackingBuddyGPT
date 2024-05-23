@@ -29,10 +29,7 @@ class SSHRunCommand(Capability):
         got_root = False
 
         cmd_parts = command.split(" ", 1)
-        assert (cmd_parts[0] == self.get_name())
         command = cmd_parts[1]
-
-        print("the command: " + command)
 
         sudo_pass = Responder(
             pattern=r'\[sudo\] password for ' + self.conn.username + ':',

@@ -11,7 +11,7 @@ class PSExecTestCredential(Capability):
     conn: PSExecConnection
 
     def describe(self) -> str:
-        return f"give credentials to be tested by stating `{self.get_name()} username password`"
+        return f"give credentials to be tested"
 
     def get_name(self) -> str:
         return "test_credential"

@@ -114,7 +114,7 @@ def get_parameters(fun, basename: str, fields: Dict[str, dataclasses.Field] = No
 
         if hasattr(type, "__parameters__"):
             params[name] = ComplexParameterDefinition(name, type, default, description, get_class_parameters(type, f"{basename}.{fun.__name__}"))
-        elif type in (str, int, bool):
+        elif type in (str, int, float, bool):
             params[name] = ParameterDefinition(name, type, default, description)
         else:
             raise ValueError(f"Parameter {name} of {basename}.{fun.__name__} must have str, int, bool, or a __parameters__ class as type, not {type}")

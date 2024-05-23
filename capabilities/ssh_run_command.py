@@ -20,10 +20,20 @@ class SSHRunCommand(Capability):
     conn: SSHConnection
 
     def describe(self) -> str:
-        return f"give a command to be executed on the shell and I will respond with the terminal output when running this command on the linux server. The given command must not require user interaction. Only state the to be executed command. The command should be used for enumeration or privilege escalation."
+        return f"give a command to be executed by stating `{self.get_name()} command arguments` and I will respond with the terminal output when running this command over SSH on the linux machine. The given command must not require user interaction."
+
+    def get_name(self):
+        return "exec_command"
 
     def __call__(self, command: str, timeout:int=10) -> Tuple[str, bool]:
         got_root = False
+
+        cmd_parts = command.split(" ", 1)
+        assert (cmd_parts[0] == self.get_name())
+        command = cmd_parts[1]
+
+        print("the command: " + command)
+
         sudo_pass = Responder(
             pattern=r'\[sudo\] password for ' + self.conn.username + ':',
             response=self.conn.password + '\n',

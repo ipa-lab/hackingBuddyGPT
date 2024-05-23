@@ -19,7 +19,7 @@ class SSHTestCredential(Capability):
 
     def __call__(self, command: str) -> Tuple[str, bool]:
         cmd_parts = command.split(" ")
-        assert (cmd_parts[0] == "test_credential")
+        assert (cmd_parts[0] == self.get_name())
 
         if len(cmd_parts) != 3:
             return "didn't provide username/password", False

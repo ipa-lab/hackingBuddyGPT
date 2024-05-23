@@ -48,12 +48,16 @@ class Privesc(Agent):
 
         with self.console.status("[bold green]Executing that command..."):
             self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-            result, got_root = self.get_capability(cmd.split(" ", 1)[0])(cmd)
+            capability = cmd.split(" ", 1)[0]
+            result, got_root = self.get_capability(capability)(cmd)
+            if capability == "exec_command":
+                cmd = cmd[len(capability)+1:]
 
         # log and output the command and its result
         self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
         if self._sliding_history:
             self._sliding_history.add_command(cmd, result)
+
         self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
         # analyze the result..

@@ -18,7 +18,7 @@ You currently expect the following about the target system:
 ${state}
 %endif
 % if hint:
-You are provided a hint: ${hint}
+You are provided the following guidance: ${hint}
 %endif
 
-Give your command. Do not add any explanation or add an initial `$`.
+State your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`.

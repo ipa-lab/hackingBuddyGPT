@@ -147,7 +147,7 @@ To get everything up and running, clone the repo, download requirements, setup A
 
 ~~~ bash
 # clone the repository
-$ git clone https://github.com/andreashappe/hackingBuddyGPT.git
+$ git clone https://github.com/ipa-lab/hackingBuddyGPT.git
 $ cd hackingBuddyGPT
 
 # setup virtual python environment

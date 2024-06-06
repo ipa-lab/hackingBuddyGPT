@@ -6,6 +6,7 @@ from mako.template import Template
 from rich.panel import Panel
 
 from capabilities import Capability
+from capabilities.capability import capabilities_to_simple_text_handler
 from usecases.agents import Agent
 from utils import llm_util, ui
 from utils.cli_history import SlidingCliHistory
@@ -48,12 +49,20 @@ class Privesc(Agent):
 
         with self.console.status("[bold green]Executing that command..."):
             self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-            result, got_root = self.get_capability(cmd.split(" ", 1)[0])(cmd)
+            _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities, default_capability=self._default_capability)
+            success, *output = parser(cmd)
+            if not success:
+                self.console.print(Panel(output[0], title=f"[bold red]Error parsing command:"))
+                return False
+
+            assert(len(output) == 1)
+            capability, cmd, (result, got_root) = output[0]
 
         # log and output the command and its result
         self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
         if self._sliding_history:
             self._sliding_history.add_command(cmd, result)
+
         self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
         # analyze the result..

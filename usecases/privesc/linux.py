@@ -104,7 +104,7 @@ class PrivescWithLSE(UseCase):
 
         run_cmd = "wget -q 'https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh' -O lse.sh;chmod 700 lse.sh; ./lse.sh -c -i -l 0 | grep -v 'nope$' | grep -v 'skip$'"
 
-        result, got_root = SSHRunCommand(conn=self.conn)(run_cmd, timeout=120)
+        result, got_root = SSHRunCommand(conn=self.conn, timeout=120)(run_cmd)
 
         self.console.print("[yellow]got the output: " + result)
         cmd = self.llm.get_response(template_lse, lse_output=result, number=3)

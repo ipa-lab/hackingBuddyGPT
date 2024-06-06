@@ -18,12 +18,21 @@ GOT_ROOT_REXEXPs = [
 @dataclass
 class SSHRunCommand(Capability):
     conn: SSHConnection
+    timeout: int = 10
 
     def describe(self) -> str:
-        return f"give a command to be executed on the shell and I will respond with the terminal output when running this command on the linux server. The given command must not require user interaction. Only state the to be executed command. The command should be used for enumeration or privilege escalation."
+        return f"give a command to be executed and I will respond with the terminal output when running this command over SSH on the linux machine. The given command must not require user interaction."
 
-    def __call__(self, command: str, timeout:int=10) -> Tuple[str, bool]:
+    def get_name(self):
+        return "exec_command"
+
+    def __call__(self, command: str) -> Tuple[str, bool]:
         got_root = False
+
+        if command.startswith(self.get_name()):
+            cmd_parts = command.split(" ", 1)
+            command = cmd_parts[1]
+
         sudo_pass = Responder(
             pattern=r'\[sudo\] password for ' + self.conn.username + ':',
             response=self.conn.password + '\n',
@@ -32,7 +41,7 @@ class SSHRunCommand(Capability):
         out = StringIO()
 
         try:
-            resp = self.conn.run(command, pty=True, warn=True, out_stream=out, watchers=[sudo_pass], timeout=timeout)
+            resp = self.conn.run(command, pty=True, warn=True, out_stream=out, watchers=[sudo_pass], timeout=self.timeout)
         except Exception as e:
             print("TIMEOUT! Could we have become root?")
         out.seek(0)

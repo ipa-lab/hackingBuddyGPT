@@ -1,6 +1,6 @@
 import abc
 import inspect
-from typing import Union, Type, Dict
+from typing import Union, Type, Dict, Callable, Any
 
 from pydantic import create_model, BaseModel
 
@@ -78,3 +78,95 @@ def capabilities_to_action_model(capabilities: Dict[str, Capability]) -> Type[Ac
 
     return Model
 
+
+SimpleTextHandlerResult = tuple[bool, Union[str, tuple[str, str, ...]]]
+SimpleTextHandler = Callable[[str], SimpleTextHandlerResult]
+
+
+def capabilities_to_simple_text_handler(capabilities: Dict[str, Capability], default_capability: Capability = None, include_description: bool = True) -> tuple[Dict[str, str], SimpleTextHandler]:
+    """
+    This function generates a simple text handler from a set of capabilities.
+    It is to be used when no function calling is available, and structured output is not to be trusted, which is why it
+    only supports the most basic of parameter types for the capabilities (str, int, float, bool).
+
+    As result it returns a dictionary of capability names to their descriptions and a parser function that can be used
+    to parse the text input and execute it. The first return value of the parser function is a boolean indicating
+    whether the parsing was successful, the second return value is a tuple containing the capability name, the parameters
+    as a string and the result of the capability execution.
+    """
+    def get_simple_fields(func, name) -> Dict[str, Type]:
+        sig = inspect.signature(func)
+        fields = {param: param_info.annotation for param, param_info in sig.parameters.items()}
+        for param, param_type in fields.items():
+            if param_type not in (str, int, float, bool):
+                raise ValueError(f"The command {name} is not compatible with this calling convention (this is not a LLM error, but rather a problem with the capability itself, the parameter {param} is {param_type} and not a simple type (str, int, float, bool))")
+        return fields
+
+    def parse_params(fields, params) -> tuple[bool, Union[str, Dict[str, Any]]]:
+        split_params = params.split(" ", maxsplit=len(fields) - 1)
+        if len(split_params) != len(fields):
+            return False, "Invalid number of parameters"
+
+        parsed_params = dict()
+        for param, param_type in fields.items():
+            try:
+                parsed_params[param] = param_type(split_params.pop(0))
+            except ValueError as e:
+                return False, f"Could not parse parameter {param}: {e}"
+        return True, parsed_params
+
+    capability_descriptions = dict()
+    capability_params = dict()
+    for capability_name, capability in capabilities.items():
+        fields = get_simple_fields(capability.__call__, capability_name)
+
+        description = f"`{capability_name}"
+        if len(fields) > 0:
+            description += " " + " ".join(param for param in fields)
+        description += "`"
+        if include_description:
+            description += f": {capability.describe()}"
+
+        capability_descriptions[capability_name] = description
+        capability_params[capability_name] = fields
+
+    def parser(text: str) -> SimpleTextHandlerResult:
+        capability_name_and_params = text.split(" ", maxsplit=1)
+        if len(capability_name_and_params) == 1:
+            capability_name = capability_name_and_params[0]
+            params = ""
+        else:
+            capability_name, params = capability_name_and_params
+        if capability_name not in capabilities:
+            return False, "Unknown command"
+
+        success, parsing_result = parse_params(capability_params[capability_name], params)
+        if not success:
+            return False, parsing_result
+
+        return True, (capability_name, params, capabilities[capability_name](**parsing_result))
+
+    resolved_parser: SimpleTextHandler = parser
+
+    if default_capability is not None:
+        default_fields = get_simple_fields(default_capability.__call__, "__default__")
+
+        def default_capability_parser(text: str) -> SimpleTextHandlerResult:
+            success, *output = parser(text)
+            if success:
+                return success, *output
+
+            params = text
+            success, parsing_result = parse_params(default_fields, params)
+            if not success:
+                params = text.split(" ", maxsplit=1)[1]
+                success, parsing_result = parse_params(default_fields, params)
+                if not success:
+                    return False, parsing_result
+
+            return True, (capability_name, params, default_capability(**parsing_result))
+
+
+        resolved_parser = default_capability_parser
+
+    return capability_descriptions, resolved_parser

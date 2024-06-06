@@ -18,7 +18,7 @@ def get_history_table(enable_explanation: bool, enable_update_state: bool, run_i
         table.add_column("StateUpdTime", style="dim")
         table.add_column("StateUpdTokens", style="dim")
 
-    for i in range(0, turn+1):
+    for i in range(1, turn+1):
         table.add_row(*db.get_round_data(run_id, i, enable_explanation, enable_update_state))
 
     return table

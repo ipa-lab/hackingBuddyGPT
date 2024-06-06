@@ -1,4 +1,5 @@
 import re
+
 from dataclasses import dataclass
 from typing import Tuple
 
@@ -6,14 +7,8 @@ from invoke import Responder
 
 from io import StringIO
 from utils import SSHConnection
+from utils.shell_root_detection import got_root
 from .capability import Capability
-
-
-GOT_ROOT_REXEXPs = [
-    re.compile("^# $"),
-    re.compile("^bash-[0-9]+.[0-9]# $")
-]
-
 
 @dataclass
 class SSHRunCommand(Capability):
@@ -27,8 +22,6 @@ class SSHRunCommand(Capability):
         return "exec_command"
 
     def __call__(self, command: str) -> Tuple[str, bool]:
-        got_root = False
-
         if command.startswith(self.get_name()):
             cmd_parts = command.split(" ", 1)
             command = cmd_parts[1]
@@ -57,9 +50,4 @@ class SSHRunCommand(Capability):
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         last_line = ansi_escape.sub('', last_line)
 
-        for i in GOT_ROOT_REXEXPs:
-            if i.fullmatch(last_line):
-                got_root = True
-        if last_line.startswith(f'root@{self.conn.hostname}:'):
-            got_root = True
-        return tmp, got_root
+        return tmp, got_root(self.conn.hostname, last_line)

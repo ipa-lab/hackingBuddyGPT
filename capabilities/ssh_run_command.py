@@ -29,6 +29,10 @@ class SSHRunCommand(Capability):
     def __call__(self, command: str) -> Tuple[str, bool]:
         got_root = False
 
+        if command.startswith(self.get_name()):
+            cmd_parts = command.split(" ", 1)
+            command = cmd_parts[1]
+
         sudo_pass = Responder(
             pattern=r'\[sudo\] password for ' + self.conn.username + ':',
             response=self.conn.password + '\n',

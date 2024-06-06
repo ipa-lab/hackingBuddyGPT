@@ -7,3 +7,6 @@ __pycache__/
 *.sqlite3
 *.sqlite3-jounal
 *.sqlite
+src/hackingBuddyGPT.egg-info/
+build/
+dist/

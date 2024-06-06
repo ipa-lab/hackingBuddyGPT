@@ -50,7 +50,6 @@ class TemplatedAgent(Agent):
         super().init()
     
     def set_initial_state(self, initial_state):
-        print("setting state!")
         self._state = initial_state
 
     def set_template(self, template):

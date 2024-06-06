@@ -55,7 +55,8 @@ class Privesc(Agent):
                 self.console.print(Panel(output[0], title=f"[bold red]Error parsing command:"))
                 return False
 
-            capability, cmd, (result, got_root) = output
+            assert(len(output) == 1)
+            capability, cmd, (result, got_root) = output[0]
 
         # log and output the command and its result
         self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)

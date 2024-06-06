@@ -44,8 +44,12 @@ Repository = "https://github.com/ipa-lab/hackingBuddyGPT"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"hackingBuddyGPT.usecases.privesc.templates" = ["*.txt"]
+"hackingBuddyGPT.usecases.minimal" = ["*.txt"]
+
 [tool.pytest.ini_options]
-pythonpath = "src/hackingBuddyGPT"
+pythonpath = "src"
 addopts = [
 	"--import-mode=importlib",
 ]

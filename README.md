@@ -155,7 +155,7 @@ $ python -m venv venv
 $ source ./venv/bin/activate
 
 # install python requirements
-$ pip install -r requirements.txt
+$ pip install -e .
 
 # copy default .env.example
 $ cp .env.example .env

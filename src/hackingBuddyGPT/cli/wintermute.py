@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from usecases.base import use_cases
+from hackingBuddyGPT.usecases.base import use_cases
 
 
 def main():

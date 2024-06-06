@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from fabric import Connection
 from typing import Optional, Tuple
 
-from utils .configurable import configurable
+from hackingBuddyGPT.utils.configurable import configurable
 
 
 @configurable("ssh", "connects to a remote host via SSH")

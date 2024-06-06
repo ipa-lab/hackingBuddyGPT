@@ -1,9 +1,10 @@
 from dataclasses import dataclass
-from capabilities.psexec_run_command import PSExecRunCommand
-from capabilities.psexec_test_credential import PSExecTestCredential
-from usecases.base import use_case
-from usecases.privesc.common import Privesc
-from utils.psexec.psexec import PSExecConnection
+
+from hackingBuddyGPT.capabilities.psexec_run_command import PSExecRunCommand
+from hackingBuddyGPT.capabilities.psexec_test_credential import PSExecTestCredential
+from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.privesc.common import Privesc
+from hackingBuddyGPT.utils.psexec.psexec import PSExecConnection
 
 
 @use_case("windows_privesc", "Windows Privilege Escalation")

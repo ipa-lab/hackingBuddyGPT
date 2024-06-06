@@ -3,7 +3,7 @@ from typing import Tuple
 
 import paramiko
 
-from utils import SSHConnection
+from hackingBuddyGPT.utils import SSHConnection
 from .capability import Capability
 
 

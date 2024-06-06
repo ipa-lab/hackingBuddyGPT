@@ -1,15 +1,14 @@
 import pathlib
 from dataclasses import dataclass, field
-from typing import Dict
-
 from mako.template import Template
 from rich.panel import Panel
+from typing import Dict
 
-from capabilities import Capability
-from capabilities.capability import capabilities_to_simple_text_handler
-from usecases.agents import Agent
-from utils import llm_util, ui
-from utils.cli_history import SlidingCliHistory
+from hackingBuddyGPT.capabilities import Capability
+from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_handler
+from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.utils import llm_util, ui
+from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent / "templates"
 template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))

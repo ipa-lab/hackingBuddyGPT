@@ -8,7 +8,6 @@ from openai.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUs
 SAFETY_MARGIN = 128
 STEP_CUT_TOKENS = 128
 
-
 @dataclass
 class LLMResult:
     result: typing.Any

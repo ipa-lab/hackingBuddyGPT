@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict
-
-from capabilities.capability import Capability, capabilities_to_simple_text_handler
-from usecases.common_patterns import RoundBasedUseCase
-
 from mako.template import Template
 from rich.panel import Panel
-from utils import llm_util
+from typing import Dict
+
+from hackingBuddyGPT.utils import llm_util
+
+from hackingBuddyGPT.capabilities.capability import Capability, capabilities_to_simple_text_handler
+from .common_patterns import RoundBasedUseCase
 
 @dataclass
 class Agent(RoundBasedUseCase, ABC):

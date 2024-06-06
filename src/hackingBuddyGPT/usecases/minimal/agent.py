@@ -1,14 +1,13 @@
 import pathlib
 from dataclasses import dataclass, field
-
 from mako.template import Template
 from rich.panel import Panel
 
-from capabilities import SSHRunCommand, SSHTestCredential
-from utils import SSHConnection, llm_util
-from usecases.base import use_case
-from usecases.agents import Agent
-from utils.cli_history import SlidingCliHistory
+from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
+from hackingBuddyGPT.utils import SSHConnection, llm_util
+from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent
 template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))

@@ -3,7 +3,7 @@ import argparse
 from dataclasses import dataclass, field
 from typing import Dict, Type
 
-from utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters
+from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters
 
 class UseCase(abc.ABC):
     """

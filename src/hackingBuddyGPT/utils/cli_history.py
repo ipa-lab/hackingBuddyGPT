@@ -1,5 +1,4 @@
-from utils.llm_util import LLM, trim_result_front
-
+from .llm_util import LLM, trim_result_front
 
 class SlidingCliHistory:
 

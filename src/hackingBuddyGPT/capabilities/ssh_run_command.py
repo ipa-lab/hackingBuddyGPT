@@ -1,13 +1,12 @@
 import re
 
 from dataclasses import dataclass
+from invoke import Responder
+from io import StringIO
 from typing import Tuple
 
-from invoke import Responder
-
-from io import StringIO
-from utils import SSHConnection
-from utils.shell_root_detection import got_root
+from hackingBuddyGPT.utils import SSHConnection
+from hackingBuddyGPT.utils.shell_root_detection import got_root
 from .capability import Capability
 
 @dataclass

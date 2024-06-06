@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple
 
-from utils import PSExecConnection
+from hackingBuddyGPT.utils import PSExecConnection
 from .capability import Capability
 
 

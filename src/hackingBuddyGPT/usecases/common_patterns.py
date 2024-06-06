@@ -2,9 +2,10 @@ import abc
 
 from dataclasses import dataclass
 from rich.panel import Panel
-from usecases.base import UseCase
-from utils import Console, DbStorage
-from utils.openai.openai_llm import OpenAIConnection
+
+from .base import UseCase
+from hackingBuddyGPT.utils import Console, DbStorage
+from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 # this set ups all the console and database stuff, and runs the main loop for a bounded amount of turns
 @dataclass

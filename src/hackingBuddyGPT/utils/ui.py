@@ -1,7 +1,6 @@
 from rich.table import Table
 
-from utils.db_storage.db_storage import DbStorage
-
+from .db_storage.db_storage import DbStorage
 
 # helper to fill the history table with data from the db
 def get_history_table(enable_explanation: bool, enable_update_state: bool, run_id: int, db: DbStorage, turn: int) -> Table:

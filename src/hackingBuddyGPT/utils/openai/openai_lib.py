@@ -1,13 +1,11 @@
+import instructor
+import openai
+import tiktoken
 import time
 from dataclasses import dataclass
 
-import instructor
-import tiktoken
-
-from utils import LLM, configurable, LLMResult
-import openai
-
-from utils.configurable import parameter
+from hackingBuddyGPT.utils import LLM, configurable, LLMResult
+from hackingBuddyGPT.utils.configurable import parameter
 
 
 @configurable("openai-lib", "OpenAI Library based connection")

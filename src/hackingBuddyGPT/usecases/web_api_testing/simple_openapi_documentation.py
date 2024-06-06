@@ -1,29 +1,28 @@
 import datetime
 import os
+import pydantic_core
 import time
+import yaml
+
 from dataclasses import dataclass, field
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
+from rich.panel import Panel
 from typing import List, Any, Union, Dict
 
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
-from capabilities import Capability
-from capabilities.capability import capabilities_to_action_model
-from capabilities.http_request import HTTPRequest
-from capabilities.record_note import RecordNote
-from capabilities.submit_flag import SubmitFlag
-from usecases.common_patterns import RoundBasedUseCase
-from usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
-from utils import LLMResult, tool_message, ui
-from utils.configurable import parameter
-from utils.openai.openai_lib import OpenAILib
-from rich.panel import Panel
-from usecases import use_case
-
-import pydantic_core
-import yaml
+from hackingBuddyGPT.capabilities import Capability
+from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
+from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from hackingBuddyGPT.capabilities.record_note import RecordNote
+from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
+from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
+from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
+from hackingBuddyGPT.utils import LLMResult, tool_message, ui
+from hackingBuddyGPT.utils.configurable import parameter
+from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
+from hackingBuddyGPT.usecases import use_case
 
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
-
 
 @use_case("simple_web_api_documentation", "Minimal implementation of a web api documentation use case")
 @dataclass

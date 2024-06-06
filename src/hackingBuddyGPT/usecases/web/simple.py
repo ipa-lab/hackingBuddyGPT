@@ -1,21 +1,21 @@
-import time
-from dataclasses import dataclass, field
-from typing import List, Any, Union, Dict
-
 import pydantic_core
+import time
+
+from dataclasses import dataclass, field
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
+from typing import List, Any, Union, Dict
 
-from capabilities import Capability
-from capabilities.capability import capabilities_to_action_model
-from capabilities.http_request import HTTPRequest
-from capabilities.record_note import RecordNote
-from capabilities.submit_flag import SubmitFlag
-from utils import LLMResult, tool_message
-from usecases.base import use_case
-from usecases.common_patterns import RoundBasedUseCase
-from utils.configurable import parameter
-from utils.openai.openai_lib import OpenAILib
+from hackingBuddyGPT.capabilities import Capability
+from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
+from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from hackingBuddyGPT.capabilities.record_note import RecordNote
+from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
+from hackingBuddyGPT.utils import LLMResult, tool_message
+from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
+from hackingBuddyGPT.utils.configurable import parameter
+from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]

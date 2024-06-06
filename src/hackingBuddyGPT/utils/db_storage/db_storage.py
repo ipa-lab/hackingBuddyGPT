@@ -1,6 +1,6 @@
 import sqlite3
 
-from utils.configurable import configurable, parameter
+from hackingBuddyGPT.utils.configurable import configurable, parameter
 
 
 @configurable("db_storage", "Stores the results of the experiments in a SQLite database")

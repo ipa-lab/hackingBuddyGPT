@@ -1,6 +1,6 @@
 from rich import console
 
-from utils.configurable import configurable
+from hackingBuddyGPT.utils.configurable import configurable
 
 
 @configurable("console", "Console")

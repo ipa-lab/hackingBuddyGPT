@@ -1,13 +1,11 @@
-import time
-
 import requests
+import tiktoken
+import time
 
 from dataclasses import dataclass
 
-import tiktoken
-
-from utils.configurable import configurable, parameter
-from utils.llm_util import LLMResult, LLM
+from hackingBuddyGPT.utils.configurable import configurable, parameter
+from hackingBuddyGPT.utils.llm_util import LLMResult, LLM
 
 @configurable("openai-compatible-llm-api", "OpenAI-compatible LLM API")
 @dataclass

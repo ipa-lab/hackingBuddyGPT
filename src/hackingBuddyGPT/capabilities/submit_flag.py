@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Tuple, List, Set, Callable
 
-from capabilities import Capability
+from . import Capability
 
 
 @dataclass

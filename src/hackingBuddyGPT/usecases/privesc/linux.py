@@ -1,16 +1,15 @@
 import json
 import pathlib
 from dataclasses import dataclass
-
 from mako.template import Template
 
-from capabilities import SSHRunCommand, SSHTestCredential
-from usecases.privesc.common import Privesc
-from utils import SSHConnection
-from usecases.base import use_case, UseCase
-from utils.console.console import Console
-from utils.db_storage.db_storage import DbStorage
-from utils.openai.openai_llm import OpenAIConnection
+from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
+from .common import Privesc
+from hackingBuddyGPT.utils import SSHConnection
+from hackingBuddyGPT.usecases.base import use_case, UseCase
+from hackingBuddyGPT.utils.console.console import Console
+from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
+from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 template_dir = pathlib.Path(__file__).parent / "templates"
 template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))

@@ -2,11 +2,11 @@
 import pathlib
 from dataclasses import dataclass
 
-from capabilities import SSHRunCommand, SSHTestCredential
-from utils import SSHConnection, llm_util
-from usecases.base import use_case
-from usecases.agents import TemplatedAgent, AgentWorldview
-from utils.cli_history import SlidingCliHistory
+from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
+from hackingBuddyGPT.utils import SSHConnection, llm_util
+from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.agents import TemplatedAgent, AgentWorldview
+from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
 @dataclass
 class MinimalLinuxTemplatedPrivescState(AgentWorldview):

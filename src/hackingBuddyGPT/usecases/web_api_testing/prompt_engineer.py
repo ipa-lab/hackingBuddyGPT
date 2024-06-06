@@ -1,6 +1,6 @@
 from openai.types.chat import ChatCompletionMessage
 
-from utils import openai
+from hackingBuddyGPT.utils import openai
 
 class PromptEngineer(object):
     '''Prompt engineer that creates prompts of different types'''

@@ -1,11 +1,9 @@
 import base64
 from dataclasses import dataclass
+import requests
 from typing import Literal, Optional, Dict
 
-import requests
-
-from capabilities import Capability
-
+from . import Capability
 
 @dataclass
 class HTTPRequest(Capability):

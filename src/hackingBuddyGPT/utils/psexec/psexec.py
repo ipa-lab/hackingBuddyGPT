@@ -1,10 +1,8 @@
-import warnings
 from dataclasses import dataclass
+from pypsexec.client import Client
 from typing import Tuple
 
-from pypsexec.client import Client
-
-from utils.configurable import configurable
+from hackingBuddyGPT.utils.configurable import configurable
 
 
 @configurable("psexec", "connects to a remote host via PSExec")

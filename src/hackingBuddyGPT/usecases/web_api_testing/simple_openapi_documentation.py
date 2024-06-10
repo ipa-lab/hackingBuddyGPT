@@ -1,8 +1,10 @@
 import datetime
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import List, Any, Union, Dict
 
+import pydantic_core
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
 
@@ -16,9 +18,7 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngin
 from hackingBuddyGPT.utils import LLMResult, tool_message, ui
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-from hackingBuddyGPT.usecases import use_case
-
-from src.hackingBuddyGPT.usecases.web_api_testing.documentation_handler import DocumentationHandler
+from hackingBuddyGPT.usecases.base import use_case
 
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
@@ -88,20 +88,24 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
     def _handle_response(self, completion, response, start_time, end_time):
         message = completion.choices[0].message
-        command = message.content
+        tool_call_id = message.tool_calls[0].id
+        command = pydantic_core.to_json(response).decode()
         self.console.print(Panel(command, title="assistant"))
         self._prompt_history.append(message)
 
-        result = response.execute()
-        self.console.print(Panel(result, title="tool"))
-        result_str = self.parse_http_status_line(result)
-        self._prompt_history.append(tool_message(result_str, message.tool_calls[0].id))
-
-        self.documentation_handler.update_openapi_spec(response)
-        self.documentation_handler.write_openapi_to_yaml()
+        with self.console.status("[bold green]Executing that command..."):
+            result = response.execute()
+            self.console.print(Panel(result, title="tool"))
+            result_str = self.parse_http_status_line(result)
+            self._prompt_history.append(tool_message(result_str, tool_call_id))
+            if result_str  != "Not a valid flag":
+                self.documentation_handler.update_openapi_spec(response)
+                self.documentation_handler.write_openapi_to_yaml()
         return self._all_http_methods_found
 
     def parse_http_status_line(self, status_line):
+        if status_line == "Not a valid flag":
+            return status_line
         if status_line and " " in status_line:
             protocol, status_code, status_message = status_line.split(' ', 2)
             status_message = status_message.split("\r\n")[0]
@@ -110,4 +114,80 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
     def has_no_numbers(self, path):
         return not any(char.isdigit() for char in path)
+
+import os
+import yaml
+from datetime import datetime
+
+
+class DocumentationHandler:
+    """Handles the generation and updating of an OpenAPI specification document based on dynamic API responses."""
+
+    def __init__(self):
+        """Initializes the handler with a template OpenAPI specification."""
+        self.filename = f"openapi_spec_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
+        self.openapi_spec = {
+            "openapi": "3.0.0",
+            "info": {
+                "title": "Generated API Documentation",
+                "version": "1.0",
+                "description": "Automatically generated description of the API."
+            },
+            "servers": [{"url": "https://jsonplaceholder.typicode.com"}],
+            "endpoints": {}
+        }
+
+    def update_openapi_spec(self, resp):
+        """
+        Updates the OpenAPI specification based on the API response provided.
+
+        Args:
+        - response: The response object containing details like the path and method which should be documented.
+        """
+
+        request = resp.action
+        path = request.path
+        method = request.method
+        # Ensure that path and method are not None and method has no numeric characters
+        if path and method and not any(char.isdigit() for char in path):
+            # Initialize the path if not already present
+            if path not in self.openapi_spec['endpoints']:
+                self.openapi_spec['endpoints'][path] = {}
+            # Update the method description within the path
+            self.openapi_spec['endpoints'][path][method.lower()] = {
+                "summary": f"{method} operation on {path}",
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {"type": "object"}  # Simplified for example
+                            }
+                        }
+                    }
+                }
+            }
+
+    def write_openapi_to_yaml(self):
+        """Writes the updated OpenAPI specification to a YAML file with a timestamped filename."""
+        try:
+            # Prepare data to be written to YAML
+            openapi_data = {
+                "openapi": self.openapi_spec["openapi"],
+                "info": self.openapi_spec["info"],
+                "servers": self.openapi_spec["servers"],
+                "paths": self.openapi_spec["endpoints"]
+            }
+            current_path = os.path.dirname(os.path.abspath(__file__))
+            file_path = os.path.join(current_path, "openapi_spec")
+
+            # Create directory if it doesn't exist and generate the timestamped filename
+            os.makedirs(file_path, exist_ok=True)
+
+            # Write to YAML file
+            with open(os.path.join(file_path, self.filename), 'w') as yaml_file:
+                yaml.dump(openapi_data, yaml_file, allow_unicode=True, default_flow_style=False)
+            print(f"OpenAPI specification written to {self.filename}.")
+        except Exception as e:
+            raise Exception(f"Error writing YAML file: {e}")
 

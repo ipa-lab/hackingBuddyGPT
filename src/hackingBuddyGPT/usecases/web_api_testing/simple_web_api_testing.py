@@ -15,7 +15,7 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngin
 from hackingBuddyGPT.utils import LLMResult, tool_message, ui
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-from hackingBuddyGPT.usecases import use_case
+from hackingBuddyGPT.usecases.base import use_case
 
 import pydantic_core
 

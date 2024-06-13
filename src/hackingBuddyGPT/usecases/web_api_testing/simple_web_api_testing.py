@@ -63,7 +63,7 @@ class SimpleWebAPITesting(RoundBasedUseCase):
                            f"Remember, if you encounter a http methods ({self.http_method_description}), promptly submit it as it is of utmost importance."
             })
         self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
-                                              api_key=self.llm.api_key,
+                                              llm=self.llm,
                                               history=self._prompt_history)
 
         self._context["host"] = self.host

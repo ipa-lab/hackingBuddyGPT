@@ -5,19 +5,19 @@ from hackingBuddyGPT.utils import openai
 class PromptEngineer(object):
     '''Prompt engineer that creates prompts of different types'''
 
-    def __init__(self, strategy, api_key,  history):
+    def __init__(self, strategy, llm,  history):
         """
         Initializes the PromptEngineer with a specific strategy and API key.
 
         Args:
             strategy (PromptStrategy): The prompt engineering strategy to use.
-            api_key (str): The API key for OpenAI.
+            llm : The LLM model.
 
             history (dict, optional): The history of chats. Defaults to None.
 
         Attributes:
             strategy (PromptStrategy): Stores the provided strategy.
-            api_key (str): Stores the provided API key.
+            llm : LLM model
             host (str): Stores the provided host for OpenAI API.
             flag_format_description (str): Stores the provided flag description format.
             prompt_history (list): A list that keeps track of the conversation history.
@@ -26,9 +26,10 @@ class PromptEngineer(object):
             strategies (dict): Maps strategies to their corresponding methods.
         """
         self.strategy = strategy
-        self.api_key = api_key
+        '''self.api_key = api_key
         # Set the OpenAI API key
-        openai.api_key = self.api_key
+        openai.api_key = self.api_key'''
+        self.llm = llm
         self.round = 0
 
 
@@ -36,6 +37,7 @@ class PromptEngineer(object):
         # Initialize prompt history
         self._prompt_history = history
         self.prompt = self._prompt_history
+        self.previous_prompt = self._prompt_history[self.round]["content"]
 
         # Set up strategy map
         self.strategies = {
@@ -55,12 +57,12 @@ class PromptEngineer(object):
         prompt_func = self.strategies.get(self.strategy)
         if prompt_func:
             print(f'prompt history:{self._prompt_history[self.round]}')
-            if not isinstance(self._prompt_history[self.round],ChatCompletionMessage ):
-                prompt = prompt_func(doc)
-                self._prompt_history[self.round]["content"] = prompt
+            prompt = prompt_func(doc)
+            self._prompt_history.append( {"role":"system", "content":prompt})
+            self.previous_prompt = prompt
             self.round = self.round +1
+
             return self._prompt_history
-            #self.get_response(prompt)
 
     def get_response(self, prompt):
         """
@@ -110,24 +112,40 @@ class PromptEngineer(object):
             str: The generated prompt.
         """
 
-        previous_prompt = self._prompt_history[self.round]["content"]
 
         if doc :
-            chain_of_thought_steps = [
-            "Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",
-            "Identify all available endpoints.",
-            "Create GET, POST, PUT, DELETE requests to understand the responses.",
-            "Note down the response structures, status codes, and headers for each endpoint.",
-            "For each endpoint, document the following details: URL, HTTP method (GET, POST, PUT, DELETE), query parameters and path variables, expected request body structure for POST and PUT requests, response structure for successful and error responses.",
-            "First execute the GET requests, then POST, then PUT and DELETE."
-            "Identify common data structures returned by various endpoints and define them as reusable schemas. Determine the type of each field (e.g., integer, string, array) and define common response structures as components that can be referenced in multiple endpoint definitions.",
-            "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
-            "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",
-            "Refine the document based on feedback and additional testing, share the draft with others, gather feedback, and make necessary adjustments. Regularly update the specification as the API evolves.",
-            "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
-            ]
+            if self.round >= 0 and self.round <= 20:
+                chain_of_thought_steps = [
+                    #"Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",
+                    "Identify all available endpoints. Valid methods are GET, POST, PUT and DELETE.",
+                    "Create  HTTPRequests of type GET  and  understand the responses. Ensure that they are correct requests, the action should look similar to this: "
+                    " 'action':{'method':'GET','path':'/posts','query':null,'body':null,'body_is_base64':null,'headers':null}.",
+                    "Note down the response structures, status codes, and headers for each endpoint."
+                    ''',
+                    "For each endpoint, document the following details: URL, HTTP method (GET, POST, PUT, DELETE), query parameters and path variables, expected request body structure for POST and PUT requests, response structure for successful and error responses.",
+                    "Identify common data structures returned by various endpoints and define them as reusable schemas. Determine the type of each field (e.g., integer, string, array) and define common response structures as components that can be referenced in multiple endpoint definitions.",
+                    "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
+                    "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",
+                    "Refine the document based on feedback and additional testing, share the draft with others, gather feedback, and make necessary adjustments. Regularly update the specification as the API evolves.",
+                    "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."'''
+                ]
+            else:
+                chain_of_thought_steps = [
+                    "Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",
+                    "Identify all available endpoints.",
+                    # "Create GET, POST, PUT, DELETE requests to understand the responses.",
+                    "Create  POST requests to understand the responses. Ensure that they are correct requests.",
+                    "Note down the response structures, status codes, and headers for each endpoint.",
+                    "For each endpoint, document the following details: URL, HTTP method (GET, POST, PUT, DELETE), query parameters and path variables, expected request body structure for POST and PUT requests, response structure for successful and error responses.",
+                    "Identify common data structures returned by various endpoints and define them as reusable schemas. Determine the type of each field (e.g., integer, string, array) and define common response structures as components that can be referenced in multiple endpoint definitions.",
+                    "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
+                    "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",
+                    "Refine the document based on feedback and additional testing, share the draft with others, gather feedback, and make necessary adjustments. Regularly update the specification as the API evolves.",
+                    "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
+                ]
+
         else:
-            if round == 0:
+            if self.round == 0:
                 chain_of_thought_steps = [
                 "Let's think step by step." # zero shot prompt
                 ]
@@ -142,10 +160,47 @@ class PromptEngineer(object):
             else:
                 chain_of_thought_steps = ["Look for exploits."]
 
+        print(f'New prompt: {chain_of_thought_steps}')
 
-        return "\n".join([previous_prompt] + chain_of_thought_steps)
+        if not all(step in self.previous_prompt for step in chain_of_thought_steps):
+            return "\n".join([self.previous_prompt] + chain_of_thought_steps)
+        else:
+            return self.previous_prompt
 
+    def token_count(self, text):
+        # Placeholder function for token counting. Replace with actual tokenizer logic for accuracy.
+        return len(text.split())
 
+    def shorten_prompt(self, prompt):
+        """Uses the LLM's create_with_completion to generate a shortened or summarized prompt."""
+        messages = [{"role": "user", "content": prompt}]
+        # Simulate the capabilities as you might need them. Adjust according to your implementation.
+        response_model = capabilities_to_action_model({
+            'summarize': True  # Assuming you have a summarization capability defined.
+        })
+        response, completion = self.llm.instructor.chat.completions.create_with_completion(
+            model=self.llm.model,
+            messages=messages,
+            response_model=response_model
+        )
+        # Assuming the completion includes a single message with the summarized content
+        return completion.choices[0].message.content.strip()
+
+    def create_prompt(self,  previous_prompt, chain_of_thought_steps, max_tokens=16385):
+        if not all(step in previous_prompt for step in chain_of_thought_steps):
+            potential_prompt = "\n".join([previous_prompt] + chain_of_thought_steps)
+            if self.token_count(potential_prompt) <= max_tokens:
+                return potential_prompt
+            else:
+                # Handle the case where the combined prompt is too long
+                shortened_prompt = self.shorten_prompt( potential_prompt)
+                if self.token_count(shortened_prompt) <= max_tokens:
+                    return shortened_prompt
+                else:
+                    # Further handling if the shortened prompt is still too long
+                    return "Prompt is still too long after summarization."
+        else:
+            return previous_prompt
 
     def tree_of_thought(self, doc=False):
         """

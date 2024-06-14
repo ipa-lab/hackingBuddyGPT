@@ -14,5 +14,5 @@ class SlidingCliHistory:
         self.sliding_history += f"$ {cmd}\n{output}"
         self.sliding_history = trim_result_front(self.model, self.maximum_target_size, self.sliding_history)
 
-    def get_history(self, target_size:int) -> str:
+    def get_history(self, target_size: int) -> str:
         return trim_result_front(self.model, min(self.maximum_target_size, target_size), self.sliding_history)

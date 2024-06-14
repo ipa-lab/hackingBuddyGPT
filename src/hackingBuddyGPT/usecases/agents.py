@@ -49,14 +49,14 @@ class TemplatedAgent(Agent):
     def init(self):
         super().init()
     
-    def set_initial_state(self, initial_state):
+    def set_initial_state(self, initial_state:AgentWorldview):
         self._state = initial_state
 
-    def set_template(self, template):
+    def set_template(self, template:str):
         self._template = Template(filename=template)
         self._template_size = self.llm.count_tokens(self._template.source)
 
-    def perform_round(self, turn):
+    def perform_round(self, turn:int) -> bool:
         got_root : bool = False
 
         with self.console.status("[bold green]Asking LLM for a new command..."):
@@ -65,8 +65,6 @@ class TemplatedAgent(Agent):
             options.update({
                 'capabilities': self.get_capability_block()
             })
-
-            print(str(options))
 
             # get the next command from the LLM
             answer = self.llm.get_response(self._template, **options)

@@ -1,6 +1,7 @@
 
 import pathlib
 from dataclasses import dataclass
+from typing import Any
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.utils import SSHConnection, llm_util
@@ -20,10 +21,10 @@ class MinimalLinuxTemplatedPrivescState(AgentWorldview):
         self.max_history_size = max_history_size
         self.conn = conn
 
-    def update(self, capability, cmd, result):
+    def update(self, capability, cmd:str, result:str):
         self.sliding_history.add_command(cmd, result)
 
-    def to_template(self):
+    def to_template(self) -> dict[str, Any]:
         return {
             'history': self.sliding_history.get_history(self.max_history_size),
             'conn': self.conn

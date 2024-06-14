@@ -2,7 +2,7 @@ import pathlib
 from dataclasses import dataclass, field
 from mako.template import Template
 from rich.panel import Panel
-from typing import Dict
+from typing import Any, Dict
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_handler
@@ -28,6 +28,8 @@ class Privesc(Agent):
     _sliding_history: SlidingCliHistory = None
     _state: str = ""
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
+    _template_params : Dict[str, Any] = field(default_factory=dict)
+    _max_history_size : int = 0
 
     def init(self):
         super().init()
@@ -36,10 +38,22 @@ class Privesc(Agent):
         if self.hint != "":
             self.console.print(f"[bold green]Using the following hint: '{self.hint}'")
         
-        if self.disable_history == False:
+        if self.disable_history is False:
             self._sliding_history = SlidingCliHistory(self.llm)
 
-    def perform_round(self, turn):
+        self._template_params = {
+            'capabilities': self.get_capability_block(),
+            'system': self.system,
+            'hint': self.hint,
+            'conn': self.conn,
+            'update_state': self.enable_update_state,
+            'target_user': 'root'
+        }
+
+        template_size = self.llm.count_tokens(template_next_cmd.source)
+        self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - template_size
+
+    def perform_round(self, turn:int) -> bool:
         got_root : bool = False
 
         with self.console.status("[bold green]Asking LLM for a new command..."):
@@ -88,21 +102,23 @@ class Privesc(Agent):
         # if we got root, we can stop the loop
         return got_root
 
-    def get_state_size(self):
+    def get_state_size(self) -> int:
         if self.enable_update_state:
             return self.llm.count_tokens(self._state)
         else:
             return 0
 
-    def get_next_command(self):
-        state_size = self.get_state_size()
-        template_size = self.llm.count_tokens(template_next_cmd.source)
-
+    def get_next_command(self) -> llm_util.LLMResult:
         history = ''
         if not self.disable_history:
-            history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - state_size - template_size)
+            history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
 
-        cmd = self.llm.get_response(template_next_cmd, capabilities=self.get_capability_block(), history=history, state=self._state, conn=self.conn, system=self.system, update_state=self.enable_update_state, target_user="root", hint=self.hint)
+        self._template_params.update({
+            'history': history,
+            'state': self._state
+        })
+
+        cmd = self.llm.get_response(template_next_cmd, **self._template_params)
         cmd.result = llm_util.cmd_output_fixer(cmd.result)
         return cmd
 

@@ -56,3 +56,4 @@ addopts = [
 
 [project.scripts]
 wintermute = "hackingBuddyGPT.cli.wintermute:main"
+hackingBuddyGPT = "hackingBuddyGPT.cli.wintermute:main"

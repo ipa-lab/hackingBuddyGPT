@@ -2,58 +2,54 @@ import os.path
 
 import yaml
 import json
+
+
 class OpenAPISpecificationConverter:
-    def __init__(self, filepath):
-        self.filepath = filepath
+    def __init__(self, base_directory):
+        self.base_directory = base_directory
+
+    def convert_file(self, input_filepath, output_directory, input_type, output_type):
+        """
+        Generic method to convert files between YAML and JSON.
+
+        :param input_filepath: Path to the input file.
+        :param output_directory: Subdirectory for the output files.
+        :param input_type: Type of the input file ('yaml' or 'json').
+        :param output_type: Type of the output file ('json' or 'yaml').
+        """
+        try:
+            filename = os.path.basename(input_filepath)
+            output_filename = filename.replace(f".{input_type}", f".{output_type}")
+            output_path = os.path.join(self.base_directory, output_directory, output_filename)
+
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            with open(input_filepath, 'r') as infile:
+                if input_type == 'yaml':
+                    content = yaml.safe_load(infile)
+                else:
+                    content = json.load(infile)
+
+            with open(output_path, 'w') as outfile:
+                if output_type == 'yaml':
+                    yaml.dump(content, outfile, allow_unicode=True, default_flow_style=False)
+                else:
+                    json.dump(content, outfile, indent=2)
+
+            print(f"Successfully converted {input_filepath} to {output_filename}")
+            return output_path
+
+        except Exception as e:
+            print(f"Error converting {input_filepath}: {e}")
+            return None
+
     def yaml_to_json(self, yaml_filepath):
-        """
-        Convert a YAML file to a JSON file.
+        """Convert a YAML file to a JSON file."""
+        return self.convert_file(yaml_filepath, "json", 'yaml', 'json')
 
-        :param yaml_filepath: Path to the input YAML file.
-        """
-        try:
-            # Get the filename from the path
-            filename = os.path.basename(yaml_input)
-            json_filepath = filename.split(".yaml")[0]+ ".json"
-            converted_path = os.path.join(self.filepath, "json")
-            if not os.path.exists(converted_path) :
-                os.makedirs(converted_path, exist_ok=True)
-            with open(yaml_filepath, 'r') as yaml_file:
-                yaml_content = yaml.safe_load(yaml_file)
-            final_path = os.path.join(converted_path, json_filepath)
-            with open(final_path, 'w') as json_file:
-                json.dump(yaml_content, json_file, indent=2)
-
-            print(f"Successfully converted {yaml_filepath} to {json_filepath}")
-            return final_path
-        except Exception as e:
-            print(f"Error converting YAML to JSON: {e}")
-            return ""
-
-
-    def json_to_yaml(self,json_filepath):
-        """
-        Convert a JSON file to a YAML file.
-
-        :param json_filepath: Path to the input JSON file.
-        """
-        try:
-            # Get the filename from the path
-            filename = os.path.basename(json_filepath)
-            yaml_filepath = filename.split(".json")[0] + ".yaml"
-            converted_path = os.path.join(self.filepath, "yaml")
-            if not os.path.exists(converted_path):
-                os.makedirs(converted_path, exist_ok=True)
-            with open(json_filepath, 'r') as json_file:
-                json_content = json.load(json_file)
-            final_path = os.path.join(converted_path, yaml_filepath)
-
-            with open(final_path, 'w') as yaml_file:
-                yaml.dump(json_content, yaml_file, allow_unicode=True, default_flow_style=False)
-
-            print(f"Successfully converted {json_filepath} to {yaml_filepath}")
-        except Exception as e:
-            print(f"Error converting JSON to YAML: {e}")
+    def json_to_yaml(self, json_filepath):
+        """Convert a JSON file to a YAML file."""
+        return self.convert_file(json_filepath, "yaml", 'json', 'yaml')
 
 
 # Usage example

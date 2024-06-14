@@ -41,5 +41,5 @@ class OpenAPISpecificationParser:
 
 # Usage example
 if __name__ == '__main__':
-    openapi_parser = OpenAPISpecificationParser('/path/to/your/openapi_spec_example3.yaml')
+    openapi_parser = OpenAPISpecificationParser('/home/diana/Desktop/masterthesis/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/openapi_spec/openapi_spec_2024-06-13_17-16-25.yaml')
     openapi_parser.print_api_details()

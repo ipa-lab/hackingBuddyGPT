@@ -36,8 +36,6 @@ class PromptEngineer(object):
         # Load the small English model
         self.nlp = spacy.load("en_core_web_sm")
 
-
-
         # Initialize prompt history
         self._prompt_history = history
         self.prompt = self._prompt_history

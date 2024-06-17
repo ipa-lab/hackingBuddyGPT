@@ -9,7 +9,7 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
-from hackingBuddyGPT.capabilities.SubmitHTTPMethod import SubmitHTTPMethod
+from hackingBuddyGPT.capabilities.submit_http_method import SubmitHTTPMethod
 from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
@@ -71,10 +71,11 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
     def _setup_capabilities(self):
         sett = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
+        notes = self._context["notes"]
         self._capabilities = {
             "submit_http_method": SubmitHTTPMethod(self.http_method_description, sett, success_function=self.all_http_methods_found),
             "http_request": HTTPRequest(self.host),
-            "record_note": RecordNote(self._context["notes"])
+            "record_note": RecordNote(notes)
         }
 
     def all_http_methods_found(self):
@@ -82,9 +83,6 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
         self._all_http_methods_found = True
 
     def perform_round(self, turn: int, FINAL_ROUND=30):
-        print(hackingBuddyGPT.capabilities.http_request.HTTPRequest)
-        print(HTTPRequest)
-
         prompt = self.prompt_engineer.generate_prompt(doc=True)
         print(f'Prompt:{prompt}')
         tic = time.perf_counter()

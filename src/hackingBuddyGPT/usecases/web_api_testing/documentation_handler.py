@@ -1,13 +1,15 @@
 import os
 import re
 
+import openai
+import pydantic_core
 import yaml
 from datetime import datetime
 
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
-
+from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 
 
 class DocumentationHandler:
@@ -27,10 +29,16 @@ class DocumentationHandler:
             "endpoints": {}
         }
         self.llm = llm
+        self.api_key = llm.api_key
         self.capabilities = capabilities
         current_path = os.path.dirname(os.path.abspath(__file__))
         self.file_path = os.path.join(current_path, "openapi_spec")
         self.file = os.path.join(self.file_path, self.filename)
+        yamls = []
+        self._capabilities = {
+            "yaml": YAMLFile()
+        }
+
 
     def update_openapi_spec(self, resp):
         """
@@ -116,6 +124,27 @@ class DocumentationHandler:
                 required_endpoints[endpoint] = [method]
 
         return required_endpoints
+
+    def read_yaml_to_string(self, filepath):
+        """
+        Reads a YAML file and returns its contents as a string.
+
+        :param filepath: Path to the YAML file.
+        :return: String containing the file contents.
+        """
+        try:
+            with open(filepath, 'r') as file:
+                file_contents = file.read()
+            return file_contents
+        except FileNotFoundError:
+            print(f"Error: The file {filepath} does not exist.")
+            return None
+        except IOError as e:
+            print(f"Error reading file {filepath}: {e}")
+            return None
+
+
+
     def check_openapi_spec(self, note):
         """
             Uses OpenAI's GPT model to generate a complete OpenAPI specification based on a natural language description.
@@ -128,19 +157,37 @@ class DocumentationHandler:
         description = self.extract_description(note)
 
         # Prepare the prompt for the LLM to generate the entire OpenAPI YAML
-        prompt = [{"role": "system" ,
-                   "content": f"Update the OpenAPI specification in YAML format based on the following description of an API:\n{description}"}
-                  ]
+        prompt =[{'role': 'system', 'content': f"Update the OpenAPI specification in YAML format based on the following description of an API and return only the OpenAPI specification as a yaml:" \
+                f"\n Description:{description},\n yaml:{self.read_yaml_to_string(self.file)}"}]
+
 
         # Ask the model to generate the complete YAML specification
-        response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model, messages=prompt, response_model=capabilities_to_action_model(self.capabilities))
+        openai.api_key = self.api_key
+        # Making the API call to GPT-3.5
+        try:
+            response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
+                                                                                               messages=prompt,
+                                                                                               response_model=capabilities_to_action_model(
+                                                                                                   self._capabilities))
 
-        # Parse the model's response assuming it's a valid YAML
-        new_openapi_spec = yaml.safe_load(completion.choices[0].message)
+            message = completion.choices[0].message
+            tool_call_id = message.tool_calls[0].id
+            command = pydantic_core.to_json(response).decode()
+            print(f'command:{command}')
+            result = response.execute()
+            print(f'result:\n{result}')
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            raise Exception(e)
+        #response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model, messages=prompt, response_model=capabilities_to_action_model(self.capabilities))
 
-        # Write the generated YAML back to file
-        with open(self.file, 'w') as file:
-            yaml.safe_dump(new_openapi_spec, file, default_flow_style=False, sort_keys=False)
+       ## Parse the model's response assuming it's a valid YAML
+       #print(f'new yaml file:{completion.choices[0].message}')
+       #new_openapi_spec = yaml.safe_load(completion.choices[0].message)
+       #
+       ## Write the generated YAML back to file
+       #with open(self.file, 'w') as file:
+       #    yaml.safe_dump(new_openapi_spec, file, default_flow_style=False, sort_keys=False)
 
     def extract_description(self, note):
         return note.action.content

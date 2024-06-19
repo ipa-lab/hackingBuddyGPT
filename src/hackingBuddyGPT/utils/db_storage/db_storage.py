@@ -30,11 +30,51 @@ class DbStorage:
 
     def setup_db(self):
         # create tables
-        self.cursor.execute(
-            "CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, model text, context_size INTEGER, state TEXT, tag TEXT, started_at text, stopped_at text, rounds INTEGER, configuration TEXT)")
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS commands (id INTEGER PRIMARY KEY, name string unique)")
-        self.cursor.execute(
-            "CREATE TABLE IF NOT EXISTS queries (run_id INTEGER, round INTEGER, cmd_id INTEGER, query TEXT, response TEXT, duration REAL, tokens_query INTEGER, tokens_response INTEGER, prompt TEXT, answer TEXT)")
+        self.cursor.execute("""CREATE TABLE IF NOT EXISTS runs (
+            id INTEGER PRIMARY KEY,
+            model text,
+            context_size INTEGER,
+            state TEXT,
+            tag TEXT,
+            started_at text,
+            stopped_at text,
+            rounds INTEGER,
+            configuration TEXT
+        )""")
+        self.cursor.execute("""CREATE TABLE IF NOT EXISTS commands (
+            id INTEGER PRIMARY KEY,
+            name string unique
+        )""")
+        self.cursor.execute("""CREATE TABLE IF NOT EXISTS queries (
+            run_id INTEGER,
+            round INTEGER,
+            cmd_id INTEGER,
+            query TEXT,
+            response TEXT,
+            duration REAL,
+            tokens_query INTEGER,
+            tokens_response INTEGER,
+            prompt TEXT,
+            answer TEXT
+        )""")
+        self.cursor.execute("""CREATE TABLE IF NOT EXISTS messages (
+            run_id INTEGER,
+            message_id INTEGER,
+            role TEXT,
+            content TEXT,
+            duration REAL,
+            tokens_query INTEGER,
+            tokens_response INTEGER
+        )""")
+        self.cursor.execute("""CREATE TABLE IF NOT EXISTS tool_calls (
+            run_id INTEGER,
+            message_id INTEGER,
+            tool_call_id INTEGER,
+            function_name TEXT,
+            arguments TEXT,
+            result_text TEXT,
+            duration REAL
+        )""")
 
         # insert commands
         self.query_cmd_id = self.insert_or_select_cmd('query_cmd')
@@ -71,6 +111,18 @@ class DbStorage:
             self.cursor.execute(
                 "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (run_id, round, self.state_update_id, cmd, result, 0, 0, 0, '', ''))
+
+    def add_log_message(self, run_id: int, role: str, content: str, tokens_query: int, tokens_response: int, duration):
+        self.cursor.execute(
+            "INSERT INTO messages (run_id, message_id, role, content, tokens_query, tokens_response, duration) VALUES (?, (SELECT COALESCE(MAX(message_id), 0) + 1 FROM messages WHERE run_id = ?), ?, ?, ?, ?, ?)",
+            (run_id, run_id, role, content, tokens_query, tokens_response, duration))
+        self.cursor.execute("SELECT MAX(message_id) FROM messages WHERE run_id = ?", (run_id,))
+        return self.cursor.fetchone()[0]
+
+    def add_log_tool_call(self, run_id: int, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration):
+        self.cursor.execute(
+            "INSERT INTO tool_calls (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration))
 
     def get_round_data(self, run_id, round, explanation, status_update):
         rows = self.cursor.execute(

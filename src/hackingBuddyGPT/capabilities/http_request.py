@@ -5,6 +5,7 @@ from typing import Literal, Optional, Dict
 
 from . import Capability
 
+
 @dataclass
 class HTTPRequest(Capability):
     host: str
@@ -18,7 +19,17 @@ class HTTPRequest(Capability):
             self._client = requests
 
     def describe(self) -> str:
-        return f"Sends a request to the host {self.host} and returns the response."
+        description = (f"Sends a request to the host {self.host} using the python requests library and returns the response. The schema and host are fixed and do not need to be provided.\n"
+                       f"Make sure that you send a Content-Type header if you are sending a body.")
+        if self.use_cookie_jar:
+            description += "\nThe cookie jar is used for storing cookies between requests."
+        else:
+            description += "\nCookies are not automatically stored, and need to be provided as header manually every time."
+        if self.follow_redirects:
+            description += "\nRedirects are followed."
+        else:
+            description += "\nRedirects are not followed."
+        return description
 
     def __call__(self,
                  method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTION", "PATCH"],
@@ -31,18 +42,18 @@ class HTTPRequest(Capability):
         if body is not None and body_is_base64:
             body = base64.b64decode(body).decode()
 
-        resp = self._client.request(
-            method,
-            self.host + path,
-            params=query,
-            data=body,
-            headers=headers,
-            allow_redirects=self.follow_redirects,
-        )
         try:
-            resp.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            return str(e)
+            resp = self._client.request(
+                method,
+                self.host + path,
+                params=query,
+                data=body,
+                headers=headers,
+                allow_redirects=self.follow_redirects,
+            )
+        except requests.exceptions.RequestException as e:
+            url = self.host + ("" if path.startswith("/") else "/") + path + ("?{query}" if query else "")
+            return f"Could not request '{url}': {e}"
 
         headers = "\r\n".join(f"{k}: {v}" for k, v in resp.headers.items())
 

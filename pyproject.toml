@@ -14,7 +14,7 @@ maintainers = [
 description = "Helping Ethical Hackers use LLMs in 50 lines of code"
 readme = "README.md"
 keywords = ["hacking", "pen-testing", "LLM", "AI", "agent"]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 version = "0.3.0"
 license = { file = "LICENSE" }
 classifiers = [

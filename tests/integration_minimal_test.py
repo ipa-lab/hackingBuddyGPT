@@ -1,5 +1,7 @@
 
 from typing import Tuple
+from hackingBuddyGPT.usecases.minimal.agent import MinimalLinuxPrivesc
+from hackingBuddyGPT.usecases.minimal.agent_with_state import MinimalLinuxTemplatedPrivesc
 from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
@@ -63,7 +65,7 @@ class FakeLLM(LLM):
     def encode(self, query) -> list[int]:
         return [0]
 
-def test_minimal_linuxprives():
+def test_linuxprivesc():
 
     conn = FakeSSHConnection()
     llm = FakeLLM()
@@ -85,7 +87,49 @@ def test_minimal_linuxprives():
     )
 
     priv_esc.init()
-
     result = priv_esc.run()
+    assert result is True
 
+def test_minimal_agent():
+
+    conn = FakeSSHConnection()
+    llm = FakeLLM()
+    log_db = DbStorage(':memory:')
+    console = Console()
+
+    log_db.init()
+
+    priv_esc = MinimalLinuxPrivesc(
+        conn=conn,
+        log_db = log_db,
+        console = console,
+        llm = llm,
+        tag = 'integration_test_linuxprivesc',
+        max_turns = len(llm.responses)
+    )
+
+    priv_esc.init()
+    result = priv_esc.run()
+    assert result is True
+
+def test_minimal_agent_state():
+
+    conn = FakeSSHConnection()
+    llm = FakeLLM()
+    log_db = DbStorage(':memory:')
+    console = Console()
+
+    log_db.init()
+
+    priv_esc = MinimalLinuxTemplatedPrivesc(
+        conn=conn,
+        log_db = log_db,
+        console = console,
+        llm = llm,
+        tag = 'integration_test_linuxprivesc',
+        max_turns = len(llm.responses)
+    )
+
+    priv_esc.init()
+    result = priv_esc.run()
     assert result is True

@@ -16,6 +16,7 @@ template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_state = Template(filename=str(template_dir / "update_state.txt"))
 template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
 
+
 @dataclass
 class Privesc(Agent):
 
@@ -24,12 +25,12 @@ class Privesc(Agent):
     enable_update_state: bool = False
     disable_history: bool = False
     hint: str = ""
-    
+
     _sliding_history: SlidingCliHistory = None
     _state: str = ""
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
-    _template_params : Dict[str, Any] = field(default_factory=dict)
-    _max_history_size : int = 0
+    _template_params: Dict[str, Any] = field(default_factory=dict)
+    _max_history_size: int = 0
 
     def init(self):
         super().init()
@@ -37,7 +38,7 @@ class Privesc(Agent):
     def setup(self):
         if self.hint != "":
             self.console.print(f"[bold green]Using the following hint: '{self.hint}'")
-        
+
         if self.disable_history is False:
             self._sliding_history = SlidingCliHistory(self.llm)
 
@@ -53,8 +54,8 @@ class Privesc(Agent):
         template_size = self.llm.count_tokens(template_next_cmd.source)
         self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - template_size
 
-    def perform_round(self, turn:int) -> bool:
-        got_root : bool = False
+    def perform_round(self, turn: int) -> bool:
+        got_root: bool = False
 
         with self.console.status("[bold green]Asking LLM for a new command..."):
             answer = self.get_next_command()
@@ -65,7 +66,7 @@ class Privesc(Agent):
             _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities, default_capability=self._default_capability)
             success, *output = parser(cmd)
             if not success:
-                self.console.print(Panel(output[0], title=f"[bold red]Error parsing command:"))
+                self.console.print(Panel(output[0], title="[bold red]Error parsing command:"))
                 return False
 
             assert(len(output) == 1)

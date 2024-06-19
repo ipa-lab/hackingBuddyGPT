@@ -5,7 +5,8 @@ GOT_ROOT_REGEXPs = [
     re.compile("^bash-[0-9]+.[0-9]# $")
 ]
 
-def got_root(hostname:str, output:str) -> bool:
+
+def got_root(hostname: str, output: str) -> bool:
     for i in GOT_ROOT_REGEXPs:
         if i.fullmatch(output):
             return True

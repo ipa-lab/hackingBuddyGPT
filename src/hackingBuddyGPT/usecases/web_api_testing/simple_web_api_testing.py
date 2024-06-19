@@ -10,6 +10,7 @@ from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
+from hackingBuddyGPT.capabilities.submit_http_method import SubmitHTTPMethod
 from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.utils import LLMResult, tool_message, ui
@@ -67,17 +68,14 @@ class SimpleWebAPITesting(RoundBasedUseCase):
                                               history=self._prompt_history)
 
         self._context["host"] = self.host
-        sett = set(self.http_method_template.format(method=method) for method in self.http_methods.split(","))
-        flag = SubmitFlag(self.http_method_description,
-                                      sett,
-                                      success_function=self.all_http_methods_found)
-        print(f'Valid flags:{flag.valid_flags}')
+        sett = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
+        notes = self._context["notes"]
         self._capabilities = {
-            "submit_http_method": flag,
+            "submit_http_method": SubmitHTTPMethod(self.http_method_description, sett,
+                                                   success_function=self.all_http_methods_found),
             "http_request": HTTPRequest(self.host),
-            "record_note": RecordNote(self._context["notes"]),
+            "record_note": RecordNote(notes)
         }
-
     def all_http_methods_found(self):
         self.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
         self._all_http_methods_found = True

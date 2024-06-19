@@ -73,7 +73,6 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
         sett = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
         notes = self._context["notes"]
         self._capabilities = {
-            "submit_http_method": SubmitHTTPMethod(self.http_method_description, sett, success_function=self.all_http_methods_found),
             "http_request": HTTPRequest(self.host),
             "record_note": RecordNote(notes)
         }
@@ -84,7 +83,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
     def perform_round(self, turn: int, FINAL_ROUND=30):
         prompt = self.prompt_engineer.generate_prompt(doc=True)
-        print(f'Prompt:{prompt}')
+        #print(f'Prompt:{prompt}')
         tic = time.perf_counter()
         response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model, messages=prompt, response_model=capabilities_to_action_model(self._capabilities))
         toc = time.perf_counter()

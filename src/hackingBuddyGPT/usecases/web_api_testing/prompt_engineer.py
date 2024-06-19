@@ -58,9 +58,9 @@ class PromptEngineer(object):
         # Directly call the method using the strategy mapping
         prompt_func = self.strategies.get(self.strategy)
         if prompt_func:
-            print(f'prompt history:{self._prompt_history[self.round]}')
+            #print(f'prompt history:{self._prompt_history[self.round]}')
             prompt = prompt_func(doc)
-            print(f'NewPrompt:\n{prompt}')
+            #print(f'NewPrompt:\n{prompt}')
             self._prompt_history.append( {"role":"system", "content":prompt})
             self.previous_prompt = prompt
             self.round = self.round +1

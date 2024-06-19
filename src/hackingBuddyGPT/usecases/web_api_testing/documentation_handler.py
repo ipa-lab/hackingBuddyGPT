@@ -48,13 +48,13 @@ class DocumentationHandler:
         - response: The response object containing details like the path and method which should be documented.
         """
         request = resp.action
-        print(f'Type of request:{type(request)}')
-        print(f'is recordnote? {isinstance(request, RecordNote)}')
-        print(f'is HTTP request? {isinstance(request, HTTPRequest)}')
-        print(f'is HTTP request? {type(request)}')
-        print(f'is HTTP request? {type(request) == HTTPRequest}')
-        print("same class?")
-        print(request.__class__.__name__ == 'HTTPRequest')
+        #print(f'Type of request:{type(request)}')
+        #print(f'is recordnote? {isinstance(request, RecordNote)}')
+        #print(f'is HTTP request? {isinstance(request, HTTPRequest)}')
+        #print(f'is HTTP request? {type(request)}')
+        #print(f'is HTTP request? {type(request) == HTTPRequest}')
+        #print("same class?")
+        #print(request.__class__.__name__ == 'HTTPRequest')
 
         if request.__class__.__name__ == 'RecordNote': # TODO check why isinstance does not work
             self.check_openapi_spec(resp)

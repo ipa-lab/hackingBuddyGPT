@@ -17,6 +17,11 @@ class Agent(AutonomousUseCase, ABC):
     def init(self):
         super().init()
 
+    # callback
+    @abstractmethod
+    def perform_round(self, turn: int):
+        pass
+
     def add_capability(self, cap: Capability, default: bool = False):
         self._capabilities[cap.get_name()] = cap
         if default:

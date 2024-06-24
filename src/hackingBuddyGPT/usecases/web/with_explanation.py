@@ -8,9 +8,9 @@ from rich.panel import Panel
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
+from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.utils import LLMResult, tool_message
 from hackingBuddyGPT.usecases import use_case
-from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
@@ -21,7 +21,7 @@ Context = Any
 
 @use_case("web_test_with_explanation", "Minimal implementation of a web testing use case while allowing the llm to 'talk'")
 @dataclass
-class WebTestingWithExplanation(RoundBasedUseCase):
+class WebTestingWithExplanation(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="http://localhost")
     flag_format_description: str = parameter(desc="Description of the flag provided to the LLM", default="a string starting with 'FLAG.' and ending with '.GALF'")

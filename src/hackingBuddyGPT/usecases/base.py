@@ -96,15 +96,18 @@ class AutonomousUseCase(UseCase, abc.ABC):
         super().init()
         self._run_id = self.log_db.create_new_run(self.llm.model, self.llm.context_size, self.tag)
 
+    # TODO: remove, call agent.setup() instead (or agent.init() and remove this)
     # callback
     def setup(self):
         pass
 
+    # TODO: remove, call agent.perform_round() instead
     # callback
     @abc.abstractmethod
     def perform_round(self, turn: int):
         pass
 
+    # TODO: remove, call agent.teardown() instead
     # callback
     def teardown(self):
         pass

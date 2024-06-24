@@ -11,9 +11,9 @@ from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
+from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.utils import LLMResult, tool_message
 from hackingBuddyGPT.usecases.base import use_case
-from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
@@ -24,7 +24,7 @@ Context = Any
 
 @use_case("simple_web_test", "Minimal implementation of a web testing use case")
 @dataclass
-class MinimalWebTesting(RoundBasedUseCase):
+class MinimalWebTesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="http://localhost")
     flag_format_description: str = parameter(desc="Description of the flag provided to the LLM", default="a string starting with 'FLAG.' and ending with '.GALF'")

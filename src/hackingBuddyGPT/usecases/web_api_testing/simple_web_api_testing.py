@@ -10,7 +10,7 @@ from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
-from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
+from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.utils import LLMResult, tool_message, ui
 from hackingBuddyGPT.utils.configurable import parameter
@@ -25,7 +25,7 @@ Context = Any
 
 @use_case("simple_web_api_testing", "Minimal implementation of a web api testing use case")
 @dataclass
-class SimpleWebAPITesting(RoundBasedUseCase):
+class SimpleWebAPITesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     # Parameter specifying the pattern description for expected HTTP methods in the API response

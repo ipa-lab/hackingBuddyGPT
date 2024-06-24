@@ -19,7 +19,7 @@ class Agent(AutonomousUseCase, ABC):
 
     # callback
     @abstractmethod
-    def perform_round(self, turn: int):
+    def perform_round(self, turn: int) -> bool:
         pass
 
     def add_capability(self, cap: Capability, default: bool = False):

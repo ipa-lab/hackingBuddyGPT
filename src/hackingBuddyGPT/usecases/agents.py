@@ -7,10 +7,10 @@ from typing import Dict
 from hackingBuddyGPT.utils import llm_util
 
 from hackingBuddyGPT.capabilities.capability import Capability, capabilities_to_simple_text_handler
-from .common_patterns import RoundBasedUseCase
+from .common_patterns import AutonomousUseCase
 
 @dataclass
-class Agent(RoundBasedUseCase, ABC):
+class Agent(AutonomousUseCase, ABC):
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _default_capability: Capability = None
 

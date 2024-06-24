@@ -9,7 +9,7 @@ from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 # this set ups all the console and database stuff, and runs the main loop for a bounded amount of turns
 @dataclass
-class RoundBasedUseCase(UseCase, abc.ABC):
+class AutonomousUseCase(UseCase, abc.ABC):
     log_db: DbStorage
     console: Console
     llm: OpenAIConnection = None

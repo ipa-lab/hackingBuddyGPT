@@ -7,7 +7,7 @@ from typing import Dict
 from hackingBuddyGPT.utils import llm_util
 
 from hackingBuddyGPT.capabilities.capability import Capability, capabilities_to_simple_text_handler
-from .common_patterns import AutonomousUseCase
+from .base import AutonomousUseCase
 
 @dataclass
 class Agent(AutonomousUseCase, ABC):

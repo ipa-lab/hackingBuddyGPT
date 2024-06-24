@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from mako.template import Template
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
+from hackingBuddyGPT.usecases.agents import Agent
 from .common import Privesc
 from hackingBuddyGPT.utils import SSHConnection
 from hackingBuddyGPT.usecases.base import use_case, UseCase
@@ -19,7 +20,7 @@ template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
 
 @use_case("linux_privesc_hintfile", "Linux Privilege Escalation using a hints file")
 @dataclass
-class PrivescWithHintFile(UseCase):
+class PrivescWithHintFile(Agent):
     conn: SSHConnection = None
     system: str = ''
     enable_explanation: bool = False
@@ -27,17 +28,32 @@ class PrivescWithHintFile(UseCase):
     disable_history: bool = False
     hints: str = ""
 
-    # all of these would typically be set by RoundBasedUseCase :-/
-    # but we need them here so that we can pass them on to the inner
-    # use-case
-    log_db: DbStorage = None
-    console: Console = None
-    llm: OpenAIConnection = None
-    tag: str = ""
-    max_turns: int = 10
+    _priv_esc: Agent = None
 
     def init(self):
         super().init()
+
+        # read the hint
+        hint = self.read_hint()
+
+        # create the inner agent
+        self._priv_esc = LinuxPrivesc(
+            conn=self.conn, # must be set in sub classes
+            enable_explanation=self.enable_explanation,
+            disable_history=self.disable_history,
+            hint=hint,
+            log_db = self.log_db,
+            console = self.console,
+            llm = self.llm,
+            tag = self.tag,
+            max_turns = self.max_turns
+        )
+
+        self._priv_esc.init()
+        self._priv_esc.setup()
+
+    def perform_round(self, turn: int) -> bool:
+        return self._priv_esc.perform_round(turn)
 
     # simple helper that reads the hints file and returns the hint
     # for the current machine (test-case)
@@ -54,25 +70,6 @@ class PrivescWithHintFile(UseCase):
             self.console.print("[yellow]calling the hintfile use-case without a hint file?")
         return ""
 
-    def run(self):
-        # read the hint
-        hint = self.read_hint()
-         
-        # call the inner use-case
-        priv_esc = LinuxPrivesc(
-            conn=self.conn, # must be set in sub classes
-            enable_explanation=self.enable_explanation,
-            disable_history=self.disable_history,
-            hint=hint,
-            log_db = self.log_db,
-            console = self.console,
-            llm = self.llm,
-            tag = self.tag,
-            max_turns = self.max_turns
-        )
-
-        priv_esc.init()
-        priv_esc.run()
 
 @use_case("linux_privesc_guided", "Linux Privilege Escalation using lse.sh for initial guidance")
 @dataclass

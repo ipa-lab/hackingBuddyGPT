@@ -3,7 +3,7 @@ from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.utils import openai
 import spacy
 import time
-from remote.src.hackingBuddyGPT.utils import LLMResult
+from hackingBuddyGPT.utils import LLMResult
 
 
 class PromptEngineer(object):

@@ -1,7 +1,9 @@
-
+import pydantic_core
 from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.utils import openai
 import spacy
+import time
+from remote.src.hackingBuddyGPT.utils import LLMResult
 
 
 class PromptEngineer(object):
@@ -82,13 +84,23 @@ class PromptEngineer(object):
         """
         messages = [{"role": "user", "content": prompt}]
 
+        tic = time.perf_counter()
         response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
-                                                                                           messages=messages,
+                                                                                           messages=prompt,
                                                                                            response_model=capabilities_to_action_model(
                                                                                                self.capabilities))
+        toc = time.perf_counter()
         # Update history
-        response_text = response.choices[0].text.strip()
-        self._prompt_history.extend([f"[User]: {prompt}", f"[System]: {response_text}"])
+        message = completion.choices[0].message
+        print(f'Message: {message}')
+        command = pydantic_core.to_json(response).decode()
+        print(f'Command: {command}')
+        answer = LLMResult(completion.choices[0].message.content, str(prompt),
+                           completion.choices[0].message.content, toc - tic, completion.usage.prompt_tokens,
+                           completion.usage.completion_tokens)
+        print(f'Answer: {answer}')
+        response_text = response.execute()
+        print(f'[Response]: {response_text}')
 
         return response_text
 

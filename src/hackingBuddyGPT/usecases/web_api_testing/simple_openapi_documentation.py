@@ -67,7 +67,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
                        f"Maintain meticulousness in documenting your observations as you traverse the APIs."
         }
         self._prompt_history.append(initial_prompt)
-        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm=self.llm, history=self._prompt_history)
+        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm=self.llm, history=self._prompt_history, capabilities = self._capabilities)
 
     def _setup_capabilities(self):
         sett = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}

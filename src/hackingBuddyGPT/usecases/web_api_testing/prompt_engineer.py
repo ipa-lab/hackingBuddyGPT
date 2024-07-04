@@ -7,7 +7,7 @@ import spacy
 class PromptEngineer(object):
     '''Prompt engineer that creates prompts of different types'''
 
-    def __init__(self, strategy, llm,  history):
+    def __init__(self, strategy, llm,  history, capabilities):
         """
         Initializes the PromptEngineer with a specific strategy and API key.
 
@@ -32,6 +32,7 @@ class PromptEngineer(object):
         # Set the OpenAI API key
         openai.api_key = self.api_key'''
         self.llm = llm
+        self.capabilities = capabilities
         self.round = 0
         # Load the small English model
         self.nlp = spacy.load("en_core_web_sm")
@@ -57,17 +58,19 @@ class PromptEngineer(object):
         """
         # Directly call the method using the strategy mapping
         prompt_func = self.strategies.get(self.strategy)
+        is_good = False
         if prompt_func:
-            #print(f'prompt history:{self._prompt_history[self.round]}')
-            prompt = prompt_func(doc)
-            #print(f'NewPrompt:\n{prompt}')
-            self._prompt_history.append( {"role":"system", "content":prompt})
-            self.previous_prompt = prompt
-            self.round = self.round +1
+            while not is_good:
+                prompt = prompt_func(doc)
+                response_text = self.get_response_for_prompt(prompt)
+                is_good = self.evaluate_response(prompt, response_text)
+                if is_good:
+                    self._prompt_history.append( {"role":"system", "content":prompt})
+                    self.previous_prompt = prompt
+                    self.round = self.round +1
+                    return self._prompt_history
 
-            return self._prompt_history
-
-    def get_response(self, prompt):
+    def get_response_for_prompt(self, prompt):
         """
         Sends a prompt to OpenAI's API and retrieves the response.
 
@@ -77,14 +80,12 @@ class PromptEngineer(object):
         Returns:
             str: The response from the API.
         """
-        response = openai.Completion.create(
-            engine="text-davinci-002",
-            prompt=prompt,
-            max_tokens=150,
-            n=1,
-            stop=None,
-            temperature=0.7,
-        )
+        messages = [{"role": "user", "content": prompt}]
+
+        response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
+                                                                                           messages=messages,
+                                                                                           response_model=capabilities_to_action_model(
+                                                                                               self.capabilities))
         # Update history
         response_text = response.choices[0].text.strip()
         self._prompt_history.extend([f"[User]: {prompt}", f"[System]: {response_text}"])
@@ -248,7 +249,8 @@ class PromptEngineer(object):
         )]
         return "\n".join([self._prompt_history[self.round]["content"]] + tree_of_thoughts_steps)
 
-
+    def evaluate_response(self, prompt, response_text):
+        return True
 
 
 from enum import Enum

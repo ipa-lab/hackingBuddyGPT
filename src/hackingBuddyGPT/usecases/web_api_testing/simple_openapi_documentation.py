@@ -55,8 +55,9 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
     def init(self):
         super().init()
-        self._setup_initial_prompt()
         self._setup_capabilities()
+        self._setup_initial_prompt()
+
         self.documentation_handler = DocumentationHandler(self.llm, self._capabilities)
 
     def _setup_initial_prompt(self):

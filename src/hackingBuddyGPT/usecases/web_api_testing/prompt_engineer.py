@@ -1,18 +1,14 @@
-import json
-
 import pydantic_core
 from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
-from hackingBuddyGPT.utils import openai
 import spacy
 import time
-from hackingBuddyGPT.utils import LLMResult
 from instructor.retry import InstructorRetryException
 
 
 class PromptEngineer(object):
     '''Prompt engineer that creates prompts of different types'''
 
-    def __init__(self, strategy, llm,  history, capabilities):
+    def __init__(self, strategy, llm_handler,  history, schemas):
         """
         Initializes the PromptEngineer with a specific strategy and API key.
 
@@ -36,16 +32,15 @@ class PromptEngineer(object):
         '''self.api_key = api_key
         # Set the OpenAI API key
         openai.api_key = self.api_key'''
-        self.llm = llm
-        self.capabilities = capabilities
+        self.llm_handler = llm_handler
         self.round = 0
         # Load the small English model
         self.nlp = spacy.load("en_core_web_sm")
-
         # Initialize prompt history
         self._prompt_history = history
         self.prompt = self._prompt_history
         self.previous_prompt = self._prompt_history[self.round]["content"]
+        self.schemas = schemas
 
         # Set up strategy map
         self.strategies = {
@@ -89,24 +84,23 @@ class PromptEngineer(object):
         Returns:
             str: The response from the API.
         """
-        messages = [{"role": "user", "content": prompt}]
+        messages = [{"role": "user",
+                     "content": [{"type": "text", "text": prompt},
+                                 {"type": "text", "text": prompt}
+                                 ]
+                     }
+                    ]
+
 
         tic = time.perf_counter()
         print(f'shorten prompt: {prompt}')
-        response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
-                                                                                           messages=messages,
-                                                                                           response_model=capabilities_to_action_model(
-                                                                                               self.capabilities))
+        response, completion = self.llm_handler.call_llm(messages)
         toc = time.perf_counter()
         # Update history
         message = completion.choices[0].message
-        #print(f'Message: {message}')
+        print(f'Message: {message}')
         command = pydantic_core.to_json(response).decode()
-        #print(f'Command: {command}')
-        answer = LLMResult(completion.choices[0].message.content, str(prompt),
-                           completion.choices[0].message.content, toc - tic, completion.usage.prompt_tokens,
-                           completion.usage.completion_tokens)
-        #print(f'Answer: {answer}')
+        print(f'response:{response}')
         response_text = response.execute()
         print(f'[Response]: {response_text[:20]}')
 
@@ -130,7 +124,7 @@ class PromptEngineer(object):
         """Helper to construct a consistent HTTP action description."""
         if method == "POST" and method == "PUT":
             return (
-                f"Create HTTPRequests of type {method} and understand the responses. Ensure that they are correct requests."
+                f"Create HTTPRequests of type {method} considering the found schemas: {self.schemas} and understand the responses. Ensure that they are correct requests."
                 f"Note down the response structures, status codes, and headers for each endpoint.",
                 f"For each endpoint, document the following details: URL, HTTP method {method}, "
                 f"query parameters and path variables, expected request body structure for {method} requests, response structure for successful and error responses.")
@@ -166,13 +160,30 @@ class PromptEngineer(object):
                 "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
             ]
 
-            http_methods = ["GET", "POST", "PUT", "DELETE"]
-            if self.round < len(http_methods) * 5:
-                index = self.round // 5
-                method = http_methods[index]
+            http_methods = ["GET", "POST", "DELETE", "PUT"]
+            # if self.round < len(http_methods) * 5:
+            #    index = self.round // 5
+            #    method = http_methods[index]
+            #    chain_of_thought_steps = [
+            #                                 f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
+            #                                 self.get_http_action_template(method)] + common_steps
+
+            if self.round <= 5:
+                chain_of_thought_steps = [
+                                         f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
+                                         self.get_http_action_template(http_methods[0])] + common_steps
+            elif self.round > 5 and self.round <= 10:
                 chain_of_thought_steps = [
                                              f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
-                                             self.get_http_action_template(method)] + common_steps
+                                             self.get_http_action_template(http_methods[1])] + common_steps
+            elif self.round > 10 and self.round <= 15:
+                chain_of_thought_steps = [
+                                             f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
+                                             self.get_http_action_template(http_methods[2])] + common_steps
+            elif self.round > 15 and self.round <= 20:
+                chain_of_thought_steps = [
+                                             f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
+                                             self.get_http_action_template(http_methods[2])] + common_steps
             else:
                 chain_of_thought_steps = [
                                              "Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",

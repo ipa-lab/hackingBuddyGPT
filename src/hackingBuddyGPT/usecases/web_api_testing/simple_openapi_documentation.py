@@ -1,7 +1,5 @@
-import datetime
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import List, Any, Union, Dict
 
 import pydantic_core
@@ -9,19 +7,17 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
-from hackingBuddyGPT.capabilities.submit_http_method import SubmitHTTPMethod
 from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
-from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
 from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
 from hackingBuddyGPT.usecases.web_api_testing.documentation_handler import DocumentationHandler
+from hackingBuddyGPT.usecases.web_api_testing.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.utils import LLMResult, tool_message, ui
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 from hackingBuddyGPT.usecases.base import use_case
-import hackingBuddyGPT.capabilities.http_request
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
@@ -56,9 +52,15 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
     def init(self):
         super().init()
         self._setup_capabilities()
+        self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self._setup_initial_prompt()
-
-        self.documentation_handler = DocumentationHandler(self.llm, self._capabilities)
+        self.documentation_handler = DocumentationHandler(self.llm_handler)
+    def _setup_capabilities(self):
+        notes = self._context["notes"]
+        self._capabilities = {
+            "http_request": HTTPRequest(self.host),
+            "record_note": RecordNote(notes)
+        }
 
     def _setup_initial_prompt(self):
         initial_prompt = {
@@ -68,15 +70,9 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
                        f"Maintain meticulousness in documenting your observations as you traverse the APIs."
         }
         self._prompt_history.append(initial_prompt)
-        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm=self.llm, history=self._prompt_history, capabilities = self._capabilities)
+        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm_handler=self.llm_handler, history=self._prompt_history,schemas = {})
 
-    def _setup_capabilities(self):
-        sett = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
-        notes = self._context["notes"]
-        self._capabilities = {
-            "http_request": HTTPRequest(self.host),
-            "record_note": RecordNote(notes)
-        }
+
 
     def all_http_methods_found(self):
         self.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
@@ -86,7 +82,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
         prompt = self.prompt_engineer.generate_prompt(doc=True)
         #print(f'Prompt:{prompt}')
         tic = time.perf_counter()
-        response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model, messages=prompt, response_model=capabilities_to_action_model(self._capabilities))
+        response, completion = self.llm_handler.call_llm(prompt)
         toc = time.perf_counter()
         self._handle_response(completion, response, tic, toc)
 
@@ -107,6 +103,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
             if not result_str in invalid_flags :
                 self.documentation_handler.update_openapi_spec(response, result)
                 self.documentation_handler.write_openapi_to_yaml()
+                self.prompt_engineer.schemas = self.documentation_handler.schemas
         return self._all_http_methods_found
 
     def parse_http_status_line(self, status_line):

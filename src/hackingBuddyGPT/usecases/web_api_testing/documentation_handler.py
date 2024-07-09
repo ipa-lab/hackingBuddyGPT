@@ -7,17 +7,15 @@ import pydantic_core
 import yaml
 from datetime import datetime
 
-from hackingBuddyGPT.capabilities.http_request import HTTPRequest
-from hackingBuddyGPT.capabilities.record_note import RecordNote
-from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 
 
 class DocumentationHandler:
     """Handles the generation and updating of an OpenAPI specification document based on dynamic API responses."""
 
-    def __init__(self, llm, capabilities):
+    def __init__(self, llm_handler):
         """Initializes the handler with a template OpenAPI specification."""
+        self.schemas = {}
         self.filename = f"openapi_spec_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
         self.openapi_spec = {
             "openapi": "3.0.0",
@@ -30,9 +28,8 @@ class DocumentationHandler:
             "endpoints": {},
             "components": {"schemas": {}}
         }
-        self.llm = llm
-        self.api_key = llm.api_key
-        self.capabilities = capabilities
+        self.llm_handler = llm_handler
+        self.api_key = llm_handler.llm.api_key
         current_path = os.path.dirname(os.path.abspath(__file__))
         self.file_path = os.path.join(current_path, "openapi_spec")
         self.file = os.path.join(self.file_path, self.filename)
@@ -48,15 +45,8 @@ class DocumentationHandler:
         Args:
         - response: The response object containing details like the path and method which should be documented.
         """
-        # print(f'resp:{resp}')
         request = resp.action
-        # print(f'Type of request:{type(request)}')
-        # print(f'is recordnote? {isinstance(request, RecordNote)}')
-        # print(f'is HTTP request? {isinstance(request, HTTPRequest)}')
-        # print(f'is HTTP request? {type(request)}')
-        # print(f'is HTTP request? {type(request) == HTTPRequest}')
-        # print("same class?")
-        # print(request.__class__.__name__ == 'HTTPRequest')
+
 
         if request.__class__.__name__ == 'RecordNote':  # TODO check why isinstance does not work
             self.check_openapi_spec(resp)
@@ -113,14 +103,18 @@ class DocumentationHandler:
         headers, body = http_response.split('\r\n\r\n', 1)
 
         # Convert the JSON body to a Python dictionary
+        print(f'BOdy: {body}')
         body_dict = json.loads(body)
         reference = self.parse_http_response_to_schema(body_dict, path)
 
         entry_dict = {}
         # Build the OpenAPI response example
-        for entry in body_dict:
-            key = entry.get("title") or entry.get("name") or entry.get("id")
-            entry_dict[key] = {"value": entry}
+        if len(body_dict) == 1:
+            entry_dict["id"] = {"value": body_dict}
+        else:
+            for entry in body_dict:
+                key = entry.get("title") or entry.get("name") or entry.get("id")
+                entry_dict[key] = {"value": entry}
 
         return entry_dict, reference
 
@@ -194,39 +188,9 @@ class DocumentationHandler:
             - description: str. A detailed description of the entire API.
             """
         description = self.extract_description(note)
-
-        # Prepare the prompt for the LLM to generate the entire OpenAPI YAML
-        prompt = [{'role': 'system',
-                   'content': f"Update the OpenAPI specification in YAML format based on the following description of an API and return only the OpenAPI specification as a yaml:" \
-                              f"\n Description:{description},\n yaml:{self.read_yaml_to_string(self.file)}"}]
-
-        # Ask the model to generate the complete YAML specification
-        openai.api_key = self.api_key
-        # Making the API call to GPT-3.5
-        try:
-            response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
-                                                                                               messages=prompt,
-                                                                                               response_model=capabilities_to_action_model(
-                                                                                                   self._capabilities))
-
-            message = completion.choices[0].message
-            tool_call_id = message.tool_calls[0].id
-            command = pydantic_core.to_json(response).decode()
-            print(f'command:{command}')
-            result = response.execute()
-            print(f'result:\n{result}')
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            raise Exception(e)
-        # response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model, messages=prompt, response_model=capabilities_to_action_model(self.capabilities))
-
-    ## Parse the model's response assuming it's a valid YAML
-    # print(f'new yaml file:{completion.choices[0].message}')
-    # new_openapi_spec = yaml.safe_load(completion.choices[0].message)
-    #
-    ## Write the generated YAML back to file
-    # with open(self.file, 'w') as file:
-    #    yaml.safe_dump(new_openapi_spec, file, default_flow_style=False, sort_keys=False)
+        from hackingBuddyGPT.usecases.web_api_testing.yaml_assistant import YamlFileAssistant
+        yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler.llm)
+        yaml_file_assistant.run(description)
 
     def extract_description(self, note):
         return note.action.content
@@ -238,14 +202,16 @@ class DocumentationHandler:
 
         # Parse body dict to types
         properties_dict = {}
-
-        for param in body_dict:
-            for key, value in param.items():
-                if key == "id":
-                    properties_dict[key] = {"type": str(type(value).__name__), "format": "uuid", "example": str(value)}
-                else:
-                    properties_dict[key] = {"type": str(type(value).__name__), "example": str(value)}
-            break
+        if len(body_dict) == 1:
+            properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict["id"])}
+        else:
+            for param in body_dict:
+                for key, value in param.items():
+                    if key == "id":
+                        properties_dict[key] = {"type": str(type(value).__name__), "format": "uuid", "example": str(value)}
+                    else:
+                        properties_dict[key] = {"type": str(type(value).__name__), "example": str(value)}
+                break
 
         object_dict = {"type": "object", "properties": properties_dict}
 
@@ -253,6 +219,7 @@ class DocumentationHandler:
             self.openapi_spec["components"]["schemas"][object_name] = object_dict
 
         schemas = self.openapi_spec["components"]["schemas"]
+        self.schemas = schemas
         print(f'schemas: {schemas}')
         reference = "#/components/schemas/" + object_name
         return reference

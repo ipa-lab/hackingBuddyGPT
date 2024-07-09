@@ -85,24 +85,23 @@ class PromptEngineer(object):
             str: The response from the API.
         """
         messages = [{"role": "user",
-                     "content": [{"type": "text", "text": prompt},
-                                 {"type": "text", "text": prompt}
+                     "content": [{"type": "text", "text": prompt}
                                  ]
                      }
                     ]
 
 
         tic = time.perf_counter()
-        print(f'shorten prompt: {prompt}')
+        #print(f'shorten prompt: {prompt}')
         response, completion = self.llm_handler.call_llm(messages)
         toc = time.perf_counter()
         # Update history
         message = completion.choices[0].message
-        print(f'Message: {message}')
+        #print(f'Message: {message}')
         command = pydantic_core.to_json(response).decode()
-        print(f'response:{response}')
+        #print(f'response:{response}')
         response_text = response.execute()
-        print(f'[Response]: {response_text[:20]}')
+        #print(f'[Response]: {response_text[:20]}')
 
         return response_text
 
@@ -178,12 +177,12 @@ class PromptEngineer(object):
                                              self.get_http_action_template(http_methods[1])] + common_steps
             elif self.round > 10 and self.round <= 15:
                 chain_of_thought_steps = [
-                                             f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
+                                             f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}. Delete one created instance of this:{self.llm_handler.get_created_objects()}",
                                              self.get_http_action_template(http_methods[2])] + common_steps
             elif self.round > 15 and self.round <= 20:
                 chain_of_thought_steps = [
                                              f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
-                                             self.get_http_action_template(http_methods[2])] + common_steps
+                                             self.get_http_action_template(http_methods[3])] + common_steps
             else:
                 chain_of_thought_steps = [
                                              "Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",
@@ -227,12 +226,12 @@ class PromptEngineer(object):
     def check_prompt(self, previous_prompt, chain_of_thought_steps, max_tokens=900):
         def validate_prompt(prompt):
             if self.token_count(prompt) <= max_tokens:
-                print()
-                print("Prompt", prompt)
-                print()
+                #print()
+                #print("Prompt", prompt)
+                #print()
                 return prompt
             shortened_prompt = self.get_response_for_prompt("Shorten this prompt to fit withing 10000 tokens." + prompt )
-            print(f'Shortened prompt: {shortened_prompt}')
+            #print(f'Shortened prompt: {shortened_prompt}')
             if self.token_count(shortened_prompt) <= max_tokens:
                 return shortened_prompt
             return "Prompt is still too long after summarization."

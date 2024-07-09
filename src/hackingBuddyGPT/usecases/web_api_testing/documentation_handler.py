@@ -48,19 +48,23 @@ class DocumentationHandler:
         request = resp.action
 
 
-        if request.__class__.__name__ == 'RecordNote':  # TODO check why isinstance does not work
-            self.check_openapi_spec(resp)
+        #if request.__class__.__name__ == 'RecordNote':  # TODO check why isinstance does not work
+            #self.check_openapi_spec(resp)
         if request.__class__.__name__ == 'HTTPRequest':
             path = request.path
             method = request.method
+            print(f'method:{method}')
             # Ensure that path and method are not None and method has no numeric characters
-            if path and method and not any(char.isdigit() for char in path):
+            if path and method:
+                if method == 'PUT':
+                    print(f'"PUUUUUUUUUUURRRRRRRRRRRTTTT')
                 # Initialize the path if not already present
                 if path not in self.openapi_spec['endpoints']:
                     self.openapi_spec['endpoints'][path] = {}
                 # Update the method description within the path
-                example, reference = self.parse_http_response_to_openapi_example(result, path)
-                self.openapi_spec['endpoints'][path][method.lower()] = {
+                example, reference = self.parse_http_response_to_openapi_example(result, path, method)
+                if example != None or reference != None:
+                    self.openapi_spec['endpoints'][path][method.lower()] = {
                     "summary": f"{method} operation on {path}",
                     "responses": {
                         "200": {
@@ -98,23 +102,31 @@ class DocumentationHandler:
         # Format the response example
         return json.loads(result_text)
 
-    def parse_http_response_to_openapi_example(self, http_response, path):
+    def parse_http_response_to_openapi_example(self, http_response, path, method):
+        if method == "DELETE" or method == "PUT":
+            print(f'http response: {http_response}')
         # Extract headers and body from the HTTP response
         headers, body = http_response.split('\r\n\r\n', 1)
 
         # Convert the JSON body to a Python dictionary
         print(f'BOdy: {body}')
-        body_dict = json.loads(body)
-        reference = self.parse_http_response_to_schema(body_dict, path)
+        try :
+            body_dict = json.loads(body)
+        except json.decoder.JSONDecodeError:
+            return None, None
+        reference, object_name = self.parse_http_response_to_schema(body_dict, path)
 
         entry_dict = {}
         # Build the OpenAPI response example
         if len(body_dict) == 1:
             entry_dict["id"] = {"value": body_dict}
+            self.llm_handler.add_created_object(entry_dict, object_name)
+
         else:
             for entry in body_dict:
                 key = entry.get("title") or entry.get("name") or entry.get("id")
                 entry_dict[key] = {"value": entry}
+                self.llm_handler.add_created_object(entry_dict[key], object_name)
 
         return entry_dict, reference
 
@@ -222,4 +234,4 @@ class DocumentationHandler:
         self.schemas = schemas
         print(f'schemas: {schemas}')
         reference = "#/components/schemas/" + object_name
-        return reference
+        return reference, object_name

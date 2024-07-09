@@ -30,7 +30,8 @@ class HTTPRequest(Capability):
                  ) -> str:
         if body is not None and body_is_base64:
             body = base64.b64decode(body).decode()
-
+        if self.host[-1] != "/":
+            path = "/" + path
         resp = self._client.request(
             method,
             self.host + path,

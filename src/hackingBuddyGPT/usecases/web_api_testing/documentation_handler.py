@@ -1,6 +1,7 @@
+import json
 import os
 import re
-
+from bs4 import BeautifulSoup
 import openai
 import pydantic_core
 import yaml
@@ -26,7 +27,8 @@ class DocumentationHandler:
                 "description": "Automatically generated description of the API."
             },
             "servers": [{"url": "https://jsonplaceholder.typicode.com"}],
-            "endpoints": {}
+            "endpoints": {},
+            "components": {"schemas": {}}
         }
         self.llm = llm
         self.api_key = llm.api_key
@@ -39,24 +41,24 @@ class DocumentationHandler:
             "yaml": YAMLFile()
         }
 
-
-    def update_openapi_spec(self, resp):
+    def update_openapi_spec(self, resp, result):
         """
         Updates the OpenAPI specification based on the API response provided.
 
         Args:
         - response: The response object containing details like the path and method which should be documented.
         """
+        # print(f'resp:{resp}')
         request = resp.action
-        #print(f'Type of request:{type(request)}')
-        #print(f'is recordnote? {isinstance(request, RecordNote)}')
-        #print(f'is HTTP request? {isinstance(request, HTTPRequest)}')
-        #print(f'is HTTP request? {type(request)}')
-        #print(f'is HTTP request? {type(request) == HTTPRequest}')
-        #print("same class?")
-        #print(request.__class__.__name__ == 'HTTPRequest')
+        # print(f'Type of request:{type(request)}')
+        # print(f'is recordnote? {isinstance(request, RecordNote)}')
+        # print(f'is HTTP request? {isinstance(request, HTTPRequest)}')
+        # print(f'is HTTP request? {type(request)}')
+        # print(f'is HTTP request? {type(request) == HTTPRequest}')
+        # print("same class?")
+        # print(request.__class__.__name__ == 'HTTPRequest')
 
-        if request.__class__.__name__ == 'RecordNote': # TODO check why isinstance does not work
+        if request.__class__.__name__ == 'RecordNote':  # TODO check why isinstance does not work
             self.check_openapi_spec(resp)
         if request.__class__.__name__ == 'HTTPRequest':
             path = request.path
@@ -67,6 +69,7 @@ class DocumentationHandler:
                 if path not in self.openapi_spec['endpoints']:
                     self.openapi_spec['endpoints'][path] = {}
                 # Update the method description within the path
+                example, reference = self.parse_http_response_to_openapi_example(result, path)
                 self.openapi_spec['endpoints'][path][method.lower()] = {
                     "summary": f"{method} operation on {path}",
                     "responses": {
@@ -74,14 +77,52 @@ class DocumentationHandler:
                             "description": "Successful response",
                             "content": {
                                 "application/json": {
-                                    "schema": {"type": "object"}  # Simplified for example
+                                    "schema": {
+                                        "$ref": reference
+                                    },
+                                    "examples": example
                                 }
                             }
                         }
+
                     }
                 }
 
+    def extract_response_example(self, html_content):
+        soup = BeautifulSoup(html_content, 'html.parser')
 
+        # Extract the JavaScript example code
+        example_code = soup.find('code', {'id': 'example'})
+        if example_code:
+            example_text = example_code.get_text()
+        else:
+            return None
+
+        # Extract the result placeholder for the response
+        result_code = soup.find('code', {'id': 'result'})
+        if result_code:
+            result_text = result_code.get_text()
+        else:
+            return None
+
+        # Format the response example
+        return json.loads(result_text)
+
+    def parse_http_response_to_openapi_example(self, http_response, path):
+        # Extract headers and body from the HTTP response
+        headers, body = http_response.split('\r\n\r\n', 1)
+
+        # Convert the JSON body to a Python dictionary
+        body_dict = json.loads(body)
+        reference = self.parse_http_response_to_schema(body_dict, path)
+
+        entry_dict = {}
+        # Build the OpenAPI response example
+        for entry in body_dict:
+            key = entry.get("title") or entry.get("name") or entry.get("id")
+            entry_dict[key] = {"value": entry}
+
+        return entry_dict, reference
 
     def write_openapi_to_yaml(self):
         """Writes the updated OpenAPI specification to a YAML file with a timestamped filename."""
@@ -91,15 +132,15 @@ class DocumentationHandler:
                 "openapi": self.openapi_spec["openapi"],
                 "info": self.openapi_spec["info"],
                 "servers": self.openapi_spec["servers"],
+                "components": self.openapi_spec["components"],
                 "paths": self.openapi_spec["endpoints"]
             }
-
 
             # Create directory if it doesn't exist and generate the timestamped filename
             os.makedirs(self.file_path, exist_ok=True)
 
             # Write to YAML file
-            with open(self.file , 'w') as yaml_file:
+            with open(self.file, 'w') as yaml_file:
                 yaml.dump(openapi_data, yaml_file, allow_unicode=True, default_flow_style=False)
             print(f"OpenAPI specification written to {self.filename}.")
         except Exception as e:
@@ -143,8 +184,6 @@ class DocumentationHandler:
             print(f"Error reading file {filepath}: {e}")
             return None
 
-
-
     def check_openapi_spec(self, note):
         """
             Uses OpenAI's GPT model to generate a complete OpenAPI specification based on a natural language description.
@@ -157,9 +196,9 @@ class DocumentationHandler:
         description = self.extract_description(note)
 
         # Prepare the prompt for the LLM to generate the entire OpenAPI YAML
-        prompt =[{'role': 'system', 'content': f"Update the OpenAPI specification in YAML format based on the following description of an API and return only the OpenAPI specification as a yaml:" \
-                f"\n Description:{description},\n yaml:{self.read_yaml_to_string(self.file)}"}]
-
+        prompt = [{'role': 'system',
+                   'content': f"Update the OpenAPI specification in YAML format based on the following description of an API and return only the OpenAPI specification as a yaml:" \
+                              f"\n Description:{description},\n yaml:{self.read_yaml_to_string(self.file)}"}]
 
         # Ask the model to generate the complete YAML specification
         openai.api_key = self.api_key
@@ -179,16 +218,41 @@ class DocumentationHandler:
         except Exception as e:
             print(f"An error occurred: {e}")
             raise Exception(e)
-        #response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model, messages=prompt, response_model=capabilities_to_action_model(self.capabilities))
+        # response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model, messages=prompt, response_model=capabilities_to_action_model(self.capabilities))
 
-       ## Parse the model's response assuming it's a valid YAML
-       #print(f'new yaml file:{completion.choices[0].message}')
-       #new_openapi_spec = yaml.safe_load(completion.choices[0].message)
-       #
-       ## Write the generated YAML back to file
-       #with open(self.file, 'w') as file:
-       #    yaml.safe_dump(new_openapi_spec, file, default_flow_style=False, sort_keys=False)
+    ## Parse the model's response assuming it's a valid YAML
+    # print(f'new yaml file:{completion.choices[0].message}')
+    # new_openapi_spec = yaml.safe_load(completion.choices[0].message)
+    #
+    ## Write the generated YAML back to file
+    # with open(self.file, 'w') as file:
+    #    yaml.safe_dump(new_openapi_spec, file, default_flow_style=False, sort_keys=False)
 
     def extract_description(self, note):
         return note.action.content
 
+    def parse_http_response_to_schema(self, body_dict, path):
+        # Create object name
+        object_name = path.split("/")[1].capitalize()
+        object_name = object_name[:len(object_name) - 1]
+
+        # Parse body dict to types
+        properties_dict = {}
+
+        for param in body_dict:
+            for key, value in param.items():
+                if key == "id":
+                    properties_dict[key] = {"type": str(type(value).__name__), "format": "uuid", "example": str(value)}
+                else:
+                    properties_dict[key] = {"type": str(type(value).__name__), "example": str(value)}
+            break
+
+        object_dict = {"type": "object", "properties": properties_dict}
+
+        if not object_name in self.openapi_spec["components"]["schemas"].keys():
+            self.openapi_spec["components"]["schemas"][object_name] = object_dict
+
+        schemas = self.openapi_spec["components"]["schemas"]
+        print(f'schemas: {schemas}')
+        reference = "#/components/schemas/" + object_name
+        return reference

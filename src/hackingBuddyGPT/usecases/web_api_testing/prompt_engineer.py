@@ -1,9 +1,12 @@
+import json
+
 import pydantic_core
 from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.utils import openai
 import spacy
 import time
 from hackingBuddyGPT.utils import LLMResult
+from instructor.retry import InstructorRetryException
 
 
 class PromptEngineer(object):
@@ -64,13 +67,17 @@ class PromptEngineer(object):
         if prompt_func:
             while not is_good:
                 prompt = prompt_func(doc)
-                response_text = self.get_response_for_prompt(prompt)
-                is_good = self.evaluate_response(prompt, response_text)
+                try:
+                    response_text = self.get_response_for_prompt(prompt)
+                    is_good = self.evaluate_response(prompt, response_text)
+                except InstructorRetryException :
+                    prompt = prompt_func(doc, hint=f"invalid prompt:{prompt}")
                 if is_good:
                     self._prompt_history.append( {"role":"system", "content":prompt})
                     self.previous_prompt = prompt
                     self.round = self.round +1
                     return self._prompt_history
+
 
     def get_response_for_prompt(self, prompt):
         """
@@ -85,28 +92,29 @@ class PromptEngineer(object):
         messages = [{"role": "user", "content": prompt}]
 
         tic = time.perf_counter()
+        print(f'shorten prompt: {prompt}')
         response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
-                                                                                           messages=prompt,
+                                                                                           messages=messages,
                                                                                            response_model=capabilities_to_action_model(
                                                                                                self.capabilities))
         toc = time.perf_counter()
         # Update history
         message = completion.choices[0].message
-        print(f'Message: {message}')
+        #print(f'Message: {message}')
         command = pydantic_core.to_json(response).decode()
-        print(f'Command: {command}')
+        #print(f'Command: {command}')
         answer = LLMResult(completion.choices[0].message.content, str(prompt),
                            completion.choices[0].message.content, toc - tic, completion.usage.prompt_tokens,
                            completion.usage.completion_tokens)
-        print(f'Answer: {answer}')
+        #print(f'Answer: {answer}')
         response_text = response.execute()
-        print(f'[Response]: {response_text}')
+        print(f'[Response]: {response_text[:20]}')
 
         return response_text
 
 
 
-    def in_context_learning(self, doc=False):
+    def in_context_learning(self, doc=False, hint=""):
         """
         Generates a prompt for in-context learning.
 
@@ -118,7 +126,24 @@ class PromptEngineer(object):
         """
         return str("\n".join(self._prompt_history[self.round]["content"] + [self.prompt]))
 
-    def chain_of_thought(self, doc=False):
+    def get_http_action_template(self, method):
+        """Helper to construct a consistent HTTP action description."""
+        if method == "POST" and method == "PUT":
+            return (
+                f"Create HTTPRequests of type {method} and understand the responses. Ensure that they are correct requests."
+                f"Note down the response structures, status codes, and headers for each endpoint.",
+                f"For each endpoint, document the following details: URL, HTTP method {method}, "
+                f"query parameters and path variables, expected request body structure for {method} requests, response structure for successful and error responses.")
+
+        else:
+            return (
+                f"Create HTTPRequests of type {method} and understand the responses. Ensure that they are correct requests. "
+                f"the action should look similar to this: "
+                f"'action':{{'method':'{method}','path':'/posts','query':null,'body':null,'body_is_base64':null,'headers':null}}."
+                f"For each endpoint, document the following details: URL, HTTP method {method}, "
+            )
+
+    def chain_of_thought(self, doc=False, hint=""):
         """
         Generates a prompt using the chain-of-thought strategy.
         If 'doc' is True, it follows a detailed documentation-oriented prompt strategy based on the round number.
@@ -130,23 +155,6 @@ class PromptEngineer(object):
         Returns:
             str: The generated prompt.
         """
-
-        def get_http_action_template(method):
-            """Helper to construct a consistent HTTP action description."""
-            if method == "POST" and method == "PUT":
-                return (
-                    f"Create HTTPRequests of type {method} and understand the responses. Ensure that they are correct requests."
-                    f"Note down the response structures, status codes, and headers for each endpoint.",
-                    f"For each endpoint, document the following details: URL, HTTP method {method}, "
-                    f"query parameters and path variables, expected request body structure for {method} requests, response structure for successful and error responses.")
-
-            else:
-                return (
-                f"Create HTTPRequests of type {method} and understand the responses. Ensure that they are correct requests. "
-                f"the action should look similar to this: "
-                f"'action':{{'method':'{method}','path':'/posts','query':null,'body':null,'body_is_base64':null,'headers':null}}."
-                f"For each endpoint, document the following details: URL, HTTP method {method}, "
-                )
 
         if doc:
             common_steps = [
@@ -164,7 +172,7 @@ class PromptEngineer(object):
                 method = http_methods[index]
                 chain_of_thought_steps = [
                                              f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
-                                             get_http_action_template(method)] + common_steps
+                                             self.get_http_action_template(method)] + common_steps
             else:
                 chain_of_thought_steps = [
                                              "Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",
@@ -180,7 +188,10 @@ class PromptEngineer(object):
                 chain_of_thought_steps = ["Look for exploits."]
 
         #prompt = "\n".join([self.previous_prompt] + chain_of_thought_steps)
-        prompt = self.check_prompt(self.previous_prompt, chain_of_thought_steps)
+        if hint != "":
+            prompt = self.check_prompt(self.previous_prompt, chain_of_thought_steps + [hint])
+        else:
+            prompt = self.check_prompt(self.previous_prompt, chain_of_thought_steps)
         return prompt
 
 
@@ -201,45 +212,25 @@ class PromptEngineer(object):
         tokens = [token for token in doc if not token.is_punct]
         return len(tokens)
 
-    def shorten_prompt(self, prompt): # TODO rework
-        """Uses the LLM's create_with_completion to generate a shortened or summarized prompt."""
-        print(f'NewPrompT:\n{prompt}')
-        messages = [{"role": "user", "content": prompt}]
-        # Simulate the capabilities as you might need them. Adjust according to your implementation.
-        response_model = capabilities_to_action_model({
-        })
-        response, completion = self.llm.instructor.chat.completions.create_with_completion(
-            model=self.llm.model,
-            messages=messages,
-            response_model=response_model
-        )
-        # Assuming the completion includes a single message with the summarized content
-        return completion.choices[0].message.content.strip()
 
-    def check_prompt(self,  previous_prompt, chain_of_thought_steps, max_tokens=1000):
+    def check_prompt(self, previous_prompt, chain_of_thought_steps, max_tokens=900):
+        def validate_prompt(prompt):
+            if self.token_count(prompt) <= max_tokens:
+                print()
+                print("Prompt", prompt)
+                print()
+                return prompt
+            shortened_prompt = self.get_response_for_prompt("Shorten this prompt to fit withing 10000 tokens." + prompt )
+            print(f'Shortened prompt: {shortened_prompt}')
+            if self.token_count(shortened_prompt) <= max_tokens:
+                return shortened_prompt
+            return "Prompt is still too long after summarization."
+
         if not all(step in previous_prompt for step in chain_of_thought_steps):
-            potential_prompt = "\n".join([] + chain_of_thought_steps)
-            if self.token_count(potential_prompt) <= max_tokens:
-                return potential_prompt
-            else:
-                # Handle the case where the combined prompt is too long
-                shortened_prompt = self.shorten_prompt( potential_prompt)
-                if self.token_count(shortened_prompt) <= max_tokens:
-                    return shortened_prompt
-                else:
-                    # Further handling if the shortened prompt is still too long
-                    return "Prompt is still too long after summarization."
-        else:
-            if self.token_count(previous_prompt) <= max_tokens:
-                return previous_prompt
-            else:
-                # Handle the case where the combined prompt is too long
-                shortened_prompt = self.shorten_prompt(previous_prompt)
-                if self.token_count(shortened_prompt) <= max_tokens:
-                    return shortened_prompt
-                else:
-                    # Further handling if the shortened prompt is still too long
-                    return "Prompt is still too long after summarization."
+            potential_prompt = "\n".join(chain_of_thought_steps)
+            return validate_prompt(potential_prompt)
+
+        return validate_prompt(previous_prompt)
 
     def tree_of_thought(self, doc=False):
         """

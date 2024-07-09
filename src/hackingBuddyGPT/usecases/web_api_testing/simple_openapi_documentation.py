@@ -99,13 +99,13 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
         with self.console.status("[bold green]Executing that command..."):
             result = response.execute()
-            self.console.print(Panel(result, title="tool"))
+            self.console.print(Panel(result[:30], title="tool"))
             result_str = self.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
             print(f'result string:{result_str}')
             invalid_flags = ["recorded","Not a valid HTTP method" ]
             if not result_str in invalid_flags :
-                self.documentation_handler.update_openapi_spec(response)
+                self.documentation_handler.update_openapi_spec(response, result)
                 self.documentation_handler.write_openapi_to_yaml()
         return self._all_http_methods_found
 

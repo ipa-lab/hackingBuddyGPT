@@ -80,7 +80,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
         self.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
         self._all_http_methods_found = True
 
-    def perform_round(self, turn: int, FINAL_ROUND=30):
+    def perform_round(self, turn: int):
         prompt = self.prompt_engineer.generate_prompt(doc=True)
         response, completion = self.llm_handler.call_llm(prompt)
         self._handle_response(completion, response)
@@ -97,7 +97,6 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
             self.console.print(Panel(result[:30], title="tool"))
             result_str = self.response_handler.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
-            #print(f'result string:{result_str}')
             invalid_flags = ["recorded","Not a valid HTTP method" ]
             if not result_str in invalid_flags :
                 self.documentation_handler.update_openapi_spec(response, result)

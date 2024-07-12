@@ -1,21 +1,36 @@
 import os.path
-
 import yaml
 import json
 
-
 class OpenAPISpecificationConverter:
+    """
+    OpenAPISpecificationConverter is a class for converting OpenAPI specification files between YAML and JSON formats.
+
+    Attributes:
+        base_directory (str): The base directory for the output files.
+    """
+
     def __init__(self, base_directory):
+        """
+        Initializes the OpenAPISpecificationConverter with the specified base directory.
+
+        Args:
+            base_directory (str): The base directory for the output files.
+        """
         self.base_directory = base_directory
 
     def convert_file(self, input_filepath, output_directory, input_type, output_type):
         """
-        Generic method to convert files between YAML and JSON.
+        Converts files between YAML and JSON formats.
 
-        :param input_filepath: Path to the input file.
-        :param output_directory: Subdirectory for the output files.
-        :param input_type: Type of the input file ('yaml' or 'json').
-        :param output_type: Type of the output file ('json' or 'yaml').
+        Args:
+            input_filepath (str): The path to the input file.
+            output_directory (str): The subdirectory for the output files.
+            input_type (str): The type of the input file ('yaml' or 'json').
+            output_type (str): The type of the output file ('json' or 'yaml').
+
+        Returns:
+            str: The path to the converted output file, or None if an error occurred.
         """
         try:
             filename = os.path.basename(input_filepath)
@@ -44,11 +59,27 @@ class OpenAPISpecificationConverter:
             return None
 
     def yaml_to_json(self, yaml_filepath):
-        """Convert a YAML file to a JSON file."""
+        """
+        Converts a YAML file to a JSON file.
+
+        Args:
+            yaml_filepath (str): The path to the YAML file to be converted.
+
+        Returns:
+            str: The path to the converted JSON file, or None if an error occurred.
+        """
         return self.convert_file(yaml_filepath, "json", 'yaml', 'json')
 
     def json_to_yaml(self, json_filepath):
-        """Convert a JSON file to a YAML file."""
+        """
+        Converts a JSON file to a YAML file.
+
+        Args:
+            json_filepath (str): The path to the JSON file to be converted.
+
+        Returns:
+            str: The path to the converted YAML file, or None if an error occurred.
+        """
         return self.convert_file(json_filepath, "yaml", 'json', 'yaml')
 
 
@@ -61,4 +92,5 @@ if __name__ == '__main__':
     json_file = converter.yaml_to_json(yaml_input)
 
     # Convert JSON to YAML
-    yaml_file = converter.json_to_yaml(json_file)
+    if json_file:
+        converter.json_to_yaml(json_file)

@@ -97,8 +97,9 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
             self.console.print(Panel(result[:30], title="tool"))
             result_str = self.response_handler.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
-            invalid_flags = ["recorded","Not a valid HTTP method" ]
-            if not result_str in invalid_flags :
+            invalid_flags = ["recorded","Not a valid HTTP method", "404" ,"Client Error: Not Found"]
+            print(f'result_str:{result_str}')
+            if not result_str in invalid_flags  or any(item in result_str for item in invalid_flags):
                 self.documentation_handler.update_openapi_spec(response, result)
                 self.documentation_handler.write_openapi_to_yaml()
                 self.prompt_engineer.schemas = self.documentation_handler.schemas

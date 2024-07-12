@@ -4,10 +4,31 @@ from bs4 import BeautifulSoup
 
 
 class ResponseHandler(object):
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, llm_handler):
+        self.llm_handler = llm_handler
+
+    def get_response_for_prompt(self, prompt):
+        """
+        Sends a prompt to OpenAI's API and retrieves the response.
+
+        Args:
+            prompt (str): The prompt to be sent to the API.
+
+        Returns:
+            str: The response from the API.
+        """
+        messages = [{"role": "user",
+                     "content": [{"type": "text", "text": prompt}
+                                 ]
+                     }
+                    ]
 
 
+        response, completion = self.llm_handler.call_llm(messages)
+
+        response_text = response.execute()
+
+        return response_text
     def parse_http_status_line(self, status_line):
         if status_line == "Not a valid HTTP method":
             return status_line
@@ -37,7 +58,7 @@ class ResponseHandler(object):
         # Format the response example
         return json.loads(result_text)
 
-    def parse_http_response_to_openapi_example(self, http_response, path, method):
+    def parse_http_response_to_openapi_example(self, openapi_spec, http_response, path, method):
         if method == "DELETE" or method == "PUT":
             print(f'http response: {http_response}')
         # Extract headers and body from the HTTP response
@@ -49,7 +70,7 @@ class ResponseHandler(object):
             body_dict = json.loads(body)
         except json.decoder.JSONDecodeError:
             return None, None
-        reference, object_name = self.parse_http_response_to_schema(body_dict, path)
+        reference, object_name, openapi_spec = self.parse_http_response_to_schema(openapi_spec, body_dict, path)
 
         entry_dict = {}
         # Build the OpenAPI response example
@@ -63,11 +84,11 @@ class ResponseHandler(object):
                 entry_dict[key] = {"value": entry}
                 self.llm_handler.add_created_object(entry_dict[key], object_name)
 
-        return entry_dict, reference
+        return entry_dict, reference, openapi_spec
     def extract_description(self, note):
         return note.action.content
 
-    def parse_http_response_to_schema(self, body_dict, path):
+    def parse_http_response_to_schema(self, openapi_spec ,body_dict, path):
         # Create object name
         object_name = path.split("/")[1].capitalize()
         object_name = object_name[:len(object_name) - 1]
@@ -87,14 +108,14 @@ class ResponseHandler(object):
 
         object_dict = {"type": "object", "properties": properties_dict}
 
-        if not object_name in self.openapi_spec["components"]["schemas"].keys():
-            self.openapi_spec["components"]["schemas"][object_name] = object_dict
+        if not object_name in openapi_spec["components"]["schemas"].keys():
+            openapi_spec["components"]["schemas"][object_name] = object_dict
 
-        schemas = self.openapi_spec["components"]["schemas"]
+        schemas = openapi_spec["components"]["schemas"]
         self.schemas = schemas
         print(f'schemas: {schemas}')
         reference = "#/components/schemas/" + object_name
-        return reference, object_name
+        return reference, object_name, openapi_spec
     def read_yaml_to_string(self, filepath):
         """
         Reads a YAML file and returns its contents as a string.

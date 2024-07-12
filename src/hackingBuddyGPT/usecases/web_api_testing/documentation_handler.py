@@ -61,7 +61,7 @@ class DocumentationHandler:
                 if path not in self.openapi_spec['endpoints']:
                     self.openapi_spec['endpoints'][path] = {}
                 # Update the method description within the path
-                example, reference = self.response_handler.parse_http_response_to_openapi_example(result, path, method)
+                example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(self.openapi_spec, result, path, method)
                 if example != None or reference != None:
                     self.openapi_spec['endpoints'][path][method.lower()] = {
                     "summary": f"{method} operation on {path}",
@@ -122,34 +122,3 @@ class DocumentationHandler:
         yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
         yaml_file_assistant.run(description)
 
-
-    def get_response_for_prompt(self, prompt):
-        """
-        Sends a prompt to OpenAI's API and retrieves the response.
-
-        Args:
-            prompt (str): The prompt to be sent to the API.
-
-        Returns:
-            str: The response from the API.
-        """
-        messages = [{"role": "user",
-                     "content": [{"type": "text", "text": prompt}
-                                 ]
-                     }
-                    ]
-
-
-        tic = time.perf_counter()
-        #print(f'shorten prompt: {prompt}')
-        response, completion = self.llm_handler.call_llm(messages)
-        toc = time.perf_counter()
-        # Update history
-        message = completion.choices[0].message
-        #print(f'Message: {message}')
-        command = pydantic_core.to_json(response).decode()
-        #print(f'response:{response}')
-        response_text = response.execute()
-        #print(f'[Response]: {response_text[:20]}')
-
-        return response_text

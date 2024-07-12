@@ -1,9 +1,10 @@
 import time
-
 from dataclasses import dataclass, field
+from typing import List, Any, Union, Dict
+
+import pydantic_core
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
-from typing import List, Any, Union, Dict
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
@@ -14,35 +15,27 @@ from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
 from hackingBuddyGPT.usecases.web_api_testing.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_handler import ResponseHandler
-from hackingBuddyGPT.utils import LLMResult, tool_message, ui
+from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 from hackingBuddyGPT.usecases.base import use_case
 
-import pydantic_core
-
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
-
-@use_case("simple_web_api_testing", "Minimal implementation of a web api testing use case")
+@use_case("simple_web_api_testing", "Minimal implementation of a web API testing use case")
 @dataclass
 class SimpleWebAPITesting(RoundBasedUseCase):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
-    # Parameter specifying the pattern description for expected HTTP methods in the API response
     http_method_description: str = parameter(
         desc="Pattern description for expected HTTP methods in the API response",
         default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.)."
     )
-
-    # Parameter specifying the template used to format HTTP methods in API requests
     http_method_template: str = parameter(
         desc="Template used to format HTTP methods in API requests. The {method} placeholder will be replaced by actual HTTP method names.",
         default="{method}"
     )
-
-    # Parameter specifying the expected HTTP methods as a comma-separated list
     http_methods: str = parameter(
         desc="Comma-separated list of HTTP methods expected to be used in the API response.",
         default="GET,POST,PUT,DELETE"
@@ -54,44 +47,82 @@ class SimpleWebAPITesting(RoundBasedUseCase):
     _all_http_methods_found: bool = False
 
     def init(self):
+        """
+        Initializes the SimpleWebAPITesting use case by setting up the context, response handler,
+        LLM handler, capabilities, and the initial prompt.
+        """
         super().init()
         self._context["host"] = self.host
-        self._setup_capabilities()
-        self.response_handler = ResponseHandler("doc")
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
+        self.response_handler = ResponseHandler(self.llm_handler)
+        self._setup_capabilities()
         self._setup_initial_prompt()
-        self.response_handler = ResponseHandler("test")
 
     def _setup_initial_prompt(self):
+        """
+        Sets up the initial prompt for the LLM. The prompt provides instructions for the LLM
+        to evaluate the REST APIs of the specified host and to document findings.
+        """
         initial_prompt = {
             "role": "system",
-            "content": f"You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at {self.host}. "
-                       f"Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, and then devise and execute potential exploits.\n"
-                       f"Be diligent in documenting your findings as you navigate through the APIs..\n"
-                       f"Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves.\n"
-                       f"Remember, if you encounter a http methods ({self.http_method_description}), promptly submit it as it is of utmost importance."
+            "content": (
+                f"You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at {self.host}. "
+                f"Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, "
+                f"and then devise and execute potential exploits. Be diligent in documenting your findings as you navigate through the APIs. "
+                f"Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves. "
+                f"Remember, if you encounter an HTTP method ({self.http_method_description}), promptly submit it as it is of utmost importance."
+            )
         }
         self._prompt_history.append(initial_prompt)
-        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm_handler=self.llm_handler,
-                                              history=self._prompt_history, schemas={}, response_handler= self.response_handler)
+        self.prompt_engineer = PromptEngineer(
+            strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm_handler=self.llm_handler,
+            history=self._prompt_history, schemas={}, response_handler=self.response_handler
+        )
 
     def all_http_methods_found(self):
+        """
+        Handles the event when all HTTP methods are found. Displays a congratulatory message
+        and sets the _all_http_methods_found flag to True.
+        """
         self.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
         self._all_http_methods_found = True
+
     def _setup_capabilities(self):
-        sett = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
+        """
+        Sets up the capabilities required for the use case. Initializes HTTP request capabilities,
+        note recording capabilities, and HTTP method submission capabilities based on the provided
+        configuration.
+        """
+        methods_set = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
         notes = self._context["notes"]
         self._capabilities = {
-            "submit_http_method": SubmitHTTPMethod(self.http_method_description, sett),
+            "submit_http_method": SubmitHTTPMethod(self.http_method_description, methods_set),
             "http_request": HTTPRequest(self.host),
             "record_note": RecordNote(notes)
         }
 
     def perform_round(self, turn: int, FINAL_ROUND=30):
+        """
+        Performs a single round of interaction with the LLM. Generates a prompt, sends it to the LLM,
+        and handles the response.
+
+        Args:
+            turn (int): The current round number.
+            FINAL_ROUND (int, optional): The final round number. Defaults to 30.
+        """
         prompt = self.prompt_engineer.generate_prompt(doc=True)
         response, completion = self.llm_handler.call_llm(prompt)
         self._handle_response(completion, response)
+
     def _handle_response(self, completion, response):
+        """
+        Handles the response from the LLM. Parses the response, executes the necessary actions,
+        and updates the prompt history.
+
+        Args:
+            completion (Any): The completion object from the LLM.
+            response (Any): The response object from the LLM.
+        """
         message = completion.choices[0].message
         tool_call_id = message.tool_calls[0].id
         command = pydantic_core.to_json(response).decode()
@@ -103,8 +134,5 @@ class SimpleWebAPITesting(RoundBasedUseCase):
             self.console.print(Panel(result[:30], title="tool"))
             result_str = self.response_handler.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
-            invalid_flags = ["recorded","Not a valid HTTP method" ]
+
         return self._all_http_methods_found
-
-
-

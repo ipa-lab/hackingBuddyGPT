@@ -53,8 +53,8 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
     def init(self):
         super().init()
         self._setup_capabilities()
-        self.response_handler = ResponseHandler("doc")
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
+        self.response_handler = ResponseHandler(self.llm_handler)
         self._setup_initial_prompt()
         self.documentation_handler = DocumentationHandler(self.llm_handler, self.response_handler)
 

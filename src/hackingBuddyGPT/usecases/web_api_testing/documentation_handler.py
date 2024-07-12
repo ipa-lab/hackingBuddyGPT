@@ -13,8 +13,9 @@ from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 class DocumentationHandler:
     """Handles the generation and updating of an OpenAPI specification document based on dynamic API responses."""
 
-    def __init__(self, llm_handler):
+    def __init__(self, llm_handler, response_handler):
         """Initializes the handler with a template OpenAPI specification."""
+        self.response_handler = response_handler
         self.schemas = {}
         self.filename = f"openapi_spec_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
         self.openapi_spec = {
@@ -48,21 +49,19 @@ class DocumentationHandler:
         request = resp.action
 
 
-        #if request.__class__.__name__ == 'RecordNote':  # TODO check why isinstance does not work
-            #self.check_openapi_spec(resp)
+        if request.__class__.__name__ == 'RecordNote':  # TODO check why isinstance does not work
+            self.check_openapi_spec(resp)
         if request.__class__.__name__ == 'HTTPRequest':
             path = request.path
             method = request.method
             print(f'method:{method}')
             # Ensure that path and method are not None and method has no numeric characters
             if path and method:
-                if method == 'PUT':
-                    print(f'"PUUUUUUUUUUURRRRRRRRRRRTTTT')
                 # Initialize the path if not already present
                 if path not in self.openapi_spec['endpoints']:
                     self.openapi_spec['endpoints'][path] = {}
                 # Update the method description within the path
-                example, reference = self.parse_http_response_to_openapi_example(result, path, method)
+                example, reference = self.response_handler.parse_http_response_to_openapi_example(result, path, method)
                 if example != None or reference != None:
                     self.openapi_spec['endpoints'][path][method.lower()] = {
                     "summary": f"{method} operation on {path}",
@@ -82,53 +81,7 @@ class DocumentationHandler:
                     }
                 }
 
-    def extract_response_example(self, html_content):
-        soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Extract the JavaScript example code
-        example_code = soup.find('code', {'id': 'example'})
-        if example_code:
-            example_text = example_code.get_text()
-        else:
-            return None
-
-        # Extract the result placeholder for the response
-        result_code = soup.find('code', {'id': 'result'})
-        if result_code:
-            result_text = result_code.get_text()
-        else:
-            return None
-
-        # Format the response example
-        return json.loads(result_text)
-
-    def parse_http_response_to_openapi_example(self, http_response, path, method):
-        if method == "DELETE" or method == "PUT":
-            print(f'http response: {http_response}')
-        # Extract headers and body from the HTTP response
-        headers, body = http_response.split('\r\n\r\n', 1)
-
-        # Convert the JSON body to a Python dictionary
-        print(f'BOdy: {body}')
-        try :
-            body_dict = json.loads(body)
-        except json.decoder.JSONDecodeError:
-            return None, None
-        reference, object_name = self.parse_http_response_to_schema(body_dict, path)
-
-        entry_dict = {}
-        # Build the OpenAPI response example
-        if len(body_dict) == 1:
-            entry_dict["id"] = {"value": body_dict}
-            self.llm_handler.add_created_object(entry_dict, object_name)
-
-        else:
-            for entry in body_dict:
-                key = entry.get("title") or entry.get("name") or entry.get("id")
-                entry_dict[key] = {"value": entry}
-                self.llm_handler.add_created_object(entry_dict[key], object_name)
-
-        return entry_dict, reference
 
     def write_openapi_to_yaml(self):
         """Writes the updated OpenAPI specification to a YAML file with a timestamped filename."""
@@ -152,43 +105,8 @@ class DocumentationHandler:
         except Exception as e:
             raise Exception(f"Error writing YAML file: {e}")
 
-    def extract_endpoints(self, note):
-        # Define a dictionary to hold the endpoint data
-        required_endpoints = {}
 
-        # Use regular expression to find all lines with endpoint definitions
-        pattern = r"(\d+\.\s+GET)\s(/[\w{}]+)"
-        matches = re.findall(pattern, note)
 
-        # Process each match to populate the dictionary
-        for match in matches:
-            method, endpoint = match
-            method = method.split()[1]  # Split to get rid of the numbering and keep "GET"
-            if endpoint in required_endpoints:
-                if method not in required_endpoints[endpoint]:
-                    required_endpoints[endpoint].append(method)
-            else:
-                required_endpoints[endpoint] = [method]
-
-        return required_endpoints
-
-    def read_yaml_to_string(self, filepath):
-        """
-        Reads a YAML file and returns its contents as a string.
-
-        :param filepath: Path to the YAML file.
-        :return: String containing the file contents.
-        """
-        try:
-            with open(filepath, 'r') as file:
-                file_contents = file.read()
-            return file_contents
-        except FileNotFoundError:
-            print(f"Error: The file {filepath} does not exist.")
-            return None
-        except IOError as e:
-            print(f"Error reading file {filepath}: {e}")
-            return None
 
     def check_openapi_spec(self, note):
         """
@@ -199,39 +117,39 @@ class DocumentationHandler:
             - file_path: str. Path to the YAML file to update.
             - description: str. A detailed description of the entire API.
             """
-        description = self.extract_description(note)
+        description = self.response_handler.extract_description(note)
         from hackingBuddyGPT.usecases.web_api_testing.yaml_assistant import YamlFileAssistant
-        yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler.llm)
+        yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
         yaml_file_assistant.run(description)
 
-    def extract_description(self, note):
-        return note.action.content
 
-    def parse_http_response_to_schema(self, body_dict, path):
-        # Create object name
-        object_name = path.split("/")[1].capitalize()
-        object_name = object_name[:len(object_name) - 1]
+    def get_response_for_prompt(self, prompt):
+        """
+        Sends a prompt to OpenAI's API and retrieves the response.
 
-        # Parse body dict to types
-        properties_dict = {}
-        if len(body_dict) == 1:
-            properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict["id"])}
-        else:
-            for param in body_dict:
-                for key, value in param.items():
-                    if key == "id":
-                        properties_dict[key] = {"type": str(type(value).__name__), "format": "uuid", "example": str(value)}
-                    else:
-                        properties_dict[key] = {"type": str(type(value).__name__), "example": str(value)}
-                break
+        Args:
+            prompt (str): The prompt to be sent to the API.
 
-        object_dict = {"type": "object", "properties": properties_dict}
+        Returns:
+            str: The response from the API.
+        """
+        messages = [{"role": "user",
+                     "content": [{"type": "text", "text": prompt}
+                                 ]
+                     }
+                    ]
 
-        if not object_name in self.openapi_spec["components"]["schemas"].keys():
-            self.openapi_spec["components"]["schemas"][object_name] = object_dict
 
-        schemas = self.openapi_spec["components"]["schemas"]
-        self.schemas = schemas
-        print(f'schemas: {schemas}')
-        reference = "#/components/schemas/" + object_name
-        return reference, object_name
+        tic = time.perf_counter()
+        #print(f'shorten prompt: {prompt}')
+        response, completion = self.llm_handler.call_llm(messages)
+        toc = time.perf_counter()
+        # Update history
+        message = completion.choices[0].message
+        #print(f'Message: {message}')
+        command = pydantic_core.to_json(response).decode()
+        #print(f'response:{response}')
+        response_text = response.execute()
+        #print(f'[Response]: {response_text[:20]}')
+
+        return response_text

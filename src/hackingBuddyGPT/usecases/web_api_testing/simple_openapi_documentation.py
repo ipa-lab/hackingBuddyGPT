@@ -14,6 +14,7 @@ from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
 from hackingBuddyGPT.usecases.web_api_testing.documentation_handler import DocumentationHandler
 from hackingBuddyGPT.usecases.web_api_testing.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
+from hackingBuddyGPT.usecases.web_api_testing.response_handler import ResponseHandler
 from hackingBuddyGPT.utils import LLMResult, tool_message, ui
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
@@ -52,9 +53,11 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
     def init(self):
         super().init()
         self._setup_capabilities()
+        self.response_handler = ResponseHandler("doc")
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self._setup_initial_prompt()
-        self.documentation_handler = DocumentationHandler(self.llm_handler)
+        self.documentation_handler = DocumentationHandler(self.llm_handler, self.response_handler)
+
     def _setup_capabilities(self):
         notes = self._context["notes"]
         self._capabilities = {
@@ -70,8 +73,9 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
                        f"Maintain meticulousness in documenting your observations as you traverse the APIs."
         }
         self._prompt_history.append(initial_prompt)
-        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm_handler=self.llm_handler, history=self._prompt_history,schemas = {})
-
+        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm_handler=self.llm_handler,
+                                              history=self._prompt_history, schemas={},
+                                              response_handler=self.response_handler)
 
 
     def all_http_methods_found(self):
@@ -80,13 +84,10 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
     def perform_round(self, turn: int, FINAL_ROUND=30):
         prompt = self.prompt_engineer.generate_prompt(doc=True)
-        #print(f'Prompt:{prompt}')
-        tic = time.perf_counter()
         response, completion = self.llm_handler.call_llm(prompt)
-        toc = time.perf_counter()
-        self._handle_response(completion, response, tic, toc)
+        self._handle_response(completion, response)
 
-    def _handle_response(self, completion, response, start_time, end_time):
+    def _handle_response(self, completion, response):
         message = completion.choices[0].message
         tool_call_id = message.tool_calls[0].id
         command = pydantic_core.to_json(response).decode()
@@ -96,7 +97,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
         with self.console.status("[bold green]Executing that command..."):
             result = response.execute()
             self.console.print(Panel(result[:30], title="tool"))
-            result_str = self.parse_http_status_line(result)
+            result_str = self.response_handler.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
             #print(f'result string:{result_str}')
             invalid_flags = ["recorded","Not a valid HTTP method" ]
@@ -106,14 +107,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
                 self.prompt_engineer.schemas = self.documentation_handler.schemas
         return self._all_http_methods_found
 
-    def parse_http_status_line(self, status_line):
-        if status_line == "Not a valid HTTP method":
-            return status_line
-        if status_line and " " in status_line:
-            protocol, status_code, status_message = status_line.split(' ', 2)
-            status_message = status_message.split("\r\n")[0]
-            return f'{status_code} {status_message}'
-        raise ValueError("Invalid HTTP status line")
+
 
     def has_no_numbers(self, path):
         return not any(char.isdigit() for char in path)

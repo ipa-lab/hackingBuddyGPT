@@ -8,41 +8,39 @@ from instructor.retry import InstructorRetryException
 class PromptEngineer(object):
     '''Prompt engineer that creates prompts of different types'''
 
-    def __init__(self, strategy, llm_handler,  history, schemas):
+    def __init__(self, strategy, llm_handler, history, schemas, response_handler):
         """
-        Initializes the PromptEngineer with a specific strategy and API key.
+        Initializes the PromptEngineer with a specific strategy and handlers for LLM and responses.
 
         Args:
             strategy (PromptStrategy): The prompt engineering strategy to use.
-            llm : The LLM model.
-
+            llm_handler (object): The LLM handler.
             history (dict, optional): The history of chats. Defaults to None.
+            schemas (object): The schemas to use.
+            response_handler (object): The handler for managing responses.
 
         Attributes:
             strategy (PromptStrategy): Stores the provided strategy.
-            llm : LLM model
-            host (str): Stores the provided host for OpenAI API.
-            flag_format_description (str): Stores the provided flag description format.
-            prompt_history (list): A list that keeps track of the conversation history.
-            initial_prompt (str): The initial prompt used for conversation.
-            prompt (str): The current prompt to be used.
+            llm_handler (object): Handles the interaction with the LLM.
+            nlp (spacy.lang.en.English): The spaCy English model used for NLP tasks.
+            _prompt_history (dict): Keeps track of the conversation history.
+            prompt (dict): The current state of the prompt history.
+            previous_prompt (str): The previous prompt content based on the conversation history.
+            schemas (object): Stores the provided schemas.
+            response_handler (object): Manages the response handling logic.
+            round (int): Tracks the current round of conversation.
             strategies (dict): Maps strategies to their corresponding methods.
         """
         self.strategy = strategy
-        '''self.api_key = api_key
-        # Set the OpenAI API key
-        openai.api_key = self.api_key'''
+        self.response_handler = response_handler
         self.llm_handler = llm_handler
         self.round = 0
-        # Load the small English model
         self.nlp = spacy.load("en_core_web_sm")
-        # Initialize prompt history
         self._prompt_history = history
         self.prompt = self._prompt_history
         self.previous_prompt = self._prompt_history[self.round]["content"]
         self.schemas = schemas
 
-        # Set up strategy map
         self.strategies = {
             PromptStrategy.IN_CONTEXT: self.in_context_learning,
             PromptStrategy.CHAIN_OF_THOUGHT: self.chain_of_thought,
@@ -63,7 +61,7 @@ class PromptEngineer(object):
             while not is_good:
                 prompt = prompt_func(doc)
                 try:
-                    response_text = self.get_response_for_prompt(prompt)
+                    response_text = self.response_handler.get_response_for_prompt(prompt)
                     is_good = self.evaluate_response(prompt, response_text)
                 except InstructorRetryException :
                     prompt = prompt_func(doc, hint=f"invalid prompt:{prompt}")
@@ -74,36 +72,6 @@ class PromptEngineer(object):
                     return self._prompt_history
 
 
-    def get_response_for_prompt(self, prompt):
-        """
-        Sends a prompt to OpenAI's API and retrieves the response.
-
-        Args:
-            prompt (str): The prompt to be sent to the API.
-
-        Returns:
-            str: The response from the API.
-        """
-        messages = [{"role": "user",
-                     "content": [{"type": "text", "text": prompt}
-                                 ]
-                     }
-                    ]
-
-
-        tic = time.perf_counter()
-        #print(f'shorten prompt: {prompt}')
-        response, completion = self.llm_handler.call_llm(messages)
-        toc = time.perf_counter()
-        # Update history
-        message = completion.choices[0].message
-        #print(f'Message: {message}')
-        command = pydantic_core.to_json(response).decode()
-        #print(f'response:{response}')
-        response_text = response.execute()
-        #print(f'[Response]: {response_text[:20]}')
-
-        return response_text
 
 
 
@@ -160,12 +128,6 @@ class PromptEngineer(object):
             ]
 
             http_methods = ["GET", "POST", "DELETE", "PUT"]
-            # if self.round < len(http_methods) * 5:
-            #    index = self.round // 5
-            #    method = http_methods[index]
-            #    chain_of_thought_steps = [
-            #                                 f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
-            #                                 self.get_http_action_template(method)] + common_steps
 
             if self.round <= 5:
                 chain_of_thought_steps = [
@@ -226,12 +188,8 @@ class PromptEngineer(object):
     def check_prompt(self, previous_prompt, chain_of_thought_steps, max_tokens=900):
         def validate_prompt(prompt):
             if self.token_count(prompt) <= max_tokens:
-                #print()
-                #print("Prompt", prompt)
-                #print()
                 return prompt
-            shortened_prompt = self.get_response_for_prompt("Shorten this prompt to fit withing 10000 tokens." + prompt )
-            #print(f'Shortened prompt: {shortened_prompt}')
+            shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt." + prompt )
             if self.token_count(shortened_prompt) <= max_tokens:
                 return shortened_prompt
             return "Prompt is still too long after summarization."
@@ -262,7 +220,7 @@ class PromptEngineer(object):
         )]
         return "\n".join([self._prompt_history[self.round]["content"]] + tree_of_thoughts_steps)
 
-    def evaluate_response(self, prompt, response_text):
+    def evaluate_response(self, prompt, response_text): #TODO find a good way of evaluating result of prompt
         return True
 
 

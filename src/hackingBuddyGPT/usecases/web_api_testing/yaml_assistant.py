@@ -4,10 +4,10 @@ from openai import OpenAI
 class YamlFileAssistant(object):
     def __init__(self, yaml_file, client):
         self.yaml_file = yaml_file
-        self.client = OpenAI()
+        self.client = client
 
     def run(self, recorded_note):
-        assistant = self.client.beta.assistants.create(
+      '''  assistant = self.client.beta.assistants.create(
             name="Yaml File Analysis Assistant",
             instructions="You are an OpenAPI specification analyst. Use you knowledge to check "
                          f"if the following information is contained in the provided yaml file. Information:{recorded_note}",
@@ -55,4 +55,4 @@ class YamlFileAssistant(object):
         )
 
         # The thread now has a vector store with that file in its tool resources.
-        print(thread.tool_resources.file_search)
+        print(thread.tool_resources.file_search)'''

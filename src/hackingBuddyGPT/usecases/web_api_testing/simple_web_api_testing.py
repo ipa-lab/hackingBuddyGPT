@@ -1,4 +1,3 @@
-import time
 from dataclasses import dataclass, field
 from typing import List, Any, Union, Dict
 
@@ -7,14 +6,13 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
-from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_http_method import SubmitHTTPMethod
 from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
-from hackingBuddyGPT.usecases.web_api_testing.llm_handler import LLMHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
-from hackingBuddyGPT.usecases.web_api_testing.response_handler import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib

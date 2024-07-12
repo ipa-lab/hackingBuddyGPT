@@ -59,17 +59,15 @@ class ResponseHandler(object):
         return json.loads(result_text)
 
     def parse_http_response_to_openapi_example(self, openapi_spec, http_response, path, method):
-        if method == "DELETE" or method == "PUT":
-            print(f'http response: {http_response}')
         # Extract headers and body from the HTTP response
         headers, body = http_response.split('\r\n\r\n', 1)
 
         # Convert the JSON body to a Python dictionary
-        print(f'BOdy: {body}')
+        #print(f'BOdy: {body}')
         try :
             body_dict = json.loads(body)
         except json.decoder.JSONDecodeError:
-            return None, None
+            return None, None, openapi_spec
         reference, object_name, openapi_spec = self.parse_http_response_to_schema(openapi_spec, body_dict, path)
 
         entry_dict = {}
@@ -95,6 +93,8 @@ class ResponseHandler(object):
 
         # Parse body dict to types
         properties_dict = {}
+        print(f'Body dict:{body_dict}')
+        print(f'LKen Body dict:{len(body_dict)}')
         if len(body_dict) == 1:
             properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict["id"])}
         else:
@@ -113,7 +113,6 @@ class ResponseHandler(object):
 
         schemas = openapi_spec["components"]["schemas"]
         self.schemas = schemas
-        print(f'schemas: {schemas}')
         reference = "#/components/schemas/" + object_name
         return reference, object_name, openapi_spec
     def read_yaml_to_string(self, filepath):

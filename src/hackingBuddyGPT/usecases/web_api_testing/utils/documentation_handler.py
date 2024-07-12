@@ -1,9 +1,4 @@
-import json
 import os
-import re
-from bs4 import BeautifulSoup
-import openai
-import pydantic_core
 import yaml
 from datetime import datetime
 
@@ -118,7 +113,7 @@ class DocumentationHandler:
             - description: str. A detailed description of the entire API.
             """
         description = self.response_handler.extract_description(note)
-        from hackingBuddyGPT.usecases.web_api_testing.yaml_assistant import YamlFileAssistant
+        from hackingBuddyGPT.usecases.web_api_testing.utils.yaml_assistant import YamlFileAssistant
         yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
         yaml_file_assistant.run(description)
 

@@ -3,7 +3,7 @@ import dataclasses
 import inspect
 import os
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, TypeVar
 
 from dotenv import load_dotenv
 
@@ -37,15 +37,14 @@ class ParameterDefinition:
     default: Any
     description: str
 
-    def parser(self, basename: str, parser: argparse.ArgumentParser):
-        name = f"{basename}{self.name}"
+    def parser(self, name: str, parser: argparse.ArgumentParser):
         default = get_default(name, self.default)
 
         parser.add_argument(f"--{name}", type=self.type, default=default, required=default is None,
                             help=self.description)
 
-    def get(self, basename: str, args: argparse.Namespace):
-        return getattr(args, f"{basename}{self.name}")
+    def get(self, name: str, args: argparse.Namespace):
+        return getattr(args, name)
 
 
 ParameterDefinitions = Dict[str, ParameterDefinition]
@@ -60,16 +59,17 @@ class ComplexParameterDefinition(ParameterDefinition):
     it. So if you have recursive type definitions that you try to make configurable, this will not work.
     """
     parameters: ParameterDefinitions
+    transparent: bool = False
 
     def parser(self, basename: str, parser: argparse.ArgumentParser):
         for name, parameter in self.parameters.items():
             if isinstance(parameter, dict):
-                build_parser(parameter, parser, f"{basename}{self.name}.")
+                build_parser(parameter, parser, next_name(basename, name, parameter))
             else:
-                parameter.parser(f"{basename}{self.name}.", parser)
+                parameter.parser(next_name(basename, name, parameter), parser)
 
-    def get(self, basename: str, args: argparse.Namespace):
-        parameter = self.type(**get_arguments(self.parameters, args, f"{basename}{self.name}."))
+    def get(self, name: str, args: argparse.Namespace):
+        parameter = self.type(**get_arguments(self.parameters, args, name))
         if hasattr(parameter, "init"):
             parameter.init()
         return parameter
@@ -94,7 +94,7 @@ def get_parameters(fun, basename: str, fields: Dict[str, dataclasses.Field] = No
             continue
 
         if not param.annotation:
-            raise ValueError(f"Parameter {name} of {basename}.{fun.__name__} must have a type annotation")
+            raise ValueError(f"Parameter {name} of {basename} must have a type annotation")
 
         default = param.default if param.default != inspect.Parameter.empty else None
         description = None
@@ -113,22 +113,22 @@ def get_parameters(fun, basename: str, fields: Dict[str, dataclasses.Field] = No
                 type = field.type
 
         if hasattr(type, "__parameters__"):
-            params[name] = ComplexParameterDefinition(name, type, default, description, get_class_parameters(type, f"{basename}.{fun.__name__}"))
+            params[name] = ComplexParameterDefinition(name, type, default, description, get_class_parameters(type, basename), transparent=getattr(type, "__transparent__", False))
         elif type in (str, int, float, bool):
             params[name] = ParameterDefinition(name, type, default, description)
         else:
-            raise ValueError(f"Parameter {name} of {basename}.{fun.__name__} must have str, int, bool, or a __parameters__ class as type, not {type}")
+            raise ValueError(f"Parameter {name} of {basename} must have str, int, bool, or a __parameters__ class as type, not {type}")
 
     return params
 
 
 def build_parser(parameters: ParameterDefinitions, parser: argparse.ArgumentParser, basename: str = ""):
     for name, parameter in parameters.items():
-        parameter.parser(basename, parser)
+        parameter.parser(next_name(basename, name, parameter), parser)
 
 
 def get_arguments(parameters: ParameterDefinitions, args: argparse.Namespace, basename: str = "") -> Dict[str, Any]:
-    return {name: parameter.get(basename, args) for name, parameter in parameters.items()}
+    return {name: parameter.get(next_name(basename, name, parameter), args) for name, parameter in parameters.items()}
 
 
 Configurable = Type  # TODO: Define type
@@ -149,3 +149,25 @@ def configurable(service_name: str, service_desc: str):
         return cls
 
     return inner
+
+
+T = TypeVar("T")
+
+
+def transparent(subclass: T) -> T:
+    class Cloned(subclass):
+        __transparent__ = True
+    Cloned.__name__ = subclass.__name__
+    Cloned.__qualname__ = subclass.__qualname__
+    Cloned.__module__ = subclass.__module__
+    return Cloned
+
+
+def next_name(basename: str, name: str, param: Any) -> str:
+    if isinstance(param, ComplexParameterDefinition) and param.transparent:
+        return basename
+    elif basename == "":
+        return name
+    else:
+        return f"{basename}.{name}"
+

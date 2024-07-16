@@ -1,5 +1,5 @@
 import time
-from dataclasses import dataclass, field
+from dataclasses import field
 from typing import List, Any, Union, Dict
 
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
@@ -50,19 +50,19 @@ class WebTestingWithExplanation(Agent):
         }
 
     def all_flags_found(self):
-        self.console.print(Panel("All flags found! Congratulations!", title="system"))
+        self._log.console.print(Panel("All flags found! Congratulations!", title="system"))
         self._all_flags_found = True
 
     def perform_round(self, turn: int):
         prompt = self._prompt_history  # TODO: in the future, this should do some context truncation
 
         result: LLMResult = None
-        stream = self.llm.stream_response(prompt, self.console, capabilities=self._capabilities)
+        stream = self.llm.stream_response(prompt, self._log.console, capabilities=self._capabilities)
         for part in stream:
             result = part
 
         message: ChatCompletionMessage = result.result
-        message_id = self.log_db.add_log_message(self._run_id, message.role, message.content, result.tokens_query, result.tokens_response, result.duration)
+        message_id = self._log.log_db.add_log_message(self._log.run_id, message.role, message.content, result.tokens_query, result.tokens_response, result.duration)
         self._prompt_history.append(result.result)
 
         if message.tool_calls is not None:
@@ -71,9 +71,9 @@ class WebTestingWithExplanation(Agent):
                 tool_call_result = self._capabilities[tool_call.function.name].to_model().model_validate_json(tool_call.function.arguments).execute()
                 toc = time.perf_counter()
 
-                self.console.print(f"\n[bold green on gray3]{' '*self.console.width}\nTOOL RESPONSE:[/bold green on gray3]")
-                self.console.print(tool_call_result)
+                self._log.console.print(f"\n[bold green on gray3]{' '*self._log.console.width}\nTOOL RESPONSE:[/bold green on gray3]")
+                self._log.console.print(tool_call_result)
                 self._prompt_history.append(tool_message(tool_call_result, tool_call.id))
-                self.log_db.add_log_tool_call(self._run_id, message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments, tool_call_result, toc - tic)
+                self._log.log_db.add_log_tool_call(self._log.run_id, message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments, tool_call_result, toc - tic)
 
         return self._all_flags_found

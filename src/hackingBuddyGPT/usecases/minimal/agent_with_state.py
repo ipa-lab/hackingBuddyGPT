@@ -9,6 +9,7 @@ from hackingBuddyGPT.usecases.base import use_case
 from hackingBuddyGPT.usecases.agents import TemplatedAgent, AgentWorldview
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
+
 @dataclass
 class MinimalLinuxTemplatedPrivescState(AgentWorldview):
     sliding_history: SlidingCliHistory
@@ -29,8 +30,8 @@ class MinimalLinuxTemplatedPrivescState(AgentWorldview):
             'conn': self.conn
         }
 
+
 @use_case("Showcase Minimal Linux Priv-Escalation")
-@dataclass
 class MinimalLinuxTemplatedPrivesc(TemplatedAgent):
 
     conn: SSHConnection = None

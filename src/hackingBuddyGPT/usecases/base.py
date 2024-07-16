@@ -1,10 +1,11 @@
 import abc
 import argparse
+import typing
 from dataclasses import dataclass
 from rich.panel import Panel
 from typing import Dict, Type
 
-from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters
+from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters, transparent
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
 
@@ -15,9 +16,9 @@ class Logger:
     console: Console
     tag: str = ""
     run_id: int = 0
-    
 
 
+@dataclass
 class UseCase(abc.ABC):
     """
     A UseCase is the combination of tools and capabilities to solve a specific problem.
@@ -34,7 +35,7 @@ class UseCase(abc.ABC):
     tag: str = ""
 
     _run_id: int = 0
-    _log : Logger = None
+    _log: Logger = None
 
     def init(self):
         """
@@ -54,13 +55,46 @@ class UseCase(abc.ABC):
         """
         pass
 
-
     @abc.abstractmethod
     def get_name(self) -> str:
         """
         This method should return the name of the use case. It is used for logging and debugging purposes.
         """
         pass
+
+
+# this runs the main loop for a bounded amount of turns or until root was achieved
+@dataclass
+class AutonomousUseCase(UseCase, abc.ABC):
+    max_turns: int = 10
+
+    _got_root: bool = False
+
+    @abc.abstractmethod
+    def perform_round(self, turn: int):
+        pass
+
+    def run(self):
+
+        turn = 1
+        while turn <= self.max_turns and not self._got_root:
+            self._log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
+
+            self._got_root = self.perform_round(turn)
+
+            # finish turn and commit logs to storage
+            self._log.log_db.commit()
+            turn += 1
+
+        # write the final result to the database and console
+        if self._got_root:
+            self._log.log_db.run_was_success(self._run_id, turn)
+            self._log.console.print(Panel("[bold green]Got Root!", title="Run finished"))
+        else:
+            self._log.log_db.run_was_failure(self._run_id, turn)
+            self._log.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
+
+        return self._got_root
 
 
 @dataclass
@@ -87,65 +121,42 @@ use_cases: Dict[str, _WrappedUseCase] = dict()
 
 def use_case(desc: str):
     """
-    By wrapping a UseCase with this decorator, it will be automatically discoverable and can be run from the command
-    line.
+    By wrapping an Agent with this decorator, an AutonomousUseCase will be automatically created to be discoverable and
+    can run from the command line.
     """
-    def inner(cls: Type[UseCase]):
+    if typing.TYPE_CHECKING:
+        from hackingBuddyGPT.usecases import Agent
+    else:
+        Agent = typing.Any
+
+    def inner(cls: Type[Agent]):
         name = cls.__name__
         if name in use_cases:
             raise IndexError(f"Use case with name {name} already exists")
         cls = dataclass(cls)
+        cls.__parameters__ = get_class_parameters(cls, name)
 
         class ConstructedUseCase(AutonomousUseCase):
-            _agent: cls = None
+            agent: transparent(cls) = None
 
             def init(self):
                 super().init()
-                self._agent._log = self._log
-                self._agent.init()
+                self.agent._log = self._log
+                self.agent.init()
+
+            def get_name(self) -> str:
+                return name
 
             def perform_round(self, turn: int):
-                return self._agent.perform_round(turn)
+                return self.agent.perform_round(turn)
 
         constructed_class = dataclass(ConstructedUseCase)
-        constructed_class.__class__.__name__ = name + "UseCase"
+        constructed_class.__name__ = name + "UseCase"
+        constructed_class.__qualname__ = name + "UseCase"
+        constructed_class.__module__ = cls.__module__
 
-        use_cases[name] = _WrappedUseCase(name, desc, constructed_class, get_class_parameters(constructed_class, name))
+        use_cases[name] = _WrappedUseCase(name, desc, constructed_class, get_class_parameters(constructed_class))
 
         return constructed_class
 
     return inner
-
-# this runs the main loop for a bounded amount of turns or until root was achieved
-@dataclass
-class AutonomousUseCase(UseCase, abc.ABC):
-
-    max_turns: int =10
-
-    _got_root: bool = False
-
-    @abc.abstractmethod
-    def perform_round(self, turn: int):
-        pass
-
-    def run(self):
-
-        turn = 1
-        while turn <= self.max_turns and not self._got_root:
-            self._log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
-
-            self._got_root = self.perform_round(turn)
-
-            # finish turn and commit logs to storage
-            self._log.log_db.commit()
-            turn += 1
-        
-        # write the final result to the database and console
-        if self._got_root:
-            self._log.log_db.run_was_success(self._run_id, turn)
-            self._log.console.print(Panel("[bold green]Got Root!", title="Run finished"))
-        else:
-            self._log.log_db.run_was_failure(self._run_id, turn)
-            self._log.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
-
-        return self._got_root

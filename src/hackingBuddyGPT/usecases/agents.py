@@ -6,9 +6,9 @@ from typing import Dict
 
 from hackingBuddyGPT.usecases.base import Logger
 from hackingBuddyGPT.utils import llm_util
-from hackingBuddyGPT.utils.llm_util import LLM
 from hackingBuddyGPT.capabilities.capability import Capability, capabilities_to_simple_text_handler
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
+
 
 @dataclass
 class Agent(ABC):
@@ -17,7 +17,6 @@ class Agent(ABC):
     _log: Logger = None
 
     llm: OpenAIConnection = None
-
 
     def init(self):
         pass
@@ -39,6 +38,7 @@ class Agent(ABC):
         capability_descriptions, _parser = capabilities_to_simple_text_handler(self._capabilities)
         return "You can either\n\n" + "\n".join(f"- {description}" for description in capability_descriptions.values())
 
+
 @dataclass
 class AgentWorldview(ABC):
 
@@ -49,6 +49,7 @@ class AgentWorldview(ABC):
     @abstractmethod
     def update(self, capability, cmd, result):
         pass
+
 
 class TemplatedAgent(Agent):
 

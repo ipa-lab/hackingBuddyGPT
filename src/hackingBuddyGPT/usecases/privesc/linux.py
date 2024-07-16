@@ -16,8 +16,7 @@ template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_state = Template(filename=str(template_dir / "update_state.txt"))
 template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
 
-@use_case("linux_privesc_hintfile", "Linux Privilege Escalation using a hints file")
-@dataclass
+@use_case("Linux Privilege Escalation using a hints file")
 class PrivescWithHintFile(Agent):
     conn: SSHConnection = None
     system: str = ''
@@ -69,8 +68,7 @@ class PrivescWithHintFile(Agent):
         return ""
 
 
-@use_case("linux_privesc_guided", "Linux Privilege Escalation using lse.sh for initial guidance")
-@dataclass
+@use_case("Linux Privilege Escalation using lse.sh for initial guidance")
 class PrivescWithLSE(Agent):
     conn: SSHConnection = None
     system: str = ''
@@ -130,8 +128,7 @@ class PrivescWithLSE(Agent):
         return cmd.result
 
 
-@use_case("linux_privesc", "Linux Privilege Escalation")
-@dataclass
+@use_case("Linux Privilege Escalation")
 class LinuxPrivesc(Privesc):
     conn: SSHConnection = None
     system: str = "linux"

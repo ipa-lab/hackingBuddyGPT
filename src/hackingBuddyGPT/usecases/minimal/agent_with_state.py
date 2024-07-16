@@ -11,9 +11,8 @@ from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
 @dataclass
 class MinimalLinuxTemplatedPrivescState(AgentWorldview):
-    sliding_history: SlidingCliHistory = None
+    sliding_history: SlidingCliHistory
     max_history_size: int = 0
-
     conn: SSHConnection = None
 
     def __init__(self, conn, llm, max_history_size):
@@ -30,7 +29,7 @@ class MinimalLinuxTemplatedPrivescState(AgentWorldview):
             'conn': self.conn
         }
 
-@use_case("minimal_linux_templated_agent", "Showcase Minimal Linux Priv-Escalation")
+@use_case("Showcase Minimal Linux Priv-Escalation")
 @dataclass
 class MinimalLinuxTemplatedPrivesc(TemplatedAgent):
 

@@ -4,18 +4,23 @@ from mako.template import Template
 from rich.panel import Panel
 from typing import Dict
 
+from hackingBuddyGPT.usecases.base import Logger
 from hackingBuddyGPT.utils import llm_util
-
+from hackingBuddyGPT.utils.llm_util import LLM
 from hackingBuddyGPT.capabilities.capability import Capability, capabilities_to_simple_text_handler
-from .base import AutonomousUseCase
+from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 @dataclass
-class Agent(AutonomousUseCase, ABC):
+class Agent(ABC):
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _default_capability: Capability = None
+    _log: Logger = None
+
+    llm: OpenAIConnection = None
+
 
     def init(self):
-        super().init()
+        pass
 
     # callback
     @abstractmethod
@@ -64,7 +69,7 @@ class TemplatedAgent(Agent):
     def perform_round(self, turn:int) -> bool:
         got_root : bool = False
 
-        with self.console.status("[bold green]Asking LLM for a new command..."):
+        with self._log.console.status("[bold green]Asking LLM for a new command..."):
             # TODO output/log state
             options = self._state.to_template()
             options.update({
@@ -75,16 +80,16 @@ class TemplatedAgent(Agent):
             answer = self.llm.get_response(self._template, **options)
             cmd = llm_util.cmd_output_fixer(answer.result)
 
-        with self.console.status("[bold green]Executing that command..."):
-                self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
+        with self._log.console.status("[bold green]Executing that command..."):
+                self._log.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
                 capability = self.get_capability(cmd.split(" ", 1)[0])
                 result, got_root = capability(cmd)
 
         # log and output the command and its result
-        self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
+        self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
         self._state.update(capability, cmd, result)
         # TODO output/log new state
-        self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+        self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
         # if we got root, we can stop the loop
         return got_root

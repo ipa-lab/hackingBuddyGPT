@@ -14,7 +14,7 @@ load_dotenv()
 
 
 def parameter(*, desc: str, default=dataclasses.MISSING, init: bool = True, repr: bool = True, hash=None,
-              compare: bool = True, metadata: Dict = None, kw_only: bool = dataclasses.MISSING) -> dataclasses.Field:
+              compare: bool = True, metadata: Dict = None, kw_only: bool = dataclasses.MISSING):
     if metadata is None:
         metadata = dict()
     metadata["desc"] = desc

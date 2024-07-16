@@ -23,8 +23,7 @@ Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
 
-@use_case("simple_web_api_testing", "Minimal implementation of a web api testing use case")
-@dataclass
+@use_case("Minimal implementation of a web api testing use case")
 class SimpleWebAPITesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")

@@ -12,12 +12,11 @@ from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 template_dir = pathlib.Path(__file__).parent
 template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))
 
-@use_case("minimal_linux_privesc", "Showcase Minimal Linux Priv-Escalation")
+@use_case("Showcase Minimal Linux Priv-Escalation")
 @dataclass
 class MinimalLinuxPrivesc(Agent):
 
     conn: SSHConnection = None
-    
     _sliding_history: SlidingCliHistory = None
 
     def init(self):
@@ -27,7 +26,7 @@ class MinimalLinuxPrivesc(Agent):
         self.add_capability(SSHTestCredential(conn=self.conn))
         self._template_size = self.llm.count_tokens(template_next_cmd.source)
 
-    def perform_round(self, turn):
+    def perform_round(self, turn:int) -> bool:
         got_root : bool = False
 
         with self.console.status("[bold green]Asking LLM for a new command..."):

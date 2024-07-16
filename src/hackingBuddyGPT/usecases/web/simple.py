@@ -22,8 +22,7 @@ Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
 
-@use_case("simple_web_test", "Minimal implementation of a web testing use case")
-@dataclass
+@use_case("Minimal implementation of a web testing use case")
 class MinimalWebTesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="http://localhost")

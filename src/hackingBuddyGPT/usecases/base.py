@@ -7,7 +7,16 @@ from typing import Dict, Type
 from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
-from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
+
+
+@dataclass
+class Logger:
+    log_db: DbStorage
+    console: Console
+    tag: str = ""
+    run_id: int = 0
+    
+
 
 class UseCase(abc.ABC):
     """
@@ -20,13 +29,21 @@ class UseCase(abc.ABC):
     so that they can be automatically discovered and run from the command line.
     """
 
+    log_db: DbStorage
+    console: Console
+    tag: str = ""
+
+    _run_id: int = 0
+    _log : Logger = None
+
     def init(self):
         """
         The init method is called before the run method. It is used to initialize the UseCase, and can be used to
         perform any dynamic setup that is needed before the run method is called. One of the most common use cases is
         setting up the llm capabilities from the tools that were injected.
         """
-        pass
+        self._run_id = self.log_db.create_new_run(self.get_name(), self.tag)
+        self._log = Logger(self.log_db, self.console, self.tag, self._run_id)
 
     @abc.abstractmethod
     def run(self):
@@ -34,6 +51,14 @@ class UseCase(abc.ABC):
         The run method is the main method of the UseCase. It is used to run the UseCase, and should contain the main
         logic. It is recommended to have only the main llm loop in here, and call out to other methods for the
         functionalities of each step.
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def get_name(self) -> str:
+        """
+        This method should return the name of the use case. It is used for logging and debugging purposes.
         """
         pass
 
@@ -60,79 +85,67 @@ class _WrappedUseCase:
 use_cases: Dict[str, _WrappedUseCase] = dict()
 
 
-def use_case(name: str, desc: str):
+def use_case(desc: str):
     """
     By wrapping a UseCase with this decorator, it will be automatically discoverable and can be run from the command
     line.
     """
-
     def inner(cls: Type[UseCase]):
+        name = cls.__name__
         if name in use_cases:
             raise IndexError(f"Use case with name {name} already exists")
-        use_cases[name] = _WrappedUseCase(name, desc, cls, get_class_parameters(cls, name))
+        cls = dataclass(cls)
 
-        return cls
+        class ConstructedUseCase(AutonomousUseCase):
+            _agent: cls = None
+
+            def init(self):
+                super().init()
+                self._agent._log = self._log
+                self._agent.init()
+
+            def perform_round(self, turn: int):
+                return self._agent.perform_round(turn)
+
+        constructed_class = dataclass(ConstructedUseCase)
+        constructed_class.__class__.__name__ = name + "UseCase"
+
+        use_cases[name] = _WrappedUseCase(name, desc, constructed_class, get_class_parameters(constructed_class, name))
+
+        return constructed_class
 
     return inner
 
-# this set ups all the console and database stuff, and runs the main loop for a bounded amount of turns
+# this runs the main loop for a bounded amount of turns or until root was achieved
 @dataclass
 class AutonomousUseCase(UseCase, abc.ABC):
-
-    # TODO: move those to UseCase?
-    log_db: DbStorage
-    console: Console
-    tag: str = ""
-
-    # TODO: move this to agent?
-    llm: OpenAIConnection = None
 
     max_turns: int =10
 
     _got_root: bool = False
-    _run_id: int = 0
 
-    def init(self):
-        super().init()
-        self._run_id = self.log_db.create_new_run(self.llm.model, self.llm.context_size, self.tag)
-
-    # TODO: remove, call agent.setup() instead (or agent.init() and remove this)
-    # callback
-    def setup(self):
-        pass
-
-    # TODO: remove, call agent.perform_round() instead
-    # callback
     @abc.abstractmethod
     def perform_round(self, turn: int):
         pass
 
-    # TODO: remove, call agent.teardown() instead
-    # callback
-    def teardown(self):
-        pass
-
     def run(self):
-
-        self.setup()
 
         turn = 1
         while turn <= self.max_turns and not self._got_root:
-            self.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
+            self._log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
 
             self._got_root = self.perform_round(turn)
 
             # finish turn and commit logs to storage
-            self.log_db.commit()
+            self._log.log_db.commit()
             turn += 1
         
         # write the final result to the database and console
         if self._got_root:
-            self.log_db.run_was_success(self._run_id, turn)
-            self.console.print(Panel("[bold green]Got Root!", title="Run finished"))
+            self._log.log_db.run_was_success(self._run_id, turn)
+            self._log.console.print(Panel("[bold green]Got Root!", title="Run finished"))
         else:
-            self.log_db.run_was_failure(self._run_id, turn)
-            self.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
+            self._log.log_db.run_was_failure(self._run_id, turn)
+            self._log.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
 
-        self.teardown()
         return self._got_root

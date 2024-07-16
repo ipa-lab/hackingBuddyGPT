@@ -7,8 +7,7 @@ from hackingBuddyGPT.usecases.privesc.common import Privesc
 from hackingBuddyGPT.utils.psexec.psexec import PSExecConnection
 
 
-@use_case("windows_privesc", "Windows Privilege Escalation")
-@dataclass
+@use_case("Windows Privilege Escalation")
 class WindowsPrivesc(Privesc):
     conn: PSExecConnection = None
     system: str = "Windows"

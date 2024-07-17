@@ -12,7 +12,6 @@ template_dir = pathlib.Path(__file__).parent
 template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))
 
 
-@use_case("Showcase Minimal Linux Priv-Escalation")
 class MinimalLinuxPrivesc(Agent):
 
     conn: SSHConnection = None
@@ -47,3 +46,5 @@ class MinimalLinuxPrivesc(Agent):
 
         # if we got root, we can stop the loop
         return got_root
+
+MinimalLinuxPrivescUseCase = use_case("Showcase Minimal Linux Priv-Escalation")(MinimalLinuxPrivesc)

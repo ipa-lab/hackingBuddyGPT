@@ -128,7 +128,6 @@ class PrivescWithLSE(Agent):
         return cmd.result
 
 
-@use_case("Linux Privilege Escalation")
 class LinuxPrivesc(Privesc):
     conn: SSHConnection = None
     system: str = "linux"
@@ -137,3 +136,6 @@ class LinuxPrivesc(Privesc):
         super().init()
         self.add_capability(SSHRunCommand(conn=self.conn), default=True)
         self.add_capability(SSHTestCredential(conn=self.conn))
+
+
+LinuxPrivescUseCase = use_case("Linux Privilege Escalation")(LinuxPrivesc)

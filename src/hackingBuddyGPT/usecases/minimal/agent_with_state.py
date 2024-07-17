@@ -31,7 +31,6 @@ class MinimalLinuxTemplatedPrivescState(AgentWorldview):
         }
 
 
-@use_case("Showcase Minimal Linux Priv-Escalation")
 class MinimalLinuxTemplatedPrivesc(TemplatedAgent):
 
     conn: SSHConnection = None
@@ -49,3 +48,6 @@ class MinimalLinuxTemplatedPrivesc(TemplatedAgent):
         # setup state
         max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size
         self.set_initial_state(MinimalLinuxTemplatedPrivescState(self.conn, self.llm, max_history_size))
+
+
+MinimalLinuxTemplatedPrivescUseCase = use_case("Showcase Minimal Linux Priv-Escalation")(MinimalLinuxTemplatedPrivesc)

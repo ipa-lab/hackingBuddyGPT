@@ -169,3 +169,12 @@ def use_case(desc: str):
         return constructed_class
 
     return inner
+
+
+def register_use_case(name: str, description: str, use_case: Type[UseCase]):
+    """
+    This function is used to register a UseCase that was created manually, and not through the use_case decorator.
+    """
+    if name in use_cases:
+        raise IndexError(f"Use case with name {name} already exists")
+    use_cases[name] = _WrappedUseCase(name, description, use_case, get_class_parameters(use_case))

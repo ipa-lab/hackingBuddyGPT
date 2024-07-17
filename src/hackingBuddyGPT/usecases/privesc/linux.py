@@ -7,7 +7,7 @@ from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.usecases.agents import Agent
 from .common import Privesc
 from hackingBuddyGPT.utils import SSHConnection
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.base import AutonomousUseCase, register_use_case, use_case
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 template_dir = pathlib.Path(__file__).parent / "templates"
@@ -16,8 +16,7 @@ template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_state = Template(filename=str(template_dir / "update_state.txt"))
 template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
 
-@use_case("Linux Privilege Escalation using a hints file")
-class PrivescWithHintFile(Agent):
+class LinuxPrivescWithHintFile(AutonomousUseCase):
     conn: SSHConnection = None
     system: str = ''
     enable_explanation: bool = False
@@ -30,6 +29,7 @@ class PrivescWithHintFile(Agent):
     def init(self):
         super().init()
 
+    def setup(self):
         # read the hint
         hint = self.read_hint()
 
@@ -39,10 +39,10 @@ class PrivescWithHintFile(Agent):
             enable_explanation=self.enable_explanation,
             disable_history=self.disable_history,
             hint=hint,
-            log_db = self.log_db,
-            console = self.console,
+            #log_db = self.log_db,
+            #console = self.console,
             llm = self.llm,
-            tag = self.tag,
+            #tag = self.tag,
             max_turns = self.max_turns
         )
 
@@ -139,3 +139,5 @@ class LinuxPrivesc(Privesc):
 
 
 LinuxPrivescUseCase = use_case("Linux Privilege Escalation")(LinuxPrivesc)
+
+register_use_case("LinuxPrivescWithHintFile", "Linux Privilege Escalation", LinuxPrivescWithHintFile)

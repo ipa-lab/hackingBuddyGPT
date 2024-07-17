@@ -70,11 +70,17 @@ class AutonomousUseCase(UseCase, abc.ABC):
 
     _got_root: bool = False
 
+
+    def setup(self):
+        pass
+
     @abc.abstractmethod
     def perform_round(self, turn: int):
         pass
 
     def run(self):
+
+        self.setup()
 
         turn = 1
         while turn <= self.max_turns and not self._got_root:
@@ -146,6 +152,9 @@ def use_case(desc: str):
 
             def get_name(self) -> str:
                 return name
+            
+            def setup(self):
+                self.agent.setup()
 
             def perform_round(self, turn: int):
                 return self.agent.perform_round(turn)

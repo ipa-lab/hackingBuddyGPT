@@ -62,9 +62,9 @@ class PrivescWithHintFile(Agent):
                     if self.conn.hostname in hints:
                         return hints[self.conn.hostname]
             except:
-                self.console.print("[yellow]Was not able to load hint file")
+                self._log.console.print("[yellow]Was not able to load hint file")
         else:
-            self.console.print("[yellow]calling the hintfile use-case without a hint file?")
+            self._log.console.print("[yellow]calling the hintfile use-case without a hint file?")
         return ""
 
 
@@ -93,7 +93,7 @@ class PrivescWithLSE(Agent):
 
             if hint_pos < len(self._hints):
                 i = self._hints[hint_pos]
-                self.console.print("[green]Now using Hint: " + i)
+                self._log.console.print("[green]Now using Hint: " + i)
             
                 # call the inner use-case
                 self._agent = LinuxPrivesc(
@@ -115,7 +115,7 @@ class PrivescWithLSE(Agent):
 
     # simple helper that uses lse.sh to get hints from the system
     def read_hint(self):
-        self.console.print("[green]performing initial enumeration with lse.sh")
+        self._log.console.print("[green]performing initial enumeration with lse.sh")
 
         run_cmd = "wget -q 'https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh' -O lse.sh;chmod 700 lse.sh; ./lse.sh -c -i -l 0 | grep -v 'nope$' | grep -v 'skip$'"
 

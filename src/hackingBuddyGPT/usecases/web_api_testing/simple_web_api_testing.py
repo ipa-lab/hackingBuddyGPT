@@ -1,6 +1,6 @@
 import time
 
-from dataclasses import dataclass, field
+from dataclasses import field
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
 from typing import List, Any, Union, Dict
@@ -11,11 +11,11 @@ from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
 from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
-from hackingBuddyGPT.utils import LLMResult, tool_message, ui
+from hackingBuddyGPT.utils import LLMResult, tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-from hackingBuddyGPT.usecases import use_case
 
 import pydantic_core
 
@@ -23,7 +23,6 @@ Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
 
-@use_case("Minimal implementation of a web api testing use case")
 class SimpleWebAPITesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
@@ -78,11 +77,11 @@ class SimpleWebAPITesting(Agent):
         }
 
     def all_http_methods_found(self):
-        self.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
+        self._log.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
         self._all_http_methods_found = True
 
     def perform_round(self, turn: int):
-        with self.console.status("[bold green]Asking LLM for a new command..."):
+        with self._log.console.status("[bold green]Asking LLM for a new command..."):
             # generate prompt
             prompt = self.prompt_engineer.generate_prompt()
 
@@ -97,21 +96,20 @@ class SimpleWebAPITesting(Agent):
             message = completion.choices[0].message
             tool_call_id = message.tool_calls[0].id
             command = pydantic_core.to_json(response).decode()
-            self.console.print(Panel(command, title="assistant"))
+            self._log.console.print(Panel(command, title="assistant"))
             self._prompt_history.append(message)
 
             answer = LLMResult(completion.choices[0].message.content, str(prompt),
                                completion.choices[0].message.content, toc - tic, completion.usage.prompt_tokens,
                                completion.usage.completion_tokens)
 
-        with self.console.status("[bold green]Executing that command..."):
+        with self._log.console.status("[bold green]Executing that command..."):
             result = response.execute()
-            self.console.print(Panel(result, title="tool"))
+            self._log.console.print(Panel(result, title="tool"))
             result_str = self.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
 
-
-        self.log_db.add_log_query(self._run_id, turn, command, result, answer)
+        self._log.log_db.add_log_query(self._log.run_id, turn, command, result, answer)
         return self._all_http_methods_found
 
     def parse_http_status_line(self, status_line):
@@ -130,3 +128,8 @@ class SimpleWebAPITesting(Agent):
                 return str(status_code + " " + status_message)
             else:
                 raise ValueError("Invalid HTTP status line")
+
+
+@use_case("Minimal implementation of a web api testing use case")
+class SimpleWebAPITestingUseCase(AutonomousAgentUseCase[SimpleWebAPITesting]):
+    pass

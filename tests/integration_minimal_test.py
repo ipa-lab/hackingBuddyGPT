@@ -1,6 +1,6 @@
 
 from typing import Tuple
-from hackingBuddyGPT.usecases.minimal.agent import MinimalLinuxPrivesc,MinimalLinuxPrivescUseCase
+from hackingBuddyGPT.usecases.minimal.agent import MinimalLinuxPrivesc, MinimalLinuxPrivescUseCase
 from hackingBuddyGPT.usecases.minimal.agent_with_state import MinimalLinuxTemplatedPrivesc, MinimalLinuxTemplatedPrivescUseCase
 from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc, LinuxPrivescUseCase
 from hackingBuddyGPT.utils.console.console import Console

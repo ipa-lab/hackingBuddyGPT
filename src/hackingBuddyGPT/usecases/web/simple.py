@@ -13,7 +13,7 @@ from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.utils import LLMResult, tool_message
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
@@ -22,7 +22,6 @@ Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
 
-@use_case("Minimal implementation of a web testing use case")
 class MinimalWebTesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="http://localhost")
@@ -79,3 +78,8 @@ class MinimalWebTesting(Agent):
 
         self._log.log_db.add_log_query(self._log.run_id, turn, command, result, answer)
         return self._all_flags_found
+
+
+@use_case("Minimal implementation of a web testing use case")
+class MinimalWebTestingUseCase(AutonomousAgentUseCase[MinimalWebTesting]):
+    pass

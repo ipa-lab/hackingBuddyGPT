@@ -69,10 +69,15 @@ class ComplexParameterDefinition(ParameterDefinition):
                 parameter.parser(next_name(basename, name, parameter), parser)
 
     def get(self, name: str, args: argparse.Namespace):
-        parameter = self.type(**get_arguments(self.parameters, args, name))
-        if hasattr(parameter, "init"):
-            parameter.init()
-        return parameter
+        args = get_arguments(self.parameters, args, name)
+
+        def create():
+            instance = self.type(**args)
+            if hasattr(instance, "init"):
+                instance.init()
+            setattr(instance, "configurable_recreate", create)
+            return instance
+        return create()
 
 
 def get_class_parameters(cls, name: str = None, fields: Dict[str, dataclasses.Field] = None) -> ParameterDefinitions:

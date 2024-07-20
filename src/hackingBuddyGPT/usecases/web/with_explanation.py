@@ -9,8 +9,8 @@ from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
 from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.utils import LLMResult, tool_message
-from hackingBuddyGPT.usecases import use_case
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
@@ -19,7 +19,6 @@ Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
 
-@use_case("Minimal implementation of a web testing use case while allowing the llm to 'talk'")
 class WebTestingWithExplanation(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="http://localhost")
@@ -77,3 +76,8 @@ class WebTestingWithExplanation(Agent):
                 self._log.log_db.add_log_tool_call(self._log.run_id, message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments, tool_call_result, toc - tic)
 
         return self._all_flags_found
+
+
+@use_case("Minimal implementation of a web testing use case while allowing the llm to 'talk'")
+class WebTestingWithExplanationUseCase(AutonomousAgentUseCase[WebTestingWithExplanation]):
+    pass

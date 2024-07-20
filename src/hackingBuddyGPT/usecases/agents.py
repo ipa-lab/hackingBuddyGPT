@@ -21,9 +21,6 @@ class Agent(ABC):
     def init(self):
         pass
 
-    def setup(self):
-        pass
-
     # callback
     @abstractmethod
     def perform_round(self, turn: int) -> bool:

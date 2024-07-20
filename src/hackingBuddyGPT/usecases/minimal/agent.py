@@ -4,7 +4,7 @@ from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.utils import SSHConnection, llm_util
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
@@ -47,4 +47,7 @@ class MinimalLinuxPrivesc(Agent):
         # if we got root, we can stop the loop
         return got_root
 
-MinimalLinuxPrivescUseCase = use_case("Showcase Minimal Linux Priv-Escalation")(MinimalLinuxPrivesc)
+
+@use_case("Showcase Minimal Linux Priv-Escalation")
+class MinimalLinuxPrivescUseCase(AutonomousAgentUseCase[MinimalLinuxPrivesc]):
+    pass

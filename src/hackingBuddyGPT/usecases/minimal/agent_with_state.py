@@ -5,7 +5,7 @@ from typing import Any
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.utils import SSHConnection, llm_util
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
 from hackingBuddyGPT.usecases.agents import TemplatedAgent, AgentWorldview
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
@@ -50,4 +50,6 @@ class MinimalLinuxTemplatedPrivesc(TemplatedAgent):
         self.set_initial_state(MinimalLinuxTemplatedPrivescState(self.conn, self.llm, max_history_size))
 
 
-MinimalLinuxTemplatedPrivescUseCase = use_case("Showcase Minimal Linux Priv-Escalation")(MinimalLinuxTemplatedPrivesc)
+@use_case("Showcase Minimal Linux Priv-Escalation")
+class MinimalLinuxTemplatedPrivescUseCase(AutonomousAgentUseCase[MinimalLinuxTemplatedPrivesc]):
+    pass

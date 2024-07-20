@@ -70,18 +70,11 @@ class AutonomousUseCase(UseCase, abc.ABC):
 
     _got_root: bool = False
 
-
-    def setup(self):
-        pass
-
     @abc.abstractmethod
     def perform_round(self, turn: int):
         pass
 
     def run(self):
-
-        self.setup()
-
         turn = 1
         while turn <= self.max_turns and not self._got_root:
             self._log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
@@ -125,25 +118,25 @@ class _WrappedUseCase:
 use_cases: Dict[str, _WrappedUseCase] = dict()
 
 
-def use_case(desc: str):
-    """
-    By wrapping an Agent with this decorator, an AutonomousUseCase will be automatically created to be discoverable and
-    can run from the command line.
-    """
-    if typing.TYPE_CHECKING:
-        from hackingBuddyGPT.usecases import Agent
-    else:
-        Agent = typing.Any
+T = typing.TypeVar("T")
 
-    def inner(cls: Type[Agent]):
-        name = cls.__name__
-        if name in use_cases:
-            raise IndexError(f"Use case with name {name} already exists")
-        cls = dataclass(cls)
-        cls.__parameters__ = get_class_parameters(cls, name)
 
-        class ConstructedUseCase(AutonomousUseCase):
-            agent: transparent(cls) = None
+class AutonomousAgentUseCase(AutonomousUseCase, typing.Generic[T]):
+    agent: T = None
+
+    def perform_round(self, turn: int):
+        raise ValueError("Do not use AutonomousAgentUseCase without supplying an agent type as generic")
+
+    def get_name(self) -> str:
+        raise ValueError("Do not use AutonomousAgentUseCase without supplying an agent type as generic")
+
+    @classmethod
+    def __class_getitem__(cls, item):
+        item = dataclass(item)
+        item.__parameters__ = get_class_parameters(item)
+
+        class AutonomousAgentUseCase(AutonomousUseCase):
+            agent: transparent(item) = None
 
             def init(self):
                 super().init()
@@ -151,23 +144,22 @@ def use_case(desc: str):
                 self.agent.init()
 
             def get_name(self) -> str:
-                return name
-            
-            def setup(self):
-                self.agent.setup()
+                return self.__class__.__name__
 
             def perform_round(self, turn: int):
                 return self.agent.perform_round(turn)
 
-        constructed_class = dataclass(ConstructedUseCase)
-        constructed_class.__name__ = name + "UseCase"
-        constructed_class.__qualname__ = name + "UseCase"
-        constructed_class.__module__ = cls.__module__
-
-        use_cases[name] = _WrappedUseCase(name, desc, constructed_class, get_class_parameters(constructed_class))
+        constructed_class = dataclass(AutonomousAgentUseCase)
 
         return constructed_class
 
+
+def use_case(description):
+    def inner(cls):
+        name = cls.__name__.removesuffix("UseCase")
+        if name in use_cases:
+            raise IndexError(f"Use case with name {name} already exists")
+        use_cases[name] = _WrappedUseCase(name, description, cls, get_class_parameters(cls))
     return inner
 
 

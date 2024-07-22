@@ -1,5 +1,5 @@
 import time
-from dataclasses import dataclass, field
+from dataclasses import field
 from typing import List, Any, Union, Dict
 
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
@@ -8,9 +8,9 @@ from rich.panel import Panel
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
+from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.utils import LLMResult, tool_message
-from hackingBuddyGPT.usecases import use_case
-from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
@@ -19,9 +19,7 @@ Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
 
-@use_case("web_test_with_explanation", "Minimal implementation of a web testing use case while allowing the llm to 'talk'")
-@dataclass
-class WebTestingWithExplanation(RoundBasedUseCase):
+class WebTestingWithExplanation(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="http://localhost")
     flag_format_description: str = parameter(desc="Description of the flag provided to the LLM", default="a string starting with 'FLAG.' and ending with '.GALF'")
@@ -51,19 +49,19 @@ class WebTestingWithExplanation(RoundBasedUseCase):
         }
 
     def all_flags_found(self):
-        self.console.print(Panel("All flags found! Congratulations!", title="system"))
+        self._log.console.print(Panel("All flags found! Congratulations!", title="system"))
         self._all_flags_found = True
 
     def perform_round(self, turn: int):
         prompt = self._prompt_history  # TODO: in the future, this should do some context truncation
 
         result: LLMResult = None
-        stream = self.llm.stream_response(prompt, self.console, capabilities=self._capabilities)
+        stream = self.llm.stream_response(prompt, self._log.console, capabilities=self._capabilities)
         for part in stream:
             result = part
 
         message: ChatCompletionMessage = result.result
-        message_id = self.log_db.add_log_message(self._run_id, message.role, message.content, result.tokens_query, result.tokens_response, result.duration)
+        message_id = self._log.log_db.add_log_message(self._log.run_id, message.role, message.content, result.tokens_query, result.tokens_response, result.duration)
         self._prompt_history.append(result.result)
 
         if message.tool_calls is not None:
@@ -72,9 +70,14 @@ class WebTestingWithExplanation(RoundBasedUseCase):
                 tool_call_result = self._capabilities[tool_call.function.name].to_model().model_validate_json(tool_call.function.arguments).execute()
                 toc = time.perf_counter()
 
-                self.console.print(f"\n[bold green on gray3]{' '*self.console.width}\nTOOL RESPONSE:[/bold green on gray3]")
-                self.console.print(tool_call_result)
+                self._log.console.print(f"\n[bold green on gray3]{' '*self._log.console.width}\nTOOL RESPONSE:[/bold green on gray3]")
+                self._log.console.print(tool_call_result)
                 self._prompt_history.append(tool_message(tool_call_result, tool_call.id))
-                self.log_db.add_log_tool_call(self._run_id, message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments, tool_call_result, toc - tic)
+                self._log.log_db.add_log_tool_call(self._log.run_id, message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments, tool_call_result, toc - tic)
 
         return self._all_flags_found
+
+
+@use_case("Minimal implementation of a web testing use case while allowing the llm to 'talk'")
+class WebTestingWithExplanationUseCase(AutonomousAgentUseCase[WebTestingWithExplanation]):
+    pass

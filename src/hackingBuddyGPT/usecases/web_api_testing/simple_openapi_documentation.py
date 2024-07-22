@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import field
 from typing import List, Any, Union, Dict
 
 import pydantic_core
@@ -8,7 +8,7 @@ from rich.panel import Panel
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
-from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
+from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.web_api_testing.utils.documentation_handler import DocumentationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
@@ -16,13 +16,11 @@ from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import Resp
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
-@use_case("simple_web_api_documentation", "Minimal implementation of a web api documentation use case")
-@dataclass
-class SimpleWebAPIDocumentation(RoundBasedUseCase):
+class SimpleWebAPIDocumentation(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     _prompt_history: Prompt = field(default_factory=list)
@@ -77,7 +75,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
 
     def all_http_methods_found(self):
-        self.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
+        self._log.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
         self._all_http_methods_found = True
 
     def perform_round(self, turn: int):
@@ -89,12 +87,12 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
         message = completion.choices[0].message
         tool_call_id = message.tool_calls[0].id
         command = pydantic_core.to_json(response).decode()
-        self.console.print(Panel(command, title="assistant"))
+        self._log.console.print(Panel(command, title="assistant"))
         self._prompt_history.append(message)
 
-        with self.console.status("[bold green]Executing that command..."):
+        with self._log.console.status("[bold green]Executing that command..."):
             result = response.execute()
-            self.console.print(Panel(result[:30], title="tool"))
+            self._log.console.print(Panel(result[:30], title="tool"))
             result_str = self.response_handler.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
             invalid_flags = ["recorded","Not a valid HTTP method", "404" ,"Client Error: Not Found"]
@@ -110,3 +108,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
     def has_no_numbers(self, path):
         return not any(char.isdigit() for char in path)
 
+
+@use_case("Minimal implementation of a web API testing use case")
+class SimpleWebAPIDocumentationUseCase(AutonomousAgentUseCase[SimpleWebAPIDocumentation]):
+    pass

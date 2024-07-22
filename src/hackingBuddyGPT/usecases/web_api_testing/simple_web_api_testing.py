@@ -9,21 +9,18 @@ from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_http_method import SubmitHTTPMethod
-from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
-@use_case("simple_web_api_testing", "Minimal implementation of a web API testing use case")
-@dataclass
-class SimpleWebAPITesting(RoundBasedUseCase):
+class SimpleWebAPITesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     http_method_description: str = parameter(
@@ -134,3 +131,7 @@ class SimpleWebAPITesting(RoundBasedUseCase):
             self._prompt_history.append(tool_message(result_str, tool_call_id))
 
         return self._all_http_methods_found
+
+@use_case("Minimal implementation of a web API testing use case")
+class SimpleWebAPITestingUseCase(AutonomousAgentUseCase[SimpleWebAPITesting]):
+    pass

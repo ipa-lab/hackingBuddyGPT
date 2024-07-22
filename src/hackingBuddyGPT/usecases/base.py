@@ -160,6 +160,7 @@ def use_case(description):
         if name in use_cases:
             raise IndexError(f"Use case with name {name} already exists")
         use_cases[name] = _WrappedUseCase(name, description, cls, get_class_parameters(cls))
+        return cls
     return inner
 
 

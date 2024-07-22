@@ -80,7 +80,7 @@ class SimpleWebAPITesting(Agent):
         Handles the event when all HTTP methods are found. Displays a congratulatory message
         and sets the _all_http_methods_found flag to True.
         """
-        self.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
+        self._log.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
         self._all_http_methods_found = True
 
     def _setup_capabilities(self):
@@ -122,12 +122,12 @@ class SimpleWebAPITesting(Agent):
         message = completion.choices[0].message
         tool_call_id = message.tool_calls[0].id
         command = pydantic_core.to_json(response).decode()
-        self.console.print(Panel(command, title="assistant"))
+        self._log.console.print(Panel(command, title="assistant"))
         self._prompt_history.append(message)
 
-        with self.console.status("[bold green]Executing that command..."):
+        with self._log.console.status("[bold green]Executing that command..."):
             result = response.execute()
-            self.console.print(Panel(result[:30], title="tool"))
+            self._log.console.print(Panel(result[:30], title="tool"))
             result_str = self.response_handler.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
 

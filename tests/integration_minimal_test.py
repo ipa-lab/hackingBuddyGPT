@@ -1,8 +1,8 @@
 
 from typing import Tuple
-from hackingBuddyGPT.usecases.minimal.agent import MinimalLinuxPrivesc
-from hackingBuddyGPT.usecases.minimal.agent_with_state import MinimalLinuxTemplatedPrivesc
-from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc
+from hackingBuddyGPT.usecases.minimal.agent import MinimalLinuxPrivesc, MinimalLinuxPrivescUseCase
+from hackingBuddyGPT.usecases.minimal.agent_with_state import MinimalLinuxTemplatedPrivesc, MinimalLinuxTemplatedPrivescUseCase
+from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc, LinuxPrivescUseCase
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
 from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
@@ -74,14 +74,16 @@ def test_linuxprivesc():
 
     log_db.init()
 
-    priv_esc = LinuxPrivesc(
-        conn=conn,
-        enable_explanation=False,
-        disable_history=False,
-        hint='',
+    priv_esc = LinuxPrivescUseCase(
+        agent = LinuxPrivesc(
+            conn=conn,
+            enable_explanation=False,
+            disable_history=False,
+            hint='',
+            llm = llm,
+        ),
         log_db = log_db,
         console = console,
-        llm = llm,
         tag = 'integration_test_linuxprivesc',
         max_turns = len(llm.responses)
     )
@@ -99,12 +101,14 @@ def test_minimal_agent():
 
     log_db.init()
 
-    priv_esc = MinimalLinuxPrivesc(
-        conn=conn,
+    priv_esc = MinimalLinuxPrivescUseCase(
+        agent = MinimalLinuxPrivesc(
+            conn=conn,
+            llm=llm
+        ),
         log_db = log_db,
         console = console,
-        llm = llm,
-        tag = 'integration_test_linuxprivesc',
+        tag = 'integration_test_minimallinuxprivesc',
         max_turns = len(llm.responses)
     )
 
@@ -121,11 +125,13 @@ def test_minimal_agent_state():
 
     log_db.init()
 
-    priv_esc = MinimalLinuxTemplatedPrivesc(
-        conn=conn,
+    priv_esc = MinimalLinuxTemplatedPrivescUseCase(
+        agent = MinimalLinuxTemplatedPrivesc(
+            conn=conn,
+            llm = llm,
+        ),
         log_db = log_db,
         console = console,
-        llm = llm,
         tag = 'integration_test_linuxprivesc',
         max_turns = len(llm.responses)
     )

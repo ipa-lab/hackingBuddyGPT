@@ -4,7 +4,7 @@ import pydantic_core
 import time
 import yaml
 
-from dataclasses import dataclass, field
+from dataclasses import field
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
 from typing import List, Any, Union, Dict
@@ -14,19 +14,18 @@ from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
-from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
+from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
-from hackingBuddyGPT.utils import LLMResult, tool_message, ui
+from hackingBuddyGPT.utils import LLMResult, tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-from hackingBuddyGPT.usecases import use_case
 
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
-@use_case("simple_web_api_documentation", "Minimal implementation of a web api documentation use case")
-@dataclass
-class SimpleWebAPIDocumentation(RoundBasedUseCase):
+
+class SimpleWebAPIDocumentation(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     _prompt_history: Prompt = field(default_factory=list)
@@ -91,12 +90,12 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
         self.current_time = datetime.datetime.now()
 
     def all_http_methods_found(self):
-        self.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
+        self._log.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
         self._all_http_methods_found = True
 
     def perform_round(self, turn: int, FINAL_ROUND=20):
 
-        with self.console.status("[bold green]Asking LLM for a new command..."):
+        with self._log.console.status("[bold green]Asking LLM for a new command..."):
             # generate prompt
             prompt = self.prompt_engineer.generate_prompt(doc=True)
 
@@ -112,7 +111,7 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
             tool_call_id = message.tool_calls[0].id
             command = pydantic_core.to_json(response).decode()
-            self.console.print(Panel(command, title="assistant"))
+            self._log.console.print(Panel(command, title="assistant"))
 
             self._prompt_history.append(message)
             content = completion.choices[0].message.content
@@ -121,16 +120,16 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
                                content, toc - tic, completion.usage.prompt_tokens,
                                completion.usage.completion_tokens)
 
-        with self.console.status("[bold green]Executing that command..."):
+        with self._log.console.status("[bold green]Executing that command..."):
             result = response.execute()
 
-            self.console.print(Panel(result, title="tool"))
+            self._log.console.print(Panel(result, title="tool"))
             result_str = self.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
             if result_str == '200 OK':
-                self.update_openapi_spec(response )
+                self.update_openapi_spec(response)
 
-        self.log_db.add_log_query(self._run_id, turn, command, result, answer)
+        self._log.log_db.add_log_query(self._log.run_id, turn, command, result, answer)
         self.write_openapi_to_yaml()
         return self._all_http_methods_found
 
@@ -196,21 +195,21 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
 
             with open(os.path.join(file_path, file_name), 'w') as yaml_file:
                 yaml.dump(openapi_data, yaml_file, allow_unicode=True, default_flow_style=False)
-            self.console.print(f"[green]OpenAPI specification written to [bold]{filename}[/bold].")
+            self._log.console.print(f"[green]OpenAPI specification written to [bold]{filename}[/bold].")
         except Exception as e:
             raise Exception(e)
 
-            #self.console.print(f"[red]Error writing YAML file: {e}")
+            #self._log.console.print(f"[red]Error writing YAML file: {e}")
     def write_openapi_to_yaml2(self, filename='openapi_spec.yaml'):
         """Write the OpenAPI specification to a YAML file."""
         try:
            # self.setup_yaml()  # Configure YAML to handle complex types
             with open(filename, 'w') as yaml_file:
                 yaml.dump(self.openapi_spec, yaml_file, allow_unicode=True, default_flow_style=False)
-            self.console.print(f"[green]OpenAPI specification written to [bold]{filename}[/bold].")
+            self._log.console.print(f"[green]OpenAPI specification written to [bold]{filename}[/bold].")
         except TypeError as e:
             raise Exception(e)
-            #self.console.print(f"[red]Error writing YAML file: {e}")
+            #self._log.console.print(f"[red]Error writing YAML file: {e}")
 
     def represent_dict_order(self, data):
         return self.represent_mapping('tag:yaml.org,2002:map', data.items())
@@ -218,3 +217,8 @@ class SimpleWebAPIDocumentation(RoundBasedUseCase):
     def setup_yaml(self):
         """Configure YAML to output OrderedDicts as regular dicts (helpful for better YAML readability)."""
         yaml.add_representer(dict, self.represent_dict_order)
+
+
+@use_case("Minimal implementation of a web api documentation use case")
+class SimpleWebAPIDocumentationUseCase(AutonomousAgentUseCase[SimpleWebAPIDocumentation]):
+    pass

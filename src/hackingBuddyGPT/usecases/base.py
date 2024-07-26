@@ -156,6 +156,7 @@ class AutonomousAgentUseCase(AutonomousUseCase, typing.Generic[T]):
 
 def use_case(description):
     def inner(cls):
+        cls = dataclass(cls)
         name = cls.__name__.removesuffix("UseCase")
         if name in use_cases:
             raise IndexError(f"Use case with name {name} already exists")

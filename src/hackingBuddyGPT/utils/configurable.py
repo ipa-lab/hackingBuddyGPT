@@ -73,7 +73,7 @@ class ComplexParameterDefinition(ParameterDefinition):
 
         def create():
             instance = self.type(**args)
-            if hasattr(instance, "init"):
+            if hasattr(instance, "init") and not getattr(self.type, "__transparent__", False):
                 instance.init()
             setattr(instance, "configurable_recreate", create)
             return instance
@@ -160,6 +160,26 @@ T = TypeVar("T")
 
 
 def transparent(subclass: T) -> T:
+    """
+    setting a type to be transparent means, that it will not increase a level in the configuration tree, so if you have the following classes:
+
+        class Inner:
+            a: int
+            b: str
+
+            def init(self):
+                print("inner init")
+
+        class Outer:
+            inner: transparent(Inner)
+
+            def init(self):
+                inner.init()
+
+    the configuration will be `--a` and `--b` instead of `--inner.a` and `--inner.b`.
+
+    A transparent attribute will also not have its init function called automatically, so you will need to do that on your own, as seen in the Outer init.
+    """
     class Cloned(subclass):
         __transparent__ = True
     Cloned.__name__ = subclass.__name__

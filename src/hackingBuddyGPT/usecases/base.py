@@ -1,10 +1,12 @@
 import abc
+import json
 import argparse
 import typing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from rich.panel import Panel
 from typing import Dict, Type
 
+from hackingBuddyGPT.utils import LLMResult
 from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters, transparent
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
@@ -14,8 +16,40 @@ from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
 class Logger:
     log_db: DbStorage
     console: Console
+    model: str = ""
     tag: str = ""
-    run_id: int = 0
+    configuration: str = ""
+
+    run_id: int = field(init=False, default=None)
+
+    def __post_init__(self):
+        self.run_id = self.log_db.create_new_run(self.model, self.tag, self.configuration)
+
+    def add_log_query(self, turn: int, command: str, result: str, answer: LLMResult):
+        self.log_db.add_log_query(self.run_id, turn, command, result, answer)
+
+    def add_log_message(self, role: str, content: str, tokens_query: int, tokens_response: int, duration: float) -> int:
+        return self.log_db.add_log_message(self.run_id, role, content, tokens_query, tokens_response, duration)
+
+    def add_log_tool_call(self, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration: float):
+        self.console.print(f"\n[bold green on gray3]{' ' * self.console.width}\nTOOL RESPONSE:[/bold green on gray3]")
+        self.console.print(result_text)
+        self.log_db.add_log_tool_call(self.run_id, message_id, tool_call_id, function_name, arguments, result_text, duration)
+
+    def add_log_analyze_response(self, turn: int, command: str, result: str, answer: LLMResult):
+        self.log_db.add_log_analyze_response(self.run_id, turn, command, result, answer)
+
+    def add_log_update_state(self, turn: int, command: str, result: str, answer: LLMResult):
+        self.log_db.add_log_update_state(self.run_id, turn, command, result, answer)
+
+    def run_was_success(self):
+        self.log_db.run_was_success(self.run_id)
+
+    def run_was_failure(self, reason: str):
+        self.log_db.run_was_failure(self.run_id, reason)
+
+    def status_message(self, message: str):
+        self.log_db.add_log_message(self.run_id, "status", message, 0, 0, 0)
 
 
 @dataclass
@@ -34,17 +68,18 @@ class UseCase(abc.ABC):
     console: Console
     tag: str = ""
 
-    _run_id: int = 0
     _log: Logger = None
 
-    def init(self):
+    def init(self, configuration):
         """
         The init method is called before the run method. It is used to initialize the UseCase, and can be used to
         perform any dynamic setup that is needed before the run method is called. One of the most common use cases is
         setting up the llm capabilities from the tools that were injected.
         """
-        self._run_id = self.log_db.create_new_run(self.get_name(), self.tag)
-        self._log = Logger(self.log_db, self.console, self.tag, self._run_id)
+        self._log = Logger(self.log_db, self.console, self.get_name(), self.tag, self.serialize_configuration(configuration))
+
+    def serialize_configuration(self, configuration) -> str:
+        return json.dumps(configuration)
 
     @abc.abstractmethod
     def run(self):
@@ -85,26 +120,30 @@ class AutonomousUseCase(UseCase, abc.ABC):
         self.before_run()
 
         turn = 1
-        while turn <= self.max_turns and not self._got_root:
-            self._log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
+        try:
+            while turn <= self.max_turns and not self._got_root:
+                self._log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
 
-            self._got_root = self.perform_round(turn)
+                self._got_root = self.perform_round(turn)
 
-            # finish turn and commit logs to storage
-            self._log.log_db.commit()
-            turn += 1
+                # finish turn and commit logs to storage
+                self._log.log_db.commit()
+                turn += 1
 
-        self.after_run()
+            self.after_run()
 
-        # write the final result to the database and console
-        if self._got_root:
-            self._log.log_db.run_was_success(self._run_id, turn)
-            self._log.console.print(Panel("[bold green]Got Root!", title="Run finished"))
-        else:
-            self._log.log_db.run_was_failure(self._run_id, turn)
-            self._log.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
+            # write the final result to the database and console
+            if self._got_root:
+                self._log.run_was_success()
+                self._log.console.print(Panel("[bold green]Got Root!", title="Run finished"))
+            else:
+                self._log.run_was_failure("maximum turn number reached")
+                self._log.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
 
-        return self._got_root
+            return self._got_root
+        except Exception as e:
+            self._log.run_was_failure(f"exception occurred: {e}")
+            raise
 
 
 @dataclass
@@ -149,17 +188,17 @@ class AutonomousAgentUseCase(AutonomousUseCase, typing.Generic[T]):
         class AutonomousAgentUseCase(AutonomousUseCase):
             agent: transparent(item) = None
 
-            def init(self):
-                super().init()
+            def init(self, configuration):
+                super().init(configuration)
                 self.agent._log = self._log
                 self.agent.init()
 
             def get_name(self) -> str:
                 return self.__class__.__name__
-            
+
             def before_run(self):
                 return self.agent.before_run()
-            
+
             def after_run(self):
                 return self.agent.after_run()
 

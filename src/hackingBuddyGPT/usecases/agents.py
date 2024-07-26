@@ -93,7 +93,7 @@ class TemplatedAgent(Agent):
                 result, got_root = capability(cmd)
 
         # log and output the command and its result
-        self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
+        self._log.add_log_query(turn, cmd, result, answer)
         self._state.update(capability, cmd, result)
         # TODO output/log new state
         self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))

@@ -31,8 +31,8 @@ class LinuxPrivescUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
 class LinuxPrivescWithHintFileUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
     hints: str = None
 
-    def init(self):
-        super().init()
+    def init(self, configuration=None):
+        super().init(configuration)
         self.agent.hint = self.read_hint()
 
     # simple helper that reads the hints file and returns the hint
@@ -64,8 +64,8 @@ class LinuxPrivescWithLSEUseCase(UseCase):
     # use either an use-case or an agent to perform the privesc
     use_use_case: bool = False
 
-    def init(self):
-        super().init()
+    def init(self, configuration=None):
+        super().init(configuration)
 
     # simple helper that uses lse.sh to get hints from the system
     def call_lse_against_host(self):
@@ -79,11 +79,11 @@ class LinuxPrivescWithLSEUseCase(UseCase):
         cmd = self.llm.get_response(template_lse, lse_output=result, number=3)
         self.console.print("[yellow]got the cmd: " + cmd.result)
 
-        return [x for x in cmd.result.splitlines() if x.strip()] 
+        return [x for x in cmd.result.splitlines() if x.strip()]
 
     def get_name(self) -> str:
         return self.__class__.__name__
-    
+
     def run(self):
         # get the hints through running LSE on the target system
         hints = self.call_lse_against_host()
@@ -118,7 +118,7 @@ class LinuxPrivescWithLSEUseCase(UseCase):
         )
         linux_privesc.init()
         return linux_privesc.run()
-    
+
     def run_using_agent(self, hint, turns_per_hint):
         # init agent
         agent = LinuxPrivesc(
@@ -142,7 +142,7 @@ class LinuxPrivescWithLSEUseCase(UseCase):
             if agent.perform_round(turn) is True:
                 got_root = True
             turn += 1
-        
+
         # cleanup and finish
         agent.after_run()
         return got_root

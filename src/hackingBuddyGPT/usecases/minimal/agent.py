@@ -40,7 +40,7 @@ class MinimalLinuxPrivesc(Agent):
             result, got_root = self.get_capability(cmd.split(" ", 1)[0])(cmd)
 
         # log and output the command and its result
-        self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
+        self._log.add_log_query(turn, cmd, result, answer)
         self._sliding_history.add_command(cmd, result)
         self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 

@@ -24,7 +24,7 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
             tag='webApiDocumentation',
             max_turns=len(self.mock_llm.responses)
         )
-        self.simple_api_testing.init()
+        self.simple_api_testing.init({})
 
     def test_initial_prompt(self):
         # Test if the initial prompt is set correctly

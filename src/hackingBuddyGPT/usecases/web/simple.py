@@ -76,7 +76,7 @@ class MinimalWebTesting(Agent):
             self._log.console.print(Panel(result, title="tool"))
             self._prompt_history.append(tool_message(result, tool_call_id))
 
-        self._log.log_db.add_log_query(self._log.run_id, turn, command, result, answer)
+        self._log.add_log_query(turn, command, result, answer)
         return self._all_flags_found
 
 

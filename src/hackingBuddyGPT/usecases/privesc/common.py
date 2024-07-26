@@ -73,7 +73,7 @@ class Privesc(Agent):
             capability, cmd, (result, got_root) = output[0]
 
         # log and output the command and its result
-        self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
+        self._log.add_log_query(turn, cmd, result, answer)
         if self._sliding_history:
             self._sliding_history.add_command(cmd, result)
 
@@ -83,7 +83,7 @@ class Privesc(Agent):
         if self.enable_explanation:
             with self._log.console.status("[bold green]Analyze its result..."):
                 answer = self.analyze_result(cmd, result)
-                self._log.log_db.add_log_analyze_response(self._log.run_id, turn, cmd, answer.result, answer)
+                self._log.add_log_analyze_response(turn, cmd, answer.result, answer)
 
         # .. and let our local model update its state
         if self.enable_update_state:
@@ -91,7 +91,7 @@ class Privesc(Agent):
             # status processing time in the table..
             with self._log.console.status("[bold green]Updating fact list.."):
                 state = self.update_state(cmd, result)
-                self._log.log_db.add_log_update_state(self._log.run_id, turn, "", state.result, state)
+                self._log.add_log_update_state(turn, "", state.result, state)
 
         # Output Round Data..
         self._log.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self._log.run_id, self._log.log_db, turn))

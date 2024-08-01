@@ -98,9 +98,10 @@ class SimpleWebAPIDocumentation(Agent):
             invalid_flags = ["recorded","Not a valid HTTP method", "404" ,"Client Error: Not Found"]
             print(f'result_str:{result_str}')
             if not result_str in invalid_flags  or any(item in result_str for item in invalid_flags):
-                self.documentation_handler.update_openapi_spec(response, result)
+                self.prompt_engineer.found_endpoints = self.documentation_handler.update_openapi_spec(response, result)
                 self.documentation_handler.write_openapi_to_yaml()
                 self.prompt_engineer.schemas = self.documentation_handler.schemas
+                print(f'SCHEMAS:{self.prompt_engineer.schemas}')
         return self._all_http_methods_found
 
 

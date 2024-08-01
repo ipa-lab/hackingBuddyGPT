@@ -42,6 +42,8 @@ class SimpleWebAPITesting(Agent):
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_http_methods_found: bool = False
 
+
+
     def init(self):
         """
         Initializes the SimpleWebAPITesting use case by setting up the context, response handler,
@@ -49,9 +51,10 @@ class SimpleWebAPITesting(Agent):
         """
         super().init()
         self._context["host"] = self.host
+        self._setup_capabilities()
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
-        self._setup_capabilities()
+
         self._setup_initial_prompt()
 
     def _setup_initial_prompt(self):
@@ -92,7 +95,7 @@ class SimpleWebAPITesting(Agent):
         methods_set = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
         notes = self._context["notes"]
         self._capabilities = {
-            "submit_http_method": SubmitHTTPMethod(self.http_method_description, methods_set),
+            "submit_http_method": SubmitHTTPMethod(self.http_method_description, methods_set, self.host),
             "http_request": HTTPRequest(self.host),
             "record_note": RecordNote(notes)
         }

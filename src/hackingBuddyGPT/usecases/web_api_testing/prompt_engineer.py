@@ -32,6 +32,18 @@ class PromptEngineer(object):
         self.response_handler = response_handler
         self.llm_handler = llm_handler
         self.round = 0
+        self.found_endpoints = []
+        model_name = "en_core_web_sm"
+
+        # Check if the model is already installed
+        from spacy.util import is_package
+        if not is_package(model_name):
+            print(f"Model '{model_name}' is not installed. Installing now...")
+            spacy.cli.download(model_name)
+
+        # Load the model
+        self.nlp = spacy.load(model_name)
+
         self.nlp = spacy.load("en_core_web_sm")
         self._prompt_history = history
         self.prompt = self._prompt_history
@@ -89,17 +101,12 @@ class PromptEngineer(object):
         if method == "POST" and method == "PUT":
             return (
                 f"Create HTTPRequests of type {method} considering the found schemas: {self.schemas} and understand the responses. Ensure that they are correct requests."
-                f"Note down the response structures, status codes, and headers for each endpoint.",
-                f"For each endpoint, document the following details: URL, HTTP method {method}, "
-                f"query parameters and path variables, expected request body structure for {method} requests, response structure for successful and error responses.")
+                )
 
         else:
             return (
-                f"Create HTTPRequests of type {method} and understand the responses. Ensure that they are correct requests. "
-                f"the action should look similar to this: "
-                f"'action':{{'method':'{method}','path':'/posts','query':null,'body':null,'body_is_base64':null,'headers':null}}."
-                f"For each endpoint, document the following details: URL, HTTP method {method}, "
-            )
+                f"Create HTTPRequests of type {method} considering the found schemas: {self.schemas} and understand the responses. Ensure that they are correct requests.")
+
 
     def chain_of_thought(self, doc=False, hint=""):
         """
@@ -109,61 +116,62 @@ class PromptEngineer(object):
 
         Args:
             doc (bool): Determines whether the documentation-oriented chain of thought should be used.
+            hint (str): Additional hint to be added to the chain of thought.
 
         Returns:
             str: The generated prompt.
         """
+        common_steps = [
+            "Identify common data structures returned by various endpoints and define them as reusable schemas. Determine the type of each field (e.g., integer, string, array) and define common response structures as components that can be referenced in multiple endpoint definitions.",
+            "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
+            "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",
+            "Refine the document based on feedback and additional testing, share the draft with others, gather feedback, and make necessary adjustments. Regularly update the specification as the API evolves.",
+            "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
+        ]
+
+        http_methods = [ "POST", "DELETE", "PUT"]
+        http_phase = {
+            6: http_methods[0],
+            16: http_methods[1], # Delete one of instance of this:{self.llm_handler.get_created_objects()}",
+            20: http_methods[2]
+        }
 
         if doc:
-            common_steps = [
-
-                "Identify common data structures returned by various endpoints and define them as reusable schemas. Determine the type of each field (e.g., integer, string, array) and define common response structures as components that can be referenced in multiple endpoint definitions.",
-                "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
-                "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",
-                "Refine the document based on feedback and additional testing, share the draft with others, gather feedback, and make necessary adjustments. Regularly update the specification as the API evolves.",
-                "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
-            ]
-
-            http_methods = ["GET", "POST", "DELETE", "PUT"]
-
             if self.round <= 5:
+
                 chain_of_thought_steps = [
-                                         f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
-                                         self.get_http_action_template(http_methods[0])] + common_steps
-            elif self.round > 5 and self.round <= 10:
-                chain_of_thought_steps = [
-                                             f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
-                                             self.get_http_action_template(http_methods[1])] + common_steps
-            elif self.round > 10 and self.round <= 15:
-                chain_of_thought_steps = [
-                                             f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}. Delete one created instance of this:{self.llm_handler.get_created_objects()}",
-                                             self.get_http_action_template(http_methods[2])] + common_steps
-            elif self.round > 15 and self.round <= 20:
-                chain_of_thought_steps = [
-                                             f"Identify all available endpoints. Valid methods are {', '.join(http_methods)}.",
-                                             self.get_http_action_template(http_methods[3])] + common_steps
+                                             f"Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}", f"Note down the response structures, status codes, and headers for each endpoint.",
+                                             f"For each endpoint, document the following details: URL, HTTP method, "
+                                             f"query parameters and path variables, expected request body structure for  requests, response structure for successful and error responses."
+                                         ] + common_steps
             else:
-                chain_of_thought_steps = [
-                                             "Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",
-                                             "Identify all available endpoints."] + common_steps
+                phase = http_phase.get(min(filter(lambda x: self.round <= x, http_phase.keys())))
+                print(f'phase:{phase}')
+                if phase != "DELETE":
+                    chain_of_thought_steps = [
+                                             f"Identify all valid calls for HTTP method {phase}.",
+                                             self.get_http_action_template(phase)
+                                         ] + common_steps
+                else:
+                    chain_of_thought_steps = [
+                                                 f"Check for all endpoints the DELETE method. Delete the first instance for all endpoints. ",
+                                                 self.get_http_action_template(phase)
+                                             ] + common_steps
+
         else:
             if self.round == 0:
                 chain_of_thought_steps = ["Let's think step by step."]  # Zero shot prompt
             elif self.round <= 20:
-                focus_phase = ["endpoints", "HTTP method GET", "HTTP method POST and PUT", "HTTP method DELETE"][
-                    self.round // 5]
-                chain_of_thought_steps = [f"Just Focus on the {focus_phase} for now."]
+                focus_phases = ["endpoints", "HTTP method GET", "HTTP method POST and PUT", "HTTP method DELETE"]
+                focus_phase = focus_phases[self.round // 5]
+                chain_of_thought_steps = [f"Just focus on the {focus_phase} for now."]
             else:
                 chain_of_thought_steps = ["Look for exploits."]
 
-        #prompt = "\n".join([self.previous_prompt] + chain_of_thought_steps)
-        if hint != "":
-            prompt = self.check_prompt(self.previous_prompt, chain_of_thought_steps + [hint])
-        else:
-            prompt = self.check_prompt(self.previous_prompt, chain_of_thought_steps)
+        print(f'chain of thought steps: {chain_of_thought_steps}')
+        prompt = self.check_prompt(self.previous_prompt,
+                                   chain_of_thought_steps + [hint] if hint else chain_of_thought_steps)
         return prompt
-
-
 
     def token_count(self, text):
         """
@@ -219,6 +227,7 @@ class PromptEngineer(object):
 
     def evaluate_response(self, prompt, response_text): #TODO find a good way of evaluating result of prompt
         return True
+
 
 
 from enum import Enum

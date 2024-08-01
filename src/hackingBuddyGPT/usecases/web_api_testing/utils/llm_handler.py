@@ -33,6 +33,7 @@ class LLMHandler(object):
         Returns:
             response (object): The response from the LLM.
         """
+        print(f'Capabilities:{self._capabilities}')
         return self.llm.instructor.chat.completions.create_with_completion(
             model=self.llm.model,
             messages=prompt,

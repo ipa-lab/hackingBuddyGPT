@@ -88,8 +88,7 @@ class ResponseHandler(object):
         Returns:
             tuple: A tuple containing the entry dictionary, reference, and updated OpenAPI specification.
         """
-        if method == "DELETE":
-            print(f'http_response: {http_response}')
+
         headers, body = http_response.split('\r\n\r\n', 1)
         try:
             body_dict = json.loads(body)
@@ -114,6 +113,7 @@ class ResponseHandler(object):
                 key = body_dict.get("title") or body_dict.get("name") or body_dict.get("id")
                 entry_dict[key] = {"value": body_dict}
                 self.llm_handler.add_created_object(entry_dict[key], object_name)
+
 
         return entry_dict, reference, openapi_spec
 
@@ -147,15 +147,13 @@ class ResponseHandler(object):
         if len(body_dict) == 1:
             properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict["id"])}
         else:
-            #print(f'body: {body_dict}')
-            #print(f'len body: {len(body_dict)}')
+
             for param in body_dict:
                 if isinstance(body_dict, list):
                     for key, value in param.items():
                         properties_dict =self.extract_keys(key, value, properties_dict)
                     break
                 else:
-                    #print(f'body_dict.items(): {body_dict.items()}')
                     for key, value in body_dict.items():
                         properties_dict = self.extract_keys(key, value, properties_dict)
                         print(f'properzies: {properties_dict}')

@@ -73,6 +73,7 @@ class DocumentationHandler:
                     self.openapi_spec['endpoints'][path] = {}
                 # Update the method description within the path
                 example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(self.openapi_spec, result, path, method)
+                self.schemas = self.openapi_spec["components"]["schemas"]
                 if example is not None or reference is not None:
                     self.openapi_spec['endpoints'][path][method.lower()] = {
                         "summary": f"{method} operation on {path}",
@@ -90,6 +91,7 @@ class DocumentationHandler:
                             }
                         }
                     }
+            return  list(self.openapi_spec['endpoints'].keys())
 
     def write_openapi_to_yaml(self):
         """

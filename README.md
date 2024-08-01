@@ -11,7 +11,7 @@ We aim to become **THE go-to framework for security researchers** and pen-tester
 ## hackingBuddyGPT in the News
 
 - 2024-07-26: The [GitHub Accelerator Showcase](https://github.blog/open-source/maintainers/github-accelerator-showcase-celebrating-our-second-cohort-and-whats-next/) features hackingBuddyGPT
-- 2024-07-24: [Juergen](https://github.com/citostyle) speaks at `Open Source + mezcal night @ GitHub HQ`
+- 2024-07-24: [Juergen](https://github.com/citostyle) speaks at [Open Source + mezcal night @ GitHub HQ](https://lu.ma/bx120myg)
 - 2024-05-23: hackingBuddyGPT is part of [GitHub Accelerator 2024](https://github.blog/news-insights/company-news/2024-github-accelerator-meet-the-11-projects-shaping-open-source-ai/)
 - 2023-12-05: [Andreas](https://github.com/andreashappe) presented hackingBuddyGPT at FSE'23 in San Francisco ([paper](https://arxiv.org/abs/2308.00121), [video](https://2023.esec-fse.org/details/fse-2023-ideas--visions-and-reflections/9/Towards-Automated-Software-Security-Testing-Augmenting-Penetration-Testing-through-L))
 

@@ -1,44 +1,37 @@
-import time
-
-from dataclasses import field
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
-from rich.panel import Panel
+from dataclasses import dataclass, field
 from typing import List, Any, Union, Dict
 
+import pydantic_core
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
+from rich.panel import Panel
+
 from hackingBuddyGPT.capabilities import Capability
-from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
-from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
+from hackingBuddyGPT.capabilities.submit_http_method import SubmitHTTPMethod
 from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
+from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
-from hackingBuddyGPT.utils import LLMResult, tool_message
+from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
+from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-
-import pydantic_core
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
-
 class SimpleWebAPITesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
-    # Parameter specifying the pattern description for expected HTTP methods in the API response
     http_method_description: str = parameter(
         desc="Pattern description for expected HTTP methods in the API response",
         default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.)."
     )
-
-    # Parameter specifying the template used to format HTTP methods in API requests
     http_method_template: str = parameter(
         desc="Template used to format HTTP methods in API requests. The {method} placeholder will be replaced by actual HTTP method names.",
         default="{method}"
     )
-
-    # Parameter specifying the expected HTTP methods as a comma-separated list
     http_methods: str = parameter(
         desc="Comma-separated list of HTTP methods expected to be used in the API response.",
         default="GET,POST,PUT,DELETE"
@@ -49,87 +42,100 @@ class SimpleWebAPITesting(Agent):
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_http_methods_found: bool = False
 
-    def init(self):
-        super().init()
-        self._prompt_history.append(
-            {
-                "role": "system",
-                "content": f"You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at {self.host}. "
-                           f"Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, and then devise and execute potential exploits.\n"
-                           f"Be diligent in documenting your findings as you navigate through the APIs..\n"
-                           f"Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves.\n"
-                           f"Remember, if you encounter a http methods ({self.http_method_description}), promptly submit it as it is of utmost importance."
-            })
-        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
-                                              api_key=self.llm.api_key,
-                                              history=self._prompt_history)
 
+
+    def init(self):
+        """
+        Initializes the SimpleWebAPITesting use case by setting up the context, response handler,
+        LLM handler, capabilities, and the initial prompt.
+        """
+        super().init()
         self._context["host"] = self.host
-        sett = set(self.http_method_template.format(method=method) for method in self.http_methods.split(","))
-        flag = SubmitFlag(self.http_method_description,
-                                      sett,
-                                      success_function=self.all_http_methods_found)
-        print(f'Valid flags:{flag.valid_flags}')
-        self._capabilities = {
-            "submit_http_method": flag,
-            "http_request": HTTPRequest(self.host),
-            "record_note": RecordNote(self._context["notes"]),
+        self._setup_capabilities()
+        self.llm_handler = LLMHandler(self.llm, self._capabilities)
+        self.response_handler = ResponseHandler(self.llm_handler)
+
+        self._setup_initial_prompt()
+
+    def _setup_initial_prompt(self):
+        """
+        Sets up the initial prompt for the LLM. The prompt provides instructions for the LLM
+        to evaluate the REST APIs of the specified host and to document findings.
+        """
+        initial_prompt = {
+            "role": "system",
+            "content": (
+                f"You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at {self.host}. "
+                f"Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, "
+                f"and then devise and execute potential exploits. Be diligent in documenting your findings as you navigate through the APIs. "
+                f"Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves. "
+                f"Remember, if you encounter an HTTP method ({self.http_method_description}), promptly submit it as it is of utmost importance."
+            )
         }
+        self._prompt_history.append(initial_prompt)
+        self.prompt_engineer = PromptEngineer(
+            strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm_handler=self.llm_handler,
+            history=self._prompt_history, schemas={}, response_handler=self.response_handler
+        )
 
     def all_http_methods_found(self):
+        """
+        Handles the event when all HTTP methods are found. Displays a congratulatory message
+        and sets the _all_http_methods_found flag to True.
+        """
         self._log.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
         self._all_http_methods_found = True
 
-    def perform_round(self, turn: int):
-        with self._log.console.status("[bold green]Asking LLM for a new command..."):
-            # generate prompt
-            prompt = self.prompt_engineer.generate_prompt()
+    def _setup_capabilities(self):
+        """
+        Sets up the capabilities required for the use case. Initializes HTTP request capabilities,
+        note recording capabilities, and HTTP method submission capabilities based on the provided
+        configuration.
+        """
+        methods_set = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
+        notes = self._context["notes"]
+        self._capabilities = {
+            "submit_http_method": SubmitHTTPMethod(self.http_method_description, methods_set, self.host),
+            "http_request": HTTPRequest(self.host),
+            "record_note": RecordNote(notes)
+        }
 
+    def perform_round(self, turn: int, FINAL_ROUND=30):
+        """
+        Performs a single round of interaction with the LLM. Generates a prompt, sends it to the LLM,
+        and handles the response.
 
-            tic = time.perf_counter()
-            response, completion = self.llm.instructor.chat.completions.create_with_completion(model=self.llm.model,
-                                                                                               messages=prompt,
-                                                                                               response_model=capabilities_to_action_model(
-                                                                                                   self._capabilities))
-            toc = time.perf_counter()
+        Args:
+            turn (int): The current round number.
+            FINAL_ROUND (int, optional): The final round number. Defaults to 30.
+        """
+        prompt = self.prompt_engineer.generate_prompt(doc=True)
+        response, completion = self.llm_handler.call_llm(prompt)
+        self._handle_response(completion, response)
 
-            message = completion.choices[0].message
-            tool_call_id = message.tool_calls[0].id
-            command = pydantic_core.to_json(response).decode()
-            self._log.console.print(Panel(command, title="assistant"))
-            self._prompt_history.append(message)
+    def _handle_response(self, completion, response):
+        """
+        Handles the response from the LLM. Parses the response, executes the necessary actions,
+        and updates the prompt history.
 
-            answer = LLMResult(completion.choices[0].message.content, str(prompt),
-                               completion.choices[0].message.content, toc - tic, completion.usage.prompt_tokens,
-                               completion.usage.completion_tokens)
+        Args:
+            completion (Any): The completion object from the LLM.
+            response (Any): The response object from the LLM.
+        """
+        message = completion.choices[0].message
+        tool_call_id = message.tool_calls[0].id
+        command = pydantic_core.to_json(response).decode()
+        self._log.console.print(Panel(command, title="assistant"))
+        self._prompt_history.append(message)
 
         with self._log.console.status("[bold green]Executing that command..."):
             result = response.execute()
-            self._log.console.print(Panel(result, title="tool"))
-            result_str = self.parse_http_status_line(result)
+            self._log.console.print(Panel(result[:30], title="tool"))
+            result_str = self.response_handler.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
 
-        self._log.log_db.add_log_query(self._log.run_id, turn, command, result, answer)
         return self._all_http_methods_found
 
-    def parse_http_status_line(self, status_line):
-        if status_line is None or status_line == "Not a valid flag":
-            return status_line
-        else:
-            # Split the status line into components
-            parts = status_line.split(' ', 2)
-
-            # Check if the parts are at least three in number
-            if len(parts) >= 3:
-                protocol = parts[0]  # e.g., "HTTP/1.1"
-                status_code = parts[1]  # e.g., "200"
-                status_message = parts[2].split("\r\n")[0]  # e.g., "OK"
-                print(f'status code:{status_code}, status msg:{status_message}')
-                return str(status_code + " " + status_message)
-            else:
-                raise ValueError("Invalid HTTP status line")
-
-
-@use_case("Minimal implementation of a web api testing use case")
+@use_case("Minimal implementation of a web API testing use case")
 class SimpleWebAPITestingUseCase(AutonomousAgentUseCase[SimpleWebAPITesting]):
     pass

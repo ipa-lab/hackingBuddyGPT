@@ -6,8 +6,8 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
-from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
+from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.submit_http_method import SubmitHTTPMethod
 from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
@@ -50,10 +50,9 @@ class SimpleWebAPITesting(RoundBasedUseCase):
         LLM handler, capabilities, and the initial prompt.
         """
         super().init()
-        self._context["host"] = self.host
+        self._setup_capabilities()
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
-        self._setup_capabilities()
         self._setup_initial_prompt()
 
     def _setup_initial_prompt(self):
@@ -94,7 +93,7 @@ class SimpleWebAPITesting(RoundBasedUseCase):
         methods_set = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
         notes = self._context["notes"]
         self._capabilities = {
-            "submit_http_method": SubmitHTTPMethod(self.http_method_description, methods_set),
+            "submit_http_method": SubmitHTTPMethod(self.http_method_description, methods_set, self.host),
             "http_request": HTTPRequest(self.host),
             "record_note": RecordNote(notes)
         }

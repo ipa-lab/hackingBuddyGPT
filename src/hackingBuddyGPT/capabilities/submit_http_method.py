@@ -15,6 +15,7 @@ class SubmitHTTPMethod(Capability):
     valid_http_methods: Set[str]
     _client = requests.Session()
     host: str
+    follow_redirects: bool = False
 
 
     submitted_valid_http_methods: Set[str] = field(default_factory=set, init=False)

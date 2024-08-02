@@ -35,6 +35,7 @@ class Privesc(Agent):
     def init(self):
         super().init()
 
+    def before_run(self):
         if self.hint != "":
             self._log.console.print(f"[bold green]Using the following hint: '{self.hint}'")
 

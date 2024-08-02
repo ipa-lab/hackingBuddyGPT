@@ -74,7 +74,16 @@ class AutonomousUseCase(UseCase, abc.ABC):
     def perform_round(self, turn: int):
         pass
 
+    def before_run(self):
+        pass
+
+    def after_run(self):
+        pass
+
     def run(self):
+
+        self.before_run()
+
         turn = 1
         while turn <= self.max_turns and not self._got_root:
             self._log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
@@ -84,6 +93,8 @@ class AutonomousUseCase(UseCase, abc.ABC):
             # finish turn and commit logs to storage
             self._log.log_db.commit()
             turn += 1
+
+        self.after_run()
 
         # write the final result to the database and console
         if self._got_root:
@@ -145,6 +156,12 @@ class AutonomousAgentUseCase(AutonomousUseCase, typing.Generic[T]):
 
             def get_name(self) -> str:
                 return self.__class__.__name__
+            
+            def before_run(self):
+                return self.agent.before_run()
+            
+            def after_run(self):
+                return self.agent.after_run()
 
             def perform_round(self, turn: int):
                 return self.agent.perform_round(turn)

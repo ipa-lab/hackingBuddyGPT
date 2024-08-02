@@ -32,22 +32,20 @@ class LinuxPrivescWithHintFileUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
 
     def init(self):
         super().init()
-
         self.agent.hint = self.read_hint()
 
     # simple helper that reads the hints file and returns the hint
     # for the current machine (test-case)
     def read_hint(self):
-        if self.hints != "":
-            try:
-                with open(self.hints, "r") as hint_file:
-                    hints = json.load(hint_file)
-                    if self.agent.conn.hostname in hints:
-                        return hints[self.agent.conn.hostname]
-            except:
-                self._log.console.print("[yellow]Was not able to load hint file")
-        else:
-            self._log.console.print("[yellow]calling the hintfile use-case without a hint file?")
+        try:
+            with open(self.hints, "r") as hint_file:
+                hints = json.load(hint_file)
+                if self.agent.conn.hostname in hints:
+                    return hints[self.agent.conn.hostname]
+        except FileNotFoundError:
+            self._log.console.print("[yellow]Hint file not found")
+        except Exception as e:
+            self._log.console.print("[yellow]Hint file could not loaded:", str(e))
         return ""
 
 
@@ -58,7 +56,6 @@ class LinuxPrivescWithLSEUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
 
     def init(self):
         super().init()
-
         self._hints = self.read_hint().splitlines()
         self._turns_per_hint = int(self.max_turns / len(self._hints))
 

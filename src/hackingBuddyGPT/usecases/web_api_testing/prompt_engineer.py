@@ -131,11 +131,10 @@ class PromptEngineer(object):
             "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
         ]
 
-        http_methods = [ "POST", "PUT", "DELETE"]
+        http_methods = [  "PUT", "DELETE"]
         http_phase = {
             5: http_methods[0],
-            10: http_methods[1], # Delete one of instance of this:{self.llm_handler.get_created_objects()}",
-            15: http_methods[2]
+            10: http_methods[1]
         }
 
         if doc:
@@ -147,7 +146,7 @@ class PromptEngineer(object):
                                              f"query parameters and path variables, expected request body structure for  requests, response structure for successful and error responses."
                                          ] + common_steps
             else:
-                if self.round <= 15:
+                if self.round <= 10:
                     phase = http_phase.get(min(filter(lambda x: self.round <= x, http_phase.keys())))
                     print(f'phase:{phase}')
                     if phase != "DELETE":

@@ -32,7 +32,9 @@ class PromptEngineer(object):
         self.response_handler = response_handler
         self.llm_handler = llm_handler
         self.round = 0
-        self.found_endpoints = []
+        self.found_endpoints = ["/"]
+        self.endpoint_methods = {}
+        self.endpoint_found_methods = {}
         model_name = "en_core_web_sm"
 
         # Check if the model is already installed
@@ -105,7 +107,7 @@ class PromptEngineer(object):
 
         else:
             return (
-                f"Create HTTPRequests of type {method} considering the found schemas: {self.schemas} and understand the responses. Ensure that they are correct requests.")
+                f"Create HTTPRequests of type {method} considering only the object with id=1 for the endpoint and understand the responses. Ensure that they are correct requests.")
 
 
     def chain_of_thought(self, doc=False, hint=""):
@@ -129,15 +131,15 @@ class PromptEngineer(object):
             "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
         ]
 
-        http_methods = [ "POST", "DELETE", "PUT"]
+        http_methods = [ "POST", "PUT", "DELETE"]
         http_phase = {
-            6: http_methods[0],
-            16: http_methods[1], # Delete one of instance of this:{self.llm_handler.get_created_objects()}",
-            20: http_methods[2]
+            5: http_methods[0],
+            10: http_methods[1], # Delete one of instance of this:{self.llm_handler.get_created_objects()}",
+            15: http_methods[2]
         }
 
         if doc:
-            if self.round <= 5:
+            if self.round < 5:
 
                 chain_of_thought_steps = [
                                              f"Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}", f"Note down the response structures, status codes, and headers for each endpoint.",
@@ -145,18 +147,41 @@ class PromptEngineer(object):
                                              f"query parameters and path variables, expected request body structure for  requests, response structure for successful and error responses."
                                          ] + common_steps
             else:
-                phase = http_phase.get(min(filter(lambda x: self.round <= x, http_phase.keys())))
-                print(f'phase:{phase}')
-                if phase != "DELETE":
-                    chain_of_thought_steps = [
-                                             f"Identify all valid calls for HTTP method {phase}.",
+                if self.round <= 15:
+                    phase = http_phase.get(min(filter(lambda x: self.round <= x, http_phase.keys())))
+                    print(f'phase:{phase}')
+                    if phase != "DELETE":
+                        chain_of_thought_steps = [
+                                             f"Identify for all endpoints {self.found_endpoints} excluding {self.endpoint_found_methods[phase]} a valid HTTP method {phase} call.",
                                              self.get_http_action_template(phase)
                                          ] + common_steps
-                else:
-                    chain_of_thought_steps = [
+                    else:
+                        chain_of_thought_steps = [
                                                  f"Check for all endpoints the DELETE method. Delete the first instance for all endpoints. ",
                                                  self.get_http_action_template(phase)
                                              ] + common_steps
+                else:
+                    endpoints_needing_help = []
+                    endpoints_and_needed_methods = {}
+
+                    # Standard HTTP methods
+                    http_methods = {"GET", "POST", "PUT", "DELETE"}
+
+                    for endpoint in self.endpoint_methods:
+                        # Calculate the missing methods for the current endpoint
+                        missing_methods = http_methods - set(self.endpoint_methods[endpoint])
+
+                        if len(self.endpoint_methods[endpoint]) < 4:
+                            endpoints_needing_help.append(endpoint)
+                            # Add the missing methods to the dictionary
+                            endpoints_and_needed_methods[endpoint] = list(missing_methods)
+
+                    print(f'endpoints_and_needed_methods: {endpoints_and_needed_methods}')
+                    print(f'first endpoint in list: {endpoints_needing_help[0]}')
+                    print(f'methods needed for first endpoint: {endpoints_and_needed_methods[endpoints_needing_help[0]][0]}')
+
+                    chain_of_thought_steps = [f"For enpoint {endpoints_needing_help[0]} find this missing method :{endpoints_and_needed_methods[endpoints_needing_help[0]][0]} "
+                                              f"If all the HTTP methods have already been found for an endpoint, then do not include this endpoint in your search. ",]
 
         else:
             if self.round == 0:
@@ -187,6 +212,7 @@ class PromptEngineer(object):
         doc = self.nlp(text)
         # Count tokens that aren't punctuation marks
         tokens = [token for token in doc if not token.is_punct]
+        print(f'TOKENS: {len(tokens)}')
         return len(tokens)
 
 

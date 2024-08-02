@@ -75,13 +75,23 @@ class SimpleWebAPIDocumentation(Agent):
 
 
     def all_http_methods_found(self):
-        self._log.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
-        self._all_http_methods_found = True
+        print(f'found endpoints:{self.documentation_handler.endpoint_methods.items()}')
+        print(f'found endpoints values:{self.documentation_handler.endpoint_methods.values()}')
+
+        found_endpoints = sum(len(value_list) for value_list in self.documentation_handler.endpoint_methods.values())
+        expected_endpoints = len(self.documentation_handler.endpoint_methods.keys())*4
+        print(f'found endpoints:{found_endpoints}')
+        print(f'expected endpoints:{expected_endpoints}')
+        print(f'correct? {found_endpoints== expected_endpoints}')
+        if found_endpoints== expected_endpoints:
+            return True
+        else:
+            return False
 
     def perform_round(self, turn: int):
         prompt = self.prompt_engineer.generate_prompt(doc=True)
         response, completion = self.llm_handler.call_llm(prompt)
-        self._handle_response(completion, response)
+        return self._handle_response(completion, response)
 
     def _handle_response(self, completion, response):
         message = completion.choices[0].message
@@ -101,8 +111,17 @@ class SimpleWebAPIDocumentation(Agent):
                 self.prompt_engineer.found_endpoints = self.documentation_handler.update_openapi_spec(response, result)
                 self.documentation_handler.write_openapi_to_yaml()
                 self.prompt_engineer.schemas = self.documentation_handler.schemas
+                from collections import defaultdict
+                http_methods_dict = defaultdict(list)
+
+                # Iterate through the original dictionary
+                for endpoint, methods in self.documentation_handler.endpoint_methods.items():
+                    for method in methods:
+                        http_methods_dict[method].append(endpoint)
+                self.prompt_engineer.endpoint_found_methods =  http_methods_dict
+                self.prompt_engineer.endpoint_methods = self.documentation_handler.endpoint_methods
                 print(f'SCHEMAS:{self.prompt_engineer.schemas}')
-        return self._all_http_methods_found
+        return self.all_http_methods_found()
 
 
 

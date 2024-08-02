@@ -95,7 +95,7 @@ class SimpleWebAPITesting(Agent):
         methods_set = {self.http_method_template.format(method=method) for method in self.http_methods.split(",")}
         notes = self._context["notes"]
         self._capabilities = {
-            "submit_http_method": SubmitHTTPMethod(self.http_method_description, methods_set, self.host),
+            "submit_http_method": HTTPRequest(self.host),
             "http_request": HTTPRequest(self.host),
             "record_note": RecordNote(notes)
         }
@@ -134,8 +134,7 @@ class SimpleWebAPITesting(Agent):
             result_str = self.response_handler.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
 
-        return self._all_http_methods_found
-
+        return self.all_http_methods_found()
 @use_case("Minimal implementation of a web API testing use case")
 class SimpleWebAPITestingUseCase(AutonomousAgentUseCase[SimpleWebAPITesting]):
     pass

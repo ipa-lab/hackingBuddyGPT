@@ -3,9 +3,10 @@ import pathlib
 from mako.template import Template
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
+from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 from .common import Privesc
 from hackingBuddyGPT.utils import SSHConnection
-from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
+from hackingBuddyGPT.usecases.base import UseCase, use_case, AutonomousAgentUseCase
 
 template_dir = pathlib.Path(__file__).parent / "templates"
 template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
@@ -50,38 +51,94 @@ class LinuxPrivescWithHintFileUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
 
 
 @use_case("Linux Privilege Escalation using lse.sh for initial guidance")
-class LinuxPrivescWithLSEUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
-    _hints = []
-    _turns_per_hint: int = None
+class LinuxPrivescWithLSEUseCase(UseCase):
+    conn: SSHConnection = None
+    max_turns: int = 20
+    enable_explanation: bool = False
+    enable_update_state: bool = False
+    disable_history: bool = False
+    llm: OpenAIConnection = None
+
+    _got_root: bool = False
+
+    # use either an use-case or an agent to perform the privesc
+    _use_use_case: bool = False
 
     def init(self):
         super().init()
-        self._hints = self.read_hint().splitlines()
-        self._turns_per_hint = int(self.max_turns / len(self._hints))
 
     # simple helper that uses lse.sh to get hints from the system
-    def read_hint(self):
+    def call_lse_against_host(self):
         self._log.console.print("[green]performing initial enumeration with lse.sh")
 
         run_cmd = "wget -q 'https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh' -O lse.sh;chmod 700 lse.sh; ./lse.sh -c -i -l 0 | grep -v 'nope$' | grep -v 'skip$'"
 
-        result, _ = SSHRunCommand(conn=self.agent.conn, timeout=120)(run_cmd)
+        result, _ = SSHRunCommand(conn=self.conn, timeout=120)(run_cmd)
 
         self.console.print("[yellow]got the output: " + result)
-        cmd = self.agent.llm.get_response(template_lse, lse_output=result, number=3)
+        cmd = self.llm.get_response(template_lse, lse_output=result, number=3)
         self.console.print("[yellow]got the cmd: " + cmd.result)
 
-        return cmd.result
+        return [x for x in cmd.result.splitlines() if x.strip()] 
 
-    def perform_round(self, turn: int) -> bool:
-        if turn % self._turns_per_hint == 1:
-            hint_pos = int(turn / self._turns_per_hint)
+    def get_name(self) -> str:
+        return self.__class__.__name__
+    
+    def run(self):
+        # get the hints through running LSE on the target system
+        hints = self.call_lse_against_host()
+        turns_per_hint = int(self.max_turns / len(hints))
 
-            if hint_pos < len(self._hints):
-                hint = self._hints[hint_pos]
-                self._log.console.print("[green]Now using Hint: " + hint)
-                self.agent = self.agent.configurable_recreate()
-                self.agent.hint = hint
-                self.agent._log = self._log
+        # now try to escalate privileges using the hints
+        for hint in hints:
 
-        return self.agent.perform_round(turn)
+            if self._use_use_case:
+                result = self.run_using_usecases(hint, turns_per_hint)
+            else:
+                result = self.run_using_agent(hint, turns_per_hint)
+
+            if result is True:
+                self.console.print("[green]Got root!")
+                return True
+
+    def run_using_usecases(self, hint, turns_per_hint):
+        # TODO: init usecase
+        linux_privesc = LinuxPrivescUseCase(
+            conn = self.conn,
+            llm = self.llm,
+            hint = hint,
+            max_turns = turns_per_hint,
+            enable_explanation = self.enable_explanation,
+            enable_update_state = self.enable_update_state,
+            disable_history = self.disable_history
+        )
+        linux_privesc.init()
+        return linux_privesc.run()
+    
+    def run_using_agent(self, hint, turns_per_hint):
+        # init agent
+        agent = LinuxPrivesc(
+            conn = self.conn,
+            llm = self.llm,
+            hint = hint,
+            enable_explanation = self.enable_explanation,
+            enable_update_state = self.enable_update_state,
+            disable_history = self.disable_history
+        )
+        agent._log = self._log
+        agent.init()
+
+        # perform the privilege escalation
+        agent.before_run()
+        turn = 1
+        got_root = False
+        while turn <= turns_per_hint and not got_root:
+            self._log.console.log(f"[yellow]Starting turn {turn} of {turns_per_hint}")
+
+            if agent.perform_round(turn) is True:
+                got_root = True
+            turn += 1
+        
+        # cleanup and finish
+        agent.after_run()
+        return got_root

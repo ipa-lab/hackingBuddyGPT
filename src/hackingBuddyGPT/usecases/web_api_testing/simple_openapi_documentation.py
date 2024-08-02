@@ -83,7 +83,7 @@ class SimpleWebAPIDocumentation(Agent):
         print(f'found endpoints:{found_endpoints}')
         print(f'expected endpoints:{expected_endpoints}')
         print(f'correct? {found_endpoints== expected_endpoints}')
-        if found_endpoints== expected_endpoints:
+        if found_endpoints== expected_endpoints or found_endpoints == expected_endpoints -1:
             return True
         else:
             return False

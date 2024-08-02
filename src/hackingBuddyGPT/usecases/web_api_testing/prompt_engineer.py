@@ -1,4 +1,6 @@
-import spacy
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 from instructor.retry import InstructorRetryException
 
 
@@ -37,16 +39,9 @@ class PromptEngineer(object):
         self.endpoint_found_methods = {}
         model_name = "en_core_web_sm"
 
-        # Check if the model is already installed
-        from spacy.util import is_package
-        if not is_package(model_name):
-            print(f"Model '{model_name}' is not installed. Installing now...")
-            spacy.cli.download(model_name)
-
-        # Load the model
-        self.nlp = spacy.load(model_name)
-
-        self.nlp = spacy.load("en_core_web_sm")
+        # Check if the models are already installed
+        nltk.download('punkt')
+        nltk.download('stopwords')
         self._prompt_history = history
         self.prompt = self._prompt_history
         self.previous_prompt = self._prompt_history[self.round]["content"]
@@ -199,20 +194,19 @@ class PromptEngineer(object):
 
     def token_count(self, text):
         """
-        Counts the number of word tokens in the provided text using spaCy's tokenizer.
+            Counts the number of word tokens in the provided text using NLTK's tokenizer.
 
-        Args:
-            text (str): The input text to tokenize and count.
+            Args:
+                text (str): The input text to tokenize and count.
 
-        Returns:
-            int: The number of tokens in the input text.
-        """
-        # Process the text through spaCy's pipeline
-        doc = self.nlp(text)
-        # Count tokens that aren't punctuation marks
-        tokens = [token for token in doc if not token.is_punct]
-        print(f'TOKENS: {len(tokens)}')
-        return len(tokens)
+            Returns:
+                int: The number of tokens in the input text.
+            """
+        # Tokenize the text using NLTK
+        tokens = word_tokenize(text)
+        # Filter out punctuation marks
+        words = [token for token in tokens if token.isalnum()]
+        return len(words)
 
 
     def check_prompt(self, previous_prompt, chain_of_thought_steps, max_tokens=900):

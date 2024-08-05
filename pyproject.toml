@@ -35,8 +35,8 @@ dependencies = [
 	'pypsexec == 0.3.0',
 	'pydantic == 2.8.2',
 	'openai == 1.28.0',
-	'spacy',
-	'BeautifulSoup4'
+	'BeautifulSoup4',
+	'nltk'
 ]
 
 [project.urls]

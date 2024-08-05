@@ -29,6 +29,7 @@ class DocumentationHandler:
         """
         self.response_handler = response_handler
         self.schemas = {}
+        self.endpoint_methods ={}
         self.filename = f"openapi_spec_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
         self.openapi_spec = {
             "openapi": "3.0.0",
@@ -42,13 +43,16 @@ class DocumentationHandler:
             "components": {"schemas": {}}
         }
         self.llm_handler = llm_handler
-        self.api_key = llm_handler.llm.api_key
+        #self.api_key = llm_handler.llm.api_key
         current_path = os.path.dirname(os.path.abspath(__file__))
         self.file_path = os.path.join(current_path, "openapi_spec")
         self.file = os.path.join(self.file_path, self.filename)
         self._capabilities = {
             "yaml": YAMLFile()
         }
+
+    def partial_match(self, element, string_list):
+        return any(element in string or string in element for string in string_list)
 
     def update_openapi_spec(self, resp, result):
         """
@@ -67,31 +71,51 @@ class DocumentationHandler:
             method = request.method
             print(f'method: {method}')
             # Ensure that path and method are not None and method has no numeric characters
+            # Ensure path and method are valid and method has no numeric characters
             if path and method:
+                endpoint_methods = self.endpoint_methods
+                endpoints = self.openapi_spec['endpoints']
+                x = path.split('/')[1]
+
                 # Initialize the path if not already present
-                if path not in self.openapi_spec['endpoints']:
-                    self.openapi_spec['endpoints'][path] = {}
+                if path not in endpoints and x != "":
+                    endpoints[path] = {}
+                    if '1' not in path:
+                        endpoint_methods[path] = []
+
                 # Update the method description within the path
-                example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(self.openapi_spec, result, path, method)
+                example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(
+                    self.openapi_spec, result, path, method
+                )
                 self.schemas = self.openapi_spec["components"]["schemas"]
-                if example is not None or reference is not None:
-                    self.openapi_spec['endpoints'][path][method.lower()] = {
+
+                if example or reference:
+                    endpoints[path][method.lower()] = {
                         "summary": f"{method} operation on {path}",
                         "responses": {
                             "200": {
                                 "description": "Successful response",
                                 "content": {
                                     "application/json": {
-                                        "schema": {
-                                            "$ref": reference
-                                        },
+                                        "schema": {"$ref": reference},
                                         "examples": example
                                     }
                                 }
                             }
                         }
                     }
-            return  list(self.openapi_spec['endpoints'].keys())
+
+                    if '1' not in path and x != "":
+                        endpoint_methods[path].append(method)
+                    elif self.partial_match(x, endpoints.keys()):
+                        path = f"/{x}"
+                        print(f'endpoint methods = {endpoint_methods}')
+                        print(f'new path:{path}')
+                        endpoint_methods[path].append(method)
+
+                    endpoint_methods[path] = list(set(endpoint_methods[path]))
+
+            return list(endpoints.keys())
 
     def write_openapi_to_yaml(self):
         """

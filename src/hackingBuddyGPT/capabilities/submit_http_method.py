@@ -16,6 +16,7 @@ class SubmitHTTPMethod(Capability):
     _client = requests.Session()
     host: str
     follow_redirects: bool = False
+    success_function: Callable[[], None] = None
 
 
     submitted_valid_http_methods: Set[str] = field(default_factory=set, init=False)
@@ -67,7 +68,11 @@ class SubmitHTTPMethod(Capability):
             return str(e)
 
         headers = "\r\n".join(f"{k}: {v}" for k, v in resp.headers.items())
-
+        if len(self.submitted_valid_http_methods) == len(self.valid_http_methods):
+            if self.success_function is not None:
+                self.success_function()
+            else:
+                return "All methods submitted, congratulations"
         # turn the response into "plain text format" for responding to the prompt
         return f"HTTP/1.1 {resp.status_code} {resp.reason}\r\n{headers}\r\n\r\n{resp.text}"""
 

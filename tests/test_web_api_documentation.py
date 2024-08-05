@@ -3,12 +3,13 @@ from unittest.mock import MagicMock, patch
 
 from hackingBuddyGPT.usecases import SimpleWebAPITesting
 from hackingBuddyGPT.usecases.web import MinimalWebTesting
-from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import SimpleWebAPIDocumentationUseCase
+from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import SimpleWebAPIDocumentationUseCase, \
+    SimpleWebAPIDocumentation
 from hackingBuddyGPT.utils import DbStorage, Console
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
-class TestSimpleWebAPITesting(unittest.TestCase):
+class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
 
     @patch('hackingBuddyGPT.utils.openai.openai_lib.OpenAILib')
     def setUp(self, MockOpenAILib):
@@ -18,20 +19,22 @@ class TestSimpleWebAPITesting(unittest.TestCase):
         console = Console()
 
         log_db.init()
-        self.agent = SimpleWebAPITesting(llm=self.mock_llm)
+        self.agent = SimpleWebAPIDocumentation(llm=self.mock_llm)
         self.agent.init()
         self.simple_api_testing = SimpleWebAPIDocumentationUseCase(
             agent=self.agent,
             log_db=log_db,
             console=console,
-            tag='integration_test_linuxprivesc',
+            tag='webApiDocumentation',
             max_turns=len(self.mock_llm.responses)
         )
         self.simple_api_testing.init()
 
     def test_initial_prompt(self):
         # Test if the initial prompt is set correctly
-        self.assertIn("You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at https://jsonplaceholder.typicode.com. Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, and then devise and execute potential exploits. Be diligent in documenting your findings as you navigate through the APIs. Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves. Remember, if you encounter an HTTP method (A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).), promptly submit it as it is of utmost importance.", self.agent._prompt_history[0]['content'])
+        expected_prompt = "You're tasked with documenting the REST APIs of a website hosted at https://jsonplaceholder.typicode.com. Start with an empty OpenAPI specification.\nMaintain meticulousness in documenting your observations as you traverse the APIs."
+
+        self.assertIn(expected_prompt, self.agent._prompt_history[0]['content'])
 
     def test_all_flags_found(self):
         # Mock console.print to suppress output during testing
@@ -62,7 +65,7 @@ class TestSimpleWebAPITesting(unittest.TestCase):
         result = self.agent.perform_round(1)
 
         # Assertions
-        self.assertFalse(result)  # No flags found in this round
+        self.assertTrue(result)
 
         # Check if the LLM was called with the correct parameters
         mock_create_with_completion = self.agent.llm.instructor.chat.completions.create_with_completion

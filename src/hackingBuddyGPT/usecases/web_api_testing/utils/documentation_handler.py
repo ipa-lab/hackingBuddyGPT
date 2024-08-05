@@ -43,7 +43,7 @@ class DocumentationHandler:
             "components": {"schemas": {}}
         }
         self.llm_handler = llm_handler
-        self.api_key = llm_handler.llm.api_key
+        #self.api_key = llm_handler.llm.api_key
         current_path = os.path.dirname(os.path.abspath(__file__))
         self.file_path = os.path.join(current_path, "openapi_spec")
         self.file = os.path.join(self.file_path, self.filename)

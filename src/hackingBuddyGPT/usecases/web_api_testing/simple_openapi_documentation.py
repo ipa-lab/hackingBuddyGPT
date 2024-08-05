@@ -29,19 +29,19 @@ class SimpleWebAPIDocumentation(Agent):
     _all_http_methods_found: bool = False
 
     # Description for expected HTTP methods
-    http_method_description: str = parameter(
+    _http_method_description: str = parameter(
         desc="Pattern description for expected HTTP methods in the API response",
         default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.)."
     )
 
     # Template for HTTP methods in API requests
-    http_method_template: str = parameter(
+    _http_method_template: str = parameter(
         desc="Template to format HTTP methods in API requests, with {method} replaced by actual HTTP method names.",
         default="{method}"
     )
 
     # List of expected HTTP methods
-    http_methods: str = parameter(
+    _http_methods: str = parameter(
         desc="Expected HTTP methods in the API, as a comma-separated list.",
         default="GET,POST,PUT,PATCH,DELETE"
     )

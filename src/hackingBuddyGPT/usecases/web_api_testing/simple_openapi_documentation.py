@@ -9,7 +9,7 @@ from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.web_api_testing.utils.documentation_handler import DocumentationHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.openAPI_specification_manager import OpenAPISpecificationManager
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
@@ -52,7 +52,7 @@ class SimpleWebAPIDocumentation(Agent):
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
         self._setup_initial_prompt()
-        self.documentation_handler = DocumentationHandler(self.llm_handler, self.response_handler)
+        self.documentation_handler = OpenAPISpecificationManager(self.llm_handler, self.response_handler)
 
     def _setup_capabilities(self):
         notes = self._context["notes"]

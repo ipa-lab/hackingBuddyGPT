@@ -11,10 +11,19 @@ class DbStorage:
     def init(self):
         self.connect()
         self.setup_db()
-
+    
     def connect(self):
-        self.db = sqlite3.connect(self.connection_string)
+#        self.db = sqlite3.connect(self.connection_string, timeout=10)  # Set timeout to 10 seconds
+        self.db = sqlite3.connect(self.connection_string, check_same_thread=False, timeout=10)
         self.cursor = self.db.cursor()
+    
+    
+    '''
+    def connect(self):
+        self.db = sqlite3.connect(self.connection_string, timeout=10.0)
+        
+        self.cursor = self.db.cursor()
+    '''
 
     def insert_or_select_cmd(self, name: str) -> int:
         results = self.cursor.execute("SELECT id, name FROM commands WHERE name = ?", (name,)).fetchall()
@@ -80,7 +89,7 @@ class DbStorage:
         self.query_cmd_id = self.insert_or_select_cmd('query_cmd')
         self.analyze_response_id = self.insert_or_select_cmd('analyze_response')
         self.state_update_id = self.insert_or_select_cmd('update_state')
-
+    '''
     def create_new_run(self, model, context_size, tag):
         self.cursor.execute(
             "INSERT INTO runs (model, context_size, state, tag, started_at) VALUES (?, ?, ?, ?, datetime('now'))",
@@ -93,7 +102,21 @@ class DbStorage:
             (
             run_id, round, self.query_cmd_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response,
             answer.prompt, answer.answer))
+    '''
+    def create_new_run(self, model, context_size, tag):
+        with self.db:
+            self.cursor.execute(
+                "INSERT INTO runs (model, context_size, state, tag, started_at) VALUES (?, ?, ?, ?, datetime('now'))",
+                (model, context_size, "in progress", tag))
+            return self.cursor.lastrowid
 
+    def add_log_query(self, run_id, round, cmd, result, answer):
+        with self.db:
+            self.cursor.execute(
+                "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (run_id, round, self.query_cmd_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response, answer.prompt, answer.answer))
+
+    
     def add_log_analyze_response(self, run_id, round, cmd, result, answer):
         self.cursor.execute(
             "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",

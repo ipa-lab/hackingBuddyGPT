@@ -1,12 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
-
 from hackingBuddyGPT.usecases import SimpleWebAPITesting
-from hackingBuddyGPT.usecases.web import MinimalWebTesting
-from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import SimpleWebAPIDocumentationUseCase
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import SimpleWebAPITestingUseCase
 from hackingBuddyGPT.utils import DbStorage, Console
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
 class TestSimpleWebAPITestingTest(unittest.TestCase):

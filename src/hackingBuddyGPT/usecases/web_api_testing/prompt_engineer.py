@@ -1,6 +1,5 @@
 import nltk
 from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 from instructor.retry import InstructorRetryException
 
 
@@ -37,13 +36,11 @@ class PromptEngineer(object):
         self.found_endpoints = ["/"]
         self.endpoint_methods = {}
         self.endpoint_found_methods = {}
-        model_name = "en_core_web_sm"
-
         # Check if the models are already installed
         nltk.download('punkt')
         nltk.download('stopwords')
         self._prompt_history = history
-        self.prompt = self._prompt_history
+        self.prompt = {self.round: {"content": "initial_prompt"}}
         self.previous_prompt = self._prompt_history[self.round]["content"]
         self.schemas = schemas
 
@@ -77,10 +74,6 @@ class PromptEngineer(object):
                     self.round = self.round +1
                     return self._prompt_history
 
-
-
-
-
     def in_context_learning(self, doc=False, hint=""):
         """
         Generates a prompt for in-context learning.
@@ -91,7 +84,14 @@ class PromptEngineer(object):
         Returns:
             str: The generated prompt.
         """
-        return str("\n".join(self._prompt_history[self.round]["content"] + [self.prompt]))
+        history_content = [entry["content"] for entry in self._prompt_history]
+        prompt_content = self.prompt.get(self.round, {}).get("content", "")
+
+        # Add hint if provided
+        if hint:
+            prompt_content += f"\n{hint}"
+
+        return "\n".join(history_content + [prompt_content])
 
     def get_http_action_template(self, method):
         """Helper to construct a consistent HTTP action description."""

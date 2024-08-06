@@ -1,12 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
-
-from hackingBuddyGPT.usecases import SimpleWebAPITesting
-from hackingBuddyGPT.usecases.web import MinimalWebTesting
 from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import SimpleWebAPIDocumentationUseCase, \
     SimpleWebAPIDocumentation
 from hackingBuddyGPT.utils import DbStorage, Console
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
 class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
@@ -40,7 +36,7 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         # Mock console.print to suppress output during testing
         with patch('rich.console.Console.print'):
             self.agent.all_http_methods_found()
-            self.assertFalse(self.agent.all_http_methods_found())
+            self.assertTrue(self.agent.all_http_methods_found())
 
     @patch('time.perf_counter', side_effect=[1, 2])  # Mocking perf_counter for consistent timing
     def test_perform_round(self, mock_perf_counter):

@@ -50,11 +50,14 @@ class ResponseHandler(object):
         """
         if status_line == "Not a valid HTTP method":
             return status_line
-        if status_line and " " in status_line:
-            protocol, status_code, status_message = status_line.split(' ', 2)
-            status_message = status_message.split("\r\n")[0]
+
+        # Regular expression to match valid HTTP status lines
+        match = re.match(r'^(HTTP/\d\.\d) (\d{3}) (.*)$', status_line)
+        if match:
+            protocol, status_code, status_message = match.groups()
             return f'{status_code} {status_message}'
-        raise ValueError("Invalid HTTP status line")
+        else:
+            raise ValueError("Invalid HTTP status line")
 
     def extract_response_example(self, html_content):
         """

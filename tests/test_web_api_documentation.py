@@ -55,7 +55,7 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         mock_response, mock_completion)
 
         # Mock the tool execution result
-        mock_response.execute.return_value = "Mocked tool execution result"
+        mock_response.execute.return_value = "HTTP/1.1 200 OK"
 
         # Perform the round
         result = self.agent.perform_round(1)

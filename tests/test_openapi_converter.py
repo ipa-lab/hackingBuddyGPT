@@ -4,7 +4,7 @@ import os
 import yaml
 import json
 
-from hackingBuddyGPT.usecases.utils.openapi_converter import OpenAPISpecificationConverter
+from hackingBuddyGPT.usecases.web_api_testing.utils.openapi_converter import OpenAPISpecificationConverter
 
 
 class TestOpenAPISpecificationConverter(unittest.TestCase):

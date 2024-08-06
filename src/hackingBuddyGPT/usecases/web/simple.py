@@ -52,11 +52,11 @@ class MinimalWebTesting(Agent):
         }
 
     def all_flags_found(self):
-        self._log.console.print(Panel("All flags found! Congratulations!", title="system"))
+        self.log.console.print(Panel("All flags found! Congratulations!", title="system"))
         self._all_flags_found = True
 
     def perform_round(self, turn: int):
-        with self._log.console.status("[bold green]Asking LLM for a new command..."):
+        with self.log.console.status("[bold green]Asking LLM for a new command..."):
             prompt = self._prompt_history  # TODO: in the future, this should do some context truncation
 
             tic = time.perf_counter()
@@ -66,17 +66,17 @@ class MinimalWebTesting(Agent):
             message = completion.choices[0].message
             tool_call_id = message.tool_calls[0].id
             command = pydantic_core.to_json(response).decode()
-            self._log.console.print(Panel(command, title="assistant"))
+            self.log.console.print(Panel(command, title="assistant"))
             self._prompt_history.append(message)
 
             answer = LLMResult(completion.choices[0].message.content, str(prompt), completion.choices[0].message.content, toc-tic, completion.usage.prompt_tokens, completion.usage.completion_tokens)
 
-        with self._log.console.status("[bold green]Executing that command..."):
+        with self.log.console.status("[bold green]Executing that command..."):
             result = response.execute()
-            self._log.console.print(Panel(result, title="tool"))
+            self.log.console.print(Panel(result, title="tool"))
             self._prompt_history.append(tool_message(result, tool_call_id))
 
-        self._log.add_log_query(turn, command, result, answer)
+        self.log.add_log_query(turn, command, result, answer)
         return self._all_flags_found
 
 

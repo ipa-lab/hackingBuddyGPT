@@ -44,9 +44,9 @@ class LinuxPrivescWithHintFileUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
                 if self.agent.conn.hostname in hints:
                     return hints[self.agent.conn.hostname]
         except FileNotFoundError:
-            self._log.console.print("[yellow]Hint file not found")
+            self.log.console.print("[yellow]Hint file not found")
         except Exception as e:
-            self._log.console.print("[yellow]Hint file could not loaded:", str(e))
+            self.log.console.print("[yellow]Hint file could not loaded:", str(e))
         return ""
 
 
@@ -61,23 +61,25 @@ class LinuxPrivescWithLSEUseCase(UseCase):
 
     _got_root: bool = False
 
-    # use either an use-case or an agent to perform the privesc
+    # use either a use-case or an agent to perform the privesc
     use_use_case: bool = False
+    _configuration: any = None
 
     def init(self, configuration=None):
         super().init(configuration)
+        self._configuration = configuration
 
     # simple helper that uses lse.sh to get hints from the system
     def call_lse_against_host(self):
-        self._log.console.print("[green]performing initial enumeration with lse.sh")
+        self.log.console.print("[green]performing initial enumeration with lse.sh")
 
         run_cmd = "wget -q 'https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh' -O lse.sh;chmod 700 lse.sh; ./lse.sh -c -i -l 0 | grep -v 'nope$' | grep -v 'skip$'"
 
         result, _ = SSHRunCommand(conn=self.conn, timeout=120)(run_cmd)
 
-        self.console.print("[yellow]got the output: " + result)
+        self.log.console.print("[yellow]got the output: " + result)
         cmd = self.llm.get_response(template_lse, lse_output=result, number=3)
-        self.console.print("[yellow]got the cmd: " + cmd.result)
+        self.log.console.print("[yellow]got the cmd: " + cmd.result)
 
         return [x for x in cmd.result.splitlines() if x.strip()]
 
@@ -98,7 +100,7 @@ class LinuxPrivescWithLSEUseCase(UseCase):
                 result = self.run_using_agent(hint, turns_per_hint)
 
             if result is True:
-                self.console.print("[green]Got root!")
+                self.log.console.print("[green]Got root!")
                 return True
 
     def run_using_usecases(self, hint, turns_per_hint):
@@ -110,13 +112,13 @@ class LinuxPrivescWithLSEUseCase(UseCase):
                 enable_update_state = self.enable_update_state,
                 disable_history = self.disable_history,
                 llm = self.llm,
-                hint = hint
+                hint = hint,
+                log = self.log,
             ),
             max_turns = turns_per_hint,
-            log_db = self.log_db,
-            console = self.console
+            log = self.log,
         )
-        linux_privesc.init()
+        linux_privesc.init(self._configuration)
         return linux_privesc.run()
 
     def run_using_agent(self, hint, turns_per_hint):
@@ -129,7 +131,7 @@ class LinuxPrivescWithLSEUseCase(UseCase):
             enable_update_state = self.enable_update_state,
             disable_history = self.disable_history
         )
-        agent._log = self._log
+        agent.log = self.log
         agent.init()
 
         # perform the privilege escalation
@@ -137,7 +139,7 @@ class LinuxPrivescWithLSEUseCase(UseCase):
         turn = 1
         got_root = False
         while turn <= turns_per_hint and not got_root:
-            self._log.console.log(f"[yellow]Starting turn {turn} of {turns_per_hint}")
+            self.log.console.log(f"[yellow]Starting turn {turn} of {turns_per_hint}")
 
             if agent.perform_round(turn) is True:
                 got_root = True

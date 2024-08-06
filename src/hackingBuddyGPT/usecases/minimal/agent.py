@@ -27,7 +27,7 @@ class MinimalLinuxPrivesc(Agent):
     def perform_round(self, turn: int) -> bool:
         got_root: bool = False
 
-        with self._log.console.status("[bold green]Asking LLM for a new command..."):
+        with self.log.console.status("[bold green]Asking LLM for a new command..."):
             # get as much history as fits into the target context size
             history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size)
 
@@ -35,14 +35,14 @@ class MinimalLinuxPrivesc(Agent):
             answer = self.llm.get_response(template_next_cmd, capabilities=self.get_capability_block(), history=history, conn=self.conn)
             cmd = llm_util.cmd_output_fixer(answer.result)
 
-        with self._log.console.status("[bold green]Executing that command..."):
-            self._log.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
+        with self.log.console.status("[bold green]Executing that command..."):
+            self.log.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
             result, got_root = self.get_capability(cmd.split(" ", 1)[0])(cmd)
 
         # log and output the command and its result
-        self._log.add_log_query(turn, cmd, result, answer)
+        self.log.add_log_query(turn, cmd, result, answer)
         self._sliding_history.add_command(cmd, result)
-        self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+        self.log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
         # if we got root, we can stop the loop
         return got_root

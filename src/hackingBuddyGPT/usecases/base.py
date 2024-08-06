@@ -13,18 +13,19 @@ from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
 
 
+@configurable("logger", "Logger")
 @dataclass
-class Logger:
+class RawLogger:
     log_db: DbStorage
     console: Console
-    model: str = ""
     tag: str = ""
-    configuration: str = ""
 
     run_id: int = field(init=False, default=None)
 
-    def __post_init__(self):
-        self.run_id = self.log_db.create_new_run(self.model, self.tag, self.configuration)
+    def start_run(self, name: str, configuration: str):
+        if self.run_id is not None:
+            raise ValueError("Run already started")
+        self.run_id = self.log_db.create_new_run(name, self.tag, configuration)
 
     def add_log_query(self, turn: int, command: str, result: str, answer: LLMResult):
         self.log_db.add_log_query(self.run_id, turn, command, result, answer)
@@ -53,6 +54,9 @@ class Logger:
         self.log_db.add_log_message(self.run_id, "status", message, 0, 0, 0)
 
 
+Logger = Global(Transparent(RawLogger))
+
+
 @dataclass
 class UseCase(abc.ABC):
     """
@@ -65,11 +69,7 @@ class UseCase(abc.ABC):
     so that they can be automatically discovered and run from the command line.
     """
 
-    log_db: DbStorage
-    console: Console
-    tag: str = ""
-
-    _log: Logger = None
+    log: Logger
 
     def init(self, configuration):
         """
@@ -77,7 +77,7 @@ class UseCase(abc.ABC):
         perform any dynamic setup that is needed before the run method is called. One of the most common use cases is
         setting up the llm capabilities from the tools that were injected.
         """
-        self._log = Logger(self.log_db, self.console, self.get_name(), self.tag, self.serialize_configuration(configuration))
+        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
 
     def serialize_configuration(self, configuration) -> str:
         return json.dumps(configuration)
@@ -123,27 +123,27 @@ class AutonomousUseCase(UseCase, abc.ABC):
         turn = 1
         try:
             while turn <= self.max_turns and not self._got_root:
-                self._log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
+                self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
 
                 self._got_root = self.perform_round(turn)
 
                 # finish turn and commit logs to storage
-                self._log.log_db.commit()
+                self.log.log_db.commit()
                 turn += 1
 
             self.after_run()
 
             # write the final result to the database and console
             if self._got_root:
-                self._log.run_was_success()
-                self._log.console.print(Panel("[bold green]Got Root!", title="Run finished"))
+                self.log.run_was_success()
+                self.log.console.print(Panel("[bold green]Got Root!", title="Run finished"))
             else:
-                self._log.run_was_failure("maximum turn number reached")
-                self._log.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
+                self.log.run_was_failure("maximum turn number reached")
+                self.log.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
 
             return self._got_root
         except Exception as e:
-            self._log.run_was_failure(f"exception occurred: {e}")
+            self.log.run_was_failure(f"exception occurred: {e}")
             raise
 
 
@@ -192,7 +192,6 @@ class AutonomousAgentUseCase(AutonomousUseCase, typing.Generic[T]):
 
             def init(self, configuration):
                 super().init(configuration)
-                self.agent._log = self._log
                 self.agent.init()
 
             def get_name(self) -> str:

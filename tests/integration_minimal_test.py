@@ -1,5 +1,7 @@
 
 from typing import Tuple
+
+from hackingBuddyGPT.usecases.base import RawLogger
 from hackingBuddyGPT.usecases.minimal.agent import MinimalLinuxPrivesc, MinimalLinuxPrivescUseCase
 from hackingBuddyGPT.usecases.minimal.agent_with_state import MinimalLinuxTemplatedPrivesc, MinimalLinuxTemplatedPrivescUseCase
 from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc, LinuxPrivescUseCase
@@ -74,18 +76,22 @@ def test_linuxprivesc():
 
     log_db.init()
 
+    log = RawLogger(
+        log_db=log_db,
+        console=console,
+        tag='integration_test_linuxprivesc',
+    )
     priv_esc = LinuxPrivescUseCase(
-        agent = LinuxPrivesc(
+        agent=LinuxPrivesc(
             conn=conn,
             enable_explanation=False,
             disable_history=False,
             hint='',
-            llm = llm,
+            llm=llm,
+            log=log,
         ),
-        log_db = log_db,
-        console = console,
-        tag = 'integration_test_linuxprivesc',
-        max_turns = len(llm.responses)
+        log=log,
+        max_turns=len(llm.responses)
     )
 
     priv_esc.init({})
@@ -101,15 +107,19 @@ def test_minimal_agent():
 
     log_db.init()
 
+    log = RawLogger(
+        log_db=log_db,
+        console=console,
+        tag='integration_test_minimallinuxprivesc',
+    )
     priv_esc = MinimalLinuxPrivescUseCase(
-        agent = MinimalLinuxPrivesc(
+        agent=MinimalLinuxPrivesc(
             conn=conn,
-            llm=llm
+            llm=llm,
+            log=log,
         ),
-        log_db = log_db,
-        console = console,
-        tag = 'integration_test_minimallinuxprivesc',
-        max_turns = len(llm.responses)
+        log=log,
+        max_turns=len(llm.responses)
     )
 
     priv_esc.init({})
@@ -125,15 +135,19 @@ def test_minimal_agent_state():
 
     log_db.init()
 
+    log = RawLogger(
+        log_db=log_db,
+        console=console,
+        tag='integration_test_linuxprivesc',
+    )
     priv_esc = MinimalLinuxTemplatedPrivescUseCase(
-        agent = MinimalLinuxTemplatedPrivesc(
+        agent=MinimalLinuxTemplatedPrivesc(
             conn=conn,
-            llm = llm,
+            llm=llm,
+            log=log,
         ),
-        log_db = log_db,
-        console = console,
-        tag = 'integration_test_linuxprivesc',
-        max_turns = len(llm.responses)
+        log=log,
+        max_turns=len(llm.responses)
     )
 
     priv_esc.init({})

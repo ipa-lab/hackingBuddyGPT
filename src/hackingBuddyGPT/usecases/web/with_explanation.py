@@ -48,15 +48,15 @@ class WebTestingWithExplanation(Agent):
         }
 
     def all_flags_found(self):
-        self._log.status_message("All flags found! Congratulations!")
+        self.log.status_message("All flags found! Congratulations!")
         self._all_flags_found = True
 
     def perform_round(self, turn: int):
         prompt = self._prompt_history  # TODO: in the future, this should do some context truncation
 
-        result: LLMResult = self.llm.stream_response(prompt, self._log.console, capabilities=self._capabilities)
+        result: LLMResult = self.llm.stream_response(prompt, self.log.console, capabilities=self._capabilities)
         message: ChatCompletionMessage = result.result
-        message_id = self._log.add_log_message(message.role, message.content, result.tokens_query, result.tokens_response, result.duration)
+        message_id = self.log.add_log_message(message.role, message.content, result.tokens_query, result.tokens_response, result.duration)
         self._prompt_history.append(result.result)
 
         if message.tool_calls is not None:
@@ -65,7 +65,7 @@ class WebTestingWithExplanation(Agent):
                 tool_call_result = self._capabilities[tool_call.function.name].to_model().model_validate_json(tool_call.function.arguments).execute()
                 toc = time.perf_counter()
                 self._prompt_history.append(tool_message(tool_call_result, tool_call.id))
-                self._log.add_log_tool_call(message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments, tool_call_result, toc - tic)
+                self.log.add_log_tool_call(message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments, tool_call_result, toc - tic)
 
         return self._all_flags_found
 

@@ -50,7 +50,7 @@ class ResponseHandler(object):
         """
         if status_line == "Not a valid HTTP method":
             return status_line
-
+        status_line = status_line.split('\r\n')[0]
         # Regular expression to match valid HTTP status lines
         match = re.match(r'^(HTTP/\d\.\d) (\d{3}) (.*)$', status_line)
         if match:

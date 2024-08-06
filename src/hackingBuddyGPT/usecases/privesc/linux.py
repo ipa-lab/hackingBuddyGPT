@@ -62,7 +62,7 @@ class LinuxPrivescWithLSEUseCase(UseCase):
     _got_root: bool = False
 
     # use either an use-case or an agent to perform the privesc
-    _use_use_case: bool = False
+    use_use_case: bool = False
 
     def init(self):
         super().init()
@@ -104,13 +104,17 @@ class LinuxPrivescWithLSEUseCase(UseCase):
     def run_using_usecases(self, hint, turns_per_hint):
         # TODO: init usecase
         linux_privesc = LinuxPrivescUseCase(
-            conn = self.conn,
-            llm = self.llm,
-            hint = hint,
+            agent = LinuxPrivesc(
+                conn = self.conn,
+                enable_explanation = self.enable_explanation,
+                enable_update_state = self.enable_update_state,
+                disable_history = self.disable_history,
+                llm = self.llm,
+                hint = hint
+            ),
             max_turns = turns_per_hint,
-            enable_explanation = self.enable_explanation,
-            enable_update_state = self.enable_update_state,
-            disable_history = self.disable_history
+            log_db = self.log_db,
+            console = self.console
         )
         linux_privesc.init()
         return linux_privesc.run()

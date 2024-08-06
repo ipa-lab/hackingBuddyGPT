@@ -1,6 +1,5 @@
 import nltk
 from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 from instructor.retry import InstructorRetryException
 
 
@@ -37,13 +36,11 @@ class PromptEngineer(object):
         self.found_endpoints = ["/"]
         self.endpoint_methods = {}
         self.endpoint_found_methods = {}
-        model_name = "en_core_web_sm"
-
         # Check if the models are already installed
         nltk.download('punkt')
         nltk.download('stopwords')
         self._prompt_history = history
-        self.prompt = self._prompt_history
+        self.prompt = {self.round: {"content": "initial_prompt"}}
         self.previous_prompt = self._prompt_history[self.round]["content"]
         self.schemas = schemas
 
@@ -77,10 +74,6 @@ class PromptEngineer(object):
                     self.round = self.round +1
                     return self._prompt_history
 
-
-
-
-
     def in_context_learning(self, doc=False, hint=""):
         """
         Generates a prompt for in-context learning.
@@ -91,7 +84,14 @@ class PromptEngineer(object):
         Returns:
             str: The generated prompt.
         """
-        return str("\n".join(self._prompt_history[self.round]["content"] + [self.prompt]))
+        history_content = [entry["content"] for entry in self._prompt_history]
+        prompt_content = self.prompt.get(self.round, {}).get("content", "")
+
+        # Add hint if provided
+        if hint:
+            prompt_content += f"\n{hint}"
+
+        return "\n".join(history_content + [prompt_content])
 
     def get_http_action_template(self, method):
         """Helper to construct a consistent HTTP action description."""
@@ -103,13 +103,45 @@ class PromptEngineer(object):
         else:
             return (
                 f"Create HTTPRequests of type {method} considering only the object with id=1 for the endpoint and understand the responses. Ensure that they are correct requests.")
+    def get_initial_steps(self, common_steps):
+            return [
+                "Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}",
+                "Note down the response structures, status codes, and headers for each endpoint.",
+                "For each endpoint, document the following details: URL, HTTP method, query parameters and path variables, expected request body structure for requests, response structure for successful and error responses."
+            ] + common_steps
 
+    def get_phase_steps(self, phase, common_steps):
+            if phase != "DELETE":
+                return [
+                    f"Identify for all endpoints {self.found_endpoints} excluding {self.endpoint_found_methods[phase]} a valid HTTP method {phase} call.",
+                    self.get_http_action_template(phase)
+                ] + common_steps
+            else:
+                return [
+                    "Check for all endpoints the DELETE method. Delete the first instance for all endpoints.",
+                    self.get_http_action_template(phase)
+                ] + common_steps
 
+    def get_endpoints_needing_help(self):
+            endpoints_needing_help = []
+            endpoints_and_needed_methods = {}
+            http_methods_set = {"GET", "POST", "PUT", "DELETE"}
+
+            for endpoint, methods in self.endpoint_methods.items():
+                missing_methods = http_methods_set - set(methods)
+                if len(methods) < 4:
+                    endpoints_needing_help.append(endpoint)
+                    endpoints_and_needed_methods[endpoint] = list(missing_methods)
+
+            if endpoints_needing_help:
+                first_endpoint = endpoints_needing_help[0]
+                needed_method = endpoints_and_needed_methods[first_endpoint][0]
+                return [
+                    f"For endpoint {first_endpoint} find this missing method: {needed_method}. If all the HTTP methods have already been found for an endpoint, then do not include this endpoint in your search."]
+            return []
     def chain_of_thought(self, doc=False, hint=""):
         """
         Generates a prompt using the chain-of-thought strategy.
-        If 'doc' is True, it follows a detailed documentation-oriented prompt strategy based on the round number.
-        If 'doc' is False, it provides general guidance for early round numbers and focuses on HTTP methods for later rounds.
 
         Args:
             doc (bool): Determines whether the documentation-oriented chain of thought should be used.
@@ -126,60 +158,19 @@ class PromptEngineer(object):
             "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
         ]
 
-        http_methods = [  "PUT", "DELETE"]
-        http_phase = {
-            5: http_methods[0],
-            10: http_methods[1]
-        }
-
+        http_methods = ["PUT", "DELETE"]
+        http_phase = {10: http_methods[0], 15: http_methods[1]}
         if doc:
-            if self.round < 5:
-
-                chain_of_thought_steps = [
-                                             f"Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}", f"Note down the response structures, status codes, and headers for each endpoint.",
-                                             f"For each endpoint, document the following details: URL, HTTP method, "
-                                             f"query parameters and path variables, expected request body structure for  requests, response structure for successful and error responses."
-                                         ] + common_steps
+            if self.round <= 5:
+                chain_of_thought_steps = self.get_initial_steps(common_steps)
+            elif self.round <= 10:
+                phase = http_phase.get(min(filter(lambda x: self.round <= x, http_phase.keys())))
+                chain_of_thought_steps = self.get_phase_steps(phase, common_steps)
             else:
-                if self.round <= 10:
-                    phase = http_phase.get(min(filter(lambda x: self.round <= x, http_phase.keys())))
-                    print(f'phase:{phase}')
-                    if phase != "DELETE":
-                        chain_of_thought_steps = [
-                                             f"Identify for all endpoints {self.found_endpoints} excluding {self.endpoint_found_methods[phase]} a valid HTTP method {phase} call.",
-                                             self.get_http_action_template(phase)
-                                         ] + common_steps
-                    else:
-                        chain_of_thought_steps = [
-                                                 f"Check for all endpoints the DELETE method. Delete the first instance for all endpoints. ",
-                                                 self.get_http_action_template(phase)
-                                             ] + common_steps
-                else:
-                    endpoints_needing_help = []
-                    endpoints_and_needed_methods = {}
-
-                    # Standard HTTP methods
-                    http_methods = {"GET", "POST", "PUT", "DELETE"}
-
-                    for endpoint in self.endpoint_methods:
-                        # Calculate the missing methods for the current endpoint
-                        missing_methods = http_methods - set(self.endpoint_methods[endpoint])
-
-                        if len(self.endpoint_methods[endpoint]) < 4:
-                            endpoints_needing_help.append(endpoint)
-                            # Add the missing methods to the dictionary
-                            endpoints_and_needed_methods[endpoint] = list(missing_methods)
-
-                    print(f'endpoints_and_needed_methods: {endpoints_and_needed_methods}')
-                    print(f'first endpoint in list: {endpoints_needing_help[0]}')
-                    print(f'methods needed for first endpoint: {endpoints_and_needed_methods[endpoints_needing_help[0]][0]}')
-
-                    chain_of_thought_steps = [f"For enpoint {endpoints_needing_help[0]} find this missing method :{endpoints_and_needed_methods[endpoints_needing_help[0]][0]} "
-                                              f"If all the HTTP methods have already been found for an endpoint, then do not include this endpoint in your search. ",]
-
+                chain_of_thought_steps = self.get_endpoints_needing_help()
         else:
             if self.round == 0:
-                chain_of_thought_steps = ["Let's think step by step."]  # Zero shot prompt
+                chain_of_thought_steps = ["Let's think step by step."]
             elif self.round <= 20:
                 focus_phases = ["endpoints", "HTTP method GET", "HTTP method POST and PUT", "HTTP method DELETE"]
                 focus_phase = focus_phases[self.round // 5]
@@ -187,9 +178,10 @@ class PromptEngineer(object):
             else:
                 chain_of_thought_steps = ["Look for exploits."]
 
-        print(f'chain of thought steps: {chain_of_thought_steps}')
-        prompt = self.check_prompt(self.previous_prompt,
-                                   chain_of_thought_steps + [hint] if hint else chain_of_thought_steps)
+        if hint:
+            chain_of_thought_steps.append(hint)
+
+        prompt = self.check_prompt(self.previous_prompt, chain_of_thought_steps)
         return prompt
 
     def token_count(self, text):

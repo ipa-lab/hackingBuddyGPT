@@ -26,7 +26,6 @@ class MinimalLinuxPrivesc(Agent):
         self.add_capability(SSHRunCommand(conn=self.conn), default=True)
         self.add_capability(SSHTestCredential(conn=self.conn))
         self._template_size = self.llm.count_tokens(template_next_cmd.source)
-
     def perform_round(self, turn):
         got_root : bool = False
 
@@ -39,13 +38,27 @@ class MinimalLinuxPrivesc(Agent):
             cmd = llm_util.cmd_output_fixer(answer.result)
 
         with self.console.status("[bold green]Executing that command..."):
-                self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-                result, got_root = self.get_capability(cmd.split(" ", 1)[0])(cmd)
+            self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
 
-        # log and output the command and its result
-        self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
-        self._sliding_history.add_command(cmd, result)
-        self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+            # Assuming cmd is of the form "username password"
+            parts = cmd.split(" ", 1)
+            if len(parts) == 2:
+                username, password = parts
+                ##here fix!
+                result, got_root = self.get_capability("test_credential")(username, password)
+            else:
+                # Handle other cases or log error
+                result = "Command format error. Expected 'username password'."
+                got_root = False
 
-        # if we got root, we can stop the loop
+            #self.log_db.add_log_query(self._run_id, cmd, result, answer)
+            self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
+            self._sliding_history.add_command(cmd, result)
+            self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+
         return got_root
+    
+    
+    
+    
+

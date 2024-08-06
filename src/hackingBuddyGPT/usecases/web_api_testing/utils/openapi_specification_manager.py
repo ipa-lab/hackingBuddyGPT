@@ -3,7 +3,7 @@ import yaml
 from datetime import datetime
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 
-class DocumentationHandler:
+class OpenAPISpecificationManager:
     """
     Handles the generation and updating of an OpenAPI specification document based on dynamic API responses.
 
@@ -51,7 +51,7 @@ class DocumentationHandler:
             "yaml": YAMLFile()
         }
 
-    def partial_match(self, element, string_list):
+    def is_partial_match(self, element, string_list):
         return any(element in string or string in element for string in string_list)
 
     def update_openapi_spec(self, resp, result):
@@ -66,7 +66,7 @@ class DocumentationHandler:
 
         if request.__class__.__name__ == 'RecordNote':  # TODO: check why isinstance does not work
             self.check_openapi_spec(resp)
-        if request.__class__.__name__ == 'HTTPRequest':
+        elif request.__class__.__name__ == 'HTTPRequest':
             path = request.path
             method = request.method
             print(f'method: {method}')
@@ -107,7 +107,7 @@ class DocumentationHandler:
 
                     if '1' not in path and x != "":
                         endpoint_methods[path].append(method)
-                    elif self.partial_match(x, endpoints.keys()):
+                    elif self.is_partial_match(x, endpoints.keys()):
                         path = f"/{x}"
                         print(f'endpoint methods = {endpoint_methods}')
                         print(f'new path:{path}')

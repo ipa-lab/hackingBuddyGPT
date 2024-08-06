@@ -1,12 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
-
 from hackingBuddyGPT.usecases import SimpleWebAPITesting
-from hackingBuddyGPT.usecases.web import MinimalWebTesting
-from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import SimpleWebAPIDocumentationUseCase
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import SimpleWebAPITestingUseCase
 from hackingBuddyGPT.utils import DbStorage, Console
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
 class TestSimpleWebAPITestingTest(unittest.TestCase):
@@ -57,7 +53,7 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         mock_response, mock_completion)
 
         # Mock the tool execution result
-        mock_response.execute.return_value = "Mocked tool execution result"
+        mock_response.execute.return_value = "HTTP/1.1 200 OK"
 
         # Perform the round
         result = self.agent.perform_round(1)

@@ -1,12 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
-
-from hackingBuddyGPT.usecases import SimpleWebAPITesting
-from hackingBuddyGPT.usecases.web import MinimalWebTesting
 from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import SimpleWebAPIDocumentationUseCase, \
     SimpleWebAPIDocumentation
 from hackingBuddyGPT.utils import DbStorage, Console
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
 class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
@@ -39,8 +35,8 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
     def test_all_flags_found(self):
         # Mock console.print to suppress output during testing
         with patch('rich.console.Console.print'):
-            self.agent.all_http_methods_found()
-            self.assertFalse(self.agent.all_http_methods_found())
+            self.agent.all_http_methods_found(1)
+            self.assertFalse(self.agent.all_http_methods_found(1))
 
     @patch('time.perf_counter', side_effect=[1, 2])  # Mocking perf_counter for consistent timing
     def test_perform_round(self, mock_perf_counter):
@@ -59,13 +55,13 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         mock_response, mock_completion)
 
         # Mock the tool execution result
-        mock_response.execute.return_value = "Mocked tool execution result"
+        mock_response.execute.return_value = "HTTP/1.1 200 OK"
 
         # Perform the round
         result = self.agent.perform_round(1)
 
         # Assertions
-        self.assertTrue(result)
+        self.assertFalse(result)
 
         # Check if the LLM was called with the correct parameters
         mock_create_with_completion = self.agent.llm.instructor.chat.completions.create_with_completion

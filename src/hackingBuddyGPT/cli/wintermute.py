@@ -14,7 +14,7 @@ def main():
         ))
 
     parsed = parser.parse_args(sys.argv[1:])
-    configuration = {k: v for k, v in vars(parsed).items() if k != "use_case"}
+    configuration = {k: v for k, v in vars(parsed).items() if k not in ("use_case", "parser_state")}
     instance = parsed.use_case(parsed)
     instance.init(configuration=configuration)
     instance.run()

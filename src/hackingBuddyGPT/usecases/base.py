@@ -7,7 +7,8 @@ from rich.panel import Panel
 from typing import Dict, Type
 
 from hackingBuddyGPT.utils import LLMResult
-from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters, transparent
+from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters, \
+    Transparent, configurable, Global, ParserState
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
 
@@ -158,11 +159,12 @@ class _WrappedUseCase:
     parameters: ParameterDefinitions
 
     def build_parser(self, parser: argparse.ArgumentParser):
-        build_parser(self.parameters, parser)
-        parser.set_defaults(use_case=self)
+        parser_state = ParserState()
+        build_parser(self.parameters, parser, parser_state)
+        parser.set_defaults(use_case=self, parser_state=parser_state)
 
     def __call__(self, args: argparse.Namespace):
-        return self.use_case(**get_arguments(self.parameters, args))
+        return self.use_case(**get_arguments(self.parameters, args, args.parser_state))
 
 
 use_cases: Dict[str, _WrappedUseCase] = dict()
@@ -186,7 +188,7 @@ class AutonomousAgentUseCase(AutonomousUseCase, typing.Generic[T]):
         item.__parameters__ = get_class_parameters(item)
 
         class AutonomousAgentUseCase(AutonomousUseCase):
-            agent: transparent(item) = None
+            agent: Transparent(item) = None
 
             def init(self, configuration):
                 super().init(configuration)

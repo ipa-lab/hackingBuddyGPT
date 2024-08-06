@@ -3,7 +3,7 @@ import dataclasses
 import inspect
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, TypeVar
+from typing import Any, Dict, TypeVar, Set
 
 from dotenv import load_dotenv
 
@@ -28,6 +28,12 @@ def get_default(key, default):
 
 
 @dataclass
+class ParserState:
+    global_parser_definitions: Set[str] = dataclasses.field(default_factory=lambda: set())
+    global_configurations: Dict[Type, Dict[str, Any]] = dataclasses.field(default_factory=lambda: dict())
+
+
+@dataclass
 class ParameterDefinition:
     """
     A ParameterDefinition is used for any parameter that is just a simple type, which can be handled by argparse directly.
@@ -37,13 +43,13 @@ class ParameterDefinition:
     default: Any
     description: str
 
-    def parser(self, name: str, parser: argparse.ArgumentParser):
+    def parser(self, name: str, parser: argparse.ArgumentParser, parser_state: ParserState):
         default = get_default(name, self.default)
 
         parser.add_argument(f"--{name}", type=self.type, default=default, required=default is None,
                             help=self.description)
 
-    def get(self, name: str, args: argparse.Namespace):
+    def get(self, name: str, args: argparse.Namespace, parser_state: ParserState):
         return getattr(args, name)
 
 
@@ -59,25 +65,45 @@ class ComplexParameterDefinition(ParameterDefinition):
     it. So if you have recursive type definitions that you try to make configurable, this will not work.
     """
     parameters: ParameterDefinitions
+    global_parameter: bool
     transparent: bool = False
 
-    def parser(self, basename: str, parser: argparse.ArgumentParser):
+    def parser(self, basename: str, parser: argparse.ArgumentParser, parser_state: ParserState):
+        if self.global_parameter and self.name in parser_state.global_parser_definitions:
+            return
+
         for name, parameter in self.parameters.items():
             if isinstance(parameter, dict):
-                build_parser(parameter, parser, next_name(basename, name, parameter))
+                build_parser(parameter, parser, parser_state, next_name(basename, name, parameter))
             else:
-                parameter.parser(next_name(basename, name, parameter), parser)
+                parameter.parser(next_name(basename, name, parameter), parser, parser_state)
 
-    def get(self, name: str, args: argparse.Namespace):
-        args = get_arguments(self.parameters, args, name)
+        if self.global_parameter:
+            parser_state.global_parser_definitions.add(self.name)
 
-        def create():
-            instance = self.type(**args)
-            if hasattr(instance, "init") and not getattr(self.type, "__transparent__", False):
-                instance.init()
-            setattr(instance, "configurable_recreate", create)
-            return instance
-        return create()
+    def get(self, name: str, args: argparse.Namespace, parser_state: ParserState):
+        def make(name, args):
+            args = get_arguments(self.parameters, args, parser_state, name)
+
+            def create():
+                instance = self.type(**args)
+                if hasattr(instance, "init") and not getattr(self.type, "__transparent__", False):
+                    instance.init()
+                setattr(instance, "configurable_recreate", create)
+                return instance
+
+            return create()
+        if not self.global_parameter:
+            return make(name, args)
+
+        if self.type in parser_state.global_configurations and self.name in parser_state.global_configurations[self.type]:
+            return parser_state.global_configurations[self.type][self.name]
+
+        instance = make(name, args)
+        if self.type not in parser_state.global_configurations:
+            parser_state.global_configurations[self.type] = dict()
+        parser_state.global_configurations[self.type][self.name] = instance
+        return instance
 
 
 def get_class_parameters(cls, name: str = None, fields: Dict[str, dataclasses.Field] = None) -> ParameterDefinitions:
@@ -117,23 +143,31 @@ def get_parameters(fun, basename: str, fields: Dict[str, dataclasses.Field] = No
             if field.type is not None:
                 type = field.type
 
+        resolution_name = name
+        resolution_basename = basename
+        if getattr(type, "__global__", False):
+            resolution_name = getattr(type, "__global_name__", None)
+            if resolution_name is None:
+                resolution_name = name
+            resolution_basename = resolution_name
+
         if hasattr(type, "__parameters__"):
-            params[name] = ComplexParameterDefinition(name, type, default, description, get_class_parameters(type, basename), transparent=getattr(type, "__transparent__", False))
+            params[name] = ComplexParameterDefinition(resolution_name, type, default, description, get_class_parameters(type, resolution_basename), global_parameter=getattr(type, "__global__", False), transparent=getattr(type, "__transparent__", False))
         elif type in (str, int, float, bool):
-            params[name] = ParameterDefinition(name, type, default, description)
+            params[name] = ParameterDefinition(resolution_name, type, default, description)
         else:
             raise ValueError(f"Parameter {name} of {basename} must have str, int, bool, or a __parameters__ class as type, not {type}")
 
     return params
 
 
-def build_parser(parameters: ParameterDefinitions, parser: argparse.ArgumentParser, basename: str = ""):
+def build_parser(parameters: ParameterDefinitions, parser: argparse.ArgumentParser, parser_state: ParserState, basename: str = ""):
     for name, parameter in parameters.items():
-        parameter.parser(next_name(basename, name, parameter), parser)
+        parameter.parser(next_name(basename, name, parameter), parser, parser_state)
 
 
-def get_arguments(parameters: ParameterDefinitions, args: argparse.Namespace, basename: str = "") -> Dict[str, Any]:
-    return {name: parameter.get(next_name(basename, name, parameter), args) for name, parameter in parameters.items()}
+def get_arguments(parameters: ParameterDefinitions, args: argparse.Namespace, parser_state: ParserState, basename: str = "") -> Dict[str, Any]:
+    return {name: parameter.get(next_name(basename, name, parameter), args, parser_state) for name, parameter in parameters.items()}
 
 
 Configurable = Type  # TODO: Define type
@@ -159,7 +193,20 @@ def configurable(service_name: str, service_desc: str):
 T = TypeVar("T")
 
 
-def transparent(subclass: T) -> T:
+def Global(subclass: T, global_name: str = None) -> T:
+    """
+
+    """
+    class Cloned(subclass):
+        __global__ = True
+        __global_name__ = global_name
+    Cloned.__name__ = subclass.__name__
+    Cloned.__qualname__ = subclass.__qualname__
+    Cloned.__module__ = subclass.__module__
+    return Cloned
+
+
+def Transparent(subclass: T) -> T:
     """
     setting a type to be transparent means, that it will not increase a level in the configuration tree, so if you have the following classes:
 
@@ -179,6 +226,7 @@ def transparent(subclass: T) -> T:
     the configuration will be `--a` and `--b` instead of `--inner.a` and `--inner.b`.
 
     A transparent attribute will also not have its init function called automatically, so you will need to do that on your own, as seen in the Outer init.
+    The function is upper case on purpose, as it is supposed to be used in a Type context
     """
     class Cloned(subclass):
         __transparent__ = True

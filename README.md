@@ -176,6 +176,9 @@ wintermute.py: error: the following arguments are required: {linux_privesc,windo
 
 # start wintermute, i.e., attack the configured virtual machine
 $ python wintermute.py minimal_linux_privesc
+
+# install dependencies for testing if you want to run the tests
+$ pip install .[testing]
 ~~~
 
 ## Publications about hackingBuddyGPT

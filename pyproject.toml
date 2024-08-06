@@ -57,6 +57,11 @@ pythonpath = "src"
 addopts = [
 	"--import-mode=importlib",
 ]
+[project.optional-dependencies]
+testing = [
+    'pytest',
+    'pytest-mock'
+]
 
 [project.scripts]
 wintermute = "hackingBuddyGPT.cli.wintermute:main"

@@ -55,9 +55,8 @@ class TemplatedAgent(Agent):
     def set_template(self, template:str):
         self._template = Template(filename=template)
         self._template_size = self.llm.count_tokens(self._template.source)
-
-    def perform_round(self, turn:int) -> bool:
-        got_root : bool = False
+    def perform_round(self, turn: int) -> bool:##fix code
+        got_root: bool = False
 
         with self.console.status("[bold green]Asking LLM for a new command..."):
             # TODO output/log state
@@ -71,15 +70,35 @@ class TemplatedAgent(Agent):
             cmd = llm_util.cmd_output_fixer(answer.result)
 
         with self.console.status("[bold green]Executing that command..."):
-                self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-                capability = self.get_capability(cmd.split(" ", 1)[0])
-                result, got_root = capability(cmd)
+            self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
 
-        # log and output the command and its result
-        self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
-        self._state.update(capability, cmd, result)
-        # TODO output/log new state
-        self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+            # Assuming command is of the form "capability_name arg1 arg2"
+            parts = cmd.split(" ", 1)
+            if len(parts) == 2:
+                capability_name, args = parts
+                capability = self.get_capability(capability_name)
+                
+                if capability:
+                    # Assuming capability requires multiple arguments
+                    # Adjust the argument unpacking based on capability's requirements
+                    args_list = args.split()  # Split arguments into a list
 
-        # if we got root, we can stop the loop
-        return got_root
+                    try:
+                        result, got_root = capability(*args_list)
+                    except TypeError as e:
+                        result = f"Error executing command: {e}"
+                        got_root = False
+                else:
+                    result = f"Unknown capability: {capability_name}"
+                    got_root = False
+            else:
+                result = "Command format error. Expected 'capability_name arg1 arg2'."
+                got_root = False
+
+            # Log and output the command and its result
+            self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
+            self._state.update(capability, cmd, result)  # Assuming capability is available
+            self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+
+            # If we got root, we can stop the loop
+            return got_root

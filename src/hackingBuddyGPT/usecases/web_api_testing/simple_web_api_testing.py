@@ -10,6 +10,7 @@ from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_http_method import SubmitHTTPMethod
 from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.web_api_testing.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
@@ -73,10 +74,11 @@ class SimpleWebAPITesting(Agent):
             )
         }
         self._prompt_history.append(initial_prompt)
-        self.prompt_engineer = PromptEngineer(
-            strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm_handler=self.llm_handler,
-            history=self._prompt_history, schemas={}, response_handler=self.response_handler
-        )
+        handlers = (self.llm_handler, self.response_handler)
+        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
+                                              history=self._prompt_history,
+                                              handlers=handlers,
+                                              context=PromptContext.PENTESTING)
 
     def all_http_methods_found(self):
         """
@@ -109,7 +111,7 @@ class SimpleWebAPITesting(Agent):
             turn (int): The current round number.
             FINAL_ROUND (int, optional): The final round number. Defaults to 30.
         """
-        prompt = self.prompt_engineer.generate_prompt(doc=True)
+        prompt = self.prompt_engineer.generate_prompt()
         response, completion = self.llm_handler.call_llm(prompt)
         self._handle_response(completion, response)
 

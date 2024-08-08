@@ -9,6 +9,7 @@ from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.web_api_testing.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.utils.openapi_specification_manager import OpenAPISpecificationManager
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptEngineer, PromptStrategy
@@ -69,9 +70,11 @@ class SimpleWebAPIDocumentation(Agent):
                        f"Maintain meticulousness in documenting your observations as you traverse the APIs."
         }
         self._prompt_history.append(initial_prompt)
-        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT, llm_handler=self.llm_handler,
-                                              history=self._prompt_history, schemas={},
-                                              response_handler=self.response_handler)
+        handlers = (self.llm_handler, self.response_handler)
+        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
+                                              history=self._prompt_history,
+                                              handlers= handlers,
+                                              context=PromptContext.DOCUMENTATION)
 
 
     def all_http_methods_found(self,turn):
@@ -80,7 +83,6 @@ class SimpleWebAPIDocumentation(Agent):
 
         found_endpoints = sum(len(value_list) for value_list in self.documentation_handler.endpoint_methods.values())
         expected_endpoints = len(self.documentation_handler.endpoint_methods.keys())*4
-        print(f'found endpoints:{found_endpoints}')
         print(f'expected endpoints:{expected_endpoints}')
         print(f'correct? {found_endpoints== expected_endpoints}')
         if found_endpoints > 0 and (found_endpoints== expected_endpoints) :
@@ -110,9 +112,9 @@ class SimpleWebAPIDocumentation(Agent):
             self._prompt_history.append(tool_message(result_str, tool_call_id))
             invalid_flags = ["recorded","Not a valid HTTP method", "404" ,"Client Error: Not Found"]
             if not result_str in invalid_flags  or any(item in result_str for item in invalid_flags):
-                self.prompt_engineer.found_endpoints = self.documentation_handler.update_openapi_spec(response, result)
+                self.prompt_engineer.prompt_helper.found_endpoints = self.documentation_handler.update_openapi_spec(response, result)
                 self.documentation_handler.write_openapi_to_yaml()
-                self.prompt_engineer.schemas = self.documentation_handler.schemas
+                self.prompt_engineer.prompt_helper.schemas = self.documentation_handler.schemas
                 from collections import defaultdict
                 http_methods_dict = defaultdict(list)
 
@@ -120,8 +122,8 @@ class SimpleWebAPIDocumentation(Agent):
                 for endpoint, methods in self.documentation_handler.endpoint_methods.items():
                     for method in methods:
                         http_methods_dict[method].append(endpoint)
-                self.prompt_engineer.endpoint_found_methods =  http_methods_dict
-                self.prompt_engineer.endpoint_methods = self.documentation_handler.endpoint_methods
+                self.prompt_engineer.prompt_helper.endpoint_found_methods =  http_methods_dict
+                self.prompt_engineer.prompt_helper.endpoint_methods = self.documentation_handler.endpoint_methods
         return self.all_http_methods_found(turn)
 
 

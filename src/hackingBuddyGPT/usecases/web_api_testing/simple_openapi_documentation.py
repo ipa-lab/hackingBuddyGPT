@@ -74,7 +74,8 @@ class SimpleWebAPIDocumentation(Agent):
         self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
                                               history=self._prompt_history,
                                               handlers= handlers,
-                                              context=PromptContext.DOCUMENTATION)
+                                              context=PromptContext.DOCUMENTATION,
+                                              rest_api=self.host)
 
 
     def all_http_methods_found(self,turn):

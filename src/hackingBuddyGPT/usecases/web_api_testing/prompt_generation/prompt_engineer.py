@@ -12,7 +12,7 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.tree_of_
 class PromptEngineer:
     '''Prompt engineer that creates prompts of different types'''
 
-    def __init__(self, strategy, history, handlers, context):
+    def __init__(self, strategy, history, handlers, context, rest_api=""):
         """
         Initializes the PromptEngineer with a specific strategy and handlers for LLM and responses.
 
@@ -21,8 +21,10 @@ class PromptEngineer:
             history (dict, optional): The history of chats. Defaults to None.
             handlers (tuple): The LLM handler and response handler.
             context (PromptContext): The context for which prompts are generated.
+            rest_api (str, optional): The REST API
         """
         self.strategy = strategy
+        self.rest_api = rest_api
         self.llm_handler, self.response_handler = handlers
         self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler)
         self.context = context
@@ -34,7 +36,7 @@ class PromptEngineer:
         self.strategies = {
             PromptStrategy.IN_CONTEXT: InContextLearningPrompt(self.context, self.prompt_helper, self.prompt).generate_prompt,
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(self.context, self.prompt_helper).generate_prompt,
-            PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(self.context, self.prompt_helper).generate_prompt
+            PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(self.context, self.prompt_helper, self.rest_api).generate_prompt
         }
 
     def generate_prompt(self, hint=""):

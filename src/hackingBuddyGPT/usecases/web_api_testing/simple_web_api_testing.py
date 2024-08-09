@@ -77,7 +77,9 @@ class SimpleWebAPITesting(Agent):
         self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
                                               history=self._prompt_history,
                                               handlers=handlers,
-                                              context=PromptContext.PENTESTING)
+                                              context=PromptContext.PENTESTING,
+                                              rest_api=self.host)
+
 
     def all_http_methods_found(self):
         """

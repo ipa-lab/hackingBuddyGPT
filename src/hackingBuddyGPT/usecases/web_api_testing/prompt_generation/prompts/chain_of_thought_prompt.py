@@ -36,10 +36,10 @@ class ChainOfThoughtPrompt(BasicPrompt):
         Returns:
             str: The generated prompt.
         """
-        common_steps = self.get_common_steps()
+        common_steps = self._get_common_steps()
         http_phase = {10: "PUT", 15: "DELETE"}
 
-        chain_of_thought_steps = self.get_chain_of_thought_steps(round, common_steps, http_phase)
+        chain_of_thought_steps = self._get_chain_of_thought_steps(round, common_steps, http_phase)
 
         if hint:
             chain_of_thought_steps.append(hint)
@@ -47,7 +47,7 @@ class ChainOfThoughtPrompt(BasicPrompt):
         return self.prompt_helper.check_prompt(
             previous_prompt=previous_prompt, steps=chain_of_thought_steps)
 
-    def get_common_steps(self):
+    def _get_common_steps(self):
         """
         Provides a list of common steps for generating prompts.
 
@@ -69,7 +69,7 @@ class ChainOfThoughtPrompt(BasicPrompt):
                     "share drafts for review, and update it regularly as the API evolves. Make the specification available to developers through the API documentation site, keeping it "
                     "current with any API changes."]
 
-    def get_chain_of_thought_steps(self, round, common_steps, http_phase):
+    def _get_chain_of_thought_steps(self, round, common_steps, http_phase):
         """
         Provides the steps for the chain-of-thought strategy based on the current round and context.
 

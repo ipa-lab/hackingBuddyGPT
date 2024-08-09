@@ -1,5 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
+
+from hackingBuddyGPT.usecases.base import RawLogger
 from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import SimpleWebAPIDocumentationUseCase, \
     SimpleWebAPIDocumentation
 from hackingBuddyGPT.utils import DbStorage, Console
@@ -15,16 +17,19 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         console = Console()
 
         log_db.init()
-        self.agent = SimpleWebAPIDocumentation(llm=self.mock_llm)
-        self.agent.init()
-        self.simple_api_testing = SimpleWebAPIDocumentationUseCase(
-            agent=self.agent,
+        log = RawLogger(
             log_db=log_db,
             console=console,
             tag='webApiDocumentation',
+        )
+        self.agent = SimpleWebAPIDocumentation(llm=self.mock_llm, log=log)
+        self.agent.init()
+        self.simple_api_testing = SimpleWebAPIDocumentationUseCase(
+            agent=self.agent,
+            log=log,
             max_turns=len(self.mock_llm.responses)
         )
-        self.simple_api_testing.init()
+        self.simple_api_testing.init({})
 
     def test_initial_prompt(self):
         # Test if the initial prompt is set correctly

@@ -1,21 +1,60 @@
 import abc
+import json
 import argparse
 import typing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from rich.panel import Panel
 from typing import Dict, Type
 
-from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters, transparent
+from hackingBuddyGPT.utils import LLMResult
+from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters, \
+    Transparent, configurable, Global, ParserState
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
 
 
+@configurable("logger", "Logger")
 @dataclass
-class Logger:
+class RawLogger:
     log_db: DbStorage
     console: Console
     tag: str = ""
-    run_id: int = 0
+
+    run_id: int = field(init=False, default=None)
+
+    def start_run(self, name: str, configuration: str):
+        if self.run_id is not None:
+            raise ValueError("Run already started")
+        self.run_id = self.log_db.create_new_run(name, self.tag, configuration)
+
+    def add_log_query(self, turn: int, command: str, result: str, answer: LLMResult):
+        self.log_db.add_log_query(self.run_id, turn, command, result, answer)
+
+    def add_log_message(self, role: str, content: str, tokens_query: int, tokens_response: int, duration: float) -> int:
+        return self.log_db.add_log_message(self.run_id, role, content, tokens_query, tokens_response, duration)
+
+    def add_log_tool_call(self, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration: float):
+        self.console.print(f"\n[bold green on gray3]{' ' * self.console.width}\nTOOL RESPONSE:[/bold green on gray3]")
+        self.console.print(result_text)
+        self.log_db.add_log_tool_call(self.run_id, message_id, tool_call_id, function_name, arguments, result_text, duration)
+
+    def add_log_analyze_response(self, turn: int, command: str, result: str, answer: LLMResult):
+        self.log_db.add_log_analyze_response(self.run_id, turn, command, result, answer)
+
+    def add_log_update_state(self, turn: int, command: str, result: str, answer: LLMResult):
+        self.log_db.add_log_update_state(self.run_id, turn, command, result, answer)
+
+    def run_was_success(self):
+        self.log_db.run_was_success(self.run_id)
+
+    def run_was_failure(self, reason: str):
+        self.log_db.run_was_failure(self.run_id, reason)
+
+    def status_message(self, message: str):
+        self.log_db.add_log_message(self.run_id, "status", message, 0, 0, 0)
+
+
+Logger = Global(Transparent(RawLogger))
 
 
 @dataclass
@@ -30,21 +69,18 @@ class UseCase(abc.ABC):
     so that they can be automatically discovered and run from the command line.
     """
 
-    log_db: DbStorage
-    console: Console
-    tag: str = ""
+    log: Logger
 
-    _run_id: int = 0
-    _log: Logger = None
-
-    def init(self):
+    def init(self, configuration):
         """
         The init method is called before the run method. It is used to initialize the UseCase, and can be used to
         perform any dynamic setup that is needed before the run method is called. One of the most common use cases is
         setting up the llm capabilities from the tools that were injected.
         """
-        self._run_id = self.log_db.create_new_run(self.get_name(), self.tag)
-        self._log = Logger(self.log_db, self.console, self.tag, self._run_id)
+        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
+
+    def serialize_configuration(self, configuration) -> str:
+        return json.dumps(configuration)
 
     @abc.abstractmethod
     def run(self):
@@ -85,26 +121,30 @@ class AutonomousUseCase(UseCase, abc.ABC):
         self.before_run()
 
         turn = 1
-        while turn <= self.max_turns and not self._got_root:
-            self._log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
+        try:
+            while turn <= self.max_turns and not self._got_root:
+                self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
 
-            self._got_root = self.perform_round(turn)
+                self._got_root = self.perform_round(turn)
 
-            # finish turn and commit logs to storage
-            self._log.log_db.commit()
-            turn += 1
+                # finish turn and commit logs to storage
+                self.log.log_db.commit()
+                turn += 1
 
-        self.after_run()
+            self.after_run()
 
-        # write the final result to the database and console
-        if self._got_root:
-            self._log.log_db.run_was_success(self._run_id, turn)
-            self._log.console.print(Panel("[bold green]Got Root!", title="Run finished"))
-        else:
-            self._log.log_db.run_was_failure(self._run_id, turn)
-            self._log.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
+            # write the final result to the database and console
+            if self._got_root:
+                self.log.run_was_success()
+                self.log.console.print(Panel("[bold green]Got Root!", title="Run finished"))
+            else:
+                self.log.run_was_failure("maximum turn number reached")
+                self.log.console.print(Panel("[green]maximum turn number reached", title="Run finished"))
 
-        return self._got_root
+            return self._got_root
+        except Exception as e:
+            self.log.run_was_failure(f"exception occurred: {e}")
+            raise
 
 
 @dataclass
@@ -119,11 +159,12 @@ class _WrappedUseCase:
     parameters: ParameterDefinitions
 
     def build_parser(self, parser: argparse.ArgumentParser):
-        build_parser(self.parameters, parser)
-        parser.set_defaults(use_case=self)
+        parser_state = ParserState()
+        build_parser(self.parameters, parser, parser_state)
+        parser.set_defaults(use_case=self, parser_state=parser_state)
 
     def __call__(self, args: argparse.Namespace):
-        return self.use_case(**get_arguments(self.parameters, args))
+        return self.use_case(**get_arguments(self.parameters, args, args.parser_state))
 
 
 use_cases: Dict[str, _WrappedUseCase] = dict()
@@ -147,19 +188,18 @@ class AutonomousAgentUseCase(AutonomousUseCase, typing.Generic[T]):
         item.__parameters__ = get_class_parameters(item)
 
         class AutonomousAgentUseCase(AutonomousUseCase):
-            agent: transparent(item) = None
+            agent: Transparent(item) = None
 
-            def init(self):
-                super().init()
-                self.agent._log = self._log
+            def init(self, configuration):
+                super().init(configuration)
                 self.agent.init()
 
             def get_name(self) -> str:
                 return self.__class__.__name__
-            
+
             def before_run(self):
                 return self.agent.before_run()
-            
+
             def after_run(self):
                 return self.agent.after_run()
 

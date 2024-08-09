@@ -75,7 +75,15 @@ class OpenAILib(LLM):
             response.usage.completion_tokens,
         )
 
-    def stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None) -> Iterable[Union[ChatCompletionChunk, LLMResult]]:
+    def stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None, get_individual_updates=False) -> Union[LLMResult, Iterable[Union[ChatCompletionChunk, LLMResult]]]:
+        generator = self._stream_response(prompt, console, capabilities)
+
+        if get_individual_updates:
+            return generator
+
+        return list(generator)[-1]
+
+    def _stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None) -> Iterable[Union[ChatCompletionChunk, LLMResult]]:
         tools = None
         if capabilities:
             tools = capabilities_to_tools(capabilities)
@@ -149,7 +157,6 @@ class OpenAILib(LLM):
             usage.prompt_tokens,
             usage.completion_tokens,
             )
-        pass
 
     def encode(self, query) -> list[int]:
         return tiktoken.encoding_for_model(self.model).encode(query)

@@ -5,7 +5,7 @@ from hackingBuddyGPT.utils.configurable import configurable, parameter
 
 @configurable("db_storage", "Stores the results of the experiments in a SQLite database")
 class DbStorage:
-    def __init__(self, connection_string: str = parameter(desc="sqlite3 database connection string for logs", default=":memory:")):
+    def __init__(self, connection_string: str = parameter(desc="sqlite3 database connection string for logs", default="wintermute.sqlite3")):
         self.connection_string = connection_string
 
     def init(self):
@@ -37,7 +37,6 @@ class DbStorage:
             tag TEXT,
             started_at text,
             stopped_at text,
-            rounds INTEGER,
             configuration TEXT
         )""")
         self.cursor.execute("""CREATE TABLE IF NOT EXISTS commands (
@@ -80,10 +79,10 @@ class DbStorage:
         self.analyze_response_id = self.insert_or_select_cmd('analyze_response')
         self.state_update_id = self.insert_or_select_cmd('update_state')
 
-    def create_new_run(self, model, tag):
+    def create_new_run(self, model: str, tag: str, configuration: str) -> int:
         self.cursor.execute(
-            "INSERT INTO runs (model, state, tag, started_at) VALUES (?,  ?, ?, datetime('now'))",
-            (model, "in progress", tag))
+            "INSERT INTO runs (model, state, tag, started_at, configuration) VALUES (?,  ?, ?, datetime('now'), ?)",
+            (model, "in progress", tag, configuration))
         return self.cursor.lastrowid
 
     def add_log_query(self, run_id, round, cmd, result, answer):
@@ -194,14 +193,14 @@ class DbStorage:
 
         return result
 
-    def run_was_success(self, run_id, round):
-        self.cursor.execute("update runs set state=?,stopped_at=datetime('now'), rounds=? where id = ?",
-                            ("got root", round, run_id))
+    def run_was_success(self, run_id):
+        self.cursor.execute("update runs set state=?,stopped_at=datetime('now') where id = ?",
+                            ("got root", run_id))
         self.db.commit()
 
-    def run_was_failure(self, run_id, round):
-        self.cursor.execute("update runs set state=?, stopped_at=datetime('now'), rounds=? where id = ?",
-                            ("reached max runs", round, run_id))
+    def run_was_failure(self, run_id: int, reason: str):
+        self.cursor.execute("update runs set state=?, stopped_at=datetime('now') where id = ?",
+                            (reason, run_id))
         self.db.commit()
 
     def commit(self):

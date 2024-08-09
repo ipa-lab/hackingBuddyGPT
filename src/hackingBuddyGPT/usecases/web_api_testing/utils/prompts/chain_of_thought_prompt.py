@@ -15,7 +15,8 @@ class ChainOfThoughtPrompt(BasicPrompt):
         if hint:
             chain_of_thought_steps.append(hint)
 
-        return self.prompt_helper.check_prompt(previous_prompt, chain_of_thought_steps)
+        return self.prompt_helper.check_prompt(
+            previous_prompt=previous_prompt, steps=chain_of_thought_steps)
 
     def get_common_steps(self):
         return [

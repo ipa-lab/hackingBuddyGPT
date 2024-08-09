@@ -4,7 +4,8 @@ from nltk.tokenize import word_tokenize
 
 class PromptHelper(object):
 
-    def __init__(self):
+    def __init__(self, response_handler):
+        self.response_handler = response_handler
         self.found_endpoints = ["/"]
         self.endpoint_methods = {}
         self.endpoint_found_methods = {}
@@ -76,11 +77,11 @@ class PromptHelper(object):
         # Filter out punctuation marks
         words = [token for token in tokens if token.isalnum()]
         return len(words)
-    def check_prompt(self, previous_prompt, steps, response_handler, max_tokens=900):
+    def check_prompt(self, previous_prompt, steps, max_tokens=900):
         def validate_prompt(prompt):
             if self.token_count(prompt) <= max_tokens:
                 return prompt
-            shortened_prompt = response_handler.get_response_for_prompt("Shorten this prompt." + prompt )
+            shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt." + prompt )
             if self.token_count(shortened_prompt) <= max_tokens:
                 return shortened_prompt
             return "Prompt is still too long after summarization."

@@ -94,7 +94,7 @@ class SimpleWebAPIDocumentation(Agent):
             return False
 
     def perform_round(self, turn: int):
-        prompt = self.prompt_engineer.generate_prompt(doc=True)
+        prompt = self.prompt_engineer.generate_prompt()
         response, completion = self.llm_handler.call_llm(prompt)
         return self._handle_response(completion, response, turn)
 

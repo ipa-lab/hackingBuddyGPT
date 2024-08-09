@@ -1,5 +1,5 @@
-from hackingBuddyGPT.usecases.web_api_testing.prompt_information import PromptStrategy, PromptContext
-from hackingBuddyGPT.usecases.web_api_testing.utils.prompts.basic_prompt import BasicPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy, PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.basic_prompt import BasicPrompt
 
 
 class ChainOfThoughtPrompt(BasicPrompt):

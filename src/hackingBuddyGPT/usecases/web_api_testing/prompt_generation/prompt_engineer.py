@@ -1,9 +1,12 @@
 from instructor.retry import InstructorRetryException
-from hackingBuddyGPT.usecases.web_api_testing.prompt_information import PromptStrategy
-from hackingBuddyGPT.usecases.web_api_testing.utils.prompts.chain_of_thought_prompt import ChainOfThoughtPrompt
-from hackingBuddyGPT.usecases.web_api_testing.utils.prompt_helper import PromptHelper
-from hackingBuddyGPT.usecases.web_api_testing.utils.prompts.in_context_learning_prompt import InContextLearningPrompt
-from hackingBuddyGPT.usecases.web_api_testing.utils.prompts.tree_of_thought_prompt import TreeOfThoughtPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import PromptGenerationHelper
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.chain_of_thought_prompt import \
+    ChainOfThoughtPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.in_context_learning_prompt import \
+    InContextLearningPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.tree_of_thought_prompt import \
+    TreeOfThoughtPrompt
 
 
 class PromptEngineer:
@@ -16,12 +19,12 @@ class PromptEngineer:
         Args:
             strategy (PromptStrategy): The prompt engineering strategy to use.
             history (dict, optional): The history of chats. Defaults to None.
-            handlers (tuple): The LLM handler and response handler
-            context (PromptContext): The context for which prompts are generated
+            handlers (tuple): The LLM handler and response handler.
+            context (PromptContext): The context for which prompts are generated.
         """
         self.strategy = strategy
         self.llm_handler, self.response_handler = handlers
-        self.prompt_helper = PromptHelper(response_handler=self.response_handler)
+        self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler)
         self.context = context
         self.round = 0
         self._prompt_history = history or []
@@ -29,8 +32,7 @@ class PromptEngineer:
         self.prompt = {self.round: {"content": "initial_prompt"}}
 
         self.strategies = {
-            PromptStrategy.IN_CONTEXT: InContextLearningPrompt(self.context, self.prompt_helper,
-                                                               self.prompt).generate_prompt,
+            PromptStrategy.IN_CONTEXT: InContextLearningPrompt(self.context, self.prompt_helper, self.prompt).generate_prompt,
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(self.context, self.prompt_helper).generate_prompt,
             PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(self.context, self.prompt_helper).generate_prompt
         }
@@ -38,6 +40,15 @@ class PromptEngineer:
     def generate_prompt(self, hint=""):
         """
         Generates a prompt based on the specified strategy and gets a response.
+
+        Args:
+            hint (str, optional): An optional hint to guide the prompt generation. Defaults to "".
+
+        Returns:
+            list: Updated prompt history after generating the prompt and receiving a response.
+
+        Raises:
+            ValueError: If an invalid prompt strategy is specified.
         """
         prompt_func = self.strategies.get(self.strategy)
         if not prompt_func:
@@ -63,6 +74,16 @@ class PromptEngineer:
     def evaluate_response(self, prompt, response_text):
         """
         Evaluates the response to determine if it is acceptable.
+
+        Args:
+            prompt (str): The generated prompt.
+            response_text (str): The response text to evaluate.
+
+        Returns:
+            bool: True if the response is acceptable, otherwise False.
+
+        Note:
+            The current implementation always returns True. A proper evaluation mechanism should be implemented.
         """
         # TODO: Implement a proper evaluation mechanism
         return True

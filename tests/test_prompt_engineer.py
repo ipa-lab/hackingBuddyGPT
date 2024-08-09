@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
-from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptStrategy, PromptEngineer
-from hackingBuddyGPT.usecases.web_api_testing.prompt_information import PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptStrategy, PromptEngineer
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptContext
 
 
 class TestPromptEngineer(unittest.TestCase):

@@ -1,13 +1,12 @@
 import unittest
 from unittest.mock import MagicMock
-from hackingBuddyGPT.usecases.web_api_testing.prompt_engineer import PromptStrategy, PromptEngineer
-from hackingBuddyGPT.usecases.web_api_testing.utils.prompt_helper import PromptHelper
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 
 
 class TestPromptHelper(unittest.TestCase):
     def setUp(self):
         self.response_handler = MagicMock()
-        self.prompt_helper = PromptHelper(self.response_handler)
+        self.prompt_helper = PromptGenerationHelper(self.response_handler)
     def test_token_count(self):
         text = "This is a sample text with several words."
         count = self.prompt_helper.token_count(text)

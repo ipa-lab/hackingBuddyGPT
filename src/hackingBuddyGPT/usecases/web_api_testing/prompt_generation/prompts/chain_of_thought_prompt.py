@@ -54,13 +54,20 @@ class ChainOfThoughtPrompt(BasicPrompt):
         Returns:
             list: A list of common steps for generating prompts.
         """
-        return [
+        if self.context == PromptContext.DOCUMENTATION:
+            return [
             "Identify common data structures returned by various endpoints and define them as reusable schemas. Determine the type of each field (e.g., integer, string, array) and define common response structures as components that can be referenced in multiple endpoint definitions.",
             "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
             "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",
             "Refine the document based on feedback and additional testing, share the draft with others, gather feedback, and make necessary adjustments. Regularly update the specification as the API evolves.",
             "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
-        ]
+            ]
+        else:
+            return ["Identify common data structures returned by various endpoints and define them as reusable schemas, specifying field types like integer, string, and array."
+                    " Create an OpenAPI document that includes API metadata (title, version, description), the base URL, endpoints, methods, parameters, and responses. "
+                    "Ensure the document's correctness and completeness using tools like Swagger Editor, and verify it matches the API's behavior. Refine the document based on feedback, "
+                    "share drafts for review, and update it regularly as the API evolves. Make the specification available to developers through the API documentation site, keeping it "
+                    "current with any API changes."]
 
     def get_chain_of_thought_steps(self, round, common_steps, http_phase):
         """
@@ -75,18 +82,44 @@ class ChainOfThoughtPrompt(BasicPrompt):
             list: A list of steps for the chain-of-thought strategy.
         """
         if self.context == PromptContext.DOCUMENTATION:
-            if round <= 5:
-                return self.prompt_helper.get_initial_steps(common_steps)
-            elif round <= 10:
-                phase = http_phase.get(min(x for x in http_phase.keys() if round <= x))
-                return self.prompt_helper.get_phase_steps(phase, common_steps)
-            else:
-                return self.prompt_helper.get_endpoints_needing_help()
+            return self._get_documentation_steps(round, common_steps, http_phase)
         else:
-            if round == 0:
-                return ["Let's think step by step."]
-            elif round <= 20:
-                focus_phases = ["endpoints", "HTTP method GET", "HTTP method POST and PUT", "HTTP method DELETE"]
-                return [f"Just focus on the {focus_phases[round // 5]} for now."]
-            else:
-                return ["Look for exploits."]
+            return self._get_pentesting_steps(round)
+
+    def _get_documentation_steps(self, round, common_steps, http_phase):
+        """
+        Provides the steps for the chain-of-thought strategy when the context is documentation.
+
+        Args:
+            round (int): The current round of prompt generation.
+            common_steps (list): A list of common steps for generating prompts.
+            http_phase (dict): A dictionary mapping rounds to HTTP phases.
+
+        Returns:
+            list: A list of steps for the chain-of-thought strategy in the documentation context.
+        """
+        if round <= 5:
+            return self.prompt_helper.get_initial_steps(common_steps)
+        elif round <= 10:
+            phase = http_phase.get(min(x for x in http_phase.keys() if round <= x))
+            return self.prompt_helper.get_phase_steps(phase, common_steps)
+        else:
+            return self.prompt_helper.get_endpoints_needing_help()
+
+    def _get_pentesting_steps(self, round):
+        """
+        Provides the steps for the chain-of-thought strategy when the context is pentesting.
+
+        Args:
+            round (int): The current round of prompt generation.
+
+        Returns:
+            list: A list of steps for the chain-of-thought strategy in the pentesting context.
+        """
+        if round == 0:
+            return ["Let's think step by step."]
+        elif round <= 20:
+            focus_phases = ["endpoints", "HTTP method GET", "HTTP method POST and PUT", "HTTP method DELETE"]
+            return [f"Just focus on the {focus_phases[round // 5]} for now."]
+        else:
+            return ["Look for exploits."]

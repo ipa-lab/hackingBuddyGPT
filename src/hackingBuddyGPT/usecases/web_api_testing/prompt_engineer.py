@@ -1,43 +1,49 @@
-from openai.types.chat import ChatCompletionMessage
+import nltk
+from nltk.tokenize import word_tokenize
+from instructor.retry import InstructorRetryException
 
-from hackingBuddyGPT.utils import openai
 
 class PromptEngineer(object):
     '''Prompt engineer that creates prompts of different types'''
 
-    def __init__(self, strategy, api_key,  history):
+    def __init__(self, strategy, llm_handler, history, schemas, response_handler):
         """
-        Initializes the PromptEngineer with a specific strategy and API key.
+        Initializes the PromptEngineer with a specific strategy and handlers for LLM and responses.
 
         Args:
             strategy (PromptStrategy): The prompt engineering strategy to use.
-            api_key (str): The API key for OpenAI.
-
+            llm_handler (object): The LLM handler.
             history (dict, optional): The history of chats. Defaults to None.
+            schemas (object): The schemas to use.
+            response_handler (object): The handler for managing responses.
 
         Attributes:
             strategy (PromptStrategy): Stores the provided strategy.
-            api_key (str): Stores the provided API key.
-            host (str): Stores the provided host for OpenAI API.
-            flag_format_description (str): Stores the provided flag description format.
-            prompt_history (list): A list that keeps track of the conversation history.
-            initial_prompt (str): The initial prompt used for conversation.
-            prompt (str): The current prompt to be used.
+            llm_handler (object): Handles the interaction with the LLM.
+            nlp (spacy.lang.en.English): The spaCy English model used for NLP tasks.
+            _prompt_history (dict): Keeps track of the conversation history.
+            prompt (dict): The current state of the prompt history.
+            previous_prompt (str): The previous prompt content based on the conversation history.
+            schemas (object): Stores the provided schemas.
+            response_handler (object): Manages the response handling logic.
+            round (int): Tracks the current round of conversation.
             strategies (dict): Maps strategies to their corresponding methods.
         """
         self.strategy = strategy
-        self.api_key = api_key
-        # Set the OpenAI API key
-        openai.api_key = self.api_key
+        self.response_handler = response_handler
+        self.llm_handler = llm_handler
         self.round = 0
-
-
-
-        # Initialize prompt history
+        self.found_endpoints = ["/"]
+        self.endpoint_methods = {}
+        self.endpoint_found_methods = {}
+        # Check if the models are already installed
+        nltk.download('punkt')
+        nltk.download('stopwords')
         self._prompt_history = history
-        self.prompt = self._prompt_history
+        self.prompt = {self.round: {"content": "initial_prompt"}}
+        self.previous_prompt = self._prompt_history[self.round]["content"]
+        self.schemas = schemas
 
-        # Set up strategy map
         self.strategies = {
             PromptStrategy.IN_CONTEXT: self.in_context_learning,
             PromptStrategy.CHAIN_OF_THOUGHT: self.chain_of_thought,
@@ -53,42 +59,22 @@ class PromptEngineer(object):
         """
         # Directly call the method using the strategy mapping
         prompt_func = self.strategies.get(self.strategy)
+        is_good = False
         if prompt_func:
-            print(f'prompt history:{self._prompt_history[self.round]}')
-            if not isinstance(self._prompt_history[self.round],ChatCompletionMessage ):
+            while not is_good:
                 prompt = prompt_func(doc)
-                self._prompt_history[self.round]["content"] = prompt
-            self.round = self.round +1
-            return self._prompt_history
-            #self.get_response(prompt)
+                try:
+                    response_text = self.response_handler.get_response_for_prompt(prompt)
+                    is_good = self.evaluate_response(prompt, response_text)
+                except InstructorRetryException :
+                    prompt = prompt_func(doc, hint=f"invalid prompt:{prompt}")
+                if is_good:
+                    self._prompt_history.append( {"role":"system", "content":prompt})
+                    self.previous_prompt = prompt
+                    self.round = self.round +1
+                    return self._prompt_history
 
-    def get_response(self, prompt):
-        """
-        Sends a prompt to OpenAI's API and retrieves the response.
-
-        Args:
-            prompt (str): The prompt to be sent to the API.
-
-        Returns:
-            str: The response from the API.
-        """
-        response = openai.Completion.create(
-            engine="text-davinci-002",
-            prompt=prompt,
-            max_tokens=150,
-            n=1,
-            stop=None,
-            temperature=0.7,
-        )
-        # Update history
-        response_text = response.choices[0].text.strip()
-        self._prompt_history.extend([f"[User]: {prompt}", f"[System]: {response_text}"])
-
-        return response_text
-
-
-
-    def in_context_learning(self, doc=False):
+    def in_context_learning(self, doc=False, hint=""):
         """
         Generates a prompt for in-context learning.
 
@@ -98,54 +84,137 @@ class PromptEngineer(object):
         Returns:
             str: The generated prompt.
         """
-        return str("\n".join(self._prompt_history[self.round]["content"] + [self.prompt]))
+        history_content = [entry["content"] for entry in self._prompt_history]
+        prompt_content = self.prompt.get(self.round, {}).get("content", "")
 
-    def chain_of_thought(self, doc=False):
+        # Add hint if provided
+        if hint:
+            prompt_content += f"\n{hint}"
+
+        return "\n".join(history_content + [prompt_content])
+
+    def get_http_action_template(self, method):
+        """Helper to construct a consistent HTTP action description."""
+        if method == "POST" and method == "PUT":
+            return (
+                f"Create HTTPRequests of type {method} considering the found schemas: {self.schemas} and understand the responses. Ensure that they are correct requests."
+                )
+
+        else:
+            return (
+                f"Create HTTPRequests of type {method} considering only the object with id=1 for the endpoint and understand the responses. Ensure that they are correct requests.")
+    def get_initial_steps(self, common_steps):
+            return [
+                "Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}",
+                "Note down the response structures, status codes, and headers for each endpoint.",
+                "For each endpoint, document the following details: URL, HTTP method, query parameters and path variables, expected request body structure for requests, response structure for successful and error responses."
+            ] + common_steps
+
+    def get_phase_steps(self, phase, common_steps):
+            if phase != "DELETE":
+                return [
+                    f"Identify for all endpoints {self.found_endpoints} excluding {self.endpoint_found_methods[phase]} a valid HTTP method {phase} call.",
+                    self.get_http_action_template(phase)
+                ] + common_steps
+            else:
+                return [
+                    "Check for all endpoints the DELETE method. Delete the first instance for all endpoints.",
+                    self.get_http_action_template(phase)
+                ] + common_steps
+
+    def get_endpoints_needing_help(self):
+            endpoints_needing_help = []
+            endpoints_and_needed_methods = {}
+            http_methods_set = {"GET", "POST", "PUT", "DELETE"}
+
+            for endpoint, methods in self.endpoint_methods.items():
+                missing_methods = http_methods_set - set(methods)
+                if len(methods) < 4:
+                    endpoints_needing_help.append(endpoint)
+                    endpoints_and_needed_methods[endpoint] = list(missing_methods)
+
+            if endpoints_needing_help:
+                first_endpoint = endpoints_needing_help[0]
+                needed_method = endpoints_and_needed_methods[first_endpoint][0]
+                return [
+                    f"For endpoint {first_endpoint} find this missing method: {needed_method}. If all the HTTP methods have already been found for an endpoint, then do not include this endpoint in your search."]
+            return []
+    def chain_of_thought(self, doc=False, hint=""):
         """
-        Generates a prompt using the chain-of-thought strategy. https://www.promptingguide.ai/techniques/cot
+        Generates a prompt using the chain-of-thought strategy.
 
-        This method adds a step-by-step reasoning prompt to the current prompt.
+        Args:
+            doc (bool): Determines whether the documentation-oriented chain of thought should be used.
+            hint (str): Additional hint to be added to the chain of thought.
 
         Returns:
             str: The generated prompt.
         """
-
-        previous_prompt = self._prompt_history[self.round]["content"]
-
-        if doc :
-            chain_of_thought_steps = [
-            "Explore the API by reviewing any available documentation to learn about the API endpoints, data models, and behaviors.",
-            "Identify all available endpoints.",
-            "Create GET, POST, PUT, DELETE requests to understand the responses.",
-            "Note down the response structures, status codes, and headers for each endpoint.",
-            "For each endpoint, document the following details: URL, HTTP method (GET, POST, PUT, DELETE), query parameters and path variables, expected request body structure for POST and PUT requests, response structure for successful and error responses.",
-            "First execute the GET requests, then POST, then PUT and DELETE."
+        common_steps = [
             "Identify common data structures returned by various endpoints and define them as reusable schemas. Determine the type of each field (e.g., integer, string, array) and define common response structures as components that can be referenced in multiple endpoint definitions.",
             "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
             "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",
             "Refine the document based on feedback and additional testing, share the draft with others, gather feedback, and make necessary adjustments. Regularly update the specification as the API evolves.",
             "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
-            ]
+        ]
+
+        http_methods = ["PUT", "DELETE"]
+        http_phase = {10: http_methods[0], 15: http_methods[1]}
+        if doc:
+            if self.round <= 5:
+                chain_of_thought_steps = self.get_initial_steps(common_steps)
+            elif self.round <= 10:
+                phase = http_phase.get(min(filter(lambda x: self.round <= x, http_phase.keys())))
+                chain_of_thought_steps = self.get_phase_steps(phase, common_steps)
+            else:
+                chain_of_thought_steps = self.get_endpoints_needing_help()
         else:
-            if round == 0:
-                chain_of_thought_steps = [
-                "Let's think step by step." # zero shot prompt
-                ]
-            elif self.round <= 5:
-                chain_of_thought_steps = ["Just Focus on the endpoints for now."]
-            elif self.round >5 and self.round <= 10:
-                chain_of_thought_steps = ["Just Focus on the HTTP method GET for now."]
-            elif self.round > 10 and self.round <= 15:
-                chain_of_thought_steps = ["Just Focus on the HTTP method POST and PUT for now."]
-            elif self.round > 15 and self.round <= 20:
-                chain_of_thought_steps = ["Just Focus on the HTTP method DELETE for now."]
+            if self.round == 0:
+                chain_of_thought_steps = ["Let's think step by step."]
+            elif self.round <= 20:
+                focus_phases = ["endpoints", "HTTP method GET", "HTTP method POST and PUT", "HTTP method DELETE"]
+                focus_phase = focus_phases[self.round // 5]
+                chain_of_thought_steps = [f"Just focus on the {focus_phase} for now."]
             else:
                 chain_of_thought_steps = ["Look for exploits."]
 
+        if hint:
+            chain_of_thought_steps.append(hint)
 
-        return "\n".join([previous_prompt] + chain_of_thought_steps)
+        prompt = self.check_prompt(self.previous_prompt, chain_of_thought_steps)
+        return prompt
+
+    def token_count(self, text):
+        """
+            Counts the number of word tokens in the provided text using NLTK's tokenizer.
+
+            Args:
+                text (str): The input text to tokenize and count.
+
+            Returns:
+                int: The number of tokens in the input text.
+            """
+        # Tokenize the text using NLTK
+        tokens = word_tokenize(text)
+        # Filter out punctuation marks
+        words = [token for token in tokens if token.isalnum()]
+        return len(words)
 
 
+    def check_prompt(self, previous_prompt, chain_of_thought_steps, max_tokens=900):
+        def validate_prompt(prompt):
+            if self.token_count(prompt) <= max_tokens:
+                return prompt
+            shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt." + prompt )
+            if self.token_count(shortened_prompt) <= max_tokens:
+                return shortened_prompt
+            return "Prompt is still too long after summarization."
+
+        if not all(step in previous_prompt for step in chain_of_thought_steps):
+            potential_prompt = "\n".join(chain_of_thought_steps)
+            return validate_prompt(potential_prompt)
+
+        return validate_prompt(previous_prompt)
 
     def tree_of_thought(self, doc=False):
         """
@@ -167,6 +236,8 @@ class PromptEngineer(object):
         )]
         return "\n".join([self._prompt_history[self.round]["content"]] + tree_of_thoughts_steps)
 
+    def evaluate_response(self, prompt, response_text): #TODO find a good way of evaluating result of prompt
+        return True
 
 
 

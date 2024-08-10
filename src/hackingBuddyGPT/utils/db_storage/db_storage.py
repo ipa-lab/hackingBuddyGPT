@@ -33,7 +33,6 @@ class DbStorage:
         self.cursor.execute("""CREATE TABLE IF NOT EXISTS runs (
             id INTEGER PRIMARY KEY,
             model text,
-            context_size INTEGER,
             state TEXT,
             tag TEXT,
             started_at text,
@@ -81,10 +80,10 @@ class DbStorage:
         self.analyze_response_id = self.insert_or_select_cmd('analyze_response')
         self.state_update_id = self.insert_or_select_cmd('update_state')
 
-    def create_new_run(self, model, context_size, tag):
+    def create_new_run(self, model, tag):
         self.cursor.execute(
-            "INSERT INTO runs (model, context_size, state, tag, started_at) VALUES (?, ?, ?, ?, datetime('now'))",
-            (model, context_size, "in progress", tag))
+            "INSERT INTO runs (model, state, tag, started_at) VALUES (?,  ?, ?, datetime('now'))",
+            (model, "in progress", tag))
         return self.cursor.lastrowid
 
     def add_log_query(self, run_id, round, cmd, result, answer):

@@ -1,7 +1,7 @@
 import pydantic_core
 import time
 
-from dataclasses import dataclass, field
+from dataclasses import field
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from rich.panel import Panel
 from typing import List, Any, Union, Dict
@@ -11,9 +11,9 @@ from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
+from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.utils import LLMResult, tool_message
-from hackingBuddyGPT.usecases.base import use_case
-from hackingBuddyGPT.usecases.common_patterns import RoundBasedUseCase
+from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
@@ -22,9 +22,7 @@ Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
 
-@use_case("simple_web_test", "Minimal implementation of a web testing use case")
-@dataclass
-class MinimalWebTesting(RoundBasedUseCase):
+class MinimalWebTesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="http://localhost")
     flag_format_description: str = parameter(desc="Description of the flag provided to the LLM", default="a string starting with 'FLAG.' and ending with '.GALF'")
@@ -54,11 +52,11 @@ class MinimalWebTesting(RoundBasedUseCase):
         }
 
     def all_flags_found(self):
-        self.console.print(Panel("All flags found! Congratulations!", title="system"))
+        self._log.console.print(Panel("All flags found! Congratulations!", title="system"))
         self._all_flags_found = True
 
     def perform_round(self, turn: int):
-        with self.console.status("[bold green]Asking LLM for a new command..."):
+        with self._log.console.status("[bold green]Asking LLM for a new command..."):
             prompt = self._prompt_history  # TODO: in the future, this should do some context truncation
 
             tic = time.perf_counter()
@@ -68,15 +66,20 @@ class MinimalWebTesting(RoundBasedUseCase):
             message = completion.choices[0].message
             tool_call_id = message.tool_calls[0].id
             command = pydantic_core.to_json(response).decode()
-            self.console.print(Panel(command, title="assistant"))
+            self._log.console.print(Panel(command, title="assistant"))
             self._prompt_history.append(message)
 
             answer = LLMResult(completion.choices[0].message.content, str(prompt), completion.choices[0].message.content, toc-tic, completion.usage.prompt_tokens, completion.usage.completion_tokens)
 
-        with self.console.status("[bold green]Executing that command..."):
+        with self._log.console.status("[bold green]Executing that command..."):
             result = response.execute()
-            self.console.print(Panel(result, title="tool"))
+            self._log.console.print(Panel(result, title="tool"))
             self._prompt_history.append(tool_message(result, tool_call_id))
 
-        self.log_db.add_log_query(self._run_id, turn, command, result, answer)
+        self._log.log_db.add_log_query(self._log.run_id, turn, command, result, answer)
         return self._all_flags_found
+
+
+@use_case("Minimal implementation of a web testing use case")
+class MinimalWebTestingUseCase(AutonomousAgentUseCase[MinimalWebTesting]):
+    pass

@@ -35,9 +35,9 @@ class Privesc(Agent):
     def init(self):
         super().init()
 
-    def setup(self):
+    def before_run(self):
         if self.hint != "":
-            self.console.print(f"[bold green]Using the following hint: '{self.hint}'")
+            self._log.console.print(f"[bold green]Using the following hint: '{self.hint}'")
 
         if self.disable_history is False:
             self._sliding_history = SlidingCliHistory(self.llm)
@@ -57,48 +57,48 @@ class Privesc(Agent):
     def perform_round(self, turn: int) -> bool:
         got_root: bool = False
 
-        with self.console.status("[bold green]Asking LLM for a new command..."):
+        with self._log.console.status("[bold green]Asking LLM for a new command..."):
             answer = self.get_next_command()
         cmd = answer.result
 
-        with self.console.status("[bold green]Executing that command..."):
-            self.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
+        with self._log.console.status("[bold green]Executing that command..."):
+            self._log.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
             _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities, default_capability=self._default_capability)
             success, *output = parser(cmd)
             if not success:
-                self.console.print(Panel(output[0], title="[bold red]Error parsing command:"))
+                self._log.console.print(Panel(output[0], title="[bold red]Error parsing command:"))
                 return False
 
             assert(len(output) == 1)
             capability, cmd, (result, got_root) = output[0]
 
         # log and output the command and its result
-        self.log_db.add_log_query(self._run_id, turn, cmd, result, answer)
+        self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
         if self._sliding_history:
             self._sliding_history.add_command(cmd, result)
 
-        self.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+        self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
         # analyze the result..
         if self.enable_explanation:
-            with self.console.status("[bold green]Analyze its result..."):
+            with self._log.console.status("[bold green]Analyze its result..."):
                 answer = self.analyze_result(cmd, result)
-                self.log_db.add_log_analyze_response(self._run_id, turn, cmd, answer.result, answer)
+                self._log.log_db.add_log_analyze_response(self._log.run_id, turn, cmd, answer.result, answer)
 
         # .. and let our local model update its state
         if self.enable_update_state:
             # this must happen before the table output as we might include the
             # status processing time in the table..
-            with self.console.status("[bold green]Updating fact list.."):
+            with self._log.console.status("[bold green]Updating fact list.."):
                 state = self.update_state(cmd, result)
-                self.log_db.add_log_update_state(self._run_id, turn, "", state.result, state)
+                self._log.log_db.add_log_update_state(self._log.run_id, turn, "", state.result, state)
 
         # Output Round Data..
-        self.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self._run_id, self.log_db, turn))
+        self._log.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self._log.run_id, self._log.log_db, turn))
 
         # .. and output the updated state
         if self.enable_update_state:
-            self.console.print(Panel(self._state, title="What does the LLM Know about the system?"))
+            self._log.console.print(Panel(self._state, title="What does the LLM Know about the system?"))
 
         # if we got root, we can stop the loop
         return got_root

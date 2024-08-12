@@ -15,7 +15,7 @@ class InContextLearningPrompt(BasicPrompt):
         prompt (dict): A dictionary containing the prompts for each round.
     """
 
-    def __init__(self, context, prompt_helper, prompt):
+    def __init__(self, context, prompt_helper, prompt, round):
         """
         Initializes the InContextLearningPrompt with a specific context, prompt helper, and initial prompt.
 
@@ -23,16 +23,17 @@ class InContextLearningPrompt(BasicPrompt):
             context (PromptContext): The context in which prompts are generated.
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
             prompt (dict): A dictionary containing the prompts for each round.
+            round (int): Number of round.
         """
         super().__init__(context, prompt_helper, PromptStrategy.IN_CONTEXT)
+        self.round = round
         self.prompt = prompt
 
-    def generate_prompt(self,round, move_type, hint, previous_prompt):
+    def generate_prompt(self, move_type, hint, previous_prompt):
         """
         Generates a prompt using the in-context learning strategy.
 
         Args:
-            round (int): The current round of prompt generation.
             move_type (str): The type of move to generate.
             hint (str): An optional hint to guide the prompt generation.
             previous_prompt (list): A list of previous prompt entries, each containing a "content" key.
@@ -41,7 +42,7 @@ class InContextLearningPrompt(BasicPrompt):
             str: The generated prompt.
         """
         history_content = [entry["content"] for entry in previous_prompt]
-        prompt_content = self.prompt.get(round, {}).get("content", "")
+        prompt_content = self.prompt.get(self.round, {}).get("content", "")
 
         # Add hint if provided
         if hint:

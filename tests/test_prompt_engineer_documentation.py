@@ -20,28 +20,28 @@ class TestPromptEngineer(unittest.TestCase):
     def test_in_context_learning_no_hint(self):
         self.prompt_engineer.strategy = PromptStrategy.IN_CONTEXT
         expected_prompt = "initial_prompt\ninitial_prompt"
-        actual_prompt = self.prompt_engineer.generate_prompt( hint="")
+        actual_prompt = self.prompt_engineer.generate_prompt( hint="", round=1)
         self.assertEqual(expected_prompt, actual_prompt[1]["content"])
 
     def test_in_context_learning_with_hint(self):
         self.prompt_engineer.strategy = PromptStrategy.IN_CONTEXT
         hint = "This is a hint."
         expected_prompt = "initial_prompt\ninitial_prompt\nThis is a hint."
-        actual_prompt = self.prompt_engineer.generate_prompt( hint=hint)
+        actual_prompt = self.prompt_engineer.generate_prompt( hint=hint, round=1)
         self.assertEqual(expected_prompt, actual_prompt[1]["content"])
 
     def test_in_context_learning_with_doc_and_hint(self):
         self.prompt_engineer.strategy = PromptStrategy.IN_CONTEXT
         hint = "This is another hint."
         expected_prompt = "initial_prompt\ninitial_prompt\nThis is another hint."
-        actual_prompt = self.prompt_engineer.generate_prompt( hint=hint)
+        actual_prompt = self.prompt_engineer.generate_prompt( hint=hint, round=1)
         self.assertEqual(expected_prompt,  actual_prompt[1]["content"])
     def test_generate_prompt_chain_of_thought(self):
         self.prompt_engineer.strategy = PromptStrategy.CHAIN_OF_THOUGHT
         self.response_handler.get_response_for_prompt = MagicMock(return_value="response_text")
         self.prompt_engineer.evaluate_response = MagicMock(return_value=True)
 
-        prompt_history = self.prompt_engineer.generate_prompt()
+        prompt_history = self.prompt_engineer.generate_prompt(round=1)
 
         self.assertEqual( 2, len(prompt_history))
 
@@ -50,7 +50,7 @@ class TestPromptEngineer(unittest.TestCase):
         self.response_handler.get_response_for_prompt = MagicMock(return_value="response_text")
         self.prompt_engineer.evaluate_response = MagicMock(return_value=True)
 
-        prompt_history = self.prompt_engineer.generate_prompt()
+        prompt_history = self.prompt_engineer.generate_prompt(round=1)
 
         self.assertEqual(len(prompt_history), 2)
 

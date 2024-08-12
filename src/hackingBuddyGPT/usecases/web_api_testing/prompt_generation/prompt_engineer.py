@@ -34,12 +34,12 @@ class PromptEngineer:
         self.prompt = {self.round: {"content": "initial_prompt"}}
 
         self.strategies = {
-            PromptStrategy.IN_CONTEXT: InContextLearningPrompt(self.context, self.prompt_helper, self.prompt).generate_prompt,
+            PromptStrategy.IN_CONTEXT: InContextLearningPrompt(self.context, self.prompt_helper, self.prompt, self.round).generate_prompt,
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(self.context, self.prompt_helper).generate_prompt,
-            PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(self.context, self.prompt_helper, self.rest_api).generate_prompt
+            PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(self.context, self.prompt_helper, self.rest_api, self.round).generate_prompt
         }
 
-    def generate_prompt(self, round,move_type,  hint=""):
+    def generate_prompt(self, round,move_type="explore",  hint=""):
         """
         Generates a prompt based on the specified strategy and gets a response.
 
@@ -61,9 +61,9 @@ class PromptEngineer:
         while not is_good:
             try:
                 if self.context == PromptStrategy.CHAIN_OF_THOUGHT:
-                    prompt = prompt_func(round,move_type, hint, self.previous_prompt)
+                    prompt = prompt_func(move_type, hint, self.previous_prompt)
                 else:
-                    prompt = prompt_func(round, move_type, hint, self._prompt_history)
+                    prompt = prompt_func(move_type, hint, self._prompt_history)
                 response_text = self.response_handler.get_response_for_prompt(prompt)
                 is_good = self.evaluate_response(prompt, response_text)
             except InstructorRetryException:

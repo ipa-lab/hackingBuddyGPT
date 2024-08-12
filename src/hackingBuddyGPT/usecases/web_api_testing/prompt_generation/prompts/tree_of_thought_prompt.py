@@ -14,7 +14,7 @@ class TreeOfThoughtPrompt(BasicPrompt):
         prompt_helper (PromptHelper): A helper object for managing and generating prompts.
     """
 
-    def __init__(self, context, prompt_helper, rest_api):
+    def __init__(self, context, prompt_helper, rest_api, round):
         """
         Initializes the TreeOfThoughtPrompt with a specific context and prompt helper.
 
@@ -22,16 +22,17 @@ class TreeOfThoughtPrompt(BasicPrompt):
             context (PromptContext): The context in which prompts are generated.
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
             rest_api (str): The REST API endpoint
+            round (int): The round number
         """
         super().__init__(context, prompt_helper, PromptStrategy.TREE_OF_THOUGHT)
         self.rest_api = rest_api
+        self.round = round
 
-    def generate_prompt(self, round, move_type, hint, previous_prompt):
+    def generate_prompt(self, move_type, hint, previous_prompt):
         """
         Generates a prompt using the tree-of-thought strategy.
 
         Args:
-            round (int): The current round of prompt generation.
             move_type (str): The type of move to generate.
             hint (str): An optional hint to guide the prompt generation.
             previous_prompt (list): A list of previous prompt entries, each containing a "content" key.
@@ -58,4 +59,4 @@ class TreeOfThoughtPrompt(BasicPrompt):
             f"The question is: Create pentests for this REST API {self.rest_api} "
             )]
 
-        return "\n".join([previous_prompt[round]["content"]] + tree_of_thoughts_steps)
+        return "\n".join([previous_prompt[self.round]["content"]] + tree_of_thoughts_steps)

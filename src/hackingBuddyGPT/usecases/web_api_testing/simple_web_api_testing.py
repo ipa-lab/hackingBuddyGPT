@@ -103,7 +103,7 @@ class SimpleWebAPITesting(Agent):
             "record_note": RecordNote(notes)
         }
 
-    def perform_round(self, turn: int, FINAL_ROUND=30):
+    def perform_round(self, turn: int):
         """
         Performs a single round of interaction with the LLM. Generates a prompt, sends it to the LLM,
         and handles the response.
@@ -112,7 +112,7 @@ class SimpleWebAPITesting(Agent):
             turn (int): The current round number.
             FINAL_ROUND (int, optional): The final round number. Defaults to 30.
         """
-        prompt = self.prompt_engineer.generate_prompt()
+        prompt = self.prompt_engineer.generate_prompt(turn)
         response, completion = self.llm_handler.call_llm(prompt)
         self._handle_response(completion, response)
 

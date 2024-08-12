@@ -127,27 +127,16 @@ class SimpleWebAPIDocumentation(Agent):
             bool: True if all HTTP methods are found, False otherwise.
         """
         if turn == 1:
-            self._explore_new_endpoints(turn)
+            counter = 0
+            new_endpoint_found = 0
+            while counter <= new_endpoint_found + 2 and counter <= 10:
+                self.run_documentation(turn, "explore")
+                counter += 1
+                if len(self.documentation_handler.endpoint_methods) > new_endpoint_found:
+                    new_endpoint_found = len(self.documentation_handler.endpoint_methods)
         else:
             self.run_documentation(turn, "exploit")
         return self.all_http_methods_found(turn)
-
-    def _explore_new_endpoints(self, turn: int):
-        """
-        Explores new endpoints by running documentation until new endpoints are no longer found or a limit is reached.
-
-        Args:
-            turn (int): The current turn number.
-        """
-        counter = 0
-        new_endpoint_found = 0
-
-        while counter <= new_endpoint_found + 2 and counter <= 10:
-            self.run_documentation(turn, "explore")
-            counter += 1
-            current_endpoints = len(self.documentation_handler.endpoint_methods)
-            if current_endpoints > new_endpoint_found:
-                new_endpoint_found = current_endpoints
 
     def has_no_numbers(self, path):
         """

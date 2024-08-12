@@ -24,12 +24,13 @@ class ChainOfThoughtPrompt(BasicPrompt):
         """
         super().__init__(context, prompt_helper, PromptStrategy.CHAIN_OF_THOUGHT)
 
-    def generate_prompt(self, round, hint, previous_prompt):
+    def generate_prompt(self, round, move_type, hint, previous_prompt):
         """
         Generates a prompt using the chain-of-thought strategy.
 
         Args:
             round (int): The current round of prompt generation.
+            move_type (str): The type of move to generate.
             hint (str): An optional hint to guide the prompt generation.
             previous_prompt (str): The previous prompt content based on the conversation history.
 
@@ -37,15 +38,14 @@ class ChainOfThoughtPrompt(BasicPrompt):
             str: The generated prompt.
         """
         common_steps = self._get_common_steps()
-        http_phase = {10: "PUT", 15: "DELETE"}
-
-        chain_of_thought_steps = self._get_chain_of_thought_steps(round, common_steps, http_phase)
+        chain_of_thought_steps = self._get_chain_of_thought_steps(round, common_steps, move_type)
 
         if hint:
             chain_of_thought_steps.append(hint)
 
         return self.prompt_helper.check_prompt(
             previous_prompt=previous_prompt, steps=chain_of_thought_steps)
+
 
     def _get_common_steps(self):
         """
@@ -69,42 +69,38 @@ class ChainOfThoughtPrompt(BasicPrompt):
                     "share drafts for review, and update it regularly as the API evolves. Make the specification available to developers through the API documentation site, keeping it "
                     "current with any API changes."]
 
-    def _get_chain_of_thought_steps(self, round, common_steps, http_phase):
+    def _get_chain_of_thought_steps(self, round, common_steps, move_type):
         """
         Provides the steps for the chain-of-thought strategy based on the current round and context.
 
         Args:
             round (int): The current round of prompt generation.
             common_steps (list): A list of common steps for generating prompts.
-            http_phase (dict): A dictionary mapping rounds to HTTP phases.
+            move_type (str): Type of move.
 
         Returns:
             list: A list of steps for the chain-of-thought strategy.
         """
         if self.context == PromptContext.DOCUMENTATION:
-            return self._get_documentation_steps(round, common_steps, http_phase)
+            return self._get_documentation_steps(common_steps, move_type)
         else:
             return self._get_pentesting_steps(round)
 
-    def _get_documentation_steps(self, round, common_steps, http_phase):
+    def _get_documentation_steps(self, common_steps, move_type):
         """
         Provides the steps for the chain-of-thought strategy when the context is documentation.
 
         Args:
-            round (int): The current round of prompt generation.
             common_steps (list): A list of common steps for generating prompts.
-            http_phase (dict): A dictionary mapping rounds to HTTP phases.
+                    move_type (str): Type of move.
 
         Returns:
             list: A list of steps for the chain-of-thought strategy in the documentation context.
         """
-        if round <= 5:
+        if move_type == "explore":
             return self.prompt_helper.get_initial_steps(common_steps)
-        elif round <= 10:
-            phase = http_phase.get(min(x for x in http_phase.keys() if round <= x))
-            return self.prompt_helper.get_phase_steps(phase, common_steps)
         else:
-            return self.prompt_helper.get_endpoints_needing_help()
+                return self.prompt_helper.get_endpoints_needing_help()
 
     def _get_pentesting_steps(self, round):
         """

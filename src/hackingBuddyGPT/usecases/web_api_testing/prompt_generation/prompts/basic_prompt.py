@@ -25,7 +25,7 @@ class BasicPrompt(ABC):
         self.strategy = strategy
 
     @abstractmethod
-    def generate_prompt(self, round, hint, previous_prompt):
+    def generate_prompt(self, round, move_type, hint, previous_prompt):
         """
         Abstract method to generate a prompt.
 
@@ -33,6 +33,7 @@ class BasicPrompt(ABC):
 
         Args:
             round (int): The current round of prompt generation.
+            move_type (str): The type of move to generate.
             hint (str): An optional hint to guide the prompt generation.
             previous_prompt (str): The previous prompt content based on the conversation history.
 

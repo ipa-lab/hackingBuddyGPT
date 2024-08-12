@@ -1,4 +1,5 @@
 import json
+
 from bs4 import BeautifulSoup
 import re
 
@@ -57,7 +58,7 @@ class ResponseHandler(object):
             protocol, status_code, status_message = match.groups()
             return f'{status_code} {status_message}'
         else:
-            raise ValueError("Invalid HTTP status line")
+            raise ValueError(f"{status_line} is an invalid HTTP status line")
 
     def extract_response_example(self, html_content):
         """
@@ -222,3 +223,6 @@ class ResponseHandler(object):
             properties_dict[key] = {"type": str(type(value).__name__), "example": str(value)}
 
         return properties_dict
+
+
+

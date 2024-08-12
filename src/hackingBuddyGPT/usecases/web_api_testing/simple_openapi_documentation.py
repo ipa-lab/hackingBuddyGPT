@@ -1,9 +1,8 @@
+from collections import defaultdict
 from dataclasses import field
 from typing import List, Any, Union, Dict
 
-import pydantic_core
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
-from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
@@ -14,14 +13,32 @@ from hackingBuddyGPT.usecases.web_api_testing.utils.openapi_specification_manage
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
-from hackingBuddyGPT.utils import tool_message
+
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
+
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
+
 class SimpleWebAPIDocumentation(Agent):
+    """
+    SimpleWebAPIDocumentation is an agent that documents REST APIs of a website by interacting with the APIs and
+    generating an OpenAPI specification.
+
+    Attributes:
+        llm (OpenAILib): The language model to use for interaction.
+        host (str): The host URL of the website to test.
+        _prompt_history (Prompt): The history of prompts and responses.
+        _context (Context): The context containing notes.
+        _capabilities (Dict[str, Capability]): The capabilities of the agent.
+        _all_http_methods_found (bool): Flag indicating if all HTTP methods were found.
+        _http_method_description (str): Description for expected HTTP methods.
+        _http_method_template (str): Template to format HTTP methods in API requests.
+        _http_methods (str): Expected HTTP methods in the API.
+    """
+
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     _prompt_history: Prompt = field(default_factory=list)
@@ -48,6 +65,7 @@ class SimpleWebAPIDocumentation(Agent):
     )
 
     def init(self):
+        """Initializes the agent with its capabilities and handlers."""
         super().init()
         self._setup_capabilities()
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
@@ -56,6 +74,7 @@ class SimpleWebAPIDocumentation(Agent):
         self.documentation_handler = OpenAPISpecificationManager(self.llm_handler, self.response_handler)
 
     def _setup_capabilities(self):
+        """Sets up the capabilities for the agent."""
         notes = self._context["notes"]
         self._capabilities = {
             "http_request": HTTPRequest(self.host),
@@ -63,6 +82,7 @@ class SimpleWebAPIDocumentation(Agent):
         }
 
     def _setup_initial_prompt(self):
+        """Sets up the initial prompt for the agent."""
         initial_prompt = {
             "role": "system",
             "content": f"You're tasked with documenting the REST APIs of a website hosted at {self.host}. "
@@ -73,66 +93,94 @@ class SimpleWebAPIDocumentation(Agent):
         handlers = (self.llm_handler, self.response_handler)
         self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
                                               history=self._prompt_history,
-                                              handlers= handlers,
+                                              handlers=handlers,
                                               context=PromptContext.DOCUMENTATION,
                                               rest_api=self.host)
 
+    def all_http_methods_found(self, turn):
+        """
+        Checks if all expected HTTP methods have been found.
 
-    def all_http_methods_found(self,turn):
-        print(f'found endpoints:{self.documentation_handler.endpoint_methods.items()}')
-        print(f'found endpoints values:{self.documentation_handler.endpoint_methods.values()}')
+        Args:
+            turn (int): The current turn number.
 
+        Returns:
+            bool: True if all HTTP methods are found, False otherwise.
+        """
         found_endpoints = sum(len(value_list) for value_list in self.documentation_handler.endpoint_methods.values())
-        expected_endpoints = len(self.documentation_handler.endpoint_methods.keys())*4
-        print(f'expected endpoints:{expected_endpoints}')
-        print(f'correct? {found_endpoints== expected_endpoints}')
-        if found_endpoints > 0 and (found_endpoints== expected_endpoints) :
+        expected_endpoints = len(self.documentation_handler.endpoint_methods.keys()) * 4
+
+        if found_endpoints > 0 and (found_endpoints == expected_endpoints):
             return True
-        else:
-            if turn == 20:
-                if found_endpoints > 0 and (found_endpoints == expected_endpoints):
-                    return True
-            return False
+        elif turn == 20 and found_endpoints > 0 and (found_endpoints == expected_endpoints):
+            return True
+        return False
 
     def perform_round(self, turn: int):
-        prompt = self.prompt_engineer.generate_prompt()
-        response, completion = self.llm_handler.call_llm(prompt)
-        return self._handle_response(completion, response, turn)
+        """
+        Performs a round of API documentation.
 
-    def _handle_response(self, completion, response, turn):
-        message = completion.choices[0].message
-        tool_call_id = message.tool_calls[0].id
-        command = pydantic_core.to_json(response).decode()
-        self._log.console.print(Panel(command, title="assistant"))
-        self._prompt_history.append(message)
+        Args:
+            turn (int): The current turn number.
 
-        with self._log.console.status("[bold green]Executing that command..."):
-            result = response.execute()
-            self._log.console.print(Panel(result[:30], title="tool"))
-            result_str = self.response_handler.parse_http_status_line(result)
-            self._prompt_history.append(tool_message(result_str, tool_call_id))
-            invalid_flags = ["recorded","Not a valid HTTP method", "404" ,"Client Error: Not Found"]
-            if not result_str in invalid_flags  or any(item in result_str for item in invalid_flags):
-                self.prompt_engineer.prompt_helper.found_endpoints = self.documentation_handler.update_openapi_spec(response, result)
-                self.documentation_handler.write_openapi_to_yaml()
-                self.prompt_engineer.prompt_helper.schemas = self.documentation_handler.schemas
-                from collections import defaultdict
-                http_methods_dict = defaultdict(list)
-
-                # Iterate through the original dictionary
-                for endpoint, methods in self.documentation_handler.endpoint_methods.items():
-                    for method in methods:
-                        http_methods_dict[method].append(endpoint)
-                self.prompt_engineer.prompt_helper.endpoint_found_methods =  http_methods_dict
-                self.prompt_engineer.prompt_helper.endpoint_methods = self.documentation_handler.endpoint_methods
+        Returns:
+            bool: True if all HTTP methods are found, False otherwise.
+        """
+        if turn == 1:
+            self._explore_new_endpoints(turn)
+        else:
+            self.run_documentation(turn, "exploit")
         return self.all_http_methods_found(turn)
 
+    def _explore_new_endpoints(self, turn: int):
+        """
+        Explores new endpoints by running documentation until new endpoints are no longer found or a limit is reached.
 
+        Args:
+            turn (int): The current turn number.
+        """
+        counter = 0
+        new_endpoint_found = 0
+
+        while counter <= new_endpoint_found + 2 and counter <= 10:
+            self.run_documentation(turn, "explore")
+            counter += 1
+            current_endpoints = len(self.documentation_handler.endpoint_methods)
+            if current_endpoints > new_endpoint_found:
+                new_endpoint_found = current_endpoints
 
     def has_no_numbers(self, path):
+        """
+        Checks if the path contains no numbers.
+
+        Args:
+            path (str): The path to check.
+
+        Returns:
+            bool: True if the path contains no numbers, False otherwise.
+        """
         return not any(char.isdigit() for char in path)
+
+    def run_documentation(self, turn, move_type):
+        """
+        Runs the documentation process for a given turn and move type.
+
+        Args:
+            turn (int): The current turn number.
+            move_type (str): The move type ('explore' or 'exploit').
+        """
+        prompt = self.prompt_engineer.generate_prompt(turn, move_type)
+        response, completion = self.llm_handler.call_llm(prompt)
+        self._log, self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
+            completion,
+            response,
+            self._log,
+            self._prompt_history,
+            self.prompt_engineer
+        )
 
 
 @use_case("Minimal implementation of a web API testing use case")
 class SimpleWebAPIDocumentationUseCase(AutonomousAgentUseCase[SimpleWebAPIDocumentation]):
+    """Use case for the SimpleWebAPIDocumentation agent."""
     pass

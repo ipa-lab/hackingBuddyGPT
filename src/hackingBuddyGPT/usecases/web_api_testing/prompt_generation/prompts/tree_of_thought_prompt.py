@@ -26,12 +26,13 @@ class TreeOfThoughtPrompt(BasicPrompt):
         super().__init__(context, prompt_helper, PromptStrategy.TREE_OF_THOUGHT)
         self.rest_api = rest_api
 
-    def generate_prompt(self, round, hint, previous_prompt):
+    def generate_prompt(self, round, move_type, hint, previous_prompt):
         """
         Generates a prompt using the tree-of-thought strategy.
 
         Args:
             round (int): The current round of prompt generation.
+            move_type (str): The type of move to generate.
             hint (str): An optional hint to guide the prompt generation.
             previous_prompt (list): A list of previous prompt entries, each containing a "content" key.
 

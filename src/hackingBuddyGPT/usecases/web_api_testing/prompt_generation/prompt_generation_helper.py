@@ -31,6 +31,12 @@ class PromptGenerationHelper(object):
         nltk.download('punkt')
         nltk.download('stopwords')
 
+    def execute_prompt(self, prompt):
+        response, completion = self.llm_handler.call_llm(prompt)
+
+
+
+
     def get_endpoints_needing_help(self):
         """
         Identifies endpoints that need additional HTTP methods and returns guidance for the first missing method.
@@ -86,7 +92,7 @@ class PromptGenerationHelper(object):
             list: A list of initial steps combined with common steps.
         """
         return [
-            "Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}",
+            f"Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}",
             "Note down the response structures, status codes, and headers for each endpoint.",
             "For each endpoint, document the following details: URL, HTTP method, query parameters and path variables, expected request body structure for requests, response structure for successful and error responses."
         ] + common_steps

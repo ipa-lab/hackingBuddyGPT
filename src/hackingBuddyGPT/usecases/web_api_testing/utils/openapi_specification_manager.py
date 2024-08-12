@@ -2,7 +2,10 @@ import os
 import yaml
 from datetime import datetime
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
-
+from collections import defaultdict
+import pydantic_core
+from rich.panel import Panel
+from hackingBuddyGPT.utils import tool_message
 class OpenAPISpecificationManager:
     """
     Handles the generation and updating of an OpenAPI specification document based on dynamic API responses.
@@ -152,3 +155,46 @@ class OpenAPISpecificationManager:
         from hackingBuddyGPT.usecases.web_api_testing.utils.yaml_assistant import YamlFileAssistant
         yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
         yaml_file_assistant.run(description)
+
+
+    def _update_documentation(self, response, result, prompt_engineer):
+        prompt_engineer.prompt_helper.found_endpoints = self.update_openapi_spec(response,
+                                                                                                            result)
+        self.write_openapi_to_yaml()
+        prompt_engineer.prompt_helper.schemas = self.schemas
+
+        http_methods_dict = defaultdict(list)
+        for endpoint, methods in self.endpoint_methods.items():
+            for method in methods:
+                http_methods_dict[method].append(endpoint)
+
+        prompt_engineer.prompt_helper.endpoint_found_methods = http_methods_dict
+        prompt_engineer.prompt_helper.endpoint_methods = self.endpoint_methods
+        return prompt_engineer
+
+    def document_response(self, completion, response, log, prompt_history, prompt_engineer):
+            message = completion.choices[0].message
+            tool_call_id = message.tool_calls[0].id
+            command = pydantic_core.to_json(response).decode()
+
+            log.console.print(Panel(command, title="assistant"))
+            prompt_history.append(message)
+
+            with log.console.status("[bold green]Executing that command..."):
+                result = response.execute()
+                log.console.print(Panel(result[:30], title="tool"))
+                result_str = self.response_handler.parse_http_status_line(result)
+                prompt_history.append(tool_message(result_str, tool_call_id))
+
+                invalid_flags = {"recorded", "Not a valid HTTP method", "404", "Client Error: Not Found"}
+                if not result_str in invalid_flags or any(flag in result_str for flag in invalid_flags):
+                    prompt_engineer = self._update_documentation(response, result, prompt_engineer)
+
+            return log, prompt_history, prompt_engineer
+
+    def found_all_endpoints(self):
+        if len(self.endpoint_methods.items())< 10:
+            return False
+        else:
+            return True
+

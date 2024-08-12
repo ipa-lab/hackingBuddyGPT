@@ -27,12 +27,13 @@ class InContextLearningPrompt(BasicPrompt):
         super().__init__(context, prompt_helper, PromptStrategy.IN_CONTEXT)
         self.prompt = prompt
 
-    def generate_prompt(self, round, hint, previous_prompt):
+    def generate_prompt(self,round, move_type, hint, previous_prompt):
         """
         Generates a prompt using the in-context learning strategy.
 
         Args:
             round (int): The current round of prompt generation.
+            move_type (str): The type of move to generate.
             hint (str): An optional hint to guide the prompt generation.
             previous_prompt (list): A list of previous prompt entries, each containing a "content" key.
 

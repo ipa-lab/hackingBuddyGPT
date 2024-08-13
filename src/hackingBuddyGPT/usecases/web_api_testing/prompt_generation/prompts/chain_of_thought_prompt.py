@@ -1,3 +1,5 @@
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.pentesting_information import \
+    PenTestingInformation
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy, PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.basic_prompt import BasicPrompt
 
@@ -23,6 +25,8 @@ class ChainOfThoughtPrompt(BasicPrompt):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         """
         super().__init__(context, prompt_helper, PromptStrategy.CHAIN_OF_THOUGHT)
+        self.pentesting_information = PenTestingInformation()
+        self.explored_steps = []
 
     def generate_prompt(self, move_type, hint, previous_prompt):
         """
@@ -112,8 +116,12 @@ class ChainOfThoughtPrompt(BasicPrompt):
             list: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
         if move_type == "explore":
-            focus_phases = ["endpoints", "HTTP method GET", "HTTP method POST and PUT", "HTTP method DELETE"]
-            return ["Let's think step by step.",
-                    f"Just focus on the {focus_phases} for now."]
+            steps = list(self.pentesting_information.explore_steps.keys())[0]
+            if steps not in self.explored_steps:
+                prompt = self.pentesting_information.explore_steps[steps]
+                self.explored_steps.append(steps)
+                del self.pentesting_information.explore_steps[steps]
+                print(f'prompt:{prompt}')
+                return prompt
         else:
             return ["Look for exploits."]

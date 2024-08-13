@@ -1,6 +1,7 @@
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.pentesting_information import \
     PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy, PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy, PromptContext, \
+    PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.basic_prompt import BasicPrompt
 
 class ChainOfThoughtPrompt(BasicPrompt):
@@ -27,6 +28,7 @@ class ChainOfThoughtPrompt(BasicPrompt):
         super().__init__(context, prompt_helper, PromptStrategy.CHAIN_OF_THOUGHT)
         self.pentesting_information = PenTestingInformation()
         self.explored_steps = []
+        self.purpose = None
 
     def generate_prompt(self, move_type, hint, previous_prompt):
         """
@@ -85,6 +87,7 @@ class ChainOfThoughtPrompt(BasicPrompt):
             list: A list of steps for the chain-of-thought strategy.
         """
         if self.context == PromptContext.DOCUMENTATION:
+            self.purpose = PromptPurpose.DOCUMENTATION
             return self._get_documentation_steps(common_steps, move_type)
         else:
             return self._get_pentesting_steps(move_type)
@@ -116,11 +119,15 @@ class ChainOfThoughtPrompt(BasicPrompt):
             list: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
         if move_type == "explore":
-            steps = list(self.pentesting_information.explore_steps.keys())[0]
-            if steps not in self.explored_steps:
-                prompt = self.pentesting_information.explore_steps[steps]
-                self.explored_steps.append(steps)
-                del self.pentesting_information.explore_steps[steps]
+            purpose = list(self.pentesting_information.explore_steps.keys())[0]
+            step = self.pentesting_information.explore_steps[purpose][0]
+            if step not in self.explored_steps:
+                prompt = step
+                self.purpose = purpose
+                self.explored_steps.append(step)
+                del self.pentesting_information.explore_steps[purpose][0]
+                if len(self.pentesting_information.explore_steps[purpose]) == 0:
+                    del self.pentesting_information.explore_steps[purpose]
                 print(f'prompt:{prompt}')
                 return prompt
         else:

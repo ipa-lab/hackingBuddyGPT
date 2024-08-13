@@ -224,5 +224,10 @@ class ResponseHandler(object):
 
         return properties_dict
 
+    def evaluate_result(self, result, purpose):
+        pass
+
+
+
 
 

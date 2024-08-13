@@ -114,9 +114,9 @@ class SimpleWebAPITesting(Agent):
         """
         prompt = self.prompt_engineer.generate_prompt(turn)
         response, completion = self.llm_handler.call_llm(prompt)
-        self._handle_response(completion, response)
+        self._handle_response(completion, response, self.prompt_engineer.purpose)
 
-    def _handle_response(self, completion, response):
+    def _handle_response(self, completion, response, purpose):
         """
         Handles the response from the LLM. Parses the response, executes the necessary actions,
         and updates the prompt history.
@@ -135,6 +135,7 @@ class SimpleWebAPITesting(Agent):
             result = response.execute()
             self._log.console.print(Panel(result[:30], title="tool"))
             result_str = self.response_handler.parse_http_status_line(result)
+            self.response_handler.evaluate_result(result, purpose)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
 
         return self.all_http_methods_found()

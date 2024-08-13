@@ -32,11 +32,11 @@ class PromptEngineer:
         self._prompt_history = history or []
         self.previous_prompt = self._prompt_history[self.round]["content"] if self._prompt_history else "initial_prompt"
         self.prompt = {self.round: {"content": "initial_prompt"}}
-
+        self.purpose = None
         self.strategies = {
-            PromptStrategy.IN_CONTEXT: InContextLearningPrompt(self.context, self.prompt_helper, self.prompt, self.round).generate_prompt,
-            PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(self.context, self.prompt_helper).generate_prompt,
-            PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(self.context, self.prompt_helper, self.rest_api, self.round).generate_prompt
+            PromptStrategy.IN_CONTEXT: InContextLearningPrompt(self.context, self.prompt_helper, self.prompt, self.round),
+            PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(self.context, self.prompt_helper),
+            PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(self.context, self.prompt_helper, self.rest_api, self.round)
         }
 
     def generate_prompt(self, round,move_type="explore",  hint=""):
@@ -60,10 +60,12 @@ class PromptEngineer:
         self.round = round
         while not is_good:
             try:
-                if self.context == PromptStrategy.CHAIN_OF_THOUGHT:
-                    prompt = prompt_func(move_type, hint, self.previous_prompt)
+                prompt_stratgey = prompt_func
+                if self.strategy == PromptStrategy.CHAIN_OF_THOUGHT:
+                    prompt = prompt_stratgey.generate_prompt(move_type, hint, self.previous_prompt)
                 else:
-                    prompt = prompt_func(move_type, hint, self._prompt_history)
+                    prompt = prompt_stratgey.generate_prompt(move_type, hint, self._prompt_history)
+                self.purpose = prompt_stratgey.purpose
                 response_text = self.response_handler.get_response_for_prompt(prompt)
                 is_good = self.evaluate_response(prompt, response_text)
             except InstructorRetryException:
@@ -90,3 +92,6 @@ class PromptEngineer:
         """
         # TODO: Implement a proper evaluation mechanism
         return True
+
+    def get_purpose(self):
+        return self.purpose

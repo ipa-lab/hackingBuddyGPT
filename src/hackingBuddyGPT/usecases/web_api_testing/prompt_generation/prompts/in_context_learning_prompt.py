@@ -1,4 +1,4 @@
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy, PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.basic_prompt import BasicPrompt
 
 class InContextLearningPrompt(BasicPrompt):
@@ -28,8 +28,10 @@ class InContextLearningPrompt(BasicPrompt):
         super().__init__(context, prompt_helper, PromptStrategy.IN_CONTEXT)
         self.round = round
         self.prompt = prompt
+        self.purpose = None
 
-    def generate_prompt(self, move_type, hint, previous_prompt):
+
+    def generate_prompt(self, move_type, hint, previous_prompt): # still work in progress
         """
         Generates a prompt using the in-context learning strategy.
 

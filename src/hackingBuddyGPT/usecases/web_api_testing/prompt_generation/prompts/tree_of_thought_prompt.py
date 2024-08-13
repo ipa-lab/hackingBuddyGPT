@@ -1,4 +1,5 @@
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy, PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy, PromptContext, \
+    PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.basic_prompt import BasicPrompt
 
 class TreeOfThoughtPrompt(BasicPrompt):
@@ -27,8 +28,9 @@ class TreeOfThoughtPrompt(BasicPrompt):
         super().__init__(context, prompt_helper, PromptStrategy.TREE_OF_THOUGHT)
         self.rest_api = rest_api
         self.round = round
+        self.purpose = None
 
-    def generate_prompt(self, move_type, hint, previous_prompt):
+    def generate_prompt(self, move_type, hint, previous_prompt): # still work in progress
         """
         Generates a prompt using the tree-of-thought strategy.
 
@@ -58,5 +60,6 @@ class TreeOfThoughtPrompt(BasicPrompt):
             "If any expert realizes they're wrong at any point, they will leave.\n"
             f"The question is: Create pentests for this REST API {self.rest_api} "
             )]
+        self.purpose = PromptPurpose.AUTHENTICATION_AUTHORIZATION
 
         return "\n".join([previous_prompt[self.round]["content"]] + tree_of_thoughts_steps)

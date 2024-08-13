@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import MagicMock
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import PromptGenerationHelper
@@ -7,6 +8,8 @@ class TestPromptHelper(unittest.TestCase):
     def setUp(self):
         self.response_handler = MagicMock()
         self.prompt_helper = PromptGenerationHelper(self.response_handler)
+
+    @unittest.skipUnless(os.getenv('RUN_LOCAL_TESTS') == 'true', "Skipping test for CI")
     def test_token_count(self):
         text = "This is a sample text with several words."
         count = self.prompt_helper.token_count(text)

@@ -26,7 +26,7 @@ class ChainOfThoughtPrompt(BasicPrompt):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         """
         super().__init__(context, prompt_helper, PromptStrategy.CHAIN_OF_THOUGHT)
-        self.pentesting_information = PenTestingInformation()
+        self.pentesting_information = PenTestingInformation(schemas = prompt_helper.schemas)
         self.explored_steps = []
         self.purpose = None
 

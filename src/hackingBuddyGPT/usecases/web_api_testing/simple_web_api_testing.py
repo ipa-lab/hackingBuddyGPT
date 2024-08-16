@@ -11,6 +11,7 @@ from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.response_analyizer import ResponseAnalyzer
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.utils import OpenAPISpecificationParser
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
@@ -21,7 +22,7 @@ from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
-
+openapi_spec_filename = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/utils/openapi_spec/openapi_spec_2024-08-16_14-14-07.yaml"
 class SimpleWebAPITesting(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
@@ -51,6 +52,7 @@ class SimpleWebAPITesting(Agent):
         LLM handler, capabilities, and the initial prompt.
         """
         super().init()
+        self.openapi_specification = OpenAPISpecificationParser(openapi_spec_filename).api_data
         self._context["host"] = self.host
         self._setup_capabilities()
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
@@ -74,11 +76,14 @@ class SimpleWebAPITesting(Agent):
         }
         self._prompt_history.append(initial_prompt)
         handlers = (self.llm_handler, self.response_handler)
+        schemas = self.openapi_specification["components"]["schemas"]
         self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
                                               history=self._prompt_history,
                                               handlers=handlers,
                                               context=PromptContext.PENTESTING,
-                                              rest_api=self.host)
+                                              rest_api=self.host,
+                                              schemas=schemas)
+
 
 
     def all_http_methods_found(self):
@@ -136,8 +141,8 @@ class SimpleWebAPITesting(Agent):
             self._log.console.print(Panel(result[:30], title="tool"))
             result_str = self.response_handler.parse_http_status_line(result)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
-            analysis = self.response_handler.evaluate_result(result, purpose)
-            self._prompt_history.append(analysis)
+            #analysis = self.response_handler.evaluate_result(result, purpose)
+           # self._prompt_history.append((tool_message(analysis, tool_call_id)))
 
 
 

@@ -12,7 +12,7 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.tree_of_
 class PromptEngineer:
     '''Prompt engineer that creates prompts of different types'''
 
-    def __init__(self, strategy, history, handlers, context, rest_api=""):
+    def __init__(self, strategy, history, handlers, context, rest_api="", schemas={}):
         """
         Initializes the PromptEngineer with a specific strategy and handlers for LLM and responses.
 
@@ -26,7 +26,7 @@ class PromptEngineer:
         self.strategy = strategy
         self.rest_api = rest_api
         self.llm_handler, self.response_handler = handlers
-        self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler)
+        self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler, schemas=schemas)
         self.context = context
         self.round = 0
         self._prompt_history = history or []
@@ -66,8 +66,8 @@ class PromptEngineer:
                 else:
                     prompt = prompt_stratgey.generate_prompt(move_type, hint, self._prompt_history)
                 self.purpose = prompt_stratgey.purpose
-                response_text = self.response_handler.get_response_for_prompt(prompt)
-                is_good = self.evaluate_response(prompt, response_text)
+                #response_text = self.response_handler.get_response_for_prompt(prompt)
+                is_good = self.evaluate_response(prompt, "")
             except InstructorRetryException:
                 hint = f"invalid prompt: {prompt}"
 
@@ -95,3 +95,4 @@ class PromptEngineer:
 
     def get_purpose(self):
         return self.purpose
+

@@ -14,25 +14,23 @@ class PromptGenerationHelper(object):
         schemas (dict): A dictionary of schemas used for constructing HTTP requests.
     """
 
-    def __init__(self, response_handler):
+    def __init__(self, response_handler, schemas={}):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
 
         Args:
             response_handler (object): The response handler used for managing responses.
+            schemas(tuple):  Schemas used
         """
         self.response_handler = response_handler
         self.found_endpoints = ["/"]
         self.endpoint_methods = {}
         self.endpoint_found_methods = {}
-        self.schemas = {}
+        self.schemas = schemas
 
         # Download NLTK models if not already installed
         nltk.download('punkt')
         nltk.download('stopwords')
-
-    def execute_prompt(self, prompt):
-        response, completion = self.llm_handler.call_llm(prompt)
 
 
 
@@ -97,28 +95,6 @@ class PromptGenerationHelper(object):
             "For each endpoint, document the following details: URL, HTTP method, query parameters and path variables, expected request body structure for requests, response structure for successful and error responses."
         ] + common_steps
 
-    def get_phase_steps(self, phase, common_steps):
-        """
-        Provides steps for a specific phase, including identifying valid HTTP methods and constructing actions.
-
-        Args:
-            phase (str): The current phase to generate steps for.
-            common_steps (list): A list of common steps to be included.
-
-        Returns:
-            list: A list of steps for the specified phase combined with common steps.
-        """
-        if phase != "DELETE":
-            return [
-                f"Identify for all endpoints {self.found_endpoints} excluding {self.endpoint_found_methods.get(phase, [])} a valid HTTP method {phase} call.",
-                self.get_http_action_template(phase)
-            ] + common_steps
-        else:
-            return [
-                "Check for all endpoints the DELETE method. Delete the first instance for all endpoints.",
-                self.get_http_action_template(phase)
-            ] + common_steps
-
     def token_count(self, text):
         """
         Counts the number of word tokens in the provided text using NLTK's tokenizer.
@@ -155,7 +131,7 @@ class PromptGenerationHelper(object):
             return "Prompt is still too long after summarization."
 
         if not all(step in previous_prompt for step in steps):
-            potential_prompt = "\n" + str(steps) +"\n"
+            potential_prompt = str(steps) +"\n"
             return validate_prompt(potential_prompt)
 
         return validate_prompt(previous_prompt)

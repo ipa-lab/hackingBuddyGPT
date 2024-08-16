@@ -109,7 +109,8 @@ class SimpleWebAPIDocumentation(Agent):
         """
         found_endpoints = sum(len(value_list) for value_list in self.documentation_handler.endpoint_methods.values())
         expected_endpoints = len(self.documentation_handler.endpoint_methods.keys()) * 4
-
+        print(f'found methods:{found_endpoints}')
+        print(f'expected methods:{expected_endpoints}')
         if found_endpoints > 0 and (found_endpoints == expected_endpoints):
             return True
         elif turn == 20 and found_endpoints > 0 and (found_endpoints == expected_endpoints):
@@ -134,6 +135,9 @@ class SimpleWebAPIDocumentation(Agent):
                 counter += 1
                 if len(self.documentation_handler.endpoint_methods) > new_endpoint_found:
                     new_endpoint_found = len(self.documentation_handler.endpoint_methods)
+        elif turn == 20:
+            while len(self.prompt_engineer.prompt_helper.get_endpoints_needing_help() )!= 0:
+                self.run_documentation(turn, "exploit")
         else:
             self.run_documentation(turn, "exploit")
         return self.all_http_methods_found(turn)

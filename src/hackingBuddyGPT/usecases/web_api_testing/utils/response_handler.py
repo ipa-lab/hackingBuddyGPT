@@ -54,7 +54,7 @@ class ResponseHandler(object):
         Raises:
             ValueError: If the status line is invalid.
         """
-        if status_line == "Not a valid HTTP method":
+        if status_line == "Not a valid HTTP method" or status_line.__contains__("note recorded"):
             return status_line
         status_line = status_line.split('\r\n')[0]
         # Regular expression to match valid HTTP status lines
@@ -165,7 +165,6 @@ class ResponseHandler(object):
                 else:
                     for key, value in body_dict.items():
                         properties_dict = self.extract_keys(key, value, properties_dict)
-                        print(f'properzies: {properties_dict}')
 
 
         object_dict = {"type": "object", "properties": properties_dict}

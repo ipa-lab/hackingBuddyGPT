@@ -130,7 +130,7 @@ class PromptGenerationHelper(object):
             int: The number of tokens in the input text.
         """
         tokens = word_tokenize(text)
-        words = [token for token in tokens if token.isalnum()]
+        words = [token.strip("'") for token in tokens if token.strip("'").isalnum()]
         return len(words)
 
     def check_prompt(self, previous_prompt, steps, max_tokens=900):

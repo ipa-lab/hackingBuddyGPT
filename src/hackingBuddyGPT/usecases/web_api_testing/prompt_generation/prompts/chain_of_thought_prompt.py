@@ -120,14 +120,18 @@ class ChainOfThoughtPrompt(BasicPrompt):
         """
         if move_type == "explore":
             purpose = list(self.pentesting_information.explore_steps.keys())[0]
-            step = self.pentesting_information.explore_steps[purpose][0]
+            step = self.pentesting_information.explore_steps[purpose]
             if step not in self.explored_steps:
+                if len(step) > 1:
+                    step = self.pentesting_information.explore_steps[purpose][0]
+                    if len(self.pentesting_information.explore_steps[purpose]) == 0:
+                        del self.pentesting_information.explore_steps[purpose][0]
                 prompt = step
                 self.purpose = purpose
                 self.explored_steps.append(step)
-                del self.pentesting_information.explore_steps[purpose][0]
-                if len(self.pentesting_information.explore_steps[purpose]) == 0:
+                if len(step) == 1:
                     del self.pentesting_information.explore_steps[purpose]
+
                 print(f'prompt:{prompt}')
                 return prompt
         else:

@@ -3,6 +3,9 @@ import json
 from bs4 import BeautifulSoup
 import re
 
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.response_analyizer import ResponseAnalyzer
+
+
 class ResponseHandler(object):
     """
     ResponseHandler is a class responsible for handling various types of responses from an LLM (Large Language Model).
@@ -20,6 +23,8 @@ class ResponseHandler(object):
             llm_handler (object): An instance of the LLM handler for interacting with the LLM.
         """
         self.llm_handler = llm_handler
+        self.response_analyzer = ResponseAnalyzer()
+
 
     def get_response_for_prompt(self, prompt):
         """
@@ -225,7 +230,9 @@ class ResponseHandler(object):
         return properties_dict
 
     def evaluate_result(self, result, purpose):
-        pass
+        self.response_analyzer.set_purpose(purpose)
+        return self.response_analyzer.analyze_response(result)
+
 
 
 

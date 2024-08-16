@@ -9,6 +9,7 @@ from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.response_analyizer import ResponseAnalyzer
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
@@ -54,7 +55,6 @@ class SimpleWebAPITesting(Agent):
         self._setup_capabilities()
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
-
         self._setup_initial_prompt()
 
     def _setup_initial_prompt(self):
@@ -135,8 +135,11 @@ class SimpleWebAPITesting(Agent):
             result = response.execute()
             self._log.console.print(Panel(result[:30], title="tool"))
             result_str = self.response_handler.parse_http_status_line(result)
-            self.response_handler.evaluate_result(result, purpose)
             self._prompt_history.append(tool_message(result_str, tool_call_id))
+            analysis = self.response_handler.evaluate_result(result, purpose)
+            self._prompt_history.append(analysis)
+
+
 
         return self.all_http_methods_found()
 @use_case("Minimal implementation of a web API testing use case")

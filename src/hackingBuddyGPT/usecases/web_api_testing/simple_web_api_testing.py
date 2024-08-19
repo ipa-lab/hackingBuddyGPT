@@ -1,3 +1,4 @@
+import os.path
 from dataclasses import field
 from typing import List, Any, Union, Dict
 
@@ -52,7 +53,8 @@ class SimpleWebAPITesting(Agent):
         LLM handler, capabilities, and the initial prompt.
         """
         super().init()
-        self.openapi_specification = OpenAPISpecificationParser(openapi_spec_filename).api_data
+        if os.path.exists(openapi_spec_filename):
+            self.openapi_specification = OpenAPISpecificationParser(openapi_spec_filename).api_data
         self._context["host"] = self.host
         self._setup_capabilities()
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
@@ -76,7 +78,10 @@ class SimpleWebAPITesting(Agent):
         }
         self._prompt_history.append(initial_prompt)
         handlers = (self.llm_handler, self.response_handler)
-        schemas = self.openapi_specification["components"]["schemas"]
+        if os.path.exists(openapi_spec_filename):
+            schemas = self.openapi_specification["components"]["schemas"]
+        else:
+            schemas = {}
         self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
                                               history=self._prompt_history,
                                               handlers=handlers,

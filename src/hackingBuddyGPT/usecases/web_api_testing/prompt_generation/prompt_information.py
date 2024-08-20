@@ -50,3 +50,8 @@ class PromptPurpose(Enum):
     SECURITY_MISCONFIGURATIONS = 10
     LOGGING_MONITORING = 11
 
+    #Analysis
+    PARSING = 12
+    ANALYSIS = 13
+    REPORTING = 14
+

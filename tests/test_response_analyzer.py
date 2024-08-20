@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.response_analyizer import ResponseAnalyzer
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.response_analyzer import ResponseAnalyzer
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptPurpose
 
 

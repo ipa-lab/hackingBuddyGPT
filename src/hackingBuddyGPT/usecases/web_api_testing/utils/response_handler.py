@@ -3,7 +3,7 @@ import json
 from bs4 import BeautifulSoup
 import re
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.response_analyizer import ResponseAnalyzer
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.response_analyzer import ResponseAnalyzer
 
 
 class ResponseHandler(object):

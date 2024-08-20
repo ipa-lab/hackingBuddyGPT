@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from bs4 import BeautifulSoup
-import json
-from hackingBuddyGPT.usecases.web_api_testing.utils import ResponseHandler
+
+from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
+
 
 class TestResponseHandler(unittest.TestCase):
     def setUp(self):
@@ -47,7 +47,7 @@ class TestResponseHandler(unittest.TestCase):
         result = self.response_handler.extract_response_example(html_content)
         self.assertIsNone(result)
 
-    @patch('hackingBuddyGPT.usecases.web_api_testing.utils.ResponseHandler.parse_http_response_to_schema')
+    @patch('hackingBuddyGPT.usecases.web_api_testing.response_processing.ResponseHandler.parse_http_response_to_openapi_example')
     def test_parse_http_response_to_openapi_example(self, mock_parse_http_response_to_schema):
         openapi_spec = {
             "components": {"schemas": {}}
@@ -60,9 +60,9 @@ class TestResponseHandler(unittest.TestCase):
 
         entry_dict, reference, updated_spec = self.response_handler.parse_http_response_to_openapi_example(openapi_spec, http_response, path, method)
 
-        self.assertEqual(reference, "#/components/schemas/Test")
+        self.assertEqual(reference, "Test")
         self.assertEqual(updated_spec, openapi_spec)
-        self.assertIn("test", entry_dict)
+        self.assertIn("Test", entry_dict)
 
     def test_extract_description(self):
         note = MagicMock()
@@ -70,17 +70,31 @@ class TestResponseHandler(unittest.TestCase):
         description = self.response_handler.extract_description(note)
         self.assertEqual(description, "Test description")
 
-    @patch('hackingBuddyGPT.usecases.web_api_testing.utils.ResponseHandler.extract_keys')
-    def test_parse_http_response_to_schema(self, mock_extract_keys):
+    from unittest.mock import patch
+
+    @patch('hackingBuddyGPT.usecases.web_api_testing.response_processing.ResponseHandler.parse_http_response_to_schema')
+    def test_parse_http_response_to_schema(self, mock_parse_http_response_to_schema):
         openapi_spec = {
             "components": {"schemas": {}}
         }
         body_dict = {"id": 1, "name": "test"}
         path = "/tests"
 
-        mock_extract_keys.side_effect = lambda key, value, properties: {**properties, key: {"type": type(value).__name__, "example": value}}
+        def mock_side_effect(spec, body, path):
+            schema_name = "Test"
+            spec['components']['schemas'][schema_name] = {
+                "type": "object",
+                "properties": {
+                    key: {"type": type(value).__name__, "example": value} for key, value in body.items()
+                }
+            }
+            reference = f"#/components/schemas/{schema_name}"
+            return reference, schema_name, spec
 
-        reference, object_name, updated_spec = self.response_handler.parse_http_response_to_schema(openapi_spec, body_dict, path)
+        mock_parse_http_response_to_schema.side_effect = mock_side_effect
+
+        reference, object_name, updated_spec = self.response_handler.parse_http_response_to_schema(openapi_spec,
+                                                                                                   body_dict, path)
 
         self.assertEqual(reference, "#/components/schemas/Test")
         self.assertEqual(object_name, "Test")

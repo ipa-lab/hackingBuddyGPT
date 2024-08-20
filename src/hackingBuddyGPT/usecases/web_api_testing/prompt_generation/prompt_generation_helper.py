@@ -1,3 +1,5 @@
+import re
+
 import nltk
 from nltk.tokenize import word_tokenize
 
@@ -105,7 +107,7 @@ class PromptGenerationHelper(object):
         Returns:
             int: The number of tokens in the input text.
         """
-        tokens = word_tokenize(text)
+        tokens = re.findall(r'\b\w+\b', text)
         words = [token.strip("'") for token in tokens if token.strip("'").isalnum()]
         return len(words)
 

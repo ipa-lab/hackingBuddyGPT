@@ -2,7 +2,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
-from hackingBuddyGPT.usecases.web_api_testing.utils import OpenAPISpecificationManager
+from hackingBuddyGPT.usecases.web_api_testing.utils.openapi_utils.openapi_specification_manager import \
+    OpenAPISpecificationManager
 
 
 class TestSpecificationHandler(unittest.TestCase):

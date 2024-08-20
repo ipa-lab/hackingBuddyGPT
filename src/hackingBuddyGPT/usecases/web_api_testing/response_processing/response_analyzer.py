@@ -45,6 +45,11 @@ class ResponseAnalyzer(object):
         header_body_split = raw_response.split("\r\n\r\n", 1)
         header_lines = header_body_split[0].split("\n")
         body = header_body_split[1] if len(header_body_split) > 1 else ""
+        print(f'Body:{body}')
+        if body != {} and bool(body and not body.isspace()):
+            body = json.loads(body)[0]
+        else:
+            body = "Empty"
 
         status_line = header_lines[0].strip()
         headers = {key.strip(): value.strip() for key, value in
@@ -110,7 +115,7 @@ class ResponseAnalyzer(object):
                 'X-Ratelimit-Remaining': headers.get('X-Ratelimit-Remaining'),
                 'X-Ratelimit-Reset': headers.get('X-Ratelimit-Reset'),
             },
-            'content_body': "Empty" if body.strip() == "" else body.strip(),
+            'content_body': "Empty" if body ==  {} else body,
         }
         return analysis
 
@@ -128,7 +133,7 @@ class ResponseAnalyzer(object):
         """
         analysis = {
             'status_code': status_code,
-            'response_body': "Empty" if body.strip() == "" else body.strip(),
+            'response_body': "Empty" if body == {}  else body,
             'is_valid_response': self.is_valid_input_response(status_code, body),
             'security_headers_present': any(key in headers for key in ["X-Content-Type-Options", "X-Ratelimit-Limit"]),
         }
@@ -212,17 +217,24 @@ class ResponseAnalyzer(object):
             "Authentication Status": analysis.get("authentication_status"),
             "Security Headers Present": "Yes" if analysis.get("security_headers_present") else "No",
         }
+        analysis_str="\n"
 
         for label, value in fields_to_print.items():
-            if value is not None:
-                print(f"{label}: {value}")
+            if label == "Content Body":
+                if value is not None:
+                    analysis_str += f"{label}: {fields_to_print['Content Body']}"
+            else:
+                if value is not None:
+                    analysis_str += f"{label}: {value}\n"
 
         if "rate_limiting" in analysis:
-            print("Rate Limiting Information:")
-            for key, value in analysis["rate_limiting"].items():
-                print(f"  {key}: {value}")
+            analysis_str += f"Rate Limiting Information:\n"
 
-        print("-" * 50)
+            for key, value in analysis["rate_limiting"].items():
+                analysis_str += f"  {key}: {value}\n"
+
+        analysis_str += "-" * 50
+        return analysis_str
 
 if __name__ == '__main__':
     # Example HTTP response to parse
@@ -266,4 +278,4 @@ if __name__ == '__main__':
     analysis = respons_analyzer.analyze_response(raw_http_response)
 
     # Print the analysis results
-    respons_analyzer.print_analysis(analysis)
+    print(respons_analyzer.print_analysis(analysis))

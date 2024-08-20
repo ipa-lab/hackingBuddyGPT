@@ -8,7 +8,7 @@ from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
-from hackingBuddyGPT.usecases.web_api_testing.utils.openapi_utils.openapi_specification_manager import OpenAPISpecificationManager
+from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.openapi_specification_handler import OpenAPISpecificationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
@@ -70,7 +70,7 @@ class SimpleWebAPIDocumentation(Agent):
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
         self._setup_initial_prompt()
-        self.documentation_handler = OpenAPISpecificationManager(self.llm_handler, self.response_handler)
+        self.documentation_handler = OpenAPISpecificationHandler(self.llm_handler, self.response_handler)
 
     def _setup_capabilities(self):
         """Sets up the capabilities for the agent."""

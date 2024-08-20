@@ -1,4 +1,4 @@
 from .openapi_parser import OpenAPISpecificationParser
 from .openapi_converter import OpenAPISpecificationConverter
-from .openapi_specification_manager import OpenAPISpecificationManager
+from .openapi_specification_handler import OpenAPISpecificationHandler
 from .yaml_assistant import YamlFileAssistant

@@ -5,8 +5,11 @@ from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 from collections import defaultdict
 import pydantic_core
 from rich.panel import Panel
+
+from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.utils import tool_message
-class OpenAPISpecificationManager:
+class OpenAPISpecificationHandler(object):
     """
     Handles the generation and updating of an OpenAPI specification document based on dynamic API responses.
 
@@ -22,7 +25,7 @@ class OpenAPISpecificationManager:
         _capabilities (dict): A dictionary to store capabilities related to YAML file handling.
     """
 
-    def __init__(self, llm_handler, response_handler):
+    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler):
         """
         Initializes the handler with a template OpenAPI specification.
 
@@ -46,7 +49,6 @@ class OpenAPISpecificationManager:
             "components": {"schemas": {}}
         }
         self.llm_handler = llm_handler
-        #self.api_key = llm_handler.llm.api_key
         current_path = os.path.dirname(os.path.abspath(__file__))
         self.file_path = os.path.join(current_path, "openapi_spec")
         self.file = os.path.join(self.file_path, self.filename)
@@ -152,7 +154,7 @@ class OpenAPISpecificationManager:
             note (object): The note object containing the description of the API.
         """
         description = self.response_handler.extract_description(note)
-        from hackingBuddyGPT.usecases.web_api_testing.utils.openapi_utils.yaml_assistant import YamlFileAssistant
+        from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.yaml_assistant import YamlFileAssistant
         yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
         yaml_file_assistant.run(description)
 

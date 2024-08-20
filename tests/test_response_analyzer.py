@@ -30,7 +30,7 @@ class TestResponseAnalyzer(unittest.TestCase):
 
         self.assertEqual(status_code, 404)
         self.assertEqual(headers['Content-Type'], 'application/json; charset=utf-8')
-        self.assertEqual(body, '')
+        self.assertEqual(body, 'Empty')
 
     def test_analyze_authentication_authorization(self):
         analyzer = ResponseAnalyzer(PromptPurpose.AUTHENTICATION_AUTHORIZATION)
@@ -54,12 +54,12 @@ class TestResponseAnalyzer(unittest.TestCase):
     def test_print_analysis(self, mock_print):
         analyzer = ResponseAnalyzer(PromptPurpose.INPUT_VALIDATION)
         analysis = analyzer.analyze_response(self.raw_http_response)
-        analyzer.print_analysis(analysis)
+        analysis_str =analyzer.print_analysis(analysis)
 
         # Check that the correct calls were made to print
-        self.assertIn("HTTP Status Code: 404", [call.args[0] for call in mock_print.call_args_list])
-        self.assertIn("Response Body: Empty", [call.args[0] for call in mock_print.call_args_list])
-        self.assertIn("Security Headers Present: Yes", [call.args[0] for call in mock_print.call_args_list])
+        self.assertIn("HTTP Status Code: 404", analysis_str)
+        self.assertIn("Response Body: Empty", analysis_str)
+        self.assertIn("Security Headers Present: Yes", analysis_str)
 
 if __name__ == '__main__':
     unittest.main()

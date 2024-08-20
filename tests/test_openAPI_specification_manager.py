@@ -2,15 +2,15 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
-from hackingBuddyGPT.usecases.web_api_testing.utils.openapi_utils.openapi_specification_manager import \
-    OpenAPISpecificationManager
+from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.openapi_specification_handler import \
+    OpenAPISpecificationHandler
 
 
 class TestSpecificationHandler(unittest.TestCase):
     def setUp(self):
         self.llm_handler = MagicMock()
         self.response_handler = MagicMock()
-        self.doc_handler = OpenAPISpecificationManager(self.llm_handler, self.response_handler)
+        self.doc_handler = OpenAPISpecificationHandler(self.llm_handler, self.response_handler)
 
     @patch('os.makedirs')
     @patch('builtins.open')

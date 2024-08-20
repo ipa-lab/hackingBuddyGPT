@@ -12,6 +12,7 @@ from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.utils import OpenAPISpecificationParser
+from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.report_handler import ReportHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
@@ -59,6 +60,7 @@ class SimpleWebAPITesting(Agent):
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
         self._setup_initial_prompt()
+        self.report_handler = ReportHandler()
 
     def _setup_initial_prompt(self):
         """
@@ -143,11 +145,11 @@ class SimpleWebAPITesting(Agent):
         with self._log.console.status("[bold green]Executing that command..."):
             result = response.execute()
             self._log.console.print(Panel(result[:30], title="tool"))
-            result_str = self.response_handler.parse_http_status_line(result)
-
+            endpoint = str(response.action.path).split('/')[1]
+            self.report_handler.write_endpoint_to_report(endpoint)
             analysis = self.response_handler.evaluate_result(result, purpose)
+            self.report_handler.write_analysis_to_report(analysis=self.response_handler.response_analyzer.print_analysis(analysis), purpose=self.prompt_engineer.purpose)
             self._prompt_history.append(tool_message(str(analysis), tool_call_id))
-           # self._prompt_history.append((tool_message(analysis, tool_call_id)))
 
 
 

@@ -1,7 +1,7 @@
 import json
 import re
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptPurpose
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
 
 
 class ResponseAnalyzer(object):

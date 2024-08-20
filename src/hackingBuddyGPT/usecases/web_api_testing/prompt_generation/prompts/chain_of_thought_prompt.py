@@ -1,6 +1,6 @@
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.pentesting_information import \
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.pentesting_information import \
     PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy, PromptContext, \
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, PromptContext, \
     PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.basic_prompt import BasicPrompt
 

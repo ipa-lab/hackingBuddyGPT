@@ -10,12 +10,11 @@ from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.response_analyzer import ResponseAnalyzer
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.utils import OpenAPISpecificationParser
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
-from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib

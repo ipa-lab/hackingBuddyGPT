@@ -152,7 +152,7 @@ class OpenAPISpecificationManager:
             note (object): The note object containing the description of the API.
         """
         description = self.response_handler.extract_description(note)
-        from hackingBuddyGPT.usecases.web_api_testing.utils.yaml_assistant import YamlFileAssistant
+        from hackingBuddyGPT.usecases.web_api_testing.utils.openapi_utils.yaml_assistant import YamlFileAssistant
         yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
         yaml_file_assistant.run(description)
 

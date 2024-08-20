@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy
 
 class BasicPrompt(ABC):
     """

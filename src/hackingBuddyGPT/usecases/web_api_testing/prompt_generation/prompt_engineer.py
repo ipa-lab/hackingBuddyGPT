@@ -1,5 +1,5 @@
 from instructor.retry import InstructorRetryException
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_information import PromptStrategy
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.chain_of_thought_prompt import \
     ChainOfThoughtPrompt

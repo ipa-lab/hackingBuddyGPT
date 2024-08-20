@@ -3,7 +3,8 @@ import json
 from bs4 import BeautifulSoup
 import re
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.pentesting.response_analyzer import ResponseAnalyzer
+from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer import ResponseAnalyzer
+from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 
 
 class ResponseHandler(object):
@@ -15,7 +16,7 @@ class ResponseHandler(object):
         llm_handler (object): An instance of the LLM handler for interacting with the LLM.
     """
 
-    def __init__(self, llm_handler):
+    def __init__(self, llm_handler: LLMHandler):
         """
         Initializes the ResponseHandler with the specified LLM handler.
 
@@ -24,7 +25,6 @@ class ResponseHandler(object):
         """
         self.llm_handler = llm_handler
         self.response_analyzer = ResponseAnalyzer()
-
 
     def get_response_for_prompt(self, prompt):
         """
@@ -123,7 +123,6 @@ class ResponseHandler(object):
                 entry_dict[key] = {"value": body_dict}
                 self.llm_handler.add_created_object(entry_dict[key], object_name)
 
-
         return entry_dict, reference, openapi_spec
 
     def extract_description(self, note):
@@ -160,12 +159,11 @@ class ResponseHandler(object):
             for param in body_dict:
                 if isinstance(body_dict, list):
                     for key, value in param.items():
-                        properties_dict =self.extract_keys(key, value, properties_dict)
+                        properties_dict = self.extract_keys(key, value, properties_dict)
                     break
                 else:
                     for key, value in body_dict.items():
                         properties_dict = self.extract_keys(key, value, properties_dict)
-
 
         object_dict = {"type": "object", "properties": properties_dict}
 
@@ -231,9 +229,3 @@ class ResponseHandler(object):
     def evaluate_result(self, result, purpose):
         self.response_analyzer.set_purpose(purpose)
         return self.response_analyzer.analyze_response(result)
-
-
-
-
-
-

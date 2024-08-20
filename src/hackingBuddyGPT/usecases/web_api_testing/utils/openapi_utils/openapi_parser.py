@@ -82,7 +82,7 @@ class OpenAPISpecificationParser:
 # Usage example
 if __name__ == '__main__':
     openapi_parser = OpenAPISpecificationParser(
-        '/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/utils/openapi_spec/openapi_spec_2024-08-16_14-14-07.yaml'
+        '/hackingBuddyGPT/usecases/web_api_testing/utils/openapi_spec/openapi_spec_2024-08-16_14-14-07.yaml'
     )
     openapi_parser.print_api_details()
     print(f'{openapi_parser.load_yaml()}')

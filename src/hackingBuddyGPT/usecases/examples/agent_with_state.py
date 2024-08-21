@@ -11,7 +11,7 @@ from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
 
 @dataclass
-class MinimalLinuxTemplatedPrivescState(AgentWorldview):
+class ExPrivEscLinuxTemplatedState(AgentWorldview):
     sliding_history: SlidingCliHistory
     max_history_size: int = 0
     conn: SSHConnection = None
@@ -31,7 +31,7 @@ class MinimalLinuxTemplatedPrivescState(AgentWorldview):
         }
 
 
-class MinimalLinuxTemplatedPrivesc(TemplatedAgent):
+class ExPrivEscLinuxTemplated(TemplatedAgent):
 
     conn: SSHConnection = None
     
@@ -47,9 +47,9 @@ class MinimalLinuxTemplatedPrivesc(TemplatedAgent):
 
         # setup state
         max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size
-        self.set_initial_state(MinimalLinuxTemplatedPrivescState(self.conn, self.llm, max_history_size))
+        self.set_initial_state(ExPrivEscLinuxTemplatedState(self.conn, self.llm, max_history_size))
 
 
 @use_case("Showcase Minimal Linux Priv-Escalation")
-class MinimalLinuxTemplatedPrivescUseCase(AutonomousAgentUseCase[MinimalLinuxTemplatedPrivesc]):
+class ExPrivEscLinuxTemplatedUseCase(AutonomousAgentUseCase[ExPrivEscLinuxTemplated]):
     pass

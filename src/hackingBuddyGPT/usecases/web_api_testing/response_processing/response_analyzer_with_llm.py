@@ -1,14 +1,16 @@
 import json
 import re
-from typing import Dict, List
+from typing import Dict, List, Tuple, Any
 from unittest.mock import MagicMock
-
+import openai
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
+from hackingBuddyGPT.utils import tool_message
+from transformers import pipeline
 
 
-class ResponseAnalyzer:
+class ResponseAnalyzerWithLLM:
     """
     A class to parse and analyze HTTP responses using an LLM for different purposes
     such as parsing, analysis, documentation, and reporting.
@@ -50,6 +52,13 @@ class ResponseAnalyzer:
         header_body_split = raw_response.split("\r\n\r\n", 1)
         header_lines = header_body_split[0].split("\n")
         body = header_body_split[1] if len(header_body_split) > 1 else ""
+        print(f'Body:{body}')
+        if body.__contains__("<html"):
+            body = ""
+        else:
+            body = json.loads(body)
+            if isinstance(body, list) and len(body) > 1:
+                body = body[0]
 
         status_line = header_lines[0].strip()
         headers = {key.strip(): value.strip() for key, value in
@@ -60,7 +69,7 @@ class ResponseAnalyzer:
 
         return status_code, headers, body
 
-    def analyze_response(self, raw_response: str) -> Dict[str, List[str]]:
+    def analyze_response(self, raw_response: str, prompt_history:list) -> tuple[dict[str, Any], list]:
         """
         Parses the HTTP response, generates prompts for an LLM, and processes each step with the LLM.
 
@@ -76,14 +85,33 @@ class ResponseAnalyzer:
         # Start processing the analysis steps through the LLM
         llm_responses = {}
         for purpose, steps in self.analyse_steps(full_response).items():
-            if purpose == self.purpose:
-                llm_output = full_response  # Start with the raw response
+            analyse_step = purpose
+            if purpose == analyse_step:
+                response = full_response  # Start with the raw response
                 for step in steps:
                     # Send the current step as a prompt to the LLM and capture the response
-                    llm_output = self.llm_handler.call_llm([step.format(response=llm_output)])
-                    llm_responses[step] = llm_output
 
-        return llm_responses
+                    try:
+                        prompt_history.append({"role": "system", "content": step})
+                        print(f'Step:{step}')
+                        response, completion = self.llm_handler.call_llm(prompt_history)
+                    except openai.BadRequestError:
+                        # Check if there are more than 10 elements in the list
+                        if len(prompt_history) > 10:
+                            # Remove 10 if even, 11 if odd, directly using slicing
+                            prompt_history = prompt_history[10 + len(prompt_history) % 2:]
+                        #prompt_history = self.summarize_prompt(prompt_history, step)
+                        response, completion = self.llm_handler.call_llm(prompt_history)
+
+
+                    message = completion.choices[0].message
+                    prompt_history.append(message)
+                    tool_call_id = message.tool_calls[0].id
+                    result = response.execute()
+                    prompt_history.append(tool_message(str(result), tool_call_id))
+                    llm_responses[step] = response
+
+        return llm_responses, prompt_history
 
     def analyse_steps(self, response: str = "") -> Dict[PromptPurpose, List[str]]:
         """
@@ -96,25 +124,28 @@ class ResponseAnalyzer:
             dict: A dictionary where each key is a PromptPurpose and each value is a list of prompts.
         """
         return {
-            PromptPurpose.PARSING: [
-                '{response}\nPlease parse this response and extract the following details:\n'
-                '- Status Code\n'
-                '- Reason Phrase\n'
-                '- Headers\n'
-                '- Response Body'
-            ],
+            PromptPurpose.PARSING: [ f"""  Please parse this response and extract the following details in JSON format: {{
+                    "Status Code": "<status code>",
+                    "Reason Phrase": "<reason phrase>",
+                    "Headers": <headers as JSON>,
+                    "Response Body": <body as JSON>
+                    from this response: {response}
+              
+                }}"""
+
+        ],
             PromptPurpose.ANALYSIS: [
-                'Given the following parsed HTTP response:\n{response}\n'
+                f'Given the following parsed HTTP response:\n{response}\n'
                 'Please analyze this response to determine:\n'
                 '1. Whether the status code is appropriate for this type of request.\n'
                 '2. If the headers indicate proper security and rate-limiting practices.\n'
                 '3. Whether the response body is correctly handled.'
             ],
             PromptPurpose.DOCUMENTATION: [
-                'Based on the analysis provided, document the findings of this API response validation:\n{response}'
+                f'Based on the analysis provided, document the findings of this API response validation:\n{response}'
             ],
             PromptPurpose.REPORTING: [
-                'Based on the documented findings, suggest any improvements or issues that should be reported to the API developers.'
+                f'Based on the documented findings : {response}. Suggest any improvements or issues that should be reported to the API developers.'
             ]
         }
 
@@ -129,6 +160,16 @@ class ResponseAnalyzer:
             print(f"Prompt: {prompt}")
             print(f"Response: {response}")
             print("-" * 50)
+
+    def summarize_prompt(self, prompt_history, text):
+
+        # Load summarization pipeline
+        summarizer = pipeline("summarization")
+
+        text = "Your long text goes here. It can be multiple paragraphs describing an event, a concept, or an argument."
+        summary = summarizer(text, max_length=130, min_length=30, do_sample=False)
+        print(summary[0]['summary_text'])
+        return summary
 
 
 if __name__ == '__main__':
@@ -167,7 +208,7 @@ if __name__ == '__main__':
     }
 
     # Initialize the ResponseAnalyzer with a specific purpose and an LLM instance
-    response_analyzer = ResponseAnalyzer(PromptPurpose.PARSING, llm_handler=LLMHandler(llm=llm_mock, capabilities=capabilities))
+    response_analyzer = ResponseAnalyzerWithLLM(PromptPurpose.PARSING, llm_handler=LLMHandler(llm=llm_mock, capabilities=capabilities))
 
     # Generate and process LLM prompts based on the HTTP response
     results = response_analyzer.analyze_response(raw_http_response)

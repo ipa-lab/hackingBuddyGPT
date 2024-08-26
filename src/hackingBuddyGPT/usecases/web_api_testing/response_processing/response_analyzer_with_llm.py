@@ -113,8 +113,9 @@ class ResponseAnalyzerWithLLM:
         elif status_code in [500, 400, 404, 422]:
             body = body
         else:
-            #print(f'Body:{body}')
-            body = json.loads(body)
+            print(f'Body:{body}')
+            if body != '' or body != "":
+                body = json.loads(body)
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
 

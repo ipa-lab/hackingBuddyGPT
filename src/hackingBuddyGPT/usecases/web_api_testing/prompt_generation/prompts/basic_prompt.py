@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy
+
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, \
+    PromptContext
+
 
 class BasicPrompt(ABC):
     """
@@ -23,6 +27,9 @@ class BasicPrompt(ABC):
         self.context = context
         self.prompt_helper = prompt_helper
         self.strategy = strategy
+        if self.context == PromptContext.PENTESTING:
+            self.pentesting_information = PenTestingInformation(schemas=prompt_helper.schemas)
+
 
     @abstractmethod
     def generate_prompt(self, move_type, hint, previous_prompt):

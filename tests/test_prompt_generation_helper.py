@@ -1,7 +1,7 @@
 import os
 import unittest
 from unittest.mock import MagicMock
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import PromptGenerationHelper
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.utils.prompt_generation_helper import PromptGenerationHelper
 
 
 class TestPromptHelper(unittest.TestCase):

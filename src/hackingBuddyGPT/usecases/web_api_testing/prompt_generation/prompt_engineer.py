@@ -1,6 +1,6 @@
 from instructor.retry import InstructorRetryException
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import PromptGenerationHelper
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.utils.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.chain_of_thought_prompt import \
     ChainOfThoughtPrompt
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.in_context_learning_prompt import \
@@ -66,7 +66,6 @@ class PromptEngineer:
                 else:
                     prompt = prompt_stratgey.generate_prompt(move_type, hint, self._prompt_history)
                 self.purpose = prompt_stratgey.purpose
-                #response_text = self.response_handler.get_response_for_prompt(prompt)
                 is_good = self.evaluate_response(prompt, "")
             except InstructorRetryException:
                 hint = f"invalid prompt: {prompt}"

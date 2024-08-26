@@ -3,6 +3,8 @@ import re
 import nltk
 from nltk.tokenize import word_tokenize
 
+from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
+
 
 class PromptGenerationHelper(object):
     """
@@ -16,7 +18,7 @@ class PromptGenerationHelper(object):
         schemas (dict): A dictionary of schemas used for constructing HTTP requests.
     """
 
-    def __init__(self, response_handler, schemas={}):
+    def __init__(self, response_handler:ResponseHandler, schemas={}):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
 

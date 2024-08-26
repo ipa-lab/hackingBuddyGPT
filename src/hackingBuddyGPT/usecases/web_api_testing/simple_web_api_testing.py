@@ -59,8 +59,8 @@ class SimpleWebAPITesting(Agent):
         self._setup_capabilities()
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
-        self._setup_initial_prompt()
         self.report_handler = ReportHandler()
+        self._setup_initial_prompt()
 
     def _setup_initial_prompt(self):
         """
@@ -145,15 +145,15 @@ class SimpleWebAPITesting(Agent):
         with self._log.console.status("[bold green]Executing that command..."):
             result = response.execute()
             self._log.console.print(Panel(result[:30], title="tool"))
-            if not isinstance(result, str):  # TODO: check why isinstance does not work
+            if not isinstance(result, str):
                 endpoint = str(response.action.path).split('/')[1]
                 self.report_handler.write_endpoint_to_report(endpoint)
             self._prompt_history.append(tool_message(str(result), tool_call_id))
+            self.response_handler.set_prompt_helper(self.prompt_engineer.prompt_helper)
+
             analysis = self.response_handler.evaluate_result(result, purpose, self._prompt_history)
             #self.report_handler.write_analysis_to_report(analysis=self.response_handler.response_analyzer.print_analysis(analysis), purpose=self.prompt_engineer.purpose)
             #self._prompt_history.append(tool_message(str(analysis), tool_call_id))
-        if len(self._prompt_history) > 10:
-            self._prompt_history = [item for idx, item in enumerate(self._prompt_history) if not 0 <= idx <= 9]
 
 
 

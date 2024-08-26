@@ -1,2 +1,1 @@
 from .llm_handler import LLMHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.openapi_parser import OpenAPISpecificationParser

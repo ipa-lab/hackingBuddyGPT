@@ -3,9 +3,7 @@ import json
 from bs4 import BeautifulSoup
 import re
 
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer import ResponseAnalyzer
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import \
-    ResponseAnalyzerWithLLM
+from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import ResponseAnalyzerWithLLM
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 
 
@@ -231,3 +229,6 @@ class ResponseHandler(object):
     def evaluate_result(self, result, purpose, prompt_history):
         self.response_analyzer.set_purpose(purpose)
         return self.response_analyzer.analyze_response(result, prompt_history)
+
+    def set_prompt_helper(self, prompt_helper):
+        self.response_analyzer.prompt_helper = prompt_helper

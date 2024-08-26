@@ -1,10 +1,11 @@
 import json
 import re
-from typing import Dict, List, Tuple, Any
+from typing import Dict,Any
 from unittest.mock import MagicMock
-import openai
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.utils import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.utils import tool_message
 from transformers import pipeline
@@ -19,16 +20,19 @@ class ResponseAnalyzerWithLLM:
         purpose (PromptPurpose): The specific purpose for analyzing the HTTP response.
     """
 
-    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler=None):
+    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler=None, prompt_helper: PromptGenerationHelper =None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
 
         Args:
             purpose (PromptPurpose, optional): The purpose for analyzing the HTTP response. Default is None.
-            llm_handler (LLMHandler): Handles the . Default is None.
+            llm_handler (LLMHandler): Handles the llm operations. Default is None.
+            prompt_helper(PromptGenerationHelper): Handles the prompt operations. Default is None.
         """
         self.purpose = purpose
         self.llm_handler = llm_handler
+        self.pentesting_information = PenTestingInformation()
+        self.prompt_helper = prompt_helper
 
     def set_purpose(self, purpose: PromptPurpose):
         """
@@ -52,15 +56,21 @@ class ResponseAnalyzerWithLLM:
         header_body_split = raw_response.split("\r\n\r\n", 1)
         header_lines = header_body_split[0].split("\n")
         body = header_body_split[1] if len(header_body_split) > 1 else ""
-        print(f'Body:{body}')
+        status_line = header_lines[0].strip()
+
+        match = re.match(r"HTTP/1\.1 (\d{3}) (.*)", status_line)
+        status_code = int(match.group(1)) if match else None
         if body.__contains__("<html"):
             body = ""
+
+        elif status_code in [500, 400, 404, 422]:
+            body = body
         else:
+            print(f'Body:{body}')
             body = json.loads(body)
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
 
-        status_line = header_lines[0].strip()
         headers = {key.strip(): value.strip() for key, value in
                    (line.split(":", 1) for line in header_lines[1:] if ':' in line)}
 
@@ -69,7 +79,7 @@ class ResponseAnalyzerWithLLM:
 
         return status_code, headers, body
 
-    def analyze_response(self, raw_response: str, prompt_history:list) -> tuple[dict[str, Any], list]:
+    def analyze_response(self, raw_response: str, prompt_history: list) -> tuple[dict[str, Any], list]:
         """
         Parses the HTTP response, generates prompts for an LLM, and processes each step with the LLM.
 
@@ -84,70 +94,39 @@ class ResponseAnalyzerWithLLM:
 
         # Start processing the analysis steps through the LLM
         llm_responses = {}
-        for purpose, steps in self.analyse_steps(full_response).items():
-            analyse_step = purpose
-            if purpose == analyse_step:
-                response = full_response  # Start with the raw response
-                for step in steps:
-                    # Send the current step as a prompt to the LLM and capture the response
-
-                    try:
-                        prompt_history.append({"role": "system", "content": step})
-                        print(f'Step:{step}')
-                        response, completion = self.llm_handler.call_llm(prompt_history)
-                    except openai.BadRequestError:
-                        # Check if there are more than 10 elements in the list
-                        if len(prompt_history) > 10:
-                            # Remove 10 if even, 11 if odd, directly using slicing
-                            prompt_history = prompt_history[10 + len(prompt_history) % 2:]
-                        #prompt_history = self.summarize_prompt(prompt_history, step)
-                        response, completion = self.llm_handler.call_llm(prompt_history)
-
-
-                    message = completion.choices[0].message
-                    prompt_history.append(message)
-                    tool_call_id = message.tool_calls[0].id
-                    result = response.execute()
-                    prompt_history.append(tool_message(str(result), tool_call_id))
-                    llm_responses[step] = response
+        steps_dict = self.pentesting_information.analyse_steps(full_response)
+        for purpose, steps in steps_dict.items():
+            response = full_response  # Reset to the full response for each purpose
+            for step in steps:
+                prompt_history, response = self.process_step(step, prompt_history)
+                llm_responses[step] = response
 
         return llm_responses, prompt_history
 
-    def analyse_steps(self, response: str = "") -> Dict[PromptPurpose, List[str]]:
+    def process_step(self, step: str, prompt_history: list) -> tuple[list, str]:
         """
-        Provides prompts for analysis based on the provided response for various purposes using an LLM.
-
-        Args:
-            response (str, optional): The HTTP response to analyze. Default is an empty string.
-
-        Returns:
-            dict: A dictionary where each key is a PromptPurpose and each value is a list of prompts.
+        Helper function to process each analysis step with the LLM.
         """
-        return {
-            PromptPurpose.PARSING: [ f"""  Please parse this response and extract the following details in JSON format: {{
-                    "Status Code": "<status code>",
-                    "Reason Phrase": "<reason phrase>",
-                    "Headers": <headers as JSON>,
-                    "Response Body": <body as JSON>
-                    from this response: {response}
-              
-                }}"""
+        # Log current step
+        print(f'Processing step: {step}')
+        prompt_history.append({"role": "system", "content": step})
 
-        ],
-            PromptPurpose.ANALYSIS: [
-                f'Given the following parsed HTTP response:\n{response}\n'
-                'Please analyze this response to determine:\n'
-                '1. Whether the status code is appropriate for this type of request.\n'
-                '2. If the headers indicate proper security and rate-limiting practices.\n'
-                '3. Whether the response body is correctly handled.'
-            ],
-            PromptPurpose.DOCUMENTATION: [
-                f'Based on the analysis provided, document the findings of this API response validation:\n{response}'
-            ],
-            PromptPurpose.REPORTING: [
-                f'Based on the documented findings : {response}. Suggest any improvements or issues that should be reported to the API developers.'
-            ]
-        }
+        # Call the LLM and handle the response
+        self.prompt_helper.check_prompt(prompt_history, step)
+        response, completion = self.llm_handler.call_llm(prompt_history)
+        message = completion.choices[0].message
+        prompt_history.append(message)
+        tool_call_id = message.tool_calls[0].id
+
+        # Execute any tool call results and handle outputs
+        try:
+            result = response.execute()
+        except Exception as e:
+            result = f"Error executing tool call: {str(e)}"
+        prompt_history.append(tool_message(str(result), tool_call_id))
+
+        return prompt_history, result
+
 
     def print_results(self, results: Dict[str, str]):
         """

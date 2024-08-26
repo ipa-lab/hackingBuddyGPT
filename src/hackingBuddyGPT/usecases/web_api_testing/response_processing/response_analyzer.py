@@ -45,7 +45,7 @@ class ResponseAnalyzer(object):
         header_body_split = raw_response.split("\r\n\r\n", 1)
         header_lines = header_body_split[0].split("\n")
         body = header_body_split[1] if len(header_body_split) > 1 else ""
-        print(f'Body:{body}')
+        #print(f'Body:{body}')
         if body != {} and bool(body and not body.isspace()):
             body = json.loads(body)[0]
         else:

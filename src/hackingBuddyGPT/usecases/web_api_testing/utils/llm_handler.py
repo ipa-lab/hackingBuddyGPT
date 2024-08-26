@@ -50,17 +50,28 @@ class LLMHandler(object):
 
         try:
             if len(prompt) > 30:
-                return call_model(self.adjust_prompt(prompt))
+                return call_model(self.adjust_prompt(prompt, num_prompts=5))
 
             return call_model(self.adjust_prompt_based_on_token(prompt))
         except openai.BadRequestError as e:
-            print(f'Error: {str(e)} - Adjusting prompt size and retrying.')
-            # Reduce prompt size; removing elements and logging this adjustment
-            return call_model(self.adjust_prompt_based_on_token(self.adjust_prompt(prompt)))
-    def adjust_prompt(self, prompt):
-        adjusted_prompt = prompt[len(prompt) - 5 - (len(prompt) % 2): len(prompt)]
+            try:
+                print(f'Error: {str(e)} - Adjusting prompt size and retrying.')
+                # Reduce prompt size; removing elements and logging this adjustment
+                return call_model(self.adjust_prompt_based_on_token(self.adjust_prompt(prompt)))
+            except openai.BadRequestError as e:
+                new_prompt = self.adjust_prompt_based_on_token(self.adjust_prompt(prompt, num_prompts=2))
+                print(f'New prompt:')
+                print(f'Len New prompt:{len(new_prompt)}')
+
+                for prompt in new_prompt:
+                    print(f'{prompt}')
+                return call_model(new_prompt)
+
+
+    def adjust_prompt(self, prompt, num_prompts=5):
+        adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2): len(prompt)]
         if not isinstance(adjusted_prompt[0], dict):
-            adjusted_prompt = prompt[len(prompt) - 5 - (len(prompt) % 2) - 1: len(prompt)]
+            adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) - 1: len(prompt)]
 
         print(f'Adjusted prompt length: {len(adjusted_prompt)}')
         print(f'adjusted prompt:{adjusted_prompt}')

@@ -153,7 +153,7 @@ class SimpleWebAPITesting(Agent):
             self._prompt_history.append(tool_message(str(result), tool_call_id))
 
             analysis = self.response_handler.evaluate_result(result, purpose, self._prompt_history)
-            #self.report_handler.write_analysis_to_report(analysis=self.response_handler.response_analyzer.print_analysis(analysis), purpose=self.prompt_engineer.purpose)
+            self.report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
             #self._prompt_history.append(tool_message(str(analysis), tool_call_id))
 
 

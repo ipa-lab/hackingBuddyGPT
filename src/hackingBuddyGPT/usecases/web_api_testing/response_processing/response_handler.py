@@ -232,4 +232,5 @@ class ResponseHandler(object):
         return properties_dict
 
     def evaluate_result(self, result, purpose, prompt_history):
-        return self.response_analyzer.analyze_response(result, prompt_history)
+        llm_responses = self.response_analyzer.analyze_response(result, prompt_history)
+        return llm_responses

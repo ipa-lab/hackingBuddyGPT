@@ -42,68 +42,6 @@ class ResponseAnalyzerWithLLM:
         """
         self.purpose = purpose
 
-    def parse_http_response(self, raw_response: str):
-        """
-        Parses the raw HTTP response string into its components: status line, headers, and body.
-
-        Args:
-            raw_response (str): The raw HTTP response string to parse.
-
-        Returns:
-            tuple: A tuple containing the status code (int), headers (dict), and body (str).
-        """
-        header_body_split = raw_response.split("\r\n\r\n", 1)
-        header_lines = header_body_split[0].split("\n")
-        body = header_body_split[1] if len(header_body_split) > 1 else ""
-        status_line = header_lines[0].strip()
-
-        match = re.match(r"HTTP/1\.1 (\d{3}) (.*)", status_line)
-        status_code = int(match.group(1)) if match else None
-        if body.__contains__("<html"):
-            body = ""
-
-        elif status_code in [500, 400, 404, 422]:
-            body = body
-        else:
-            print(f'Body:{body}')
-            body = json.loads(body)
-            if isinstance(body, list) and len(body) > 1:
-                body = body[0]
-
-        headers = {key.strip(): value.strip() for key, value in
-                   (line.split(":", 1) for line in header_lines[1:] if ':' in line)}
-
-        match = re.match(r"HTTP/1\.1 (\d{3}) (.*)", status_line)
-        status_code = int(match.group(1)) if match else None
-
-        return status_code, headers, body
-
-    def analyze_response(self, raw_response: str, prompt_history: list) -> tuple[dict[str, Any], list]:
-        """
-        Parses the HTTP response, generates prompts for an LLM, and processes each step with the LLM.
-
-        Args:
-            raw_response (str): The raw HTTP response string to parse and analyze.
-
-        Returns:
-            dict: A dictionary with the final results after processing all steps through the LLM.
-        """
-        status_code, headers, body = self.parse_http_response(raw_response)
-        full_response = f"Status Code: {status_code}\nHeaders: {json.dumps(headers, indent=4)}\nBody: {body}"
-
-        # Start processing the analysis steps through the LLM
-        llm_responses = {}
-        steps_dict = self.pentesting_information.analyse_steps(full_response)
-        for purpose, steps in steps_dict.items():
-            response = full_response  # Reset to the full response for each purpose
-            for step in steps:
-                prompt_history, response = self.prompt_engineer.process_step(step, prompt_history)
-                llm_responses[step] = response
-
-        return llm_responses, prompt_history
-
-
-
     def print_results(self, results: Dict[str, str]):
         """
         Prints the LLM responses in a structured and readable format.
@@ -141,15 +79,16 @@ class ResponseAnalyzerWithLLM:
         full_response = f"Status Code: {status_code}\nHeaders: {json.dumps(headers, indent=4)}\nBody: {body}"
 
         # Start processing the analysis steps through the LLM
-        llm_responses = {}
+        llm_responses = []
         steps_dict = self.pentesting_information.analyse_steps(full_response)
         for purpose, steps in steps_dict.items():
             response = full_response  # Reset to the full response for each purpose
             for step in steps:
                 prompt_history, response = self.process_step(step, prompt_history)
-                llm_responses[step] = response
+                llm_responses.append(response)
+                print(f'Response:{response}')
 
-        return llm_responses, prompt_history
+        return llm_responses
 
     def parse_http_response(self, raw_response: str):
         """
@@ -174,7 +113,7 @@ class ResponseAnalyzerWithLLM:
         elif status_code in [500, 400, 404, 422]:
             body = body
         else:
-            print(f'Body:{body}')
+            #print(f'Body:{body}')
             body = json.loads(body)
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
@@ -192,7 +131,7 @@ class ResponseAnalyzerWithLLM:
         Helper function to process each analysis step with the LLM.
         """
         # Log current step
-        print(f'Processing step: {step}')
+        #print(f'Processing step: {step}')
         prompt_history.append({"role": "system", "content": step})
 
         # Call the LLM and handle the response

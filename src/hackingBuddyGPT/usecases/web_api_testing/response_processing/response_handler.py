@@ -1,9 +1,13 @@
 import json
+from typing import Any
 
 from bs4 import BeautifulSoup
 import re
 
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import ResponseAnalyzerWithLLM
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
+from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import \
+    ResponseAnalyzerWithLLM
+#from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import ResponseAnalyzerWithLLM
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 
 
@@ -24,6 +28,7 @@ class ResponseHandler(object):
             llm_handler (object): An instance of the LLM handler for interacting with the LLM.
         """
         self.llm_handler = llm_handler
+        self.pentesting_information = PenTestingInformation()
         self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler)
 
     def get_response_for_prompt(self, prompt):
@@ -227,8 +232,4 @@ class ResponseHandler(object):
         return properties_dict
 
     def evaluate_result(self, result, purpose, prompt_history):
-        self.response_analyzer.set_purpose(purpose)
         return self.response_analyzer.analyze_response(result, prompt_history)
-
-    def set_prompt_helper(self, prompt_helper):
-        self.response_analyzer.prompt_helper = prompt_helper

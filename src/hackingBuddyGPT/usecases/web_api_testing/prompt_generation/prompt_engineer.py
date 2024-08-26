@@ -7,6 +7,7 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.in_conte
     InContextLearningPrompt
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.tree_of_thought_prompt import \
     TreeOfThoughtPrompt
+from hackingBuddyGPT.utils import tool_message
 
 
 class PromptEngineer:
@@ -94,4 +95,30 @@ class PromptEngineer:
 
     def get_purpose(self):
         return self.purpose
+
+
+    def process_step(self, step: str, prompt_history: list) -> tuple[list, str]:
+        """
+        Helper function to process each analysis step with the LLM.
+        """
+        # Log current step
+        print(f'Processing step: {step}')
+        prompt_history.append({"role": "system", "content": step})
+
+        # Call the LLM and handle the response
+        self.prompt_helper.check_prompt(prompt_history, step)
+        response, completion = self.llm_handler.call_llm(prompt_history)
+        message = completion.choices[0].message
+        prompt_history.append(message)
+        tool_call_id = message.tool_calls[0].id
+
+        # Execute any tool call results and handle outputs
+        try:
+            result = response.execute()
+        except Exception as e:
+            result = f"Error executing tool call: {str(e)}"
+        prompt_history.append(tool_message(str(result), tool_call_id))
+
+        return prompt_history, result
+
 

@@ -6,7 +6,6 @@ from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
-from transformers import pipeline
 
 from hackingBuddyGPT.utils import tool_message
 
@@ -54,15 +53,7 @@ class ResponseAnalyzerWithLLM:
             print(f"Response: {response}")
             print("-" * 50)
 
-    def summarize_prompt(self, prompt_history, text):
 
-        # Load summarization pipeline
-        summarizer = pipeline("summarization")
-
-        text = "Your long text goes here. It can be multiple paragraphs describing an event, a concept, or an argument."
-        summary = summarizer(text, max_length=130, min_length=30, do_sample=False)
-        print(summary[0]['summary_text'])
-        return summary
 
 
     def analyze_response(self, raw_response: str, prompt_history: list) -> tuple[dict[str, Any], list]:

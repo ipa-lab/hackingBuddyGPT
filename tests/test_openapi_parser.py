@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, mock_open
 import yaml
 
-from hackingBuddyGPT.usecases.web_api_testing.utils.documentation import OpenAPISpecificationParser
+from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.parsing import OpenAPISpecificationParser
 
 
 class TestOpenAPISpecificationParser(unittest.TestCase):
@@ -100,7 +100,7 @@ class TestOpenAPISpecificationParser(unittest.TestCase):
     """))
     def test_get_servers(self, mock_yaml_load, mock_open_file):
         parser = OpenAPISpecificationParser(self.filepath)
-        servers = parser.get_servers()
+        servers = parser._get_servers()
         self.assertEqual(servers, ["https://api.example.com", "https://staging.api.example.com"])
 
     @patch("builtins.open", new_callable=mock_open, read_data="")
@@ -196,7 +196,7 @@ class TestOpenAPISpecificationParser(unittest.TestCase):
     """))
     def test_get_operations(self, mock_yaml_load, mock_open_file):
         parser = OpenAPISpecificationParser(self.filepath)
-        operations = parser.get_operations("/pets")
+        operations = parser._get_operations("/pets")
         expected_operations = {
             "get": {
                 "summary": "List all pets",
@@ -248,7 +248,7 @@ class TestOpenAPISpecificationParser(unittest.TestCase):
     def test_print_api_details(self, mock_yaml_load, mock_open_file):
         parser = OpenAPISpecificationParser(self.filepath)
         with patch('builtins.print') as mocked_print:
-            parser.print_api_details()
+            parser._print_api_details()
             mocked_print.assert_any_call("API Title:", "Sample API")
             mocked_print.assert_any_call("API Version:", "1.0.0")
             mocked_print.assert_any_call("Servers:", ["https://api.example.com", "https://staging.api.example.com"])

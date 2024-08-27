@@ -3,7 +3,7 @@ from datetime import datetime
 
 import os
 from datetime import datetime
-
+import uuid
 
 class ReportHandler(object):
     """
@@ -27,7 +27,13 @@ class ReportHandler(object):
             os.mkdir(self.file_path)
 
         self.report_name = os.path.join(self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt")
-        self.report = open(self.report_name, "x")
+        try:
+            self.report = open(self.report_name, "x")
+        except FileExistsError:
+            # Handle the error, maybe retry with a different name or log the error
+            self.report_name = os.path.join(self.file_path,
+                                            f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{uuid.uuid4().hex}.txt")
+            self.report = open(self.report_name, "x")
 
     def write_endpoint_to_report(self, endpoint):
         """

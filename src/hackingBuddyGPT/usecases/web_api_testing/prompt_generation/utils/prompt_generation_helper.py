@@ -135,7 +135,10 @@ class PromptGenerationHelper(object):
             return "Prompt is still too long after summarization."
 
         if not all(step in previous_prompt for step in steps):
-            potential_prompt = str(steps) +"\n"
+            if isinstance(steps, list):
+                potential_prompt = "\n".join(str(element) for element in steps)
+            else:
+                potential_prompt = str(steps) +"\n"
             return validate_prompt(potential_prompt)
 
         return validate_prompt(previous_prompt)

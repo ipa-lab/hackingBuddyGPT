@@ -1,37 +1,37 @@
 import json
-from typing import Any
+from typing import Any, Dict, Optional, Tuple, Union
 
 from bs4 import BeautifulSoup
 import re
 
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import \
-    ResponseAnalyzerWithLLM
-#from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import ResponseAnalyzerWithLLM
+from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import ResponseAnalyzerWithLLM
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 
 
-class ResponseHandler(object):
+class ResponseHandler:
     """
     ResponseHandler is a class responsible for handling various types of responses from an LLM (Large Language Model).
     It processes prompts, parses HTTP responses, extracts examples, and handles OpenAPI specifications.
 
     Attributes:
-        llm_handler (object): An instance of the LLM handler for interacting with the LLM.
+        llm_handler (LLMHandler): An instance of the LLM handler for interacting with the LLM.
+        pentesting_information (PenTestingInformation): An instance containing pentesting information.
+        response_analyzer (ResponseAnalyzerWithLLM): An instance for analyzing responses with the LLM.
     """
 
-    def __init__(self, llm_handler: LLMHandler):
+    def __init__(self, llm_handler: LLMHandler) -> None:
         """
         Initializes the ResponseHandler with the specified LLM handler.
 
         Args:
-            llm_handler (object): An instance of the LLM handler for interacting with the LLM.
+            llm_handler (LLMHandler): An instance of the LLM handler for interacting with the LLM.
         """
         self.llm_handler = llm_handler
         self.pentesting_information = PenTestingInformation()
         self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler)
 
-    def get_response_for_prompt(self, prompt):
+    def get_response_for_prompt(self, prompt: str) -> str:
         """
         Sends a prompt to the LLM's API and retrieves the response.
 
@@ -46,7 +46,7 @@ class ResponseHandler(object):
         response_text = response.execute()
         return response_text
 
-    def parse_http_status_line(self, status_line):
+    def parse_http_status_line(self, status_line: str) -> str:
         """
         Parses an HTTP status line and returns the status code and message.
 
@@ -59,7 +59,7 @@ class ResponseHandler(object):
         Raises:
             ValueError: If the status line is invalid.
         """
-        if status_line == "Not a valid HTTP method" or status_line.__contains__("note recorded"):
+        if status_line == "Not a valid HTTP method" or "note recorded" in status_line:
             return status_line
         status_line = status_line.split('\r\n')[0]
         # Regular expression to match valid HTTP status lines
@@ -70,7 +70,7 @@ class ResponseHandler(object):
         else:
             raise ValueError(f"{status_line} is an invalid HTTP status line")
 
-    def extract_response_example(self, html_content):
+    def extract_response_example(self, html_content: str) -> Optional[Dict[str, Any]]:
         """
         Extracts the JavaScript example code and result placeholder from HTML content.
 
@@ -78,7 +78,7 @@ class ResponseHandler(object):
             html_content (str): The HTML content containing the example code.
 
         Returns:
-            dict: The extracted response example as a dictionary, or None if extraction fails.
+            Optional[Dict[str, Any]]: The extracted response example as a dictionary, or None if extraction fails.
         """
         soup = BeautifulSoup(html_content, 'html.parser')
         example_code = soup.find('code', {'id': 'example'})
@@ -89,18 +89,18 @@ class ResponseHandler(object):
             return json.loads(result_text)
         return None
 
-    def parse_http_response_to_openapi_example(self, openapi_spec, http_response, path, method):
+    def parse_http_response_to_openapi_example(self, openapi_spec: Dict[str, Any], http_response: str, path: str, method: str) -> Tuple[Optional[Dict[str, Any]], Optional[str], Dict[str, Any]]:
         """
         Parses an HTTP response to generate an OpenAPI example.
 
         Args:
-            openapi_spec (dict): The OpenAPI specification to update.
+            openapi_spec (Dict[str, Any]): The OpenAPI specification to update.
             http_response (str): The HTTP response to parse.
             path (str): The API path.
             method (str): The HTTP method.
 
         Returns:
-            tuple: A tuple containing the entry dictionary, reference, and updated OpenAPI specification.
+            Tuple[Optional[Dict[str, Any]], Optional[str], Dict[str, Any]]: A tuple containing the entry dictionary, reference, and updated OpenAPI specification.
         """
 
         headers, body = http_response.split('\r\n\r\n', 1)
@@ -122,37 +122,35 @@ class ResponseHandler(object):
                     entry_dict[key] = {"value": entry}
                     self.llm_handler.add_created_object(entry_dict[key], object_name)
             else:
-                print(f'entry: {body_dict}')
-
                 key = body_dict.get("title") or body_dict.get("name") or body_dict.get("id")
                 entry_dict[key] = {"value": body_dict}
                 self.llm_handler.add_created_object(entry_dict[key], object_name)
 
         return entry_dict, reference, openapi_spec
 
-    def extract_description(self, note):
+    def extract_description(self, note: Any) -> str:
         """
         Extracts the description from a note.
 
         Args:
-            note (object): The note containing the description.
+            note (Any): The note containing the description.
 
         Returns:
             str: The extracted description.
         """
         return note.action.content
 
-    def parse_http_response_to_schema(self, openapi_spec, body_dict, path):
+    def parse_http_response_to_schema(self, openapi_spec: Dict[str, Any], body_dict: Dict[str, Any], path: str) -> Tuple[str, str, Dict[str, Any]]:
         """
         Parses an HTTP response body to generate an OpenAPI schema.
 
         Args:
-            openapi_spec (dict): The OpenAPI specification to update.
-            body_dict (dict): The HTTP response body as a dictionary.
+            openapi_spec (Dict[str, Any]): The OpenAPI specification to update.
+            body_dict (Dict[str, Any]): The HTTP response body as a dictionary.
             path (str): The API path.
 
         Returns:
-            tuple: A tuple containing the reference, object name, and updated OpenAPI specification.
+            Tuple[str, str, Dict[str, Any]]: A tuple containing the reference, object name, and updated OpenAPI specification.
         """
         object_name = path.split("/")[1].capitalize().rstrip('s')
         properties_dict = {}
@@ -160,7 +158,6 @@ class ResponseHandler(object):
         if len(body_dict) == 1:
             properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict["id"])}
         else:
-
             for param in body_dict:
                 if isinstance(body_dict, list):
                     for key, value in param.items():
@@ -178,7 +175,7 @@ class ResponseHandler(object):
         reference = f"#/components/schemas/{object_name}"
         return reference, object_name, openapi_spec
 
-    def read_yaml_to_string(self, filepath):
+    def read_yaml_to_string(self, filepath: str) -> Optional[str]:
         """
         Reads a YAML file and returns its contents as a string.
 
@@ -186,7 +183,7 @@ class ResponseHandler(object):
             filepath (str): The path to the YAML file.
 
         Returns:
-            str: The contents of the YAML file, or None if an error occurred.
+            Optional[str]: The contents of the YAML file, or None if an error occurred.
         """
         try:
             with open(filepath, 'r') as file:
@@ -198,7 +195,7 @@ class ResponseHandler(object):
             print(f"Error reading file {filepath}: {e}")
             return None
 
-    def extract_endpoints(self, note):
+    def extract_endpoints(self, note: str) -> Dict[str, list]:
         """
         Extracts API endpoints from a note using regular expressions.
 
@@ -206,7 +203,7 @@ class ResponseHandler(object):
             note (str): The note containing endpoint definitions.
 
         Returns:
-            dict: A dictionary with endpoints as keys and HTTP methods as values.
+            Dict[str, list]: A dictionary with endpoints as keys and HTTP methods as values.
         """
         required_endpoints = {}
         pattern = r"(\d+\.\s+GET)\s(/[\w{}]+)"
@@ -223,7 +220,18 @@ class ResponseHandler(object):
 
         return required_endpoints
 
-    def extract_keys(self, key, value, properties_dict):
+    def extract_keys(self, key: str, value: Any, properties_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extracts and formats the keys and values from a dictionary to generate OpenAPI properties.
+
+        Args:
+            key (str): The key in the dictionary.
+            value (Any): The value associated with the key.
+            properties_dict (Dict[str, Any]): The dictionary to store the extracted properties.
+
+        Returns:
+            Dict[str, Any]: The updated properties dictionary.
+        """
         if key == "id":
             properties_dict[key] = {"type": str(type(value).__name__), "format": "uuid", "example": str(value)}
         else:
@@ -231,6 +239,17 @@ class ResponseHandler(object):
 
         return properties_dict
 
-    def evaluate_result(self, result, purpose, prompt_history):
+    def evaluate_result(self, result: Any, purpose: str, prompt_history: list) -> Any:
+        """
+        Evaluates the result using the LLM-based response analyzer.
+
+        Args:
+            result (Any): The result to evaluate.
+            purpose (str): The purpose of the evaluation.
+            prompt_history (list): The history of prompts used in the evaluation.
+
+        Returns:
+            Any: The evaluation result from the LLM response analyzer.
+        """
         llm_responses = self.response_analyzer.analyze_response(result, prompt_history)
         return llm_responses

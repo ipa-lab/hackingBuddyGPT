@@ -1,11 +1,10 @@
-import os.path
-from datetime import datetime
-
 import os
 from datetime import datetime
 import uuid
+from typing import List
+from enum import Enum
 
-class ReportHandler(object):
+class ReportHandler:
     """
     A handler for creating and managing report files that document operations and data.
 
@@ -20,46 +19,44 @@ class ReportHandler(object):
         Initializes the ReportHandler by setting up the file path for reports,
         creating the directory if it does not exist, and preparing a new report file.
         """
-        current_path = os.path.dirname(os.path.abspath(__file__))
-        self.file_path = os.path.join(current_path, "reports")
+        current_path: str = os.path.dirname(os.path.abspath(__file__))
+        self.file_path: str = os.path.join(current_path, "reports")
 
         if not os.path.exists(self.file_path):
             os.mkdir(self.file_path)
 
-        self.report_name = os.path.join(self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt")
+        self.report_name: str = os.path.join(self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt")
         try:
             self.report = open(self.report_name, "x")
         except FileExistsError:
-            # Handle the error, maybe retry with a different name or log the error
+            # Retry with a different name using a UUID to ensure uniqueness
             self.report_name = os.path.join(self.file_path,
                                             f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{uuid.uuid4().hex}.txt")
             self.report = open(self.report_name, "x")
 
-    def write_endpoint_to_report(self, endpoint):
+    def write_endpoint_to_report(self, endpoint: str) -> None:
         """
         Writes an endpoint string to the report file.
 
         Args:
             endpoint (str): The endpoint information to be recorded in the report.
         """
-        self.report = open(self.report_name, 'a')
-        self.report.write(f'{endpoint}\n')
-        self.report.close()
+        with open(self.report_name, 'a') as report:
+            report.write(f'{endpoint}\n')
 
-    def write_analysis_to_report(self, analysis, purpose):
+    def write_analysis_to_report(self, analysis: List[str], purpose: Enum) -> None:
         """
         Writes an analysis result and its purpose to the report file.
 
         Args:
-            analysis (str): The analysis data to be recorded.
+            analysis (List[str]): The analysis data to be recorded.
             purpose (Enum): An enumeration that describes the purpose of the analysis.
         """
-        self.report = open(self.report_name, 'a')
-        self.report.write(f'{purpose.name}:\n')
-        for item in analysis:
-            for line in item.split("\n"):
-                if line.__contains__("note recorded"):
-                    continue
-                else:
-                    self.report.write(str(line) +"\n")
-        self.report.close()
+        with open(self.report_name, 'a') as report:
+            report.write(f'{purpose.name}:\n')
+            for item in analysis:
+                for line in item.split("\n"):
+                    if "note recorded" in line:
+                        continue
+                    else:
+                        report.write(line + "\n")

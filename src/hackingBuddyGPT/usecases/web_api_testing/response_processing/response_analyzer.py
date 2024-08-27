@@ -1,29 +1,29 @@
 import json
 import re
-
+from typing import Optional, Tuple, Dict, Any
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
 
 
-class ResponseAnalyzer(object):
+class ResponseAnalyzer:
     """
     A class to parse and analyze HTTP responses based on different purposes, such as
     authentication/authorization checks and input validation.
 
     Attributes:
-        purpose (PromptPurpose): The specific purpose for analyzing the HTTP response. It determines
-                                 which analysis method will be applied.
+        purpose (Optional[PromptPurpose]): The specific purpose for analyzing the HTTP response. It determines
+                                           which analysis method will be applied.
     """
 
-    def __init__(self, purpose=None):
+    def __init__(self, purpose: Optional[PromptPurpose] = None) -> None:
         """
         Initializes the ResponseAnalyzer with an optional purpose.
 
         Args:
-            purpose (PromptPurpose, optional): The purpose for analyzing the HTTP response. Default is None.
+            purpose (Optional[PromptPurpose]): The purpose for analyzing the HTTP response. Default is None.
         """
-        self.purpose = purpose
+        self.purpose: Optional[PromptPurpose] = purpose
 
-    def set_purpose(self, purpose):
+    def set_purpose(self, purpose: PromptPurpose) -> None:
         """
         Sets the purpose for analyzing the HTTP response.
 
@@ -32,7 +32,7 @@ class ResponseAnalyzer(object):
         """
         self.purpose = purpose
 
-    def parse_http_response(self, raw_response):
+    def parse_http_response(self, raw_response: str) -> Tuple[Optional[int], Dict[str, str], str]:
         """
         Parses the raw HTTP response string into its components: status line, headers, and body.
 
@@ -40,12 +40,12 @@ class ResponseAnalyzer(object):
             raw_response (str): The raw HTTP response string to parse.
 
         Returns:
-            tuple: A tuple containing the status code (int), headers (dict), and body (str).
+            Tuple[Optional[int], Dict[str, str], str]: A tuple containing the status code (int), headers (dict), and body (str).
         """
         header_body_split = raw_response.split("\r\n\r\n", 1)
         header_lines = header_body_split[0].split("\n")
         body = header_body_split[1] if len(header_body_split) > 1 else ""
-        #print(f'Body:{body}')
+
         if body != {} and bool(body and not body.isspace()):
             body = json.loads(body)[0]
         else:
@@ -60,7 +60,7 @@ class ResponseAnalyzer(object):
 
         return status_code, headers, body
 
-    def analyze_response(self, raw_response):
+    def analyze_response(self, raw_response: str) -> Optional[Dict[str, Any]]:
         """
         Parses the HTTP response and analyzes it based on the set purpose.
 
@@ -68,41 +68,40 @@ class ResponseAnalyzer(object):
             raw_response (str): The raw HTTP response string to parse and analyze.
 
         Returns:
-            dict: The analysis results based on the purpose.
+            Optional[Dict[str, Any]]: The analysis results based on the purpose.
         """
         status_code, headers, body = self.parse_http_response(raw_response)
         return self.analyze_parsed_response(status_code, headers, body)
 
-    def analyze_parsed_response(self, status_code, headers, body):
+    def analyze_parsed_response(self, status_code: Optional[int], headers: Dict[str, str], body: str) -> Optional[Dict[str, Any]]:
         """
         Analyzes the parsed HTTP response based on the purpose, invoking the appropriate method.
 
         Args:
-            status_code (int): The HTTP status code.
-            headers (dict): The HTTP headers.
+            status_code (Optional[int]): The HTTP status code.
+            headers (Dict[str, str]): The HTTP headers.
             body (str): The HTTP response body.
 
         Returns:
-            dict: The analysis results based on the purpose.
+            Optional[Dict[str, Any]]: The analysis results based on the purpose.
         """
         analysis_methods = {
-            PromptPurpose.AUTHENTICATION_AUTHORIZATION: self.analyze_authentication_authorization(status_code, headers,
-                                                                                                  body),
+            PromptPurpose.AUTHENTICATION_AUTHORIZATION: self.analyze_authentication_authorization(status_code, headers, body),
             PromptPurpose.INPUT_VALIDATION: self.analyze_input_validation(status_code, headers, body),
         }
         return analysis_methods.get(self.purpose)
 
-    def analyze_authentication_authorization(self, status_code, headers, body):
+    def analyze_authentication_authorization(self, status_code: Optional[int], headers: Dict[str, str], body: str) -> Dict[str, Any]:
         """
         Analyzes the HTTP response with a focus on authentication and authorization.
 
         Args:
-            status_code (int): The HTTP status code.
-            headers (dict): The HTTP headers.
+            status_code (Optional[int]): The HTTP status code.
+            headers (Dict[str, str]): The HTTP headers.
             body (str): The HTTP response body.
 
         Returns:
-            dict: The analysis results focused on authentication and authorization.
+            Dict[str, Any]: The analysis results focused on authentication and authorization.
         """
         analysis = {
             'status_code': status_code,
@@ -115,36 +114,36 @@ class ResponseAnalyzer(object):
                 'X-Ratelimit-Remaining': headers.get('X-Ratelimit-Remaining'),
                 'X-Ratelimit-Reset': headers.get('X-Ratelimit-Reset'),
             },
-            'content_body': "Empty" if body ==  {} else body,
+            'content_body': "Empty" if body == {} else body,
         }
         return analysis
 
-    def analyze_input_validation(self, status_code, headers, body):
+    def analyze_input_validation(self, status_code: Optional[int], headers: Dict[str, str], body: str) -> Dict[str, Any]:
         """
         Analyzes the HTTP response with a focus on input validation.
 
         Args:
-            status_code (int): The HTTP status code.
-            headers (dict): The HTTP headers.
+            status_code (Optional[int]): The HTTP status code.
+            headers (Dict[str, str]): The HTTP headers.
             body (str): The HTTP response body.
 
         Returns:
-            dict: The analysis results focused on input validation.
+            Dict[str, Any]: The analysis results focused on input validation.
         """
         analysis = {
             'status_code': status_code,
-            'response_body': "Empty" if body == {}  else body,
+            'response_body': "Empty" if body == {} else body,
             'is_valid_response': self.is_valid_input_response(status_code, body),
             'security_headers_present': any(key in headers for key in ["X-Content-Type-Options", "X-Ratelimit-Limit"]),
         }
         return analysis
 
-    def is_valid_input_response(self, status_code, body):
+    def is_valid_input_response(self, status_code: Optional[int], body: str) -> str:
         """
         Determines if the HTTP response is valid based on the status code and body content.
 
         Args:
-            status_code (int): The HTTP status code.
+            status_code (Optional[int]): The HTTP status code.
             body (str): The HTTP response body.
 
         Returns:
@@ -159,19 +158,19 @@ class ResponseAnalyzer(object):
         else:
             return "Unexpected"
 
-    def document_findings(self, status_code, headers, body, expected_behavior, actual_behavior):
+    def document_findings(self, status_code: Optional[int], headers: Dict[str, str], body: str, expected_behavior: str, actual_behavior: str) -> Dict[str, Any]:
         """
         Documents the findings from the analysis, comparing expected and actual behavior.
 
         Args:
-            status_code (int): The HTTP status code.
-            headers (dict): The HTTP headers.
+            status_code (Optional[int]): The HTTP status code.
+            headers (Dict[str, str]): The HTTP headers.
             body (str): The HTTP response body.
             expected_behavior (str): The expected behavior of the API.
             actual_behavior (str): The actual behavior observed.
 
         Returns:
-            dict: A dictionary containing the documented findings.
+            Dict[str, Any]: A dictionary containing the documented findings.
         """
         document = {
             "Status Code": status_code,
@@ -185,12 +184,12 @@ class ResponseAnalyzer(object):
         print("-" * 50)
         return document
 
-    def report_issues(self, document):
+    def report_issues(self, document: Dict[str, Any]) -> None:
         """
         Reports any discrepancies found during analysis, suggesting improvements where necessary.
 
         Args:
-            document (dict): The documented findings to be reported.
+            document (Dict[str, Any]): The documented findings to be reported.
         """
         print("Reporting Issues:")
         if document["Expected Behavior"] != document["Actual Behavior"]:
@@ -202,12 +201,15 @@ class ResponseAnalyzer(object):
             print("No issues found in this test case.")
         print("-" * 50)
 
-    def print_analysis(self, analysis):
+    def print_analysis(self, analysis: Dict[str, Any]) -> str:
         """
         Prints the analysis results in a structured and readable format.
 
         Args:
-            analysis (dict): The analysis results to be printed.
+            analysis (Dict[str, Any]): The analysis results to be printed.
+
+        Returns:
+            str: A formatted string representing the analysis results.
         """
         fields_to_print = {
             "HTTP Status Code": analysis.get("status_code"),
@@ -217,7 +219,7 @@ class ResponseAnalyzer(object):
             "Authentication Status": analysis.get("authentication_status"),
             "Security Headers Present": "Yes" if analysis.get("security_headers_present") else "No",
         }
-        analysis_str="\n"
+        analysis_str = "\n"
 
         for label, value in fields_to_print.items():
             if label == "Content Body":
@@ -228,13 +230,14 @@ class ResponseAnalyzer(object):
                     analysis_str += f"{label}: {value}\n"
 
         if "rate_limiting" in analysis:
-            analysis_str += f"Rate Limiting Information:\n"
+            analysis_str += "Rate Limiting Information:\n"
 
             for key, value in analysis["rate_limiting"].items():
                 analysis_str += f"  {key}: {value}\n"
 
         analysis_str += "-" * 50
         return analysis_str
+
 
 if __name__ == '__main__':
     # Example HTTP response to parse
@@ -265,17 +268,17 @@ if __name__ == '__main__':
     alt-svc: h3=":443"; ma=86400
 
     {}"""
-    respons_analyzer = ResponseAnalyzer()
-    respons_analyzer.purpose = PromptPurpose.AUTHENTICATION_AUTHORIZATION
+    response_analyzer = ResponseAnalyzer()
+    response_analyzer.purpose = PromptPurpose.AUTHENTICATION_AUTHORIZATION
     # Parse and analyze the HTTP response
-    analysis = respons_analyzer.analyze_response(raw_http_response)
+    analysis = response_analyzer.analyze_response(raw_http_response)
 
     # Print the analysis results
-    respons_analyzer.print_analysis(analysis)
-    respons_analyzer = ResponseAnalyzer()
-    respons_analyzer.purpose = PromptPurpose.INPUT_VALIDATION
+    response_analyzer.print_analysis(analysis)
+    response_analyzer = ResponseAnalyzer()
+    response_analyzer.purpose = PromptPurpose.INPUT_VALIDATION
     # Parse and analyze the HTTP response
-    analysis = respons_analyzer.analyze_response(raw_http_response)
+    analysis = response_analyzer.analyze_response(raw_http_response)
 
     # Print the analysis results
-    print(respons_analyzer.print_analysis(analysis))
+    print(response_analyzer.print_analysis(analysis))

@@ -1,7 +1,7 @@
 
 from typing import Tuple
-from hackingBuddyGPT.usecases.minimal.agent import MinimalLinuxPrivesc, MinimalLinuxPrivescUseCase
-from hackingBuddyGPT.usecases.minimal.agent_with_state import MinimalLinuxTemplatedPrivesc, MinimalLinuxTemplatedPrivescUseCase
+from hackingBuddyGPT.usecases.examples.agent import ExPrivEscLinux, ExPrivEscLinuxUseCase
+from hackingBuddyGPT.usecases.examples.agent_with_state import ExPrivEscLinuxTemplated, ExPrivEscLinuxTemplatedUseCase
 from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc, LinuxPrivescUseCase
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
@@ -101,8 +101,8 @@ def test_minimal_agent():
 
     log_db.init()
 
-    priv_esc = MinimalLinuxPrivescUseCase(
-        agent = MinimalLinuxPrivesc(
+    priv_esc = ExPrivEscLinuxUseCase(
+        agent = ExPrivEscLinux(
             conn=conn,
             llm=llm
         ),
@@ -125,8 +125,8 @@ def test_minimal_agent_state():
 
     log_db.init()
 
-    priv_esc = MinimalLinuxTemplatedPrivescUseCase(
-        agent = MinimalLinuxTemplatedPrivesc(
+    priv_esc = ExPrivEscLinuxTemplatedUseCase(
+        agent = ExPrivEscLinuxTemplated(
             conn=conn,
             llm = llm,
         ),

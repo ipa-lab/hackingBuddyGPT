@@ -3,9 +3,11 @@ from typing import List, Optional
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PromptStrategy, PromptContext, PromptPurpose
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.basic_prompt import BasicPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning import TaskPlanningPrompt
+from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt
 
-class TreeOfThoughtPrompt(BasicPrompt):
+
+class TreeOfThoughtPrompt(TaskPlanningPrompt):
     """
     A class that generates prompts using the tree-of-thought strategy.
 
@@ -21,7 +23,7 @@ class TreeOfThoughtPrompt(BasicPrompt):
         purpose (Optional[PromptPurpose]): The purpose of the prompt generation, which can be set during the process.
     """
 
-    def __init__(self, context: PromptContext, prompt_helper: 'PromptHelper', rest_api: str, round: int) -> None:
+    def __init__(self, context: PromptContext, prompt_helper, rest_api: str) -> None:
         """
         Initializes the TreeOfThoughtPrompt with a specific context and prompt helper.
 
@@ -31,19 +33,21 @@ class TreeOfThoughtPrompt(BasicPrompt):
             rest_api (str): The REST API endpoint.
             round (int): The round number for the prompt generation process.
         """
-        super().__init__(context, prompt_helper, PromptStrategy.TREE_OF_THOUGHT)
+        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.TREE_OF_THOUGHT)
         self.rest_api: str = rest_api
-        self.round: int = round
         self.purpose: Optional[PromptPurpose] = None
 
-    def generate_prompt(self, move_type: str, hint: str, previous_prompt: List[dict]) -> str:
+    def generate_prompt(self, move_type: str, hint: Optional[str],
+                        previous_prompt: Prompt,
+                        turn: Optional[int]) -> str:
         """
         Generates a prompt using the tree-of-thought strategy.
 
         Args:
             move_type (str): The type of move to generate.
-            hint (str): An optional hint to guide the prompt generation.
-            previous_prompt (List[dict]): A list of previous prompt entries, each containing a "content" key.
+            hint (Optional[str]): An optional hint to guide the prompt generation.
+            previous_prompt (List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]): A list of previous prompt entries, each containing a "content" key.
+            turn (Optional[int]): The current turn or step in the conversation.
 
         Returns:
             str: The generated prompt.
@@ -66,6 +70,11 @@ class TreeOfThoughtPrompt(BasicPrompt):
                 "If any expert realizes they're wrong at any point, they will leave.\n"
                 f"The question is: Create pentests for this REST API {self.rest_api} "
             )]
+
+        # Assuming ChatCompletionMessage and ChatCompletionMessageParam have a 'content' attribute
+        previous_content = previous_prompt[turn].content if turn is not None else "initial_prompt"
+
         self.purpose = PromptPurpose.AUTHENTICATION_AUTHORIZATION
 
-        return "\n".join([previous_prompt[self.round]["content"]] + tree_of_thoughts_steps)
+        return "\n".join([previous_content] + tree_of_thoughts_steps)
+

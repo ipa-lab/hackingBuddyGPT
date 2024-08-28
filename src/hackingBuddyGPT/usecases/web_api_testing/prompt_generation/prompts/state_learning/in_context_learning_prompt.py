@@ -2,11 +2,10 @@ from typing import List, Dict, Optional
 
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, \
     PromptContext, PromptPurpose
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.basic_prompt import BasicPrompt
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.utils import PromptGenerationHelper
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.state_learning.state_planning_prompt import StatePlanningPrompt
 
 
-class InContextLearningPrompt(BasicPrompt):
+class InContextLearningPrompt(StatePlanningPrompt):
     """
     A class that generates prompts using the in-context learning strategy.
 
@@ -18,26 +17,26 @@ class InContextLearningPrompt(BasicPrompt):
         context (PromptContext): The context in which prompts are generated.
         prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         prompt (Dict[int, Dict[str, str]]): A dictionary containing the prompts for each round.
-        round (int): The round number for which the prompt is being generated.
+        turn (int): The round number for which the prompt is being generated.
         purpose (Optional[PromptPurpose]): The purpose of the prompt generation, which can be set during the process.
     """
 
-    def __init__(self, context: PromptContext, prompt_helper: PromptGenerationHelper, prompt: Dict[int, Dict[str, str]], round: int) -> None:
+    def __init__(self, context: PromptContext, prompt_helper, context_information: Dict[int, Dict[str, str]]) -> None:
         """
         Initializes the InContextLearningPrompt with a specific context, prompt helper, and initial prompt.
 
         Args:
             context (PromptContext): The context in which prompts are generated.
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
-            prompt (Dict[int, Dict[str, str]]): A dictionary containing the prompts for each round.
+            context_information (Dict[int, Dict[str, str]]): A dictionary containing the prompts for each round.
             round (int): The round number for which the prompt is being generated.
         """
-        super().__init__(context, prompt_helper, PromptStrategy.IN_CONTEXT)
-        self.round: int = round
-        self.prompt: Dict[int, Dict[str, str]] = prompt
+        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.IN_CONTEXT)
+        self.prompt: Dict[int, Dict[str, str]] = context_information
         self.purpose: Optional[PromptPurpose] = None
 
-    def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: List[Dict[str, str]]) -> str:
+    def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Optional[str],
+                        turn: Optional[int]) -> str:
         """
         Generates a prompt using the in-context learning strategy.
 
@@ -50,7 +49,7 @@ class InContextLearningPrompt(BasicPrompt):
             str: The generated prompt.
         """
         history_content = [entry["content"] for entry in previous_prompt]
-        prompt_content = self.prompt.get(self.round, {}).get("content", "")
+        prompt_content = self.prompt.get(turn, {}).get("content", "")
 
         # Add hint if provided
         if hint:

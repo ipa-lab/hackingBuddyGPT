@@ -1,24 +1,22 @@
 from dataclasses import field
-from typing import List, Any, Union, Dict
+from typing import  Dict
 
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt, Context
 from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.openapi_specification_handler import OpenAPISpecificationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptStrategy, PromptEngineer
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 
-Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
-Context = Any
 
 
 class SimpleWebAPIDocumentation(Agent):

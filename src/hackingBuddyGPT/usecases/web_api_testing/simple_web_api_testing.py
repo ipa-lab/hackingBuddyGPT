@@ -1,9 +1,8 @@
 import os.path
 from dataclasses import field
-from typing import List, Any, Union, Dict
-
+from typing import List, Any, Dict
 import pydantic_core
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
+
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
@@ -11,6 +10,7 @@ from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt, Context
 from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.parsing import OpenAPISpecificationParser
 from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.report_handler import ReportHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
@@ -21,9 +21,6 @@ from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 
-# Type aliases for readability
-Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
-Context = Any
 
 # OpenAPI specification file path
 openapi_spec_filename = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/utils/openapi_spec/openapi_spec_2024-08-16_14-14-07.yaml"
@@ -72,12 +69,12 @@ class SimpleWebAPITesting(Agent):
         """
         super().init()
         if os.path.exists(openapi_spec_filename):
-            self.openapi_specification: Dict[str, Any] = OpenAPISpecificationParser(openapi_spec_filename).api_data
+            self._openapi_specification: Dict[str, Any] = OpenAPISpecificationParser(openapi_spec_filename).api_data
         self._context["host"] = self.host
         self._setup_capabilities()
-        self.llm_handler: LLMHandler = LLMHandler(self.llm, self._capabilities)
-        self.response_handler: ResponseHandler = ResponseHandler(self.llm_handler)
-        self.report_handler: ReportHandler = ReportHandler()
+        self._llm_handler: LLMHandler = LLMHandler(self.llm, self._capabilities)
+        self._response_handler: ResponseHandler = ResponseHandler(self._llm_handler)
+        self._report_handler: ReportHandler = ReportHandler()
         self._setup_initial_prompt()
 
     def _setup_initial_prompt(self) -> None:
@@ -96,8 +93,8 @@ class SimpleWebAPITesting(Agent):
             )
         }
         self._prompt_history.append(initial_prompt)
-        handlers = (self.llm_handler, self.response_handler)
-        schemas: Dict[str, Any] = self.openapi_specification["components"]["schemas"] if os.path.exists(
+        handlers = (self._llm_handler, self._response_handler)
+        schemas: Dict[str, Any] = self._openapi_specification["components"]["schemas"] if os.path.exists(
             openapi_spec_filename) else {}
         self.prompt_engineer: PromptEngineer = PromptEngineer(
             strategy=PromptStrategy.CHAIN_OF_THOUGHT,
@@ -139,10 +136,10 @@ class SimpleWebAPITesting(Agent):
         Args:
             turn (int): The current round number.
         """
-        prompt: Dict[str, Any] = self.prompt_engineer.generate_prompt(turn)
+        prompt = self.prompt_engineer.generate_prompt(turn)
         response: Any
         completion: Any
-        response, completion = self.llm_handler.call_llm(prompt)
+        response, completion = self._llm_handler.call_llm(prompt)
         self._handle_response(completion, response, self.prompt_engineer.purpose)
 
     def _handle_response(self, completion: Any, response: Any, purpose: str) -> None:
@@ -166,11 +163,11 @@ class SimpleWebAPITesting(Agent):
             self._log.console.print(Panel(result[:30], title="tool"))
             if not isinstance(result, str):
                 endpoint: str = str(response.action.path).split('/')[1]
-                self.report_handler.write_endpoint_to_report(endpoint)
+                self._report_handler.write_endpoint_to_report(endpoint)
             self._prompt_history.append(tool_message(str(result), tool_call_id))
 
-            analysis: str = self.response_handler.evaluate_result(result, purpose, self._prompt_history)
-            self.report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
+            analysis = self._response_handler.evaluate_result(result=result, prompt_history= self._prompt_history)
+            self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
             # self._prompt_history.append(tool_message(str(analysis), tool_call_id))
 
         self.all_http_methods_found()

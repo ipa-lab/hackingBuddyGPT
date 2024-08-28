@@ -7,6 +7,7 @@ import re
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import ResponseAnalyzerWithLLM
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt
 
 
 class ResponseHandler:
@@ -239,13 +240,12 @@ class ResponseHandler:
 
         return properties_dict
 
-    def evaluate_result(self, result: Any, purpose: str, prompt_history: list) -> Any:
+    def evaluate_result(self, result: Any, prompt_history: Prompt) -> Any:
         """
         Evaluates the result using the LLM-based response analyzer.
 
         Args:
             result (Any): The result to evaluate.
-            purpose (str): The purpose of the evaluation.
             prompt_history (list): The history of prompts used in the evaluation.
 
         Returns:

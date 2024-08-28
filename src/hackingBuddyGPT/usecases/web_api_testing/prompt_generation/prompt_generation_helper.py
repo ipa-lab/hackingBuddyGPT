@@ -1,8 +1,5 @@
 import re
-
 import nltk
-from nltk.tokenize import word_tokenize
-
 from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
 
 
@@ -18,7 +15,7 @@ class PromptGenerationHelper(object):
         schemas (dict): A dictionary of schemas used for constructing HTTP requests.
     """
 
-    def __init__(self, response_handler:ResponseHandler, schemas={}):
+    def __init__(self, response_handler:ResponseHandler=None, schemas:dict={}):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
 
@@ -113,13 +110,13 @@ class PromptGenerationHelper(object):
         words = [token.strip("'") for token in tokens if token.strip("'").isalnum()]
         return len(words)
 
-    def check_prompt(self, previous_prompt, steps, max_tokens=900):
+    def check_prompt(self, previous_prompt: list, steps: str, max_tokens: int = 900) -> str:
         """
         Validates and shortens the prompt if necessary to ensure it does not exceed the maximum token count.
 
         Args:
-            previous_prompt (str): The previous prompt content.
-            steps (list): A list of steps to be included in the new prompt.
+            previous_prompt (list): The previous prompt content.
+            steps (str): A list of steps to be included in the new prompt.
             max_tokens (int, optional): The maximum number of tokens allowed. Defaults to 900.
 
         Returns:

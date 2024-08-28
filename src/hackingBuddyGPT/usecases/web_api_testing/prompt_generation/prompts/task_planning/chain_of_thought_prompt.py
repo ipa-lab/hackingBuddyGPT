@@ -1,11 +1,10 @@
-from typing import List, Optional, Any
+from typing import List, Optional
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.pentesting_information import PenTestingInformation
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, PromptContext, PromptPurpose
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.basic_prompt import BasicPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning.task_planning_prompt import TaskPlanningPrompt
 
 
-class ChainOfThoughtPrompt(BasicPrompt):
+class ChainOfThoughtPrompt(TaskPlanningPrompt):
     """
     A class that generates prompts using the chain-of-thought strategy.
 
@@ -20,7 +19,7 @@ class ChainOfThoughtPrompt(BasicPrompt):
         purpose (Optional[PromptPurpose]): The purpose of the current prompt.
     """
 
-    def __init__(self, context: PromptContext, prompt_helper: 'PromptHelper'):
+    def __init__(self, context: PromptContext, prompt_helper):
         """
         Initializes the ChainOfThoughtPrompt with a specific context and prompt helper.
 
@@ -28,11 +27,12 @@ class ChainOfThoughtPrompt(BasicPrompt):
             context (PromptContext): The context in which prompts are generated.
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         """
-        super().__init__(context, prompt_helper, PromptStrategy.CHAIN_OF_THOUGHT)
+        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
         self.explored_steps: List[str] = []
         self.purpose: Optional[PromptPurpose] = None
 
-    def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Optional[str]) -> str:
+    def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Optional[str],
+                        turn: Optional[int]) -> str:
         """
         Generates a prompt using the chain-of-thought strategy.
 

@@ -15,9 +15,11 @@ class PromptStrategy(Enum):
     TREE_OF_THOUGHT = 3
 
 
+from enum import Enum
+
 class PromptContext(Enum):
     """
-    Enumeration for different contexts in which prompts are generated.
+    Enumeration for general contexts in which prompts are generated.
 
     Attributes:
         DOCUMENTATION (int): Represents the documentation context.
@@ -27,7 +29,18 @@ class PromptContext(Enum):
     PENTESTING = 2
 
 
-from enum import Enum
+class PlanningType(Enum):
+    """
+    Enumeration for planning type in which prompts are generated.
+
+    Attributes:
+        TASK_PLANNING (int): Represents the task planning context.
+        STATE_PLANNING (int): Represents the state planning context.
+    """
+    TASK_PLANNING = 1
+    STATE_PLANNING = 2
+
+
 
 class PromptPurpose(Enum):
     """

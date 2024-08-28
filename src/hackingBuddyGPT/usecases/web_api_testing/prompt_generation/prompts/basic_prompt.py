@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+#from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, \
+    PromptContext, PlanningType
+
 
 class BasicPrompt(ABC):
     """
@@ -19,25 +22,30 @@ class BasicPrompt(ABC):
         pentesting_information (Optional[PenTestingInformation]): Contains information relevant to pentesting when the context is pentesting.
     """
 
-    def __init__(self, context: PromptContext, prompt_helper: 'PromptHelper', strategy: PromptStrategy):
+    def __init__(self, context: PromptContext = None, planning_type: PlanningType = None,
+                 prompt_helper= None,
+                 strategy: PromptStrategy = None):
         """
         Initializes the BasicPrompt with a specific context, prompt helper, and strategy.
 
         Args:
             context (PromptContext): The context in which prompts are generated.
+            planning_type (PlanningType): The type of planning.
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
             strategy (PromptStrategy): The strategy used for prompt generation.
         """
-        self.context: PromptContext = context
-        self.prompt_helper: 'PromptHelper' = prompt_helper
-        self.strategy: PromptStrategy = strategy
+        self.context = context
+        self.planning_type = planning_type
+        self.prompt_helper = prompt_helper
+        self.strategy = strategy
         self.pentesting_information: Optional[PenTestingInformation] = None
 
         if self.context == PromptContext.PENTESTING:
             self.pentesting_information = PenTestingInformation(schemas=prompt_helper.schemas)
 
     @abstractmethod
-    def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Optional[str]) -> str:
+    def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Optional[str],
+                        turn: Optional[int]) -> str:
         """
         Abstract method to generate a prompt.
 
@@ -47,6 +55,7 @@ class BasicPrompt(ABC):
             move_type (str): The type of move to generate.
             hint (Optional[str]): An optional hint to guide the prompt generation.
             previous_prompt (Optional[str]): The previous prompt content based on the conversation history.
+            turn (Optional[int]): The current turn
 
         Returns:
             str: The generated prompt.

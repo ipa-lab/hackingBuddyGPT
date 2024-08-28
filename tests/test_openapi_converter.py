@@ -1,10 +1,8 @@
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open
 import os
-import yaml
-import json
 
-from hackingBuddyGPT.usecases.web_api_testing.utils.openapi_converter import OpenAPISpecificationConverter
+from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing.openapi_converter import OpenAPISpecificationConverter
 
 
 class TestOpenAPISpecificationConverter(unittest.TestCase):

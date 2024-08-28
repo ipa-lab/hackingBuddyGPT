@@ -13,4 +13,5 @@ dist/
 .coverage
 src/hackingBuddyGPT/usecases/web_api_testing/openapi_spec/
 src/hackingBuddyGPT/usecases/web_api_testing/converted_files/
-/src/hackingBuddyGPT/usecases/web_api_testing/utils/openapi_spec/
+/src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/
+/src/hackingBuddyGPT/usecases/web_api_testing/documentation/reports/

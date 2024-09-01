@@ -173,15 +173,18 @@ $ cp .env.example .env
 $ vi .env
 
 # if you start wintermute without parameters, it will list all available use cases
-$ python wintermute.py
-usage: wintermute.py [-h] {linux_privesc,minimal_linux_privesc,windows privesc} ...
-wintermute.py: error: the following arguments are required: {linux_privesc,windows privesc}
+$ python src/hackingBuddyGPT/cli/wintermute.py
+usage: wintermute.py [-h]
+                     {LinuxPrivesc,WindowsPrivesc,ExPrivEscLinux,ExPrivEscLinuxTemplated,ExPrivEscLinuxHintFile,ExPrivEscLinuxLSE,MinimalWebTesting,WebTestingWithExplanation,SimpleWebAPITesting,SimpleWebAPIDocumentation}
+                     ...
+wintermute.py: error: the following arguments are required: {LinuxPrivesc,WindowsPrivesc,ExPrivEscLinux,ExPrivEscLinuxTemplated,ExPrivEscLinuxHintFile,ExPrivEscLinuxLSE,MinimalWebTesting,WebTestingWithExplanation,SimpleWebAPITesting,SimpleWebAPIDocumentation}
 
 # start wintermute, i.e., attack the configured virtual machine
-$ python wintermute.py minimal_linux_privesc
+$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...ChangeMeToYourOpenAiApiKey --llm.model=gpt-4-turbo --llm.context_size=8192 --conn.host=localhost --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
+
 
 # install dependencies for testing if you want to run the tests
-$ pip install .[testing]
+$ pip install '.[testing]'
 ~~~
 
 ## Publications about hackingBuddyGPT

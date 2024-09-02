@@ -4,12 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hackingBuddyGPT"
+# original author was Andreas Happe, for an up-to-date list see
+# https://github.com/ipa-lab/hackingBuddyGPT/graphs/contributors
 authors = [
-	{ name = "Andreas Happe", email = "andreas@offensive.one" }
+	{ name = "HackingBuddyGPT maintainers", email = "maintainers@hackingbuddy.ai" }
 ]
 maintainers = [
 	{ name = "Andreas Happe", email = "andreas@offensive.one" },
-	{ name = "Juergen Cito", email = "juergen.cito@tuwiena.c.at" }
+	{ name = "Juergen Cito", email = "juergen.cito@tuwien.ac.at" }
 ]
 description = "Helping Ethical Hackers use LLMs in 50 lines of code"
 readme = "README.md"

@@ -52,7 +52,7 @@ class MinimalWebTesting(Agent):
         }
 
     def all_flags_found(self):
-        self.log.console.print(Panel("All flags found! Congratulations!", title="system"))
+        self.log.run_was_success()
         self._all_flags_found = True
 
     def perform_round(self, turn: int):

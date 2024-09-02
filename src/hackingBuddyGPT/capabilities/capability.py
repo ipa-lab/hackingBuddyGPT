@@ -1,4 +1,5 @@
 import abc
+import enum
 import inspect
 from typing import Union, Type, Dict, Callable, Any, Iterable
 
@@ -168,7 +169,6 @@ def capabilities_to_simple_text_handler(capabilities: Dict[str, Capability], def
                     return False, parsing_result
 
             return True, (capability_name, params, default_capability(**parsing_result))
-
 
         resolved_parser = default_capability_parser
 

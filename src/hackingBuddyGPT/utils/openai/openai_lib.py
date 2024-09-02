@@ -1,6 +1,7 @@
 import instructor
 from typing import Dict, Union, Iterable, Optional
 
+from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from rich.console import Console
 from openai.types import CompletionUsage
 from openai.types.chat import ChatCompletionChunk, ChatCompletionMessage, ChatCompletionMessageParam, \
@@ -75,7 +76,7 @@ class OpenAILib(LLM):
             response.usage.completion_tokens,
         )
 
-    def stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None, get_individual_updates=False) -> Union[LLMResult, Iterable[Union[ChatCompletionChunk, LLMResult]]]:
+    def stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None, get_individual_updates=False) -> Union[LLMResult, Iterable[Union[ChoiceDelta, LLMResult]]]:
         generator = self._stream_response(prompt, console, capabilities)
 
         if get_individual_updates:
@@ -83,7 +84,7 @@ class OpenAILib(LLM):
 
         return list(generator)[-1]
 
-    def _stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None) -> Iterable[Union[ChatCompletionChunk, LLMResult]]:
+    def _stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None) -> Iterable[Union[ChoiceDelta, LLMResult]]:
         tools = None
         if capabilities:
             tools = capabilities_to_tools(capabilities)
@@ -133,12 +134,14 @@ class OpenAILib(LLM):
                         message.tool_calls[tool_call.index].function.arguments += tool_call.function.arguments
                         outputs += 1
 
+                yield delta
+
             if chunk.usage is not None:
                 usage = chunk.usage
 
             if outputs > 1:
                 print("WARNING: Got more than one output in the stream response")
-            yield chunk
+
 
         console.print()
         if usage is None:

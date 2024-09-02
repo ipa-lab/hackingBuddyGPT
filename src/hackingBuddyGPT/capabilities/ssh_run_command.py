@@ -9,6 +9,7 @@ from hackingBuddyGPT.utils import SSHConnection
 from hackingBuddyGPT.utils.shell_root_detection import got_root
 from .capability import Capability
 
+
 @dataclass
 class SSHRunCommand(Capability):
     conn: SSHConnection

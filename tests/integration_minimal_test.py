@@ -1,7 +1,7 @@
 
 from typing import Tuple
 
-from hackingBuddyGPT.usecases.base import RawLogger
+from hackingBuddyGPT.usecases.base import Logger
 from hackingBuddyGPT.usecases.minimal.agent import MinimalLinuxPrivesc, MinimalLinuxPrivescUseCase
 from hackingBuddyGPT.usecases.minimal.agent_with_state import MinimalLinuxTemplatedPrivesc, MinimalLinuxTemplatedPrivescUseCase
 from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc, LinuxPrivescUseCase
@@ -76,7 +76,7 @@ def test_linuxprivesc():
 
     log_db.init()
 
-    log = RawLogger(
+    log = Logger(
         log_db=log_db,
         console=console,
         tag='integration_test_linuxprivesc',
@@ -107,7 +107,7 @@ def test_minimal_agent():
 
     log_db.init()
 
-    log = RawLogger(
+    log = Logger(
         log_db=log_db,
         console=console,
         tag='integration_test_minimallinuxprivesc',
@@ -135,7 +135,7 @@ def test_minimal_agent_state():
 
     log_db.init()
 
-    log = RawLogger(
+    log = Logger(
         log_db=log_db,
         console=console,
         tag='integration_test_linuxprivesc',

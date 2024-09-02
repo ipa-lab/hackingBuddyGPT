@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Optional
 
 from hackingBuddyGPT.utils.configurable import configurable, parameter
 
@@ -13,20 +14,8 @@ class DbStorage:
         self.setup_db()
 
     def connect(self):
-        self.db = sqlite3.connect(self.connection_string)
+        self.db = sqlite3.connect(self.connection_string, autocommit=True)
         self.cursor = self.db.cursor()
-
-    def insert_or_select_cmd(self, name: str) -> int:
-        results = self.cursor.execute("SELECT id, name FROM commands WHERE name = ?", (name,)).fetchall()
-
-        if len(results) == 0:
-            self.cursor.execute("INSERT INTO commands (name) VALUES (?)", (name,))
-            return self.cursor.lastrowid
-        elif len(results) == 1:
-            return results[0][0]
-        else:
-            print("this should not be happening: " + str(results))
-            return -1
 
     def setup_db(self):
         # create tables
@@ -39,6 +28,48 @@ class DbStorage:
             stopped_at text,
             configuration TEXT
         )""")
+        self.cursor.execute("""CREATE TABLE IF NOT EXISTS sections (
+            section_id INTEGER PRIMARY KEY,
+            run_id INTEGER,
+            name TEXT,
+            from_message INTEGER,
+            to_message INTEGER,
+            duration REAL
+        )""")
+        self.cursor.execute("""CREATE TABLE IF NOT EXISTS messages (
+            run_id INTEGER,
+            conversation TEXT,
+            message_id INTEGER,
+            role TEXT,
+            content TEXT,
+            duration REAL,
+            tokens_query INTEGER,
+            tokens_response INTEGER,
+            PRIMARY KEY (run_id, message_id)
+        )""")
+        self.cursor.execute("""CREATE TABLE IF NOT EXISTS tool_calls (
+            run_id INTEGER,
+            message_id INTEGER,
+            tool_call_id INTEGER,
+            function_name TEXT,
+            arguments TEXT,
+            state TEXT,
+            result_text TEXT,
+            duration REAL,
+            PRIMARY KEY (run_id, message_id, tool_call_id)
+        )""")
+        # we need autoincrement here, as using rowids are potentially reused and then we won't be able to simply have a
+        # select that uses the last received section_id as filter
+        self.cursor.execute("""CREATE TABLE IF NOT EXISTS message_stream_parts (
+            section_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id INTEGER,
+            message_id INTEGER,
+            action TEXT,
+            content TEXT
+        )""")
+
+        #### OLD STUFF ####
+
         self.cursor.execute("""CREATE TABLE IF NOT EXISTS commands (
             id INTEGER PRIMARY KEY,
             name string unique
@@ -55,24 +86,6 @@ class DbStorage:
             prompt TEXT,
             answer TEXT
         )""")
-        self.cursor.execute("""CREATE TABLE IF NOT EXISTS messages (
-            run_id INTEGER,
-            message_id INTEGER,
-            role TEXT,
-            content TEXT,
-            duration REAL,
-            tokens_query INTEGER,
-            tokens_response INTEGER
-        )""")
-        self.cursor.execute("""CREATE TABLE IF NOT EXISTS tool_calls (
-            run_id INTEGER,
-            message_id INTEGER,
-            tool_call_id INTEGER,
-            function_name TEXT,
-            arguments TEXT,
-            result_text TEXT,
-            duration REAL
-        )""")
 
         # insert commands
         self.query_cmd_id = self.insert_or_select_cmd('query_cmd')
@@ -85,12 +98,67 @@ class DbStorage:
             (model, "in progress", tag, configuration))
         return self.cursor.lastrowid
 
+    def add_log_message(self, run_id: int, message_id: int, conversation: Optional[str], role: str, content: str, tokens_query: int, tokens_response: int, duration):
+        self.cursor.execute(
+            "INSERT INTO messages (run_id, conversation, message_id, role, content, tokens_query, tokens_response, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (run_id, conversation, message_id, role, content, tokens_query, tokens_response, duration)
+        )
+
+    def add_log_message_stream_part(self, run_id: int, message_id: int, action: str, content: str):
+        self.cursor.execute(
+            "INSERT INTO message_stream_parts (run_id, message_id, action, content) VALUES (?, ?, ?, ?)",
+            (run_id, message_id, action, content)
+        )
+
+    def remove_log_message_stream_parts(self, run_id: int, message_id: int):
+        self.cursor.execute(
+            "DELETE FROM message_stream_parts WHERE run_id = ? AND message_id = ?",
+            (run_id, message_id)
+        )
+
+    def add_log_section(self, run_id: int, name: str, from_message: int, to_message: int, duration: float):
+        self.cursor.execute(
+            "INSERT INTO sections (run_id, name, from_message, to_message, duration) VALUES (?, ?, ?, ?, ?)",
+            (run_id, name, from_message, to_message, duration)
+        )
+
+    def add_log_tool_call(self, run_id: int, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration):
+        self.cursor.execute(
+            "INSERT INTO tool_calls (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration))
+
+    def run_was_success(self, run_id):
+        self.cursor.execute("update runs set state=?,stopped_at=datetime('now') where id = ?",
+                            ("got root", run_id))
+        self.db.commit()
+
+    def run_was_failure(self, run_id: int, reason: str):
+        self.cursor.execute("update runs set state=?, stopped_at=datetime('now') where id = ?",
+                            (reason, run_id))
+        self.db.commit()
+
+
+    #### OLD METHODS ####
+
+
+    def insert_or_select_cmd(self, name: str) -> int:
+        results = self.cursor.execute("SELECT id, name FROM commands WHERE name = ?", (name,)).fetchall()
+
+        if len(results) == 0:
+            self.cursor.execute("INSERT INTO commands (name) VALUES (?)", (name,))
+            return self.cursor.lastrowid
+        elif len(results) == 1:
+            return results[0][0]
+        else:
+            print("this should not be happening: " + str(results))
+            return -1
+
     def add_log_query(self, run_id, round, cmd, result, answer):
         self.cursor.execute(
             "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
-            run_id, round, self.query_cmd_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response,
-            answer.prompt, answer.answer))
+                run_id, round, self.query_cmd_id, cmd, result, answer.duration, answer.tokens_query, answer.tokens_response,
+                answer.prompt, answer.answer))
 
     def add_log_analyze_response(self, run_id, round, cmd, result, answer):
         self.cursor.execute(
@@ -99,7 +167,6 @@ class DbStorage:
              answer.tokens_response, answer.prompt, answer.answer))
 
     def add_log_update_state(self, run_id, round, cmd, result, answer):
-
         if answer is not None:
             self.cursor.execute(
                 "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -109,18 +176,6 @@ class DbStorage:
             self.cursor.execute(
                 "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (run_id, round, self.state_update_id, cmd, result, 0, 0, 0, '', ''))
-
-    def add_log_message(self, run_id: int, role: str, content: str, tokens_query: int, tokens_response: int, duration):
-        self.cursor.execute(
-            "INSERT INTO messages (run_id, message_id, role, content, tokens_query, tokens_response, duration) VALUES (?, (SELECT COALESCE(MAX(message_id), 0) + 1 FROM messages WHERE run_id = ?), ?, ?, ?, ?, ?)",
-            (run_id, run_id, role, content, tokens_query, tokens_response, duration))
-        self.cursor.execute("SELECT MAX(message_id) FROM messages WHERE run_id = ?", (run_id,))
-        return self.cursor.fetchone()[0]
-
-    def add_log_tool_call(self, run_id: int, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration):
-        self.cursor.execute(
-            "INSERT INTO tool_calls (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration))
 
     def get_round_data(self, run_id, round, explanation, status_update):
         rows = self.cursor.execute(
@@ -192,16 +247,6 @@ class DbStorage:
             result.append([row[0], row[1]])
 
         return result
-
-    def run_was_success(self, run_id):
-        self.cursor.execute("update runs set state=?,stopped_at=datetime('now') where id = ?",
-                            ("got root", run_id))
-        self.db.commit()
-
-    def run_was_failure(self, run_id: int, reason: str):
-        self.cursor.execute("update runs set state=?, stopped_at=datetime('now') where id = ?",
-                            (reason, run_id))
-        self.db.commit()
 
     def commit(self):
         self.db.commit()

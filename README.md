@@ -82,38 +82,38 @@ template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))
 
 
 class MinimalLinuxPrivesc(Agent):
-
     conn: SSHConnection = None
+
     _sliding_history: SlidingCliHistory = None
+    _max_history_size: int = 0
 
     def init(self):
         super().init()
+
         self._sliding_history = SlidingCliHistory(self.llm)
+        self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(template_next_cmd.source)
+
         self.add_capability(SSHRunCommand(conn=self.conn), default=True)
         self.add_capability(SSHTestCredential(conn=self.conn))
-        self._template_size = self.llm.count_tokens(template_next_cmd.source)
 
-    def perform_round(self, turn: int) -> bool:
-        got_root: bool = False
+    @log_conversation("Asking LLM for a new command...")
+    def perform_round(self, turn: int, log: Logger) -> bool:
+        # get as much history as fits into the target context size
+        history = self._sliding_history.get_history(self._max_history_size)
 
-        with self.log.console.status("[bold green]Asking LLM for a new command..."):
-            # get as much history as fits into the target context size
-            history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size)
+        # get the next command from the LLM
+        answer = self.llm.get_response(template_next_cmd, capabilities=self.get_capability_block(), history=history, conn=self.conn)
+        message_id = log.call_response(answer)
 
-            # get the next command from the LLM
-            answer = self.llm.get_response(template_next_cmd, capabilities=self.get_capability_block(), history=history, conn=self.conn)
-            cmd = llm_util.cmd_output_fixer(answer.result)
+        # clean the command, load and execute it
+        cmd = llm_util.cmd_output_fixer(answer.result)
+        capability, arguments = cmd.split(" ", 1)
+        result, got_root = self.run_capability(message_id, "0", capability, arguments, calling_mode=CapabilityCallingMode.Direct, log=log)
 
-        with self.log.console.status("[bold green]Executing that command..."):
-            self.log.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-            result, got_root = self.get_capability(cmd.split(" ", 1)[0])(cmd)
-
-        # log and output the command and its result
-        self.log.add_log_query(turn, cmd, result, answer)
+        # store the results in our local history
         self._sliding_history.add_command(cmd, result)
-        self.log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
-        # if we got root, we can stop the loop
+        # signal if we were successful in our task
         return got_root
 
 

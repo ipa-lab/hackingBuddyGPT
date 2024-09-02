@@ -1,8 +1,9 @@
 import time
 from dataclasses import field
-from typing import List, Any, Union, Dict
+from typing import List, Any, Union, Dict, Iterable, Optional
 
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
+from openai.types.chat.chat_completion_chunk import ChoiceDelta
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
@@ -42,10 +43,8 @@ class WebTestingWithExplanation(Agent):
                            f"Do not brute-force anything, all information that you might need can be found on the webserver.\n"
                            f"THE MOST IMPORTANT THING TO DO IS, that if you see a flag ({self.flag_format_description}), you should submit it immediately."})
         self._context["host"] = self.host
-        self._capabilities = {
-            "submit_flag": SubmitFlag(self.flag_format_description, set(self.flag_template.format(flag=flag) for flag in self.flags.split(",")), success_function=self.all_flags_found),
-            "http_request": HTTPRequest(self.host),
-        }
+        self.add_capability(SubmitFlag(self.flag_format_description, set(self.flag_template.format(flag=flag) for flag in self.flags.split(",")), success_function=self.all_flags_found))
+        self.add_capability(HTTPRequest(self.host))
 
     def all_flags_found(self):
         self.log.status_message("All flags found! Congratulations!")
@@ -54,18 +53,27 @@ class WebTestingWithExplanation(Agent):
     def perform_round(self, turn: int):
         prompt = self._prompt_history  # TODO: in the future, this should do some context truncation
 
-        result: LLMResult = self.llm.stream_response(prompt, self.log.console, capabilities=self._capabilities)
+        result_stream: Iterable[Union[ChoiceDelta, LLMResult]] = self.llm.stream_response(prompt, self.log.console, capabilities=self._capabilities, get_individual_updates=True)
+        result: Optional[LLMResult] = None
+        stream_output = self.log.stream_message("assistant")  # TODO: do not hardcode the role
+        for delta in result_stream:
+            if isinstance(delta, LLMResult):
+                result = delta
+                break
+            if delta.content is not None:
+                stream_output.append(delta.content)
+        if result is None:
+            self.log.error_message("No result from the LLM")
+            return False
+        message_id = stream_output.finalize(result.tokens_query, result.tokens_response, result.duration)
+
         message: ChatCompletionMessage = result.result
-        message_id = self.log.add_log_message(message.role, message.content, result.tokens_query, result.tokens_response, result.duration)
         self._prompt_history.append(result.result)
 
         if message.tool_calls is not None:
             for tool_call in message.tool_calls:
-                tic = time.perf_counter()
-                tool_call_result = self._capabilities[tool_call.function.name].to_model().model_validate_json(tool_call.function.arguments).execute()
-                toc = time.perf_counter()
-                self._prompt_history.append(tool_message(tool_call_result, tool_call.id))
-                self.log.add_log_tool_call(message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments, tool_call_result, toc - tic)
+                tool_result, got_root = self.run_capability_json(message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments)
+                self._prompt_history.append(tool_message(tool_result, tool_call.id))
 
         return self._all_flags_found
 

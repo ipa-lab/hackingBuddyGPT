@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from hackingBuddyGPT.usecases.base import RawLogger
+from hackingBuddyGPT.usecases.base import Logger
 from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import SimpleWebAPIDocumentationUseCase, \
     SimpleWebAPIDocumentation
 from hackingBuddyGPT.utils import DbStorage, Console
@@ -17,7 +17,7 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         console = Console()
 
         log_db.init()
-        log = RawLogger(
+        log = Logger(
             log_db=log_db,
             console=console,
             tag='webApiDocumentation',

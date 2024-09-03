@@ -4,8 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hackingBuddyGPT"
+# original author was Andreas Happe, for an up-to-date list see
+# https://github.com/ipa-lab/hackingBuddyGPT/graphs/contributors
 authors = [
-	{ name = "Andreas Happe", email = "andreas@offensive.one" }
+	{ name = "HackingBuddyGPT maintainers", email = "maintainers@hackingbuddy.ai" }
 ]
 maintainers = [
 	{ name = "Andreas Happe", email = "andreas@offensive.one" },

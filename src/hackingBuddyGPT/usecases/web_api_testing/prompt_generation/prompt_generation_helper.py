@@ -2,7 +2,7 @@ import re
 
 import nltk
 
-from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 
 
 class PromptGenerationHelper(object):

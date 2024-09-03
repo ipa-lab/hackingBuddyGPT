@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from bs4 import BeautifulSoup
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import (
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.pentesting_information import (
     PenTestingInformation,
 )
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import (

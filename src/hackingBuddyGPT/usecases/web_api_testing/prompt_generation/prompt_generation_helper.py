@@ -15,7 +15,7 @@ class PromptGenerationHelper(object):
         schemas (dict): A dictionary of schemas used for constructing HTTP requests.
     """
 
-    def __init__(self, response_handler:ResponseHandler=None, schemas:dict={}):
+    def __init__(self, response_handler: ResponseHandler = None, schemas: dict = {}, endpoints: dict = {}):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
 
@@ -28,13 +28,7 @@ class PromptGenerationHelper(object):
         self.endpoint_methods = {}
         self.endpoint_found_methods = {}
         self.schemas = schemas
-
-        # Download NLTK models if not already installed
-        nltk.download('punkt')
-        nltk.download('stopwords')
-
-
-
+        self.endpoints = endpoints
 
     def get_endpoints_needing_help(self):
         """
@@ -106,6 +100,8 @@ class PromptGenerationHelper(object):
         Returns:
             int: The number of tokens in the input text.
         """
+        if not isinstance(text, str):
+            text = str(text)
         tokens = re.findall(r'\b\w+\b', text)
         words = [token.strip("'") for token in tokens if token.strip("'").isalnum()]
         return len(words)
@@ -124,6 +120,7 @@ class PromptGenerationHelper(object):
         """
 
         def validate_prompt(prompt):
+            print(f'Prompt: {prompt}')
             if self.token_count(prompt) <= max_tokens:
                 return prompt
             shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt: " + prompt)
@@ -135,7 +132,7 @@ class PromptGenerationHelper(object):
             if isinstance(steps, list):
                 potential_prompt = "\n".join(str(element) for element in steps)
             else:
-                potential_prompt = str(steps) +"\n"
+                potential_prompt = str(steps) + "\n"
             return validate_prompt(potential_prompt)
 
         return validate_prompt(previous_prompt)

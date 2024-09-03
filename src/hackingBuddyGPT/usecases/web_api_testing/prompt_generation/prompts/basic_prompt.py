@@ -41,7 +41,7 @@ class BasicPrompt(ABC):
         self.pentesting_information: Optional[PenTestingInformation] = None
 
         if self.context == PromptContext.PENTESTING:
-            self.pentesting_information = PenTestingInformation(schemas=prompt_helper.schemas)
+            self.pentesting_information = PenTestingInformation(schemas=prompt_helper.schemas, endpoints=prompt_helper.endpoints)
 
     @abstractmethod
     def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Optional[str],

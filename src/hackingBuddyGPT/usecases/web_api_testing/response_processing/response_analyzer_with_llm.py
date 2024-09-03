@@ -77,7 +77,7 @@ class ResponseAnalyzerWithLLM:
             for step in steps:
                 prompt_history, response = self.process_step(step, prompt_history)
                 llm_responses.append(response)
-                print(f'Response:{response}')
+                #print(f'Response:{response}')
 
         return llm_responses
 
@@ -98,13 +98,13 @@ class ResponseAnalyzerWithLLM:
 
         match = re.match(r"HTTP/1\.1 (\d{3}) (.*)", status_line)
         status_code = int(match.group(1)) if match else None
-        if body.__contains__("<html"):
+        if body.__contains__("<!DOCTYPE"):
             body = ""
 
         elif status_code in [500, 400, 404, 422]:
             body = body
         else:
-            print(f'Body:{body}')
+            #print(f'Body:{body}')
             if body != '' or body != "":
                 body = json.loads(body)
             if isinstance(body, list) and len(body) > 1:

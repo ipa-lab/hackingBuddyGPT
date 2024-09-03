@@ -1,5 +1,6 @@
 from instructor.retry import InstructorRetryException
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, \
+    PromptContext, PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning import ChainOfThoughtPrompt, TreeOfThoughtPrompt
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.state_learning import InContextLearningPrompt
@@ -12,7 +13,7 @@ class PromptEngineer:
 
     def __init__(self, strategy: PromptStrategy = None, history: Prompt = None, handlers=(),
                  context: PromptContext = None, rest_api: str = "",
-                 schemas: dict = None):
+                 schemas: dict = None, endpoints: dict = None,):
         """
         Initializes the PromptEngineer with a specific strategy and handlers for LLM and responses.
 
@@ -27,7 +28,7 @@ class PromptEngineer:
         self.strategy = strategy
         self.rest_api = rest_api
         self.llm_handler, self.response_handler = handlers
-        self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler, schemas=schemas or {})
+        self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler, schemas=schemas or {}, endpoints=endpoints)
         self.context = context
         self.turn = 0
         self._prompt_history = history or []
@@ -42,7 +43,7 @@ class PromptEngineer:
                                                                    self.turn: {"content": "initial_prompt"}})
         }
 
-        self.purpose = None
+        self.purpose =  PromptPurpose.AUTHENTICATION_AUTHORIZATION
 
     def generate_prompt(self, turn:int, move_type="explore", hint=""):
         """

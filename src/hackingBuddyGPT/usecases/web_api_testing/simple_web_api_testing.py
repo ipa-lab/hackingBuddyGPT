@@ -9,7 +9,8 @@ from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext, \
+    PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt, Context
 from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
 from hackingBuddyGPT.usecases.web_api_testing.documentation.report_handler import ReportHandler
@@ -23,7 +24,7 @@ from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 
 
 # OpenAPI specification file path
-openapi_spec_filename = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/utils/openapi_spec/openapi_spec_2024-08-16_14-14-07.yaml"
+openapi_spec_filename = "src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/openapi_spec_2024-09-03_10-22-09.yaml"
 
 
 class SimpleWebAPITesting(Agent):
@@ -76,6 +77,7 @@ class SimpleWebAPITesting(Agent):
         self._response_handler: ResponseHandler = ResponseHandler(self._llm_handler)
         self._report_handler: ReportHandler = ReportHandler()
         self._setup_initial_prompt()
+        self.purpose =  PromptPurpose.AUTHENTICATION_AUTHORIZATION
 
     def _setup_initial_prompt(self) -> None:
         """
@@ -96,13 +98,16 @@ class SimpleWebAPITesting(Agent):
         handlers = (self._llm_handler, self._response_handler)
         schemas: Dict[str, Any] = self._openapi_specification["components"]["schemas"] if os.path.exists(
             openapi_spec_filename) else {}
+        endpoints: Dict[str, Any] = self._openapi_specification["paths"].keys() if os.path.exists(
+            openapi_spec_filename) else {}
         self.prompt_engineer: PromptEngineer = PromptEngineer(
             strategy=PromptStrategy.CHAIN_OF_THOUGHT,
             history=self._prompt_history,
             handlers=handlers,
             context=PromptContext.PENTESTING,
             rest_api=self.host,
-            schemas=schemas
+            schemas=schemas,
+            endpoints= endpoints
         )
 
     def all_http_methods_found(self) -> None:
@@ -136,11 +141,19 @@ class SimpleWebAPITesting(Agent):
         Args:
             turn (int): The current round number.
         """
-        prompt = self.prompt_engineer.generate_prompt(turn)
+        self._perform_prompt_generation(turn)
+    def _perform_prompt_generation(self, turn: int) -> None:
         response: Any
         completion: Any
-        response, completion = self._llm_handler.call_llm(prompt)
-        self._handle_response(completion, response, self.prompt_engineer.purpose)
+        while self.purpose == self.prompt_engineer.purpose:
+            print(f'Self purpose: {self.purpose}')
+            print(f'prompt engineer purpose: {self.purpose}')
+            prompt = self.prompt_engineer.generate_prompt(turn)
+            response, completion = self._llm_handler.call_llm(prompt)
+            self._handle_response(completion, response, self.prompt_engineer.purpose)
+        print(f'Self purpose: {self.purpose}')
+        print(f'prompt engineer purpose: {self.purpose}')
+        self.purpose = self.prompt_engineer.purpose
 
     def _handle_response(self, completion: Any, response: Any, purpose: str) -> None:
         """
@@ -171,6 +184,8 @@ class SimpleWebAPITesting(Agent):
             # self._prompt_history.append(tool_message(str(analysis), tool_call_id))
 
         self.all_http_methods_found()
+
+
 
 
 @use_case("Minimal implementation of a web API testing use case")

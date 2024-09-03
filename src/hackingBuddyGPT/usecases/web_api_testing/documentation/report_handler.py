@@ -52,11 +52,26 @@ class ReportHandler:
             analysis (List[str]): The analysis data to be recorded.
             purpose (Enum): An enumeration that describes the purpose of the analysis.
         """
+        # Open the file in read mode to check if the purpose already exists
+        try:
+            with open(self.report_name, 'r') as report:
+                content = report.read()
+        except FileNotFoundError:
+            # If file does not exist, treat as if the purpose doesn't exist
+            content = ""
+
+        # Check if the purpose.name is already in the content
+        if purpose.name not in content:
+            with open(self.report_name, 'a') as report:
+                report.write(
+                    '-------------------------------------------------------------------------------------------\n')
+                report.write(f'{purpose.name}:\n')
+
+        # Write the analysis data
         with open(self.report_name, 'a') as report:
-            report.write(f'{purpose.name}:\n')
             for item in analysis:
-                for line in item.split("\n"):
-                    if "note recorded" in line:
-                        continue
-                    else:
-                        report.write(line + "\n")
+                lines = item.split("\n")
+                filtered_lines = [line for line in lines if "note recorded" not in line]
+                report.write("\n".join(filtered_lines) + "\n")
+
+

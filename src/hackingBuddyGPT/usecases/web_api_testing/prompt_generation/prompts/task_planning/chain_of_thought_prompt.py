@@ -1,7 +1,9 @@
 from typing import List, Optional
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, PromptContext, PromptPurpose
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning.task_planning_prompt import TaskPlanningPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, \
+    PromptContext, PromptPurpose
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning.task_planning_prompt import \
+    TaskPlanningPrompt
 
 
 class ChainOfThoughtPrompt(TaskPlanningPrompt):
@@ -120,20 +122,23 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
         if move_type == "explore":
-            purpose = list(self.pentesting_information.explore_steps.keys())[0]
-            step = self.pentesting_information.explore_steps[purpose]
-            if step not in self.explored_steps:
-                if len(step) > 1:
-                    step = self.pentesting_information.explore_steps[purpose][0]
-                    if len(self.pentesting_information.explore_steps[purpose]) == 0:
+            if len(self.pentesting_information.explore_steps.keys()) > 0:
+                purpose = list(self.pentesting_information.explore_steps.keys())[0]
+                step = self.pentesting_information.explore_steps[purpose]
+                if step not in self.explored_steps:
+                    if len(step) > 1:
+                        step = self.pentesting_information.explore_steps[purpose][0]
+                        # Delete the first item from the list, automatically shifting the remaining items up
                         del self.pentesting_information.explore_steps[purpose][0]
-                prompt = step
-                self.purpose = purpose
-                self.explored_steps.append(step)
-                if len(step) == 1:
-                    del self.pentesting_information.explore_steps[purpose]
+                    prompt = step
+                    self.purpose = purpose
+                    self.explored_steps.append(step)
+                    if len(step) == 1:
+                        del self.pentesting_information.explore_steps[purpose]
 
-                print(f'prompt: {prompt}')
-                return prompt
+                    print(f'prompt: {prompt}')
+                    return prompt
+            else:
+                return ""
         else:
             return ["Look for exploits."]

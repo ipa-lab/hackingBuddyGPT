@@ -10,12 +10,11 @@ class PromptStrategy(Enum):
         CHAIN_OF_THOUGHT (int): Represents the chain-of-thought strategy.
         TREE_OF_THOUGHT (int): Represents the tree-of-thought strategy.
     """
+
     IN_CONTEXT = 1
     CHAIN_OF_THOUGHT = 2
     TREE_OF_THOUGHT = 3
 
-
-from enum import Enum
 
 class PromptContext(Enum):
     """
@@ -25,6 +24,7 @@ class PromptContext(Enum):
         DOCUMENTATION (int): Represents the documentation context.
         PENTESTING (int): Represents the penetration testing context.
     """
+
     DOCUMENTATION = 1
     PENTESTING = 2
 
@@ -37,9 +37,9 @@ class PlanningType(Enum):
         TASK_PLANNING (int): Represents the task planning context.
         STATE_PLANNING (int): Represents the state planning context.
     """
+
     TASK_PLANNING = 1
     STATE_PLANNING = 2
-
 
 
 class PromptPurpose(Enum):
@@ -63,8 +63,7 @@ class PromptPurpose(Enum):
     SECURITY_MISCONFIGURATIONS = 10
     LOGGING_MONITORING = 11
 
-    #Analysis
+    # Analysis
     PARSING = 12
     ANALYSIS = 13
     REPORTING = 14
-

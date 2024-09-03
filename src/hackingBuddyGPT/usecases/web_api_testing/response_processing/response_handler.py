@@ -1,11 +1,15 @@
 import json
-from typing import Any, Dict, Optional, Tuple, Union
+import re
+from typing import Any, Dict, Optional, Tuple
 
 from bs4 import BeautifulSoup
-import re
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import ResponseAnalyzerWithLLM
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import (
+    PenTestingInformation,
+)
+from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import (
+    ResponseAnalyzerWithLLM,
+)
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt
 
@@ -62,12 +66,12 @@ class ResponseHandler:
         """
         if status_line == "Not a valid HTTP method" or "note recorded" in status_line:
             return status_line
-        status_line = status_line.split('\r\n')[0]
+        status_line = status_line.split("\r\n")[0]
         # Regular expression to match valid HTTP status lines
-        match = re.match(r'^(HTTP/\d\.\d) (\d{3}) (.*)$', status_line)
+        match = re.match(r"^(HTTP/\d\.\d) (\d{3}) (.*)$", status_line)
         if match:
             protocol, status_code, status_message = match.groups()
-            return f'{status_code} {status_message}'
+            return f"{status_code} {status_message}"
         else:
             raise ValueError(f"{status_line} is an invalid HTTP status line")
 
@@ -81,16 +85,18 @@ class ResponseHandler:
         Returns:
             Optional[Dict[str, Any]]: The extracted response example as a dictionary, or None if extraction fails.
         """
-        soup = BeautifulSoup(html_content, 'html.parser')
-        example_code = soup.find('code', {'id': 'example'})
-        result_code = soup.find('code', {'id': 'result'})
+        soup = BeautifulSoup(html_content, "html.parser")
+        example_code = soup.find("code", {"id": "example"})
+        result_code = soup.find("code", {"id": "result"})
         if example_code and result_code:
             example_text = example_code.get_text()
             result_text = result_code.get_text()
             return json.loads(result_text)
         return None
 
-    def parse_http_response_to_openapi_example(self, openapi_spec: Dict[str, Any], http_response: str, path: str, method: str) -> Tuple[Optional[Dict[str, Any]], Optional[str], Dict[str, Any]]:
+    def parse_http_response_to_openapi_example(
+        self, openapi_spec: Dict[str, Any], http_response: str, path: str, method: str
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str], Dict[str, Any]]:
         """
         Parses an HTTP response to generate an OpenAPI example.
 
@@ -104,7 +110,7 @@ class ResponseHandler:
             Tuple[Optional[Dict[str, Any]], Optional[str], Dict[str, Any]]: A tuple containing the entry dictionary, reference, and updated OpenAPI specification.
         """
 
-        headers, body = http_response.split('\r\n\r\n', 1)
+        headers, body = http_response.split("\r\n\r\n", 1)
         try:
             body_dict = json.loads(body)
         except json.decoder.JSONDecodeError:
@@ -141,7 +147,9 @@ class ResponseHandler:
         """
         return note.action.content
 
-    def parse_http_response_to_schema(self, openapi_spec: Dict[str, Any], body_dict: Dict[str, Any], path: str) -> Tuple[str, str, Dict[str, Any]]:
+    def parse_http_response_to_schema(
+        self, openapi_spec: Dict[str, Any], body_dict: Dict[str, Any], path: str
+    ) -> Tuple[str, str, Dict[str, Any]]:
         """
         Parses an HTTP response body to generate an OpenAPI schema.
 
@@ -153,7 +161,7 @@ class ResponseHandler:
         Returns:
             Tuple[str, str, Dict[str, Any]]: A tuple containing the reference, object name, and updated OpenAPI specification.
         """
-        object_name = path.split("/")[1].capitalize().rstrip('s')
+        object_name = path.split("/")[1].capitalize().rstrip("s")
         properties_dict = {}
 
         if len(body_dict) == 1:
@@ -187,7 +195,7 @@ class ResponseHandler:
             Optional[str]: The contents of the YAML file, or None if an error occurred.
         """
         try:
-            with open(filepath, 'r') as file:
+            with open(filepath, "r") as file:
                 return file.read()
         except FileNotFoundError:
             print(f"Error: The file {filepath} does not exist.")
@@ -234,7 +242,11 @@ class ResponseHandler:
             Dict[str, Any]: The updated properties dictionary.
         """
         if key == "id":
-            properties_dict[key] = {"type": str(type(value).__name__), "format": "uuid", "example": str(value)}
+            properties_dict[key] = {
+                "type": str(type(value).__name__),
+                "format": "uuid",
+                "example": str(value),
+            }
         else:
             properties_dict[key] = {"type": str(type(value).__name__), "example": str(value)}
 

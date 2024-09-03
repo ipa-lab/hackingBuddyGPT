@@ -1,5 +1,4 @@
 from openai import OpenAI
-from typing import Any
 
 
 class YamlFileAssistant:
@@ -37,7 +36,7 @@ class YamlFileAssistant:
             The current implementation is commented out and serves as a placeholder for
             integrating with OpenAI's API. Uncomment and modify the code as needed.
         """
-        '''
+        """
         assistant = self.client.beta.assistants.create(
             name="Yaml File Analysis Assistant",
             instructions="You are an OpenAPI specification analyst. Use your knowledge to check "
@@ -88,4 +87,4 @@ class YamlFileAssistant:
 
         # The thread now has a vector store with that file in its tool resources.
         print(thread.tool_resources.file_search)
-        '''
+        """

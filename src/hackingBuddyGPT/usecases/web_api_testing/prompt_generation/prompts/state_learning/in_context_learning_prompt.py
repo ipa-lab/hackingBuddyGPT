@@ -1,8 +1,13 @@
-from typing import List, Dict, Optional
+from typing import Dict, Optional
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, \
-    PromptContext, PromptPurpose
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.state_learning.state_planning_prompt import StatePlanningPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+    PromptContext,
+    PromptPurpose,
+    PromptStrategy,
+)
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.state_learning.state_planning_prompt import (
+    StatePlanningPrompt,
+)
 
 
 class InContextLearningPrompt(StatePlanningPrompt):
@@ -35,8 +40,9 @@ class InContextLearningPrompt(StatePlanningPrompt):
         self.prompt: Dict[int, Dict[str, str]] = context_information
         self.purpose: Optional[PromptPurpose] = None
 
-    def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Optional[str],
-                        turn: Optional[int]) -> str:
+    def generate_prompt(
+        self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
+    ) -> str:
         """
         Generates a prompt using the in-context learning strategy.
 

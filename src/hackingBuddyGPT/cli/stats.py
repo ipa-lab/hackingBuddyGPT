@@ -2,15 +2,15 @@
 
 import argparse
 
-from utils.db_storage import DbStorage
 from rich.console import Console
 from rich.table import Table
+from utils.db_storage import DbStorage
 
 # setup infrastructure for outputing information
 console = Console()
 
-parser = argparse.ArgumentParser(description='View an existing log file.')
-parser.add_argument('log', type=str, help='sqlite3 db for reading log data')
+parser = argparse.ArgumentParser(description="View an existing log file.")
+parser.add_argument("log", type=str, help="sqlite3 db for reading log data")
 args = parser.parse_args()
 console.log(args)
 
@@ -21,19 +21,19 @@ db.setup_db()
 
 # experiment names
 names = {
-    "1" : "suid-gtfo",
-    "2" : "sudo-all",
-    "3" : "sudo-gtfo",
-    "4" : "docker",
-    "5" : "cron-script",
-    "6" : "pw-reuse",
-    "7" : "pw-root",
-    "8" : "vacation",
-    "9" : "ps-bash-hist",
-    "10" : "cron-wildcard",
-    "11" : "ssh-key",
-    "12" : "cron-script-vis",
-    "13" : "cron-wildcard-vis"
+    "1": "suid-gtfo",
+    "2": "sudo-all",
+    "3": "sudo-gtfo",
+    "4": "docker",
+    "5": "cron-script",
+    "6": "pw-reuse",
+    "7": "pw-root",
+    "8": "vacation",
+    "9": "ps-bash-hist",
+    "10": "cron-wildcard",
+    "11": "ssh-key",
+    "12": "cron-script-vis",
+    "13": "cron-wildcard-vis",
 }
 
 # prepare table

@@ -1,11 +1,12 @@
 import pathlib
+
 from mako.template import Template
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
-from hackingBuddyGPT.utils import SSHConnection, llm_util
-from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
 from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
+from hackingBuddyGPT.utils import SSHConnection, llm_util
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent
@@ -13,7 +14,6 @@ template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))
 
 
 class ExPrivEscLinux(Agent):
-
     conn: SSHConnection = None
     _sliding_history: SlidingCliHistory = None
 
@@ -29,10 +29,14 @@ class ExPrivEscLinux(Agent):
 
         with self._log.console.status("[bold green]Asking LLM for a new command..."):
             # get as much history as fits into the target context size
-            history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size)
+            history = self._sliding_history.get_history(
+                self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size
+            )
 
             # get the next command from the LLM
-            answer = self.llm.get_response(template_next_cmd, capabilities=self.get_capability_block(), history=history, conn=self.conn)
+            answer = self.llm.get_response(
+                template_next_cmd, capabilities=self.get_capability_block(), history=history, conn=self.conn
+            )
             cmd = llm_util.cmd_output_fixer(answer.result)
 
         with self._log.console.status("[bold green]Executing that command..."):

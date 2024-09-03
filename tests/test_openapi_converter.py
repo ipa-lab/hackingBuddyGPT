@@ -1,8 +1,10 @@
-import unittest
-from unittest.mock import patch, mock_open
 import os
+import unittest
+from unittest.mock import mock_open, patch
 
-from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing.openapi_converter import OpenAPISpecificationConverter
+from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing.openapi_converter import (
+    OpenAPISpecificationConverter,
+)
 
 
 class TestOpenAPISpecificationConverter(unittest.TestCase):
@@ -22,9 +24,9 @@ class TestOpenAPISpecificationConverter(unittest.TestCase):
 
         result = self.converter.convert_file(input_filepath, output_directory, input_type, output_type)
 
-        mock_open_file.assert_any_call(input_filepath, 'r')
+        mock_open_file.assert_any_call(input_filepath, "r")
         mock_yaml_safe_load.assert_called_once()
-        mock_open_file.assert_any_call(expected_output_path, 'w')
+        mock_open_file.assert_any_call(expected_output_path, "w")
         mock_json_dump.assert_called_once_with({"key": "value"}, mock_open_file(), indent=2)
         mock_makedirs.assert_called_once_with(os.path.join("base_directory", output_directory), exist_ok=True)
         self.assertEqual(result, expected_output_path)
@@ -42,10 +44,12 @@ class TestOpenAPISpecificationConverter(unittest.TestCase):
 
         result = self.converter.convert_file(input_filepath, output_directory, input_type, output_type)
 
-        mock_open_file.assert_any_call(input_filepath, 'r')
+        mock_open_file.assert_any_call(input_filepath, "r")
         mock_json_load.assert_called_once()
-        mock_open_file.assert_any_call(expected_output_path, 'w')
-        mock_yaml_dump.assert_called_once_with({"key": "value"}, mock_open_file(), allow_unicode=True, default_flow_style=False)
+        mock_open_file.assert_any_call(expected_output_path, "w")
+        mock_yaml_dump.assert_called_once_with(
+            {"key": "value"}, mock_open_file(), allow_unicode=True, default_flow_style=False
+        )
         mock_makedirs.assert_called_once_with(os.path.join("base_directory", output_directory), exist_ok=True)
         self.assertEqual(result, expected_output_path)
 
@@ -60,7 +64,7 @@ class TestOpenAPISpecificationConverter(unittest.TestCase):
 
         result = self.converter.convert_file(input_filepath, output_directory, input_type, output_type)
 
-        mock_open_file.assert_any_call(input_filepath, 'r')
+        mock_open_file.assert_any_call(input_filepath, "r")
         mock_yaml_safe_load.assert_called_once()
         mock_makedirs.assert_called_once_with(os.path.join("base_directory", output_directory), exist_ok=True)
         self.assertIsNone(result)
@@ -76,10 +80,11 @@ class TestOpenAPISpecificationConverter(unittest.TestCase):
 
         result = self.converter.convert_file(input_filepath, output_directory, input_type, output_type)
 
-        mock_open_file.assert_any_call(input_filepath, 'r')
+        mock_open_file.assert_any_call(input_filepath, "r")
         mock_json_load.assert_called_once()
         mock_makedirs.assert_called_once_with(os.path.join("base_directory", output_directory), exist_ok=True)
         self.assertIsNone(result)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,8 @@
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
-from .common import Privesc
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.utils import SSHConnection
-from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
+
+from .common import Privesc
 
 
 class LinuxPrivesc(Privesc):

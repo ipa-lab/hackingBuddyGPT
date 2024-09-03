@@ -1,5 +1,7 @@
 import re
+
 import nltk
+
 from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
 
 
@@ -15,7 +17,7 @@ class PromptGenerationHelper(object):
         schemas (dict): A dictionary of schemas used for constructing HTTP requests.
     """
 
-    def __init__(self, response_handler:ResponseHandler=None, schemas:dict={}):
+    def __init__(self, response_handler: ResponseHandler = None, schemas: dict = None):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
 
@@ -23,6 +25,9 @@ class PromptGenerationHelper(object):
             response_handler (object): The response handler used for managing responses.
             schemas(tuple):  Schemas used
         """
+        if schemas is None:
+            schemas = {}
+
         self.response_handler = response_handler
         self.found_endpoints = ["/"]
         self.endpoint_methods = {}
@@ -30,11 +35,8 @@ class PromptGenerationHelper(object):
         self.schemas = schemas
 
         # Download NLTK models if not already installed
-        nltk.download('punkt')
-        nltk.download('stopwords')
-
-
-
+        nltk.download("punkt")
+        nltk.download("stopwords")
 
     def get_endpoints_needing_help(self):
         """
@@ -72,13 +74,9 @@ class PromptGenerationHelper(object):
             str: The constructed HTTP action description.
         """
         if method in ["POST", "PUT"]:
-            return (
-                f"Create HTTPRequests of type {method} considering the found schemas: {self.schemas} and understand the responses. Ensure that they are correct requests."
-            )
+            return f"Create HTTPRequests of type {method} considering the found schemas: {self.schemas} and understand the responses. Ensure that they are correct requests."
         else:
-            return (
-                f"Create HTTPRequests of type {method} considering only the object with id=1 for the endpoint and understand the responses. Ensure that they are correct requests."
-            )
+            return f"Create HTTPRequests of type {method} considering only the object with id=1 for the endpoint and understand the responses. Ensure that they are correct requests."
 
     def get_initial_steps(self, common_steps):
         """
@@ -93,7 +91,7 @@ class PromptGenerationHelper(object):
         return [
             f"Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}",
             "Note down the response structures, status codes, and headers for each endpoint.",
-            "For each endpoint, document the following details: URL, HTTP method, query parameters and path variables, expected request body structure for requests, response structure for successful and error responses."
+            "For each endpoint, document the following details: URL, HTTP method, query parameters and path variables, expected request body structure for requests, response structure for successful and error responses.",
         ] + common_steps
 
     def token_count(self, text):
@@ -106,7 +104,7 @@ class PromptGenerationHelper(object):
         Returns:
             int: The number of tokens in the input text.
         """
-        tokens = re.findall(r'\b\w+\b', text)
+        tokens = re.findall(r"\b\w+\b", text)
         words = [token.strip("'") for token in tokens if token.strip("'").isalnum()]
         return len(words)
 
@@ -135,7 +133,7 @@ class PromptGenerationHelper(object):
             if isinstance(steps, list):
                 potential_prompt = "\n".join(str(element) for element in steps)
             else:
-                potential_prompt = str(steps) +"\n"
+                potential_prompt = str(steps) + "\n"
             return validate_prompt(potential_prompt)
 
         return validate_prompt(previous_prompt)

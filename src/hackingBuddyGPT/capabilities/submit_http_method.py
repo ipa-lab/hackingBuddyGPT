@@ -1,10 +1,10 @@
 import base64
-from dataclasses import dataclass, field
-from typing import Set, Dict, Callable, Literal, Optional
 import inspect
+from dataclasses import dataclass, field
+from typing import Callable, Dict, Literal, Optional, Set
 
 import requests
-from pydantic import create_model, BaseModel
+from pydantic import BaseModel, create_model
 
 from . import Capability
 
@@ -17,7 +17,6 @@ class SubmitHTTPMethod(Capability):
     host: str
     follow_redirects: bool = False
     success_function: Callable[[], None] = None
-
 
     submitted_valid_http_methods: Set[str] = field(default_factory=set, init=False)
 
@@ -43,14 +42,15 @@ class SubmitHTTPMethod(Capability):
 
         return model_type
 
-    def __call__(self, method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTION", "PATCH"],
-                 path: str,
-                 query: Optional[str] = None,
-                 body: Optional[str] = None,
-                 body_is_base64: Optional[bool] = False,
-                 headers: Optional[Dict[str, str]] = None
-                 ) -> str:
-
+    def __call__(
+        self,
+        method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTION", "PATCH"],
+        path: str,
+        query: Optional[str] = None,
+        body: Optional[str] = None,
+        body_is_base64: Optional[bool] = False,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> str:
         if body is not None and body_is_base64:
             body = base64.b64decode(body).decode()
 
@@ -74,5 +74,4 @@ class SubmitHTTPMethod(Capability):
             else:
                 return "All methods submitted, congratulations"
         # turn the response into "plain text format" for responding to the prompt
-        return f"HTTP/1.1 {resp.status_code} {resp.reason}\r\n{headers}\r\n\r\n{resp.text}"""
-
+        return f"HTTP/1.1 {resp.status_code} {resp.reason}\r\n{headers}\r\n\r\n{resp.text}"

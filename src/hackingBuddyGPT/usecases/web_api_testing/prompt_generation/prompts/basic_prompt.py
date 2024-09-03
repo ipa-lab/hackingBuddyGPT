@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-#from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, \
-    PromptContext, PlanningType
+# from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import (
+    PenTestingInformation,
+)
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+    PlanningType,
+    PromptContext,
+    PromptStrategy,
+)
 
 
 class BasicPrompt(ABC):
@@ -22,9 +27,13 @@ class BasicPrompt(ABC):
         pentesting_information (Optional[PenTestingInformation]): Contains information relevant to pentesting when the context is pentesting.
     """
 
-    def __init__(self, context: PromptContext = None, planning_type: PlanningType = None,
-                 prompt_helper= None,
-                 strategy: PromptStrategy = None):
+    def __init__(
+        self,
+        context: PromptContext = None,
+        planning_type: PlanningType = None,
+        prompt_helper=None,
+        strategy: PromptStrategy = None,
+    ):
         """
         Initializes the BasicPrompt with a specific context, prompt helper, and strategy.
 
@@ -44,8 +53,9 @@ class BasicPrompt(ABC):
             self.pentesting_information = PenTestingInformation(schemas=prompt_helper.schemas)
 
     @abstractmethod
-    def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Optional[str],
-                        turn: Optional[int]) -> str:
+    def generate_prompt(
+        self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
+    ) -> str:
         """
         Abstract method to generate a prompt.
 

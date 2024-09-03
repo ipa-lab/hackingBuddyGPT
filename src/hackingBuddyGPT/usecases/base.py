@@ -2,10 +2,17 @@ import abc
 import argparse
 import typing
 from dataclasses import dataclass
-from rich.panel import Panel
 from typing import Dict, Type
 
-from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters, transparent
+from rich.panel import Panel
+
+from hackingBuddyGPT.utils.configurable import (
+    ParameterDefinitions,
+    build_parser,
+    get_arguments,
+    get_class_parameters,
+    transparent,
+)
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
 
@@ -81,7 +88,6 @@ class AutonomousUseCase(UseCase, abc.ABC):
         pass
 
     def run(self):
-
         self.before_run()
 
         turn = 1
@@ -113,6 +119,7 @@ class _WrappedUseCase:
     A WrappedUseCase should not be used directly and is an internal tool used for initialization and dependency injection
     of the actual UseCases.
     """
+
     name: str
     description: str
     use_case: Type[UseCase]
@@ -156,10 +163,10 @@ class AutonomousAgentUseCase(AutonomousUseCase, typing.Generic[T]):
 
             def get_name(self) -> str:
                 return self.__class__.__name__
-            
+
             def before_run(self):
                 return self.agent.before_run()
-            
+
             def after_run(self):
                 return self.agent.after_run()
 
@@ -179,6 +186,7 @@ def use_case(description):
             raise IndexError(f"Use case with name {name} already exists")
         use_cases[name] = _WrappedUseCase(name, description, cls, get_class_parameters(cls))
         return cls
+
     return inner
 
 

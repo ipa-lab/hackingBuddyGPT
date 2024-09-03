@@ -1,8 +1,9 @@
 import pathlib
 from dataclasses import dataclass, field
+from typing import Any, Dict
+
 from mako.template import Template
 from rich.panel import Panel
-from typing import Any, Dict
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_handler
@@ -18,8 +19,7 @@ template_state = Template(filename=str(template_dir / "update_state.txt"))
 
 @dataclass
 class Privesc(Agent):
-
-    system: str = ''
+    system: str = ""
     enable_explanation: bool = False
     enable_update_state: bool = False
     disable_history: bool = False
@@ -42,12 +42,12 @@ class Privesc(Agent):
             self._sliding_history = SlidingCliHistory(self.llm)
 
         self._template_params = {
-            'capabilities': self.get_capability_block(),
-            'system': self.system,
-            'hint': self.hint,
-            'conn': self.conn,
-            'update_state': self.enable_update_state,
-            'target_user': 'root'
+            "capabilities": self.get_capability_block(),
+            "system": self.system,
+            "hint": self.hint,
+            "conn": self.conn,
+            "update_state": self.enable_update_state,
+            "target_user": "root",
         }
 
         template_size = self.llm.count_tokens(template_next_cmd.source)
@@ -62,13 +62,15 @@ class Privesc(Agent):
 
         with self._log.console.status("[bold green]Executing that command..."):
             self._log.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-            _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities, default_capability=self._default_capability)
+            _capability_descriptions, parser = capabilities_to_simple_text_handler(
+                self._capabilities, default_capability=self._default_capability
+            )
             success, *output = parser(cmd)
             if not success:
                 self._log.console.print(Panel(output[0], title="[bold red]Error parsing command:"))
                 return False
 
-            assert(len(output) == 1)
+            assert len(output) == 1
             capability, cmd, (result, got_root) = output[0]
 
         # log and output the command and its result
@@ -93,7 +95,11 @@ class Privesc(Agent):
                 self._log.log_db.add_log_update_state(self._log.run_id, turn, "", state.result, state)
 
         # Output Round Data..
-        self._log.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self._log.run_id, self._log.log_db, turn))
+        self._log.console.print(
+            ui.get_history_table(
+                self.enable_explanation, self.enable_update_state, self._log.run_id, self._log.log_db, turn
+            )
+        )
 
         # .. and output the updated state
         if self.enable_update_state:
@@ -109,14 +115,11 @@ class Privesc(Agent):
             return 0
 
     def get_next_command(self) -> llm_util.LLMResult:
-        history = ''
+        history = ""
         if not self.disable_history:
             history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
 
-        self._template_params.update({
-            'history': history,
-            'state': self._state
-        })
+        self._template_params.update({"history": history, "state": self._state})
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)
         cmd.result = llm_util.cmd_output_fixer(cmd.result)

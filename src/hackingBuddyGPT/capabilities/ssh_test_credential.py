@@ -4,6 +4,7 @@ from typing import Tuple
 import paramiko
 
 from hackingBuddyGPT.utils import SSHConnection
+
 from .capability import Capability
 
 
@@ -12,7 +13,7 @@ class SSHTestCredential(Capability):
     conn: SSHConnection
 
     def describe(self) -> str:
-        return f"give credentials to be tested"
+        return "give credentials to be tested"
 
     def get_name(self):
         return "test_credential"
@@ -21,7 +22,7 @@ class SSHTestCredential(Capability):
         test_conn = self.conn.new_with(username=username, password=password)
         try:
             test_conn.init()
-            user = test_conn.run("whoami")[0].strip('\n\r ')
+            user = test_conn.run("whoami")[0].strip("\n\r ")
             if user == "root":
                 return "Login as root was successful\n", True
             else:

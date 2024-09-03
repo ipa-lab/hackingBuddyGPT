@@ -1,10 +1,10 @@
 from .llm_util import LLM, trim_result_front
 
-class SlidingCliHistory:
 
+class SlidingCliHistory:
     model: LLM = None
     maximum_target_size: int = 0
-    sliding_history: str = ''
+    sliding_history: str = ""
 
     def __init__(self, used_model: LLM):
         self.model = used_model

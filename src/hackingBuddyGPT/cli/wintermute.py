@@ -8,10 +8,7 @@ def main():
     parser = argparse.ArgumentParser()
     subparser = parser.add_subparsers(required=True)
     for name, use_case in use_cases.items():
-        use_case.build_parser(subparser.add_parser(
-            name=use_case.name,
-            help=use_case.description
-        ))
+        use_case.build_parser(subparser.add_parser(name=name, help=use_case.description))
 
     parsed = parser.parse_args(sys.argv[1:])
     instance = parsed.use_case(parsed)

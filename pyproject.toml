@@ -11,7 +11,7 @@ authors = [
 ]
 maintainers = [
 	{ name = "Andreas Happe", email = "andreas@offensive.one" },
-	{ name = "Juergen Cito", email = "juergen.cito@tuwien.ac.at" }
+	{ name = "Juergen Cito", email = "juergen.cito@tuwien.ac.at" },
 ]
 description = "Helping Ethical Hackers use LLMs in 50 lines of code"
 readme = "README.md"
@@ -64,7 +64,17 @@ testing = [
     'pytest',
     'pytest-mock'
 ]
+dev = [
+	'ruff',
+]
 
 [project.scripts]
 wintermute = "hackingBuddyGPT.cli.wintermute:main"
 hackingBuddyGPT = "hackingBuddyGPT.cli.wintermute:main"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]
+ignore = ["E501", "F401", "F403"]

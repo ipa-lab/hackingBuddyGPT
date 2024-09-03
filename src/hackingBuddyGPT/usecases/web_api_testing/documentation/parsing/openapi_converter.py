@@ -1,6 +1,8 @@
-import os.path
-import yaml
 import json
+import os.path
+
+import yaml
+
 
 class OpenAPISpecificationConverter:
     """
@@ -39,14 +41,14 @@ class OpenAPISpecificationConverter:
 
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-            with open(input_filepath, 'r') as infile:
-                if input_type == 'yaml':
+            with open(input_filepath, "r") as infile:
+                if input_type == "yaml":
                     content = yaml.safe_load(infile)
                 else:
                     content = json.load(infile)
 
-            with open(output_path, 'w') as outfile:
-                if output_type == 'yaml':
+            with open(output_path, "w") as outfile:
+                if output_type == "yaml":
                     yaml.dump(content, outfile, allow_unicode=True, default_flow_style=False)
                 else:
                     json.dump(content, outfile, indent=2)
@@ -68,7 +70,7 @@ class OpenAPISpecificationConverter:
         Returns:
             str: The path to the converted JSON file, or None if an error occurred.
         """
-        return self.convert_file(yaml_filepath, "json", 'yaml', 'json')
+        return self.convert_file(yaml_filepath, "json", "yaml", "json")
 
     def json_to_yaml(self, json_filepath):
         """
@@ -80,12 +82,12 @@ class OpenAPISpecificationConverter:
         Returns:
             str: The path to the converted YAML file, or None if an error occurred.
         """
-        return self.convert_file(json_filepath, "yaml", 'json', 'yaml')
+        return self.convert_file(json_filepath, "yaml", "json", "yaml")
 
 
 # Usage example
-if __name__ == '__main__':
-    yaml_input = '/home/diana/Desktop/masterthesis/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/openapi_spec/openapi_spec_2024-06-13_17-16-25.yaml'
+if __name__ == "__main__":
+    yaml_input = "/home/diana/Desktop/masterthesis/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/openapi_spec/openapi_spec_2024-06-13_17-16-25.yaml"
 
     converter = OpenAPISpecificationConverter("converted_files")
     # Convert YAML to JSON

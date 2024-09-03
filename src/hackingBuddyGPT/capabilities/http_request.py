@@ -1,7 +1,8 @@
 import base64
 from dataclasses import dataclass
+from typing import Dict, Literal, Optional
+
 import requests
-from typing import Literal, Optional, Dict
 
 from . import Capability
 
@@ -19,26 +20,31 @@ class HTTPRequest(Capability):
             self._client = requests
 
     def describe(self) -> str:
-        description = (f"Sends a request to the host {self.host} using the python requests library and returns the response. The schema and host are fixed and do not need to be provided.\n"
-                       f"Make sure that you send a Content-Type header if you are sending a body.")
+        description = (
+            f"Sends a request to the host {self.host} using the python requests library and returns the response. The schema and host are fixed and do not need to be provided.\n"
+            f"Make sure that you send a Content-Type header if you are sending a body."
+        )
         if self.use_cookie_jar:
             description += "\nThe cookie jar is used for storing cookies between requests."
         else:
-            description += "\nCookies are not automatically stored, and need to be provided as header manually every time."
+            description += (
+                "\nCookies are not automatically stored, and need to be provided as header manually every time."
+            )
         if self.follow_redirects:
             description += "\nRedirects are followed."
         else:
             description += "\nRedirects are not followed."
         return description
 
-    def __call__(self,
-                 method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTION", "PATCH"],
-                 path: str,
-                 query: Optional[str] = None,
-                 body: Optional[str] = None,
-                 body_is_base64: Optional[bool] = False,
-                 headers: Optional[Dict[str, str]] = None,
-                 ) -> str:
+    def __call__(
+        self,
+        method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTION", "PATCH"],
+        path: str,
+        query: Optional[str] = None,
+        body: Optional[str] = None,
+        body_is_base64: Optional[bool] = False,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> str:
         if body is not None and body_is_base64:
             body = base64.b64decode(body).decode()
         if self.host[-1] != "/":
@@ -67,4 +73,4 @@ class HTTPRequest(Capability):
         headers = "\r\n".join(f"{k}: {v}" for k, v in resp.headers.items())
 
         # turn the response into "plain text format" for responding to the prompt
-        return f"HTTP/1.1 {resp.status_code} {resp.reason}\r\n{headers}\r\n\r\n{resp.text}"""
+        return f"HTTP/1.1 {resp.status_code} {resp.reason}\r\n{headers}\r\n\r\n{resp.text}"

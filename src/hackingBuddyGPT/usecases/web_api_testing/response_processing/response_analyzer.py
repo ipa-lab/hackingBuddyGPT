@@ -1,6 +1,7 @@
 import json
 import re
-from typing import Optional, Tuple, Dict, Any
+from typing import Any, Dict, Optional, Tuple
+
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
 
 
@@ -52,8 +53,10 @@ class ResponseAnalyzer:
             body = "Empty"
 
         status_line = header_lines[0].strip()
-        headers = {key.strip(): value.strip() for key, value in
-                   (line.split(":", 1) for line in header_lines[1:] if ':' in line)}
+        headers = {
+            key.strip(): value.strip()
+            for key, value in (line.split(":", 1) for line in header_lines[1:] if ":" in line)
+        }
 
         match = re.match(r"HTTP/1\.1 (\d{3}) (.*)", status_line)
         status_code = int(match.group(1)) if match else None
@@ -73,7 +76,9 @@ class ResponseAnalyzer:
         status_code, headers, body = self.parse_http_response(raw_response)
         return self.analyze_parsed_response(status_code, headers, body)
 
-    def analyze_parsed_response(self, status_code: Optional[int], headers: Dict[str, str], body: str) -> Optional[Dict[str, Any]]:
+    def analyze_parsed_response(
+        self, status_code: Optional[int], headers: Dict[str, str], body: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Analyzes the parsed HTTP response based on the purpose, invoking the appropriate method.
 
@@ -86,12 +91,16 @@ class ResponseAnalyzer:
             Optional[Dict[str, Any]]: The analysis results based on the purpose.
         """
         analysis_methods = {
-            PromptPurpose.AUTHENTICATION_AUTHORIZATION: self.analyze_authentication_authorization(status_code, headers, body),
+            PromptPurpose.AUTHENTICATION_AUTHORIZATION: self.analyze_authentication_authorization(
+                status_code, headers, body
+            ),
             PromptPurpose.INPUT_VALIDATION: self.analyze_input_validation(status_code, headers, body),
         }
         return analysis_methods.get(self.purpose)
 
-    def analyze_authentication_authorization(self, status_code: Optional[int], headers: Dict[str, str], body: str) -> Dict[str, Any]:
+    def analyze_authentication_authorization(
+        self, status_code: Optional[int], headers: Dict[str, str], body: str
+    ) -> Dict[str, Any]:
         """
         Analyzes the HTTP response with a focus on authentication and authorization.
 
@@ -104,21 +113,29 @@ class ResponseAnalyzer:
             Dict[str, Any]: The analysis results focused on authentication and authorization.
         """
         analysis = {
-            'status_code': status_code,
-            'authentication_status': "Authenticated" if status_code == 200 else
-            "Not Authenticated or Not Authorized" if status_code in [401, 403] else "Unknown",
-            'auth_headers_present': any(
-                header in headers for header in ['Authorization', 'Set-Cookie', 'WWW-Authenticate']),
-            'rate_limiting': {
-                'X-Ratelimit-Limit': headers.get('X-Ratelimit-Limit'),
-                'X-Ratelimit-Remaining': headers.get('X-Ratelimit-Remaining'),
-                'X-Ratelimit-Reset': headers.get('X-Ratelimit-Reset'),
+            "status_code": status_code,
+            "authentication_status": (
+                "Authenticated"
+                if status_code == 200
+                else "Not Authenticated or Not Authorized"
+                if status_code in [401, 403]
+                else "Unknown"
+            ),
+            "auth_headers_present": any(
+                header in headers for header in ["Authorization", "Set-Cookie", "WWW-Authenticate"]
+            ),
+            "rate_limiting": {
+                "X-Ratelimit-Limit": headers.get("X-Ratelimit-Limit"),
+                "X-Ratelimit-Remaining": headers.get("X-Ratelimit-Remaining"),
+                "X-Ratelimit-Reset": headers.get("X-Ratelimit-Reset"),
             },
-            'content_body': "Empty" if body == {} else body,
+            "content_body": "Empty" if body == {} else body,
         }
         return analysis
 
-    def analyze_input_validation(self, status_code: Optional[int], headers: Dict[str, str], body: str) -> Dict[str, Any]:
+    def analyze_input_validation(
+        self, status_code: Optional[int], headers: Dict[str, str], body: str
+    ) -> Dict[str, Any]:
         """
         Analyzes the HTTP response with a focus on input validation.
 
@@ -131,10 +148,10 @@ class ResponseAnalyzer:
             Dict[str, Any]: The analysis results focused on input validation.
         """
         analysis = {
-            'status_code': status_code,
-            'response_body': "Empty" if body == {} else body,
-            'is_valid_response': self.is_valid_input_response(status_code, body),
-            'security_headers_present': any(key in headers for key in ["X-Content-Type-Options", "X-Ratelimit-Limit"]),
+            "status_code": status_code,
+            "response_body": "Empty" if body == {} else body,
+            "is_valid_response": self.is_valid_input_response(status_code, body),
+            "security_headers_present": any(key in headers for key in ["X-Content-Type-Options", "X-Ratelimit-Limit"]),
         }
         return analysis
 
@@ -158,7 +175,14 @@ class ResponseAnalyzer:
         else:
             return "Unexpected"
 
-    def document_findings(self, status_code: Optional[int], headers: Dict[str, str], body: str, expected_behavior: str, actual_behavior: str) -> Dict[str, Any]:
+    def document_findings(
+        self,
+        status_code: Optional[int],
+        headers: Dict[str, str],
+        body: str,
+        expected_behavior: str,
+        actual_behavior: str,
+    ) -> Dict[str, Any]:
         """
         Documents the findings from the analysis, comparing expected and actual behavior.
 
@@ -239,7 +263,7 @@ class ResponseAnalyzer:
         return analysis_str
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Example HTTP response to parse
     raw_http_response = """HTTP/1.1 404 Not Found
     Date: Fri, 16 Aug 2024 10:01:19 GMT

@@ -8,5 +8,6 @@ class Console(console.Console):
     """
     Simple wrapper around the rich Console class, to allow for dependency injection and configuration.
     """
+
     def __init__(self):
         super().__init__()

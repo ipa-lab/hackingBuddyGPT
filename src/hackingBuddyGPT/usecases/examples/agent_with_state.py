@@ -1,12 +1,11 @@
-
 import pathlib
 from dataclasses import dataclass
 from typing import Any
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
+from hackingBuddyGPT.usecases.agents import AgentWorldview, TemplatedAgent
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.utils import SSHConnection, llm_util
-from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
-from hackingBuddyGPT.usecases.agents import TemplatedAgent, AgentWorldview
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
 
@@ -21,20 +20,16 @@ class ExPrivEscLinuxTemplatedState(AgentWorldview):
         self.max_history_size = max_history_size
         self.conn = conn
 
-    def update(self, capability, cmd:str, result:str):
+    def update(self, capability, cmd: str, result: str):
         self.sliding_history.add_command(cmd, result)
 
     def to_template(self) -> dict[str, Any]:
-        return {
-            'history': self.sliding_history.get_history(self.max_history_size),
-            'conn': self.conn
-        }
+        return {"history": self.sliding_history.get_history(self.max_history_size), "conn": self.conn}
 
 
 class ExPrivEscLinuxTemplated(TemplatedAgent):
-
     conn: SSHConnection = None
-    
+
     def init(self):
         super().init()
 

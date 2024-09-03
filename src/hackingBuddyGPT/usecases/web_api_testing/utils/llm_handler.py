@@ -1,7 +1,9 @@
 import re
-from typing import List, Dict, Any
-from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
+from typing import Any, Dict, List
+
 import openai
+
+from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 
 
 class LLMHandler:
@@ -26,7 +28,7 @@ class LLMHandler:
         self.llm = llm
         self._capabilities = capabilities
         self.created_objects: Dict[str, List[Any]] = {}
-        self._re_word_boundaries = re.compile(r'\b')
+        self._re_word_boundaries = re.compile(r"\b")
 
     def call_llm(self, prompt: List[Dict[str, Any]]) -> Any:
         """
@@ -38,13 +40,14 @@ class LLMHandler:
         Returns:
             Any: The response from the LLM.
         """
+        print(f"Initial prompt length: {len(prompt)}")
 
         def call_model(prompt: List[Dict[str, Any]]) -> Any:
-            """ Helper function to make the API call. """
+            """Helper function to avoid redundancy in making the API call."""
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,
                 messages=prompt,
-                response_model=capabilities_to_action_model(self._capabilities)
+                response_model=capabilities_to_action_model(self._capabilities),
             )
 
         try:
@@ -68,13 +71,13 @@ class LLMHandler:
                 return call_model(shortened_prompt)
 
     def adjust_prompt(self, prompt: List[Dict[str, Any]], num_prompts: int = 5) -> List[Dict[str, Any]]:
-        adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2): len(prompt)]
+        adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) : len(prompt)]
         if not isinstance(adjusted_prompt[0], dict):
-            adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) - 1: len(prompt)]
+            adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) - 1 : len(prompt)]
 
-        #print(f'Adjusted prompt length: {len(adjusted_prompt)}')
-        #print(f'adjusted prompt:{adjusted_prompt}')
-        return adjusted_prompt
+        print(f"Adjusted prompt length: {len(adjusted_prompt)}")
+        print(f"adjusted prompt:{adjusted_prompt}")
+        return prompt
 
     def add_created_object(self, created_object: Any, object_type: str) -> None:
         """
@@ -96,7 +99,7 @@ class LLMHandler:
         Returns:
             Dict[str, List[Any]]: The dictionary of created objects.
         """
-        print(f'created_objects: {self.created_objects}')
+        print(f"created_objects: {self.created_objects}")
         return self.created_objects
 
     def adjust_prompt_based_on_token(self, prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -108,12 +111,13 @@ class LLMHandler:
                 prompt.remove(item)
             else:
                 if isinstance(item, dict):
-                    new_token_count = (tokens + self.get_num_tokens(item["content"]))
+                    new_token_count = tokens + self.get_num_tokens(item["content"])
                     if new_token_count <= max_tokens:
                         tokens = new_token_count
                 else:
                     continue
 
+        print(f"tokens:{tokens}")
         prompt.reverse()
         return prompt
 

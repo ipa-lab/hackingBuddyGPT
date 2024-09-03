@@ -1,22 +1,21 @@
 from dataclasses import field
-from typing import  Dict
-
+from typing import Dict
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
+from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import (
+    OpenAPISpecificationHandler,
+)
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt, Context
-from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import OpenAPISpecificationHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptStrategy, PromptEngineer
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
-
+from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
+from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
-
 
 
 class SimpleWebAPIDocumentation(Agent):
@@ -46,19 +45,19 @@ class SimpleWebAPIDocumentation(Agent):
     # Description for expected HTTP methods
     _http_method_description: str = parameter(
         desc="Pattern description for expected HTTP methods in the API response",
-        default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.)."
+        default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).",
     )
 
     # Template for HTTP methods in API requests
     _http_method_template: str = parameter(
         desc="Template to format HTTP methods in API requests, with {method} replaced by actual HTTP method names.",
-        default="{method}"
+        default="{method}",
     )
 
     # List of expected HTTP methods
     _http_methods: str = parameter(
         desc="Expected HTTP methods in the API, as a comma-separated list.",
-        default="GET,POST,PUT,PATCH,DELETE"
+        default="GET,POST,PUT,PATCH,DELETE",
     )
 
     def init(self):
@@ -73,26 +72,25 @@ class SimpleWebAPIDocumentation(Agent):
     def _setup_capabilities(self):
         """Sets up the capabilities for the agent."""
         notes = self._context["notes"]
-        self._capabilities = {
-            "http_request": HTTPRequest(self.host),
-            "record_note": RecordNote(notes)
-        }
+        self._capabilities = {"http_request": HTTPRequest(self.host), "record_note": RecordNote(notes)}
 
     def _setup_initial_prompt(self):
         """Sets up the initial prompt for the agent."""
         initial_prompt = {
             "role": "system",
             "content": f"You're tasked with documenting the REST APIs of a website hosted at {self.host}. "
-                       f"Start with an empty OpenAPI specification.\n"
-                       f"Maintain meticulousness in documenting your observations as you traverse the APIs."
+            f"Start with an empty OpenAPI specification.\n"
+            f"Maintain meticulousness in documenting your observations as you traverse the APIs.",
         }
         self._prompt_history.append(initial_prompt)
         handlers = (self.llm_handler, self.response_handler)
-        self.prompt_engineer = PromptEngineer(strategy=PromptStrategy.CHAIN_OF_THOUGHT,
-                                              history=self._prompt_history,
-                                              handlers=handlers,
-                                              context=PromptContext.DOCUMENTATION,
-                                              rest_api=self.host)
+        self.prompt_engineer = PromptEngineer(
+            strategy=PromptStrategy.CHAIN_OF_THOUGHT,
+            history=self._prompt_history,
+            handlers=handlers,
+            context=PromptContext.DOCUMENTATION,
+            rest_api=self.host,
+        )
 
     def all_http_methods_found(self, turn):
         """
@@ -106,11 +104,15 @@ class SimpleWebAPIDocumentation(Agent):
         """
         found_endpoints = sum(len(value_list) for value_list in self.documentation_handler.endpoint_methods.values())
         expected_endpoints = len(self.documentation_handler.endpoint_methods.keys()) * 4
-        print(f'found methods:{found_endpoints}')
-        print(f'expected methods:{expected_endpoints}')
-        if found_endpoints > 0 and (found_endpoints == expected_endpoints):
-            return True
-        elif turn == 20 and found_endpoints > 0 and (found_endpoints == expected_endpoints):
+        print(f"found methods:{found_endpoints}")
+        print(f"expected methods:{expected_endpoints}")
+        if (
+            found_endpoints > 0
+            and (found_endpoints == expected_endpoints)
+            or turn == 20
+            and found_endpoints > 0
+            and (found_endpoints == expected_endpoints)
+        ):
             return True
         return False
 
@@ -133,7 +135,7 @@ class SimpleWebAPIDocumentation(Agent):
                 if len(self.documentation_handler.endpoint_methods) > new_endpoint_found:
                     new_endpoint_found = len(self.documentation_handler.endpoint_methods)
         elif turn == 20:
-            while len(self.prompt_engineer.prompt_helper.get_endpoints_needing_help() )!= 0:
+            while len(self.prompt_engineer.prompt_helper.get_endpoints_needing_help()) != 0:
                 self.run_documentation(turn, "exploit")
         else:
             self.run_documentation(turn, "exploit")
@@ -162,15 +164,12 @@ class SimpleWebAPIDocumentation(Agent):
         prompt = self.prompt_engineer.generate_prompt(turn, move_type)
         response, completion = self.llm_handler.call_llm(prompt)
         self._log, self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
-            completion,
-            response,
-            self._log,
-            self._prompt_history,
-            self.prompt_engineer
+            completion, response, self._log, self._prompt_history, self.prompt_engineer
         )
 
 
 @use_case("Minimal implementation of a web API testing use case")
 class SimpleWebAPIDocumentationUseCase(AutonomousAgentUseCase[SimpleWebAPIDocumentation]):
     """Use case for the SimpleWebAPIDocumentation agent."""
+
     pass

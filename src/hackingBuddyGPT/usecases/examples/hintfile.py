@@ -1,7 +1,8 @@
 import json
 
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc
-from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
+
 
 @use_case("Linux Privilege Escalation using hints from a hint file initial guidance")
 class ExPrivEscLinuxHintFileUseCase(AutonomousAgentUseCase[LinuxPrivesc]):

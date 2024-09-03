@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from pypsexec.client import Client
 from typing import Tuple
+
+from pypsexec.client import Client
 
 from hackingBuddyGPT.utils.configurable import configurable
 

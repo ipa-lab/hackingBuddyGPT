@@ -2,7 +2,7 @@ from instructor.retry import InstructorRetryException
 
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PromptContext,
-    PromptStrategy,
+    PromptStrategy, PromptPurpose,
 )
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import (
     PromptGenerationHelper,

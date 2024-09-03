@@ -5,15 +5,15 @@ from typing import Any
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.utils import SSHConnection, llm_util
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
 from hackingBuddyGPT.usecases.agents import TemplatedAgent, AgentWorldview
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
-@dataclass
-class MinimalLinuxTemplatedPrivescState(AgentWorldview):
-    sliding_history: SlidingCliHistory = None
-    max_history_size: int = 0
 
+@dataclass
+class ExPrivEscLinuxTemplatedState(AgentWorldview):
+    sliding_history: SlidingCliHistory
+    max_history_size: int = 0
     conn: SSHConnection = None
 
     def __init__(self, conn, llm, max_history_size):
@@ -30,9 +30,8 @@ class MinimalLinuxTemplatedPrivescState(AgentWorldview):
             'conn': self.conn
         }
 
-@use_case("minimal_linux_templated_agent", "Showcase Minimal Linux Priv-Escalation")
-@dataclass
-class MinimalLinuxTemplatedPrivesc(TemplatedAgent):
+
+class ExPrivEscLinuxTemplated(TemplatedAgent):
 
     conn: SSHConnection = None
     
@@ -48,4 +47,9 @@ class MinimalLinuxTemplatedPrivesc(TemplatedAgent):
 
         # setup state
         max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size
-        self.set_initial_state(MinimalLinuxTemplatedPrivescState(self.conn, self.llm, max_history_size))
+        self.set_initial_state(ExPrivEscLinuxTemplatedState(self.conn, self.llm, max_history_size))
+
+
+@use_case("Showcase Minimal Linux Priv-Escalation")
+class ExPrivEscLinuxTemplatedUseCase(AutonomousAgentUseCase[ExPrivEscLinuxTemplated]):
+    pass

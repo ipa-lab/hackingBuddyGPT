@@ -52,7 +52,7 @@ class LLMHandler:
 
         try:
             adjusted_prompt = self.adjust_prompt(prompt, num_prompts=3) if len(
-                prompt) > 20 else self.adjust_prompt_based_on_token(prompt)
+                prompt) >= 20 else self.adjust_prompt_based_on_token(prompt)
             print(f'Adjusted prompt: {adjusted_prompt}')
             return call_model(adjusted_prompt)
 
@@ -77,7 +77,7 @@ class LLMHandler:
 
         print(f"Adjusted prompt length: {len(adjusted_prompt)}")
         print(f"adjusted prompt:{adjusted_prompt}")
-        return prompt
+        return adjusted_prompt
 
     def add_created_object(self, created_object: Any, object_type: str) -> None:
         """

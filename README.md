@@ -186,17 +186,17 @@ The next important part is having a machine that we can run our agent against. I
 
 We are using vulnerable Linux systems running in Virtual Machines for this. Never run this against real systems.
 
-{% callout title="We also provide vulnerable machines!" %}
-We are using virtual machines from our [Linux Privilege-Escalation Benchmark](https://github.com/ipa-lab/benchmark-privesc-linux) project. Feel free to use them for your own research!
-{% /callout %}
+> 💡 **We also provide vulnerable machines!**
+>
+> We are using virtual machines from our [Linux Privilege-Escalation Benchmark](https://github.com/ipa-lab/benchmark-privesc-linux) project. Feel free to use them for your own research!
 
 ## Run the Hacking Agent
 
 Finally we can run hackingBuddyGPT against our provided test VM. Enjoy!
 
-{% callout type="warning" title="Don't be evil!" %}
-Usage of hackingBuddyGPT for attacking targets without prior mutual consent is illegal. It's the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program. Only use for educational purposes.
-{% /callout %}
+> ❗ **Don't be evil!**
+>
+> Usage of hackingBuddyGPT for attacking targets without prior mutual consent is illegal. It's the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program. Only use for educational purposes.
 
 With that out of the way, let's look at an example hackingBuddyGPT run. Each run is structured in rounds. At the start of each round, hackingBuddyGPT asks a LLM for the next command to execute (e.g., `whoami`) for the first round. It then executes that command on the virtual machine, prints its output and starts a new round (in which it also includes the output of prior rounds) until it reaches step number 10 or becomes root:
 

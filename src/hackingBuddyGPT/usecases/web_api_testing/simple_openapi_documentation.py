@@ -67,7 +67,7 @@ class SimpleWebAPIDocumentation(Agent):
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
         self._setup_initial_prompt()
-        self.documentation_handler = OpenAPISpecificationHandler(self.llm_handler, self.response_handler)
+        self.documentation_handler = OpenAPISpecificationHandler(self.llm_handler, self.response_handler, self.strategy)
 
     def _setup_capabilities(self):
         """Sets up the capabilities for the agent."""
@@ -83,9 +83,10 @@ class SimpleWebAPIDocumentation(Agent):
             f"Maintain meticulousness in documenting your observations as you traverse the APIs.",
         }
         self._prompt_history.append(initial_prompt)
+        self.strategy = PromptStrategy.TREE_OF_THOUGHT
         handlers = (self.llm_handler, self.response_handler)
         self.prompt_engineer = PromptEngineer(
-            strategy=PromptStrategy.CHAIN_OF_THOUGHT,
+            strategy=self.strategy,
             history=self._prompt_history,
             handlers=handlers,
             context=PromptContext.DOCUMENTATION,

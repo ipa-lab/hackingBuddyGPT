@@ -3,8 +3,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 from typing import List
-
-
+from fpdf import FPDF
 class ReportHandler:
     """
     A handler for creating and managing report files that document operations and data.
@@ -29,6 +28,11 @@ class ReportHandler:
         self.report_name: str = os.path.join(
             self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
         )
+        # Initialize the PDF object
+        self.pdf = FPDF()
+        self.pdf.set_auto_page_break(auto=True, margin=15)
+        self.pdf.add_page()
+        self.pdf.set_font("Arial", size=12)
         try:
             self.report = open(self.report_name, "x")
         except FileExistsError:
@@ -48,6 +52,9 @@ class ReportHandler:
         """
         with open(self.report_name, "a") as report:
             report.write(f"{endpoint}\n")
+
+        self.pdf.set_font("Arial", size=12)
+        self.pdf.multi_cell(0, 10, f"Endpoint: {endpoint}")
 
     def write_analysis_to_report(self, analysis: List[str], purpose: Enum) -> None:
         """
@@ -79,4 +86,20 @@ class ReportHandler:
                 filtered_lines = [line for line in lines if "note recorded" not in line]
                 report.write("\n".join(filtered_lines) + "\n")
 
+                # Write the purpose if it's new
+                self.pdf.set_font("Arial", 'B', 12)
+                self.pdf.multi_cell(0, 10, f"Purpose: {purpose.name}")
+                self.pdf.set_font("Arial", size=12)
 
+                # Write each item in the analysis list
+                for item in analysis:
+                    lines = item.split("\n")
+                    filtered_lines = [line for line in lines if "note recorded" not in line]
+                    self.pdf.multi_cell(0, 10, "\n".join(filtered_lines))
+
+    def save_report(self) -> None:
+        """
+        Finalizes and saves the PDF report to the file system.
+        """
+        report_name = self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+        self.pdf.output(report_name)

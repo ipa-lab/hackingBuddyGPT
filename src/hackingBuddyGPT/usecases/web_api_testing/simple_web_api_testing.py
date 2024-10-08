@@ -144,6 +144,9 @@ class SimpleWebAPITesting(Agent):
             turn (int): The current round number.
         """
         self._perform_prompt_generation(turn)
+        if turn == 20:
+            self._report_handler.save_report()
+
     def _perform_prompt_generation(self, turn: int) -> None:
         response: Any
         completion: Any
@@ -179,11 +182,11 @@ class SimpleWebAPITesting(Agent):
             if not isinstance(result, str):
                 endpoint: str = str(response.action.path).split("/")[1]
                 self._report_handler.write_endpoint_to_report(endpoint)
-            self._prompt_history.append(tool_message(str(result), tool_call_id))
+
+            self._prompt_history.append(tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
             analysis = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history)
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
-            # self._prompt_history.append(tool_message(str(analysis), tool_call_id))
 
         self.all_http_methods_found()
 

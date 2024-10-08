@@ -42,41 +42,54 @@ class LLMHandler:
         """
         print(f"Initial prompt length: {len(prompt)}")
 
-        def call_model(prompt: List[Dict[str, Any]]) -> Any:
-            """Helper function to avoid redundancy in making the API call."""
+        def call_model(adjusted_prompt: List[Dict[str, Any]]) -> Any:
+            """Helper function to make the API call with the adjusted prompt."""
+            print(f'------------------------------------------------')
+            print(f'Prompt:{adjusted_prompt}')
+            print(f'------------------------------------------------')
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,
-                messages=prompt,
+                messages=adjusted_prompt,
                 response_model=capabilities_to_action_model(self._capabilities),
             )
 
+        # Helper to adjust the prompt based on its length.
+        def adjust_prompt_based_on_length(prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            num_prompts = 3 if len(prompt) >= 20 else 5
+            return self.adjust_prompt(self.adjust_prompt_based_on_token(prompt), num_prompts=num_prompts)
+
         try:
-            adjusted_prompt = self.adjust_prompt(prompt, num_prompts=3) if len(
-                prompt) >= 20 else self.adjust_prompt_based_on_token(prompt)
-            print(f'Adjusted prompt: {adjusted_prompt}')
+            # First adjustment attempt based on prompt length
+            adjusted_prompt = adjust_prompt_based_on_length(prompt)
             return call_model(adjusted_prompt)
 
         except openai.BadRequestError as e:
-            print(f'Error: {str(e)} - Adjusting prompt size and retrying.')
+            print(f"Error: {str(e)} - Adjusting prompt size and retrying.")
+
             try:
-                adjusted_prompt = self.adjust_prompt_based_on_token(self.adjust_prompt(prompt))
+                # Second adjustment based on token size if the first attempt fails
+                adjusted_prompt = self.adjust_prompt_based_on_token(prompt)
                 return call_model(adjusted_prompt)
+
             except openai.BadRequestError as e:
-                #print(f'Error: {str(e)} - Further adjusting and retrying.')
-                shortened_prompt = self.adjust_prompt(prompt, num_prompts=2)
-                #adjusted_prompt = self.adjust_prompt_based_on_token(shortened_prompt)
-                #print(f'New prompt length: {len(shortened_prompt)}')
-                for p in shortened_prompt:
-                    print(p)
+                print(f"Error: {str(e)} - Further adjusting and retrying.")
+
+                # Final fallback with the smallest prompt size
+                shortened_prompt = self.adjust_prompt(prompt, num_prompts=1)
+                print(f"New prompt length: {len(shortened_prompt)}")
                 return call_model(shortened_prompt)
 
     def adjust_prompt(self, prompt: List[Dict[str, Any]], num_prompts: int = 5) -> List[Dict[str, Any]]:
         adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) : len(prompt)]
         if not isinstance(adjusted_prompt[0], dict):
-            adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) - 1 : len(prompt)]
+            adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) -1 : len(prompt)]
 
+
+        if adjusted_prompt is None:
+            adjusted_prompt = prompt
         print(f"Adjusted prompt length: {len(adjusted_prompt)}")
         print(f"adjusted prompt:{adjusted_prompt}")
+        print(f"adjusted prompt class:{adjusted_prompt.__class__.__name__}")
         return adjusted_prompt
 
     def add_created_object(self, created_object: Any, object_type: str) -> None:
@@ -122,4 +135,6 @@ class LLMHandler:
         return prompt
 
     def get_num_tokens(self, content: str) -> int:
+        if not isinstance(content, str):
+            content = str(content)
         return len(self._re_word_boundaries.findall(content)) >> 1

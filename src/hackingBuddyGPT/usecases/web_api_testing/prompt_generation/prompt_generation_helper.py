@@ -75,7 +75,7 @@ class PromptGenerationHelper(object):
         else:
             return f"Create HTTPRequests of type {method} considering only the object with id=1 for the endpoint and understand the responses. Ensure that they are correct requests."
 
-    def get_initial_steps(self, common_steps):
+    def _get_initial_documentation_steps(self, common_steps):
         """
         Provides the initial steps for identifying available endpoints and documenting their details.
 
@@ -101,6 +101,8 @@ class PromptGenerationHelper(object):
         Returns:
             int: The number of tokens in the input text.
         """
+        if not isinstance(text, str):
+            text = str(text)
         tokens = re.findall(r"\b\w+\b", text)
         words = [token.strip("'") for token in tokens if token.strip("'").isalnum()]
         return len(words)
@@ -120,12 +122,12 @@ class PromptGenerationHelper(object):
 
         def validate_prompt(prompt):
             print(f'Prompt: {prompt}')
-            if self.token_count(prompt) <= max_tokens:
-                return prompt
-            shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt: " + prompt)
-            if self.token_count(shortened_prompt) <= max_tokens:
-                return shortened_prompt
-            return "Prompt is still too long after summarization."
+            #if self.token_count(prompt) <= max_tokens:
+            return prompt
+            #shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt: " + str(prompt))
+            #if self.token_count(shortened_prompt) <= max_tokens:
+             #   return shortened_prompt
+            #return "Prompt is still too long after summarization."
 
         if not all(step in previous_prompt for step in steps):
             if isinstance(steps, list):

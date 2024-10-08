@@ -265,3 +265,7 @@ class ResponseHandler:
         """
         llm_responses = self.response_analyzer.analyze_response(result, prompt_history)
         return llm_responses
+
+    def extract_key_elements_of_response(self, raw_response: Any) ->str:
+        status_code, headers, body = self.response_analyzer.parse_http_response(raw_response)
+        return "Status Code: " + str(status_code) + "\nHeaders:"+ str(headers)+ "\nBody"+ str(body)

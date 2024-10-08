@@ -7,6 +7,7 @@ import yaml
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.utils import tool_message
@@ -28,13 +29,14 @@ class OpenAPISpecificationHandler(object):
         _capabilities (dict): A dictionary to store capabilities related to YAML file handling.
     """
 
-    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler):
+    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler, strategy: PromptStrategy,):
         """
         Initializes the handler with a template OpenAPI specification.
 
         Args:
             llm_handler (object): An instance of the LLM handler for interacting with the LLM.
             response_handler (object): An instance of the response handler for processing API responses.
+            strategy (PromptStrategy): An instance of the PromptStrategy class.
         """
         self.response_handler = response_handler
         self.schemas = {}
@@ -53,7 +55,7 @@ class OpenAPISpecificationHandler(object):
         }
         self.llm_handler = llm_handler
         current_path = os.path.dirname(os.path.abspath(__file__))
-        self.file_path = os.path.join(current_path, "openapi_spec")
+        self.file_path = os.path.join(current_path, "openapi_spec", str(strategy).split(".")[1].lower())
         self.file = os.path.join(self.file_path, self.filename)
         self._capabilities = {"yaml": YAMLFile()}
 
@@ -154,8 +156,8 @@ class OpenAPISpecificationHandler(object):
             YamlFileAssistant,
         )
 
-        yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
-        yaml_file_assistant.run(description)
+        #yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
+        #yaml_file_assistant.run(description)
 
     def _update_documentation(self, response, result, prompt_engineer):
         prompt_engineer.prompt_helper.found_endpoints = self.update_openapi_spec(response, result)

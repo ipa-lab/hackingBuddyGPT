@@ -39,7 +39,6 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.TREE_OF_THOUGHT)
         self.rest_api: str = rest_api
-        self.purpose: Optional[PromptPurpose] = None
 
     def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Prompt, turn: Optional[int]) -> str:
         """
@@ -54,32 +53,13 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         Returns:
             str: The generated prompt.
         """
+        common_steps = self._get_common_steps()
         if self.context == PromptContext.DOCUMENTATION:
-            tree_of_thoughts_steps = [
-                (
-                    "Imagine three different OpenAPI specification specialists.\n"
-                    "All experts will write down one step of their thinking,\n"
-                    "then share it with the group.\n"
-                    "After that, all remaining specialists will proceed to the next step, and so on.\n"
-                    "If any specialist realizes they're wrong at any point, they will leave.\n"
-                    f"The question is: Create an OpenAPI specification for this REST API {self.rest_api} "
-                )
-            ]
+            self.purpose = PromptPurpose.DOCUMENTATION
+            chain_of_thought_steps = self._get_documentation_steps(common_steps, move_type)
         else:
-            tree_of_thoughts_steps = [
-                (
-                    "Imagine three different Pentest experts are answering this question.\n"
-                    "All experts will write down one step of their thinking,\n"
-                    "then share it with the group.\n"
-                    "After that, all experts will proceed to the next step, and so on.\n"
-                    "If any expert realizes they're wrong at any point, they will leave.\n"
-                    f"The question is: Create pentests for this REST API {self.rest_api} "
-                )
-            ]
+            chain_of_thought_steps = self._get_pentesting_steps(move_type)
+        if hint:
+            chain_of_thought_steps.append(hint)
 
-        # Assuming ChatCompletionMessage and ChatCompletionMessageParam have a 'content' attribute
-        previous_content = previous_prompt[turn].content if turn is not None else "initial_prompt"
-
-        self.purpose = PromptPurpose.AUTHENTICATION_AUTHORIZATION
-
-        return "\n".join([previous_content] + tree_of_thoughts_steps)
+        return self.prompt_helper.check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)

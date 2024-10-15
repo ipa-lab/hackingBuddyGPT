@@ -27,18 +27,16 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         purpose (Optional[PromptPurpose]): The purpose of the prompt generation, which can be set during the process.
     """
 
-    def __init__(self, context: PromptContext, prompt_helper, rest_api: str) -> None:
+    def __init__(self, context: PromptContext, prompt_helper) -> None:
         """
         Initializes the TreeOfThoughtPrompt with a specific context and prompt helper.
 
         Args:
             context (PromptContext): The context in which prompts are generated.
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
-            rest_api (str): The REST API endpoint.
             round (int): The round number for the prompt generation process.
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.TREE_OF_THOUGHT)
-        self.rest_api: str = rest_api
 
     def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Prompt, turn: Optional[int]) -> str:
         """

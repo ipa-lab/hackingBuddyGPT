@@ -83,6 +83,7 @@ class OpenAPISpecificationHandler(object):
             if path and method:
                 endpoint_methods = self.endpoint_methods
                 endpoints = self.openapi_spec["endpoints"]
+                print(f'Path;{path}')
                 x = path.split("/")[1]
 
                 # Initialize the path if not already present

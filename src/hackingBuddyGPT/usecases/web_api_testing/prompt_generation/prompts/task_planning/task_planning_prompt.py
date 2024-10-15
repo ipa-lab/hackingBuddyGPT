@@ -55,7 +55,7 @@ class TaskPlanningPrompt(BasicPrompt):
             List[str]: A list of steps for the chain-of-thought strategy in the documentation context.
         """
         if move_type == "explore":
-            return self.prompt_helper._get_initial_documentation_steps(common_steps)
+            return self.prompt_helper._get_initial_documentation_steps(common_steps, strategy=self.strategy)
         else:
             return self.prompt_helper.get_endpoints_needing_help()
 

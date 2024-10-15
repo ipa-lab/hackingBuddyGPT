@@ -63,11 +63,13 @@ class SimpleWebAPIDocumentation(Agent):
     def init(self):
         """Initializes the agent with its capabilities and handlers."""
         super().init()
+        self.found_all_http_methods: bool = False
         self._setup_capabilities()
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
-        self._setup_initial_prompt()
+        self.strategy = PromptStrategy.IN_CONTEXT
         self.documentation_handler = OpenAPISpecificationHandler(self.llm_handler, self.response_handler, self.strategy)
+        self._setup_initial_prompt()
 
     def _setup_capabilities(self):
         """Sets up the capabilities for the agent."""
@@ -79,18 +81,17 @@ class SimpleWebAPIDocumentation(Agent):
         initial_prompt = {
             "role": "system",
             "content": f"You're tasked with documenting the REST APIs of a website hosted at {self.host}. "
-            f"Start with an empty OpenAPI specification.\n"
-            f"Maintain meticulousness in documenting your observations as you traverse the APIs.",
+                       f"Start with an empty OpenAPI specification.\n"
+                       f"Maintain meticulousness in documenting your observations as you traverse the APIs.",
         }
         self._prompt_history.append(initial_prompt)
-        self.strategy = PromptStrategy.TREE_OF_THOUGHT
         handlers = (self.llm_handler, self.response_handler)
         self.prompt_engineer = PromptEngineer(
             strategy=self.strategy,
             history=self._prompt_history,
             handlers=handlers,
             context=PromptContext.DOCUMENTATION,
-            rest_api=self.host,
+            open_api_spec=self.documentation_handler.openapi_spec
         )
 
     def all_http_methods_found(self, turn):
@@ -108,14 +109,15 @@ class SimpleWebAPIDocumentation(Agent):
         print(f"found methods:{found_endpoints}")
         print(f"expected methods:{expected_endpoints}")
         if (
-            found_endpoints > 0
-            and (found_endpoints == expected_endpoints)
-            or turn == 20
-            and found_endpoints > 0
-            and (found_endpoints == expected_endpoints)
+                found_endpoints > 0
+                and (found_endpoints == expected_endpoints)
+                or turn == 20
+                and found_endpoints > 0
+                and (found_endpoints == expected_endpoints)
         ):
-            return True
-        return False
+            self.found_all_http_methods = True
+            return self.found_all_http_methods
+        return self.found_all_http_methods
 
     def perform_round(self, turn: int):
         """
@@ -130,16 +132,21 @@ class SimpleWebAPIDocumentation(Agent):
         if turn == 1:
             counter = 0
             new_endpoint_found = 0
-            while counter <= new_endpoint_found + 2 and counter <= 10:
+            while counter <= new_endpoint_found + 2 and counter <= 10 and self.found_all_http_methods == False:
                 self.run_documentation(turn, "explore")
                 counter += 1
                 if len(self.documentation_handler.endpoint_methods) > new_endpoint_found:
                     new_endpoint_found = len(self.documentation_handler.endpoint_methods)
+                    self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
+
         elif turn == 20:
             while len(self.prompt_engineer.prompt_helper.get_endpoints_needing_help()) != 0:
                 self.run_documentation(turn, "exploit")
+                self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
         else:
             self.run_documentation(turn, "exploit")
+            self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
+
         return self.all_http_methods_found(turn)
 
     def has_no_numbers(self, path):
@@ -167,6 +174,7 @@ class SimpleWebAPIDocumentation(Agent):
         self._log, self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
             completion, response, self._log, self._prompt_history, self.prompt_engineer
         )
+        self.all_http_methods_found(turn)
 
 
 @use_case("Minimal implementation of a web API testing use case")

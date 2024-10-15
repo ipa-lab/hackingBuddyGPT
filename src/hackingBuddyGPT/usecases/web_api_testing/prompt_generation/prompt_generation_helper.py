@@ -2,6 +2,7 @@ import re
 
 import nltk
 
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 
 
@@ -47,10 +48,17 @@ class PromptGenerationHelper(object):
         http_methods_set = {"GET", "POST", "PUT", "DELETE"}
 
         for endpoint, methods in self.endpoint_methods.items():
+            if len(methods) >= 4:
+                continue
+
+            last_part = endpoint.rsplit("/", 1)[-1]
+            if last_part.isdigit() and int(last_part) >= 2:
+                continue
+
+            # the endpoint needs help
             missing_methods = http_methods_set - set(methods)
-            if len(methods) < 4:
-                endpoints_needing_help.append(endpoint)
-                endpoints_and_needed_methods[endpoint] = list(missing_methods)
+            endpoints_needing_help.append(endpoint)
+            endpoints_and_needed_methods[endpoint] = list(missing_methods)
 
         if endpoints_needing_help:
             first_endpoint = endpoints_needing_help[0]
@@ -75,7 +83,7 @@ class PromptGenerationHelper(object):
         else:
             return f"Create HTTPRequests of type {method} considering only the object with id=1 for the endpoint and understand the responses. Ensure that they are correct requests."
 
-    def _get_initial_documentation_steps(self, common_steps):
+    def _get_initial_documentation_steps(self, common_steps, strategy):
         """
         Provides the initial steps for identifying available endpoints and documenting their details.
 
@@ -85,11 +93,15 @@ class PromptGenerationHelper(object):
         Returns:
             list: A list of initial steps combined with common steps.
         """
-        return [
+        documentation_steps = [
             f"Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}",
             "Note down the response structures, status codes, and headers for each endpoint.",
             "For each endpoint, document the following details: URL, HTTP method, query parameters and path variables, expected request body structure for requests, response structure for successful and error responses.",
-        ] + common_steps
+            ]
+        if strategy == PromptStrategy.IN_CONTEXT:
+            return common_steps + documentation_steps
+        else:
+            return documentation_steps + common_steps
 
     def token_count(self, text):
         """

@@ -27,7 +27,7 @@ class PromptEngineer:
         history: Prompt = None,
         handlers=(),
         context: PromptContext = None,
-        rest_api: str = "",
+        open_api_spec: dict = None,
         schemas: dict = None,
         endpoints: dict = None
     ):
@@ -39,28 +39,30 @@ class PromptEngineer:
             history (dict, optional): The history of chats. Defaults to None.
             handlers (tuple): The LLM handler and response handler.
             context (PromptContext): The context for which prompts are generated.
-            rest_api (str, optional): The REST API endpoint.
+            open_api_spec (list): OpenAPI spec definitions.
             schemas (dict, optional): Schemas relevant for the context.
         """
         self.strategy = strategy
-        self.rest_api = rest_api
+        self.open_api_spec = open_api_spec
         self.llm_handler, self.response_handler = handlers
         self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler, schemas=schemas or {}, endpoints=endpoints)
         self.context = context
         self.turn = 0
         self._prompt_history = history or []
+        self.previous_prompt = ""
 
         self.strategies = {
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(
                 context=self.context, prompt_helper=self.prompt_helper
             ),
             PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(
-                context=self.context, prompt_helper=self.prompt_helper, rest_api=self.rest_api
+                context=self.context, prompt_helper=self.prompt_helper
             ),
             PromptStrategy.IN_CONTEXT: InContextLearningPrompt(
                 context=self.context,
                 prompt_helper=self.prompt_helper,
                 context_information={self.turn: {"content": "initial_prompt"}},
+                open_api_spec= open_api_spec
             ),
         }
 
@@ -82,6 +84,8 @@ class PromptEngineer:
             ValueError: If an invalid prompt strategy is specified.
         """
         prompt_func = self.strategies.get(self.strategy)
+        if prompt_func.strategy == PromptStrategy.IN_CONTEXT:
+            prompt_func.open_api_spec = self.open_api_spec
         if not prompt_func:
             raise ValueError("Invalid prompt strategy")
 

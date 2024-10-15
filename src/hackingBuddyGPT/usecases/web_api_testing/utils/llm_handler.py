@@ -76,7 +76,7 @@ class LLMHandler:
 
                 # Final fallback with the smallest prompt size
                 shortened_prompt = self.adjust_prompt(prompt, num_prompts=1)
-                print(f"New prompt length: {len(shortened_prompt)}")
+                #print(f"New prompt length: {len(shortened_prompt)}")
                 return call_model(shortened_prompt)
 
     def adjust_prompt(self, prompt: List[Dict[str, Any]], num_prompts: int = 5) -> List[Dict[str, Any]]:
@@ -87,9 +87,9 @@ class LLMHandler:
 
         if adjusted_prompt is None:
             adjusted_prompt = prompt
-        print(f"Adjusted prompt length: {len(adjusted_prompt)}")
-        print(f"adjusted prompt:{adjusted_prompt}")
-        print(f"adjusted prompt class:{adjusted_prompt.__class__.__name__}")
+        #print(f"Adjusted prompt length: {len(adjusted_prompt)}")
+        #print(f"adjusted prompt:{adjusted_prompt}")
+        #print(f"adjusted prompt class:{adjusted_prompt.__class__.__name__}")
         return adjusted_prompt
 
     def add_created_object(self, created_object: Any, object_type: str) -> None:

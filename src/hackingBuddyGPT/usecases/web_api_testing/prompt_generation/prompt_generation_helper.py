@@ -40,86 +40,82 @@ class PromptGenerationHelper(object):
 
     import re
 
-    def find_missing_endpoints(self, endpoints: list) -> list:
+    def find_missing_endpoint(self, endpoints: dict) -> str:
         """
-        Identifies and returns the actual missing endpoint paths.
+        Identifies and returns the first missing endpoint path found.
 
         Args:
-            endpoints (dict): A dictionary of endpoint paths (e.g., {'/resources/': {...}, '/resources/:id': {...}}).
+            endpoints (dict): A dictionary of endpoint paths (e.g., {'/resources': {...}, '/resources/:id': {...}}).
 
         Returns:
-            list: A list of missing endpoint paths.
-                  Example: ['/resources/:id', '/products/']
+            str: The first missing endpoint path found.
+                 Example: '/resources/:id' or '/products'
         """
         general_endpoints = set()
         parameterized_endpoints = set()
 
-        # Extract resource names and categorize them
+        # Extract resource names and categorize them using regex
         for endpoint in endpoints:
-            match = re.match(r'^/([^/]+)/?$', endpoint)  # Match general endpoints like /resources/
+            # Match both general and parameterized patterns and categorize them
+            match = re.match(r'^/([^/]+)(/|/:id)?$', endpoint)
             if match:
-                general_endpoints.add(match.group(1))
+                resource = match.group(1)
+                if match.group(2) == '/' or match.group(2) is None:
+                    general_endpoints.add(resource)
+                elif match.group(2) == '/:id':
+                    parameterized_endpoints.add(resource)
 
-            match = re.match(r'^/([^/]+)/:id$', endpoint)  # Match parameterized endpoints like /resources/:id
-            if match:
-                parameterized_endpoints.add(match.group(1))
-
-        # Find resources that are missing either general or parameterized endpoints
-        missing_endpoints = []
-        all_resources = general_endpoints | parameterized_endpoints
-
-        for resource in all_resources:
+        # Find missing endpoints during the comparison
+        for resource in parameterized_endpoints:
             if resource not in general_endpoints:
-                missing_endpoints.append(f'/{resource}/')
+                return f'/{resource}'
+        for resource in general_endpoints:
             if resource not in parameterized_endpoints:
-                missing_endpoints.append(f'/{resource}/:id')
+                return f'/{resource}/:id'
 
-            # If only one missing endpoint is needed, break early
-            if len(missing_endpoints) == 1:
-                break
-
-        return missing_endpoints
+        # Return an empty string if no missing endpoints are found
+        return ""
 
     def get_endpoints_needing_help(self, info=""):
         """
         Identifies endpoints that need additional HTTP methods and returns guidance for the first missing method.
 
+        Args:
+            info (str): Additional information to include in the response.
+
         Returns:
             list: A list containing guidance for the first missing method of the first endpoint that needs help.
         """
-        endpoints_needing_help = []
-        endpoints_and_needed_methods = {}
         http_methods_set = {"GET", "POST", "PUT", "DELETE"}
-
         for endpoint, methods in self.endpoint_methods.items():
-            if len(methods) >= 4:
-                continue
-
-            # the endpoint needs help
             missing_methods = http_methods_set - set(methods)
-            endpoints_needing_help.append(endpoint)
-            endpoints_and_needed_methods[endpoint] = list(missing_methods)
-
-        if endpoints_needing_help:
-            first_endpoint = endpoints_needing_help[0]
-            needed_method = endpoints_and_needed_methods[first_endpoint][0]
-            print(F'{first_endpoint}: {needed_method}')
-            if ":id" in first_endpoint:
-                first_endpoint = first_endpoint.replace(":id", "1")
-            return [
-                info + "/n",
-                f"For endpoint {first_endpoint}, find this missing method: {needed_method}. "
-                #f"If all HTTP methods have already been found for an endpoint, do not include this endpoint in your search."
-            ]
-        else:
-            missing_endpoints = self.find_missing_endpoints(endpoints=self.found_endpoints)
-            if missing_endpoints:
-                needed_method = "GET"
+            if missing_methods:
+                needed_method = next(iter(missing_methods))
+                formatted_endpoint = endpoint.replace(":id", "1") if ":id" in endpoint else endpoint
                 return [
-                info + "/n",
-                f"For endpoint {missing_endpoints[0]}, find this missing method: {needed_method}. "
-                # f"If all HTTP methods have already been found for an endpoint, do not include this endpoint in your search."
+                    f"{info}\n",
+                    f"For endpoint {formatted_endpoint}, find this missing method: {needed_method}. "
                 ]
+
+        # If no endpoints need help, find missing endpoints and suggest "GET"
+        missing_endpoint = self.find_missing_endpoint(endpoints=self.found_endpoints)
+        print(f"------------------------------------")
+        print(f"------------------------------------")
+        print(f"------------------------------------")
+        print(f"{info}\n{missing_endpoint}")
+        print(f"------------------------------------")
+        print(f"------------------------------------")
+        print(f"------------------------------------")
+
+        if missing_endpoint != "":
+            formatted_endpoint = missing_endpoint.replace(":id", "1") if ":id" in missing_endpoint else \
+            missing_endpoint
+            return [
+                f"{info}\n",
+                f"For endpoint {formatted_endpoint}, find this missing method: GET. "
+            ]
+
+        return []
 
     def get_http_action_template(self, method):
         """

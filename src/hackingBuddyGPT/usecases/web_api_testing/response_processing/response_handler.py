@@ -128,6 +128,8 @@ class ResponseHandler:
                     key = entry.get("title") or entry.get("name") or entry.get("id")
                     entry_dict[key] = {"value": entry}
                     self.llm_handler.add_created_object(entry_dict[key], object_name)
+                    if len(entry_dict) > 3:
+                        break
             else:
                 key = body_dict.get("title") or body_dict.get("name") or body_dict.get("id")
                 entry_dict[key] = {"value": body_dict}
@@ -161,6 +163,8 @@ class ResponseHandler:
         Returns:
             Tuple[str, str, Dict[str, Any]]: A tuple containing the reference, object name, and updated OpenAPI specification.
         """
+        if "/" not in path:
+            return None, None, openapi_spec
         object_name = path.split("/")[1].capitalize().rstrip("s")
         properties_dict = {}
 

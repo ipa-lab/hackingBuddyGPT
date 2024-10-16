@@ -74,7 +74,7 @@ class OpenAPISpecificationHandler(object):
         status_code, status_message = result_str.split(" ", 1)
 
         if request.__class__.__name__ == "RecordNote":  # TODO: check why isinstance does not work
-            self.check_openapi_spec(resp)
+            #self.check_openapi_spec(resp)
             return list(self.openapi_spec["endpoints"].keys())
 
         if request.__class__.__name__ == "HTTPRequest":
@@ -90,7 +90,7 @@ class OpenAPISpecificationHandler(object):
 
             # Extract the main part of the path for checking partial matches
             path_parts = path.split("/")
-            main_path = path_parts[1] if len(path_parts) > 1 else ""
+            main_path = path if len(path_parts) > 1 else ""
 
             # Initialize the path if it's not present and is valid
             if path not in endpoints and main_path:
@@ -105,7 +105,9 @@ class OpenAPISpecificationHandler(object):
 
             # Add example and reference to the method's responses if available
             if example or reference:
-                endpoints[path][method.lower()] = {
+                if path in endpoints.keys() and  method.lower() not in endpoints[path].values():
+
+                    endpoints[path][method.lower()] = {
                     "summary": f"{method} operation on {path}",
                     "responses": {
                         f"{status_code}": {
@@ -114,17 +116,17 @@ class OpenAPISpecificationHandler(object):
                                 "application/json": {
                                     "schema": {"$ref": reference},
                                     "examples": example
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                # Update endpoint methods for the path
-                endpoint_methods[path].append(method)
+                    # Update endpoint methods for the path
+                    endpoint_methods[path].append(method)
 
-                # Ensure uniqueness of methods for each path
-                endpoint_methods[path] = list(set(endpoint_methods[path]))
+                    # Ensure uniqueness of methods for each path
+                    endpoint_methods[path] = list(set(endpoint_methods[path]))
 
         return list(self.openapi_spec["endpoints"].keys())
 

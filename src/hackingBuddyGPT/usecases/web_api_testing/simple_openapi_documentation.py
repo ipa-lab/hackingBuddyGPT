@@ -67,7 +67,7 @@ class SimpleWebAPIDocumentation(Agent):
         self._setup_capabilities()
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
-        self.strategy = PromptStrategy.IN_CONTEXT
+        self.strategy = PromptStrategy.TREE_OF_THOUGHT
         self.documentation_handler = OpenAPISpecificationHandler(self.llm_handler, self.response_handler, self.strategy)
         self._setup_initial_prompt()
 
@@ -132,31 +132,37 @@ class SimpleWebAPIDocumentation(Agent):
         if turn == 1:
             last_endpoint_found_x_steps_ago = 0
             new_endpoint_count = len(self.documentation_handler.endpoint_methods)
-            last_number_of_found_endpoints = 0
-            while (last_endpoint_found_x_steps_ago <= new_endpoint_count + 2
-                   and last_endpoint_found_x_steps_ago <= 5
-                   and not self.found_all_http_methods):
+            last_number_of_found_endpoints = len(self.prompt_engineer.prompt_helper.found_endpoints)
+
+            # Explore mode: search for new endpoints until conditions are met
+            while (
+                    last_endpoint_found_x_steps_ago <= new_endpoint_count + 2
+                    and last_endpoint_found_x_steps_ago <= 5
+                    and not self.found_all_http_methods
+            ):
                 self.run_documentation(turn, "explore")
 
-                # Check if new endpoints have been found
+                # Update endpoint counts
                 current_endpoint_count = len(self.prompt_engineer.prompt_helper.found_endpoints)
-                if last_number_of_found_endpoints == len(self.prompt_engineer.prompt_helper.found_endpoints):
+
+                if current_endpoint_count == last_number_of_found_endpoints:
                     last_endpoint_found_x_steps_ago += 1
                 else:
-                    last_endpoint_found_x_steps_ago = 0  # Reset if a new endpoint is found
+                    last_endpoint_found_x_steps_ago = 0
+                    last_number_of_found_endpoints = current_endpoint_count
 
-                # Update if new endpoint methods are discovered
-                if len(self.documentation_handler.endpoint_methods) > new_endpoint_count:
-                    new_endpoint_count = len(self.documentation_handler.endpoint_methods)
+                # Check if new methods have been discovered
+                updated_endpoint_count = len(self.documentation_handler.endpoint_methods)
+                if updated_endpoint_count > new_endpoint_count:
+                    new_endpoint_count = updated_endpoint_count
                     self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
 
-                last_number_of_found_endpoints = current_endpoint_count
-
         elif turn == 20:
-            # Continue until all endpoints needing help are addressed
+            # Exploit mode: refine endpoints until no further help is needed
             while self.prompt_engineer.prompt_helper.get_endpoints_needing_help():
                 self.run_documentation(turn, "exploit")
                 self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
+
         else:
             # For other turns, run documentation in exploit mode
             self.run_documentation(turn, "exploit")

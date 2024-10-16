@@ -36,7 +36,7 @@ class PromptGenerationHelper(object):
         self.schemas = schemas
         self.endpoints = endpoints
 
-    def get_endpoints_needing_help(self):
+    def get_endpoints_needing_help(self, info=""):
         """
         Identifies endpoints that need additional HTTP methods and returns guidance for the first missing method.
 
@@ -51,10 +51,6 @@ class PromptGenerationHelper(object):
             if len(methods) >= 4:
                 continue
 
-            last_part = endpoint.rsplit("/", 1)[-1]
-            if last_part.isdigit() and int(last_part) >= 2:
-                continue
-
             # the endpoint needs help
             missing_methods = http_methods_set - set(methods)
             endpoints_needing_help.append(endpoint)
@@ -63,9 +59,15 @@ class PromptGenerationHelper(object):
         if endpoints_needing_help:
             first_endpoint = endpoints_needing_help[0]
             needed_method = endpoints_and_needed_methods[first_endpoint][0]
+            print(F'{first_endpoint}: {needed_method}')
+            if ":id" in first_endpoint:
+                first_endpoint = first_endpoint.replace(":id", "1")
             return [
-                f"For endpoint {first_endpoint}, find this missing method: {needed_method}. If all HTTP methods have already been found for an endpoint, do not include this endpoint in your search."
+                info + "/n",
+                f"For endpoint {first_endpoint}, find this missing method: {needed_method}. "
+                #f"If all HTTP methods have already been found for an endpoint, do not include this endpoint in your search."
             ]
+
         return []
 
     def get_http_action_template(self, method):
@@ -94,10 +96,22 @@ class PromptGenerationHelper(object):
             list: A list of initial steps combined with common steps.
         """
         documentation_steps = [
-            f"Identify all available endpoints via GET Requests. Exclude those in this list: {self.found_endpoints}",
-            "Note down the response structures, status codes, and headers for each endpoint.",
-            "For each endpoint, document the following details: URL, HTTP method, query parameters and path variables, expected request body structure for requests, response structure for successful and error responses.",
-            ]
+            f"""Identify all available endpoints via GET Requests. 
+            Exclude those in this list: {[ endpoint.replace(":id", "1") for endpoint in self.found_endpoints]} 
+            and endpoints that match this pattern: '/resource/number' where 'number' is greater than 1 (e.g., '/todos/2', '/todos/3').
+            Only include endpoints where the number is 1 or the endpoint does not end with a number at all.
+
+            Note down the response structures, status codes, and headers for each selected endpoint.
+
+            For each selected endpoint, document the following details: 
+            - URL
+            - HTTP method
+            - Query parameters and path variables
+            - Expected request body structure for requests
+            - Response structure for successful and error responses.
+            """
+
+        ]
         if strategy == PromptStrategy.IN_CONTEXT:
             return common_steps + documentation_steps
         else:

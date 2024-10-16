@@ -119,7 +119,7 @@ class SimpleWebAPIDocumentation(Agent):
             return self.found_all_http_methods
         return self.found_all_http_methods
 
-    def perform_round(self, turn: int):
+    def perform_round(self, turn: int) -> bool:
         """
         Performs a round of API documentation.
 
@@ -130,20 +130,35 @@ class SimpleWebAPIDocumentation(Agent):
             bool: True if all HTTP methods are found, False otherwise.
         """
         if turn == 1:
-            counter = 0
-            new_endpoint_found = 0
-            while counter <= new_endpoint_found + 2 and counter <= 10 and self.found_all_http_methods == False:
+            last_endpoint_found_x_steps_ago = 0
+            new_endpoint_count = len(self.documentation_handler.endpoint_methods)
+            last_number_of_found_endpoints = 0
+            while (last_endpoint_found_x_steps_ago <= new_endpoint_count + 2
+                   and last_endpoint_found_x_steps_ago <= 5
+                   and not self.found_all_http_methods):
                 self.run_documentation(turn, "explore")
-                counter += 1
-                if len(self.documentation_handler.endpoint_methods) > new_endpoint_found:
-                    new_endpoint_found = len(self.documentation_handler.endpoint_methods)
+
+                # Check if new endpoints have been found
+                current_endpoint_count = len(self.prompt_engineer.prompt_helper.found_endpoints)
+                if last_number_of_found_endpoints == len(self.prompt_engineer.prompt_helper.found_endpoints):
+                    last_endpoint_found_x_steps_ago += 1
+                else:
+                    last_endpoint_found_x_steps_ago = 0  # Reset if a new endpoint is found
+
+                # Update if new endpoint methods are discovered
+                if len(self.documentation_handler.endpoint_methods) > new_endpoint_count:
+                    new_endpoint_count = len(self.documentation_handler.endpoint_methods)
                     self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
 
+                last_number_of_found_endpoints = current_endpoint_count
+
         elif turn == 20:
-            while len(self.prompt_engineer.prompt_helper.get_endpoints_needing_help()) != 0:
+            # Continue until all endpoints needing help are addressed
+            while self.prompt_engineer.prompt_helper.get_endpoints_needing_help():
                 self.run_documentation(turn, "exploit")
                 self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
         else:
+            # For other turns, run documentation in exploit mode
             self.run_documentation(turn, "exploit")
             self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
 

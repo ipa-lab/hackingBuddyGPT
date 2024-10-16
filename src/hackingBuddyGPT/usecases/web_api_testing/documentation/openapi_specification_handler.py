@@ -62,7 +62,7 @@ class OpenAPISpecificationHandler(object):
     def is_partial_match(self, element, string_list):
         return any(element in string or string in element for string in string_list)
 
-    def update_openapi_spec(self, resp, result):
+    def update_openapi_spec(self, resp, result, result_str):
         """
         Updates the OpenAPI specification based on the API response provided.
 
@@ -71,55 +71,62 @@ class OpenAPISpecificationHandler(object):
             result (str): The result of the API call.
         """
         request = resp.action
+        status_code, status_message = result_str.split(" ", 1)
 
         if request.__class__.__name__ == "RecordNote":  # TODO: check why isinstance does not work
             self.check_openapi_spec(resp)
-        elif request.__class__.__name__ == "HTTPRequest":
+            return list(self.openapi_spec["endpoints"].keys())
+
+        if request.__class__.__name__ == "HTTPRequest":
             path = request.path
             method = request.method
-            print(f"method: {method}")
-            # Ensure that path and method are not None and method has no numeric characters
-            # Ensure path and method are valid and method has no numeric characters
-            if path and method:
-                endpoint_methods = self.endpoint_methods
-                endpoints = self.openapi_spec["endpoints"]
-                print(f'Path;{path}')
-                x = path.split("/")[1]
 
-                # Initialize the path if not already present
-                if path not in endpoints and x != "":
-                    endpoints[path] = {}
-                    if "1" not in path:
-                        endpoint_methods[path] = []
+            if not path or not method :
+                return list(self.openapi_spec["endpoints"].keys())
+            if "1" in path:
+                path = path.replace("1", ":id")
+            endpoint_methods = self.endpoint_methods
+            endpoints = self.openapi_spec["endpoints"]
 
-                # Update the method description within the path
-                example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(
-                    self.openapi_spec, result, path, method
-                )
-                self.schemas = self.openapi_spec["components"]["schemas"]
+            # Extract the main part of the path for checking partial matches
+            path_parts = path.split("/")
+            main_path = path_parts[1] if len(path_parts) > 1 else ""
 
-                if example or reference:
-                    endpoints[path][method.lower()] = {
-                        "summary": f"{method} operation on {path}",
-                        "responses": {
-                            "200": {
-                                "description": "Successful response",
-                                "content": {"application/json": {"schema": {"$ref": reference}, "examples": example}},
+            # Initialize the path if it's not present and is valid
+            if path not in endpoints and main_path:
+                endpoints[path] = {}
+                endpoint_methods[path] = []
+
+            # Parse the response into OpenAPI example and reference
+            example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(
+                self.openapi_spec, result, path, method
+            )
+            self.schemas = self.openapi_spec["components"]["schemas"]
+
+            # Add example and reference to the method's responses if available
+            if example or reference:
+                endpoints[path][method.lower()] = {
+                    "summary": f"{method} operation on {path}",
+                    "responses": {
+                        f"{status_code}": {
+                            "description": status_message,
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": reference},
+                                    "examples": example
+                                }
                             }
-                        },
+                        }
                     }
+                }
 
-                    if "1" not in path and x != "":
-                        endpoint_methods[path].append(method)
-                    elif self.is_partial_match(x, endpoints.keys()):
-                        path = f"/{x}"
-                        print(f"endpoint methods = {endpoint_methods}")
-                        print(f"new path:{path}")
-                        endpoint_methods[path].append(method)
+                # Update endpoint methods for the path
+                endpoint_methods[path].append(method)
 
-                    endpoint_methods[path] = list(set(endpoint_methods[path]))
+                # Ensure uniqueness of methods for each path
+                endpoint_methods[path] = list(set(endpoint_methods[path]))
 
-            return list(endpoints.keys())
+        return list(self.openapi_spec["endpoints"].keys())
 
     def write_openapi_to_yaml(self):
         """
@@ -160,8 +167,8 @@ class OpenAPISpecificationHandler(object):
         #yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
         #yaml_file_assistant.run(description)
 
-    def _update_documentation(self, response, result, prompt_engineer):
-        prompt_engineer.prompt_helper.found_endpoints = self.update_openapi_spec(response, result)
+    def _update_documentation(self, response, result,result_str, prompt_engineer):
+        prompt_engineer.prompt_helper.found_endpoints = self.update_openapi_spec(response, result, result_str)
         self.write_openapi_to_yaml()
         prompt_engineer.prompt_helper.schemas = self.schemas
 
@@ -188,9 +195,9 @@ class OpenAPISpecificationHandler(object):
             result_str = self.response_handler.parse_http_status_line(result)
             prompt_history.append(tool_message(result_str, tool_call_id))
 
-            invalid_flags = {"recorded", "Not a valid HTTP method", "404", "Client Error: Not Found"}
+            invalid_flags = {"recorded"}
             if result_str not in invalid_flags or any(flag in result_str for flag in invalid_flags):
-                prompt_engineer = self._update_documentation(response, result, prompt_engineer)
+                prompt_engineer = self._update_documentation(response, result,result_str, prompt_engineer)
 
         return log, prompt_history, prompt_engineer
 

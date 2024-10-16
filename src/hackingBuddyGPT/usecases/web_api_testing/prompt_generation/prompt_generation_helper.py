@@ -36,6 +36,50 @@ class PromptGenerationHelper(object):
         self.schemas = schemas
         self.endpoints = endpoints
 
+    import re
+
+    import re
+
+    def find_missing_endpoints(self, endpoints: list) -> list:
+        """
+        Identifies and returns the actual missing endpoint paths.
+
+        Args:
+            endpoints (dict): A dictionary of endpoint paths (e.g., {'/resources/': {...}, '/resources/:id': {...}}).
+
+        Returns:
+            list: A list of missing endpoint paths.
+                  Example: ['/resources/:id', '/products/']
+        """
+        general_endpoints = set()
+        parameterized_endpoints = set()
+
+        # Extract resource names and categorize them
+        for endpoint in endpoints:
+            match = re.match(r'^/([^/]+)/?$', endpoint)  # Match general endpoints like /resources/
+            if match:
+                general_endpoints.add(match.group(1))
+
+            match = re.match(r'^/([^/]+)/:id$', endpoint)  # Match parameterized endpoints like /resources/:id
+            if match:
+                parameterized_endpoints.add(match.group(1))
+
+        # Find resources that are missing either general or parameterized endpoints
+        missing_endpoints = []
+        all_resources = general_endpoints | parameterized_endpoints
+
+        for resource in all_resources:
+            if resource not in general_endpoints:
+                missing_endpoints.append(f'/{resource}/')
+            if resource not in parameterized_endpoints:
+                missing_endpoints.append(f'/{resource}/:id')
+
+            # If only one missing endpoint is needed, break early
+            if len(missing_endpoints) == 1:
+                break
+
+        return missing_endpoints
+
     def get_endpoints_needing_help(self, info=""):
         """
         Identifies endpoints that need additional HTTP methods and returns guidance for the first missing method.
@@ -67,8 +111,15 @@ class PromptGenerationHelper(object):
                 f"For endpoint {first_endpoint}, find this missing method: {needed_method}. "
                 #f"If all HTTP methods have already been found for an endpoint, do not include this endpoint in your search."
             ]
-
-        return []
+        else:
+            missing_endpoints = self.find_missing_endpoints(endpoints=self.found_endpoints)
+            if missing_endpoints:
+                needed_method = "GET"
+                return [
+                info + "/n",
+                f"For endpoint {missing_endpoints[0]}, find this missing method: {needed_method}. "
+                # f"If all HTTP methods have already been found for an endpoint, do not include this endpoint in your search."
+                ]
 
     def get_http_action_template(self, method):
         """

@@ -36,7 +36,7 @@ class SimpleWebAPIDocumentation(Agent):
     """
 
     llm: OpenAILib
-    host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
+    host: str = parameter(desc="The host to test", default="https://84e9-213-255-219-62.ngrok-free.app")
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)

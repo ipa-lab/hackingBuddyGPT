@@ -116,7 +116,8 @@ class LLMHandler:
         return self.created_objects
 
     def adjust_prompt_based_on_token(self, prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        prompt.reverse()
+        if not isinstance(prompt, str):
+            prompt.reverse()
         tokens = 0
         max_tokens = 10000
         for item in prompt:
@@ -131,7 +132,8 @@ class LLMHandler:
                     continue
 
         print(f"tokens:{tokens}")
-        prompt.reverse()
+        if not isinstance(prompt, str):
+            prompt.reverse()
         return prompt
 
     def get_num_tokens(self, content: str) -> int:

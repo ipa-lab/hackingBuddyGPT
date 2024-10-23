@@ -142,9 +142,10 @@ class PromptGenerationHelper(object):
         Returns:
             list: A list of initial steps combined with common steps.
         """
+        endpoints = list(set([ endpoint.replace(":id", "1") for endpoint in self.found_endpoints] + ['/']))
         documentation_steps = [
             f"""Identify all available endpoints via GET Requests. 
-            Exclude those in this list: {[ endpoint.replace(":id", "1") for endpoint in self.found_endpoints]} 
+            Exclude those in this list: {endpoints} 
             and endpoints that match this pattern: '/resource/number' where 'number' is greater than 1 (e.g., '/todos/2', '/todos/3').
             Only include endpoints where the number is 1 or the endpoint does not end with a number at all.
 

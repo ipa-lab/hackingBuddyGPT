@@ -1,5 +1,6 @@
 import os.path
 from dataclasses import field
+from datetime import datetime
 from typing import Any, Dict, List
 
 import pydantic_core
@@ -7,17 +8,18 @@ from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext, \
     PromptPurpose
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt, Context
 from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
 from hackingBuddyGPT.usecases.web_api_testing.documentation.report_handler import ReportHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.testing.test_handler import TestHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.utils import tool_message
@@ -25,7 +27,7 @@ from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 # OpenAPI specification file path
-openapi_spec_filename = "src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/openapi_spec_2024-09-03_10-22-09.yaml"
+openapi_spec_filename = "src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/in_context/openapi_spec_2024-10-16_15-36-11.yaml"
 
 
 class SimpleWebAPITesting(Agent):
@@ -60,7 +62,7 @@ class SimpleWebAPITesting(Agent):
     )
 
     _prompt_history: Prompt = field(default_factory=list)
-    _context: Context = field(default_factory=lambda: {"notes": list()})
+    _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases":list})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_http_methods_found: bool = False
 
@@ -77,8 +79,11 @@ class SimpleWebAPITesting(Agent):
         self._llm_handler: LLMHandler = LLMHandler(self.llm, self._capabilities)
         self._response_handler: ResponseHandler = ResponseHandler(self._llm_handler)
         self._report_handler: ReportHandler = ReportHandler()
+        self._test_handler: TestHandler = TestHandler(self._llm_handler)
         self._setup_initial_prompt()
         self.purpose =  PromptPurpose.AUTHENTICATION_AUTHORIZATION
+
+
 
     def _setup_initial_prompt(self) -> None:
         """
@@ -106,9 +111,9 @@ class SimpleWebAPITesting(Agent):
             history=self._prompt_history,
             handlers=handlers,
             context=PromptContext.PENTESTING,
-            rest_api=self.host,
             schemas=schemas,
-            endpoints= endpoints
+            endpoints= endpoints,
+
         )
 
     def all_http_methods_found(self) -> None:
@@ -129,10 +134,12 @@ class SimpleWebAPITesting(Agent):
             self.http_method_template.format(method=method) for method in self.http_methods.split(",")
         }
         notes: List[str] = self._context["notes"]
+        test_cases = self._context["test_cases"]
         self._capabilities = {
             "submit_http_method": HTTPRequest(self.host),
             "http_request": HTTPRequest(self.host),
             "record_note": RecordNote(notes),
+            "test_cases": PythonTestCase(test_cases)
         }
 
     def perform_round(self, turn: int) -> None:
@@ -186,6 +193,8 @@ class SimpleWebAPITesting(Agent):
             self._prompt_history.append(tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
             analysis = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history)
+
+            self._test_handler.generate_and_save_test_cases(analysis=analysis, endpoint=response.action.path, method=response.action.method, prompt_history= self._prompt_history)
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
 
         self.all_http_methods_found()

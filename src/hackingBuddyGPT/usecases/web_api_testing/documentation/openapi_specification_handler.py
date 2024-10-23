@@ -81,7 +81,7 @@ class OpenAPISpecificationHandler(object):
             path = request.path
             method = request.method
 
-            if not path or not method :
+            if not path or not method or path == "/":
                 return list(self.openapi_spec["endpoints"].keys())
             if "1" in path:
                 path = path.replace("1", ":id")
@@ -93,9 +93,11 @@ class OpenAPISpecificationHandler(object):
             main_path = path if len(path_parts) > 1 else ""
 
             # Initialize the path if it's not present and is valid
-            if path not in endpoints and main_path:
+            if path not in endpoints and main_path and status_code == "200":
                 endpoints[path] = {}
                 endpoint_methods[path] = []
+            if path not in endpoints:
+                return list(self.openapi_spec["endpoints"].keys())
 
             # Parse the response into OpenAPI example and reference
             example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(

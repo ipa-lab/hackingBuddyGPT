@@ -169,7 +169,7 @@ class ResponseHandler:
         properties_dict = {}
 
         if len(body_dict) == 1:
-            properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict["id"])}
+            properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict[0]["id"])}
         else:
             for param in body_dict:
                 if isinstance(body_dict, list):

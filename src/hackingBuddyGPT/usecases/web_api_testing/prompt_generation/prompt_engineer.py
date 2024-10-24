@@ -29,7 +29,9 @@ class PromptEngineer:
         context: PromptContext = None,
         open_api_spec: dict = None,
         schemas: dict = None,
-        endpoints: dict = None
+        endpoints: dict = None,
+        description:str ="",
+        token :str =""
     ):
         """
         Initializes the PromptEngineer with a specific strategy and handlers for LLM and responses.
@@ -41,15 +43,22 @@ class PromptEngineer:
             context (PromptContext): The context for which prompts are generated.
             open_api_spec (list): OpenAPI spec definitions.
             schemas (dict, optional): Schemas relevant for the context.
+            endpoints (dict, optional): Endpoints relevant for the context.
+            description (str, optional): The description of the context.
         """
         self.strategy = strategy
         self.open_api_spec = open_api_spec
         self.llm_handler, self.response_handler = handlers
-        self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler, schemas=schemas or {}, endpoints=endpoints)
+        self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler,
+                                                    schemas=schemas or {},
+                                                    endpoints=endpoints,
+                                                    description=description,
+                                                    token=token)
         self.context = context
         self.turn = 0
         self._prompt_history = history or []
         self.previous_prompt = ""
+        self.description = description
 
         self.strategies = {
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(

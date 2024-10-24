@@ -36,7 +36,9 @@ class SimpleWebAPIDocumentation(Agent):
     """
 
     llm: OpenAILib
-    host: str = parameter(desc="The host to test", default="https://84e9-213-255-219-62.ngrok-free.app")
+    token: str =  'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyYWIxMjk2NWNiMzZhNjU5OTFhOTI1MTNhY2Q1ZmFhZiIsIm5iZiI6MTcyOTc3MTAxNC41Mzg1NzksInN1YiI6IjY3MWEzNGZlYzc4MDJjYzUwMzU5Y2NiZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sQpChf28r1faaRFTDBv_fUmoWP6A6u6RFd9oyawxxsI'
+    host: str = parameter(desc="The host to test", default="https://api.themoviedb.org/3/")
+    description: str = parameter(desc="The descrpition of the website", default="TMDB is a service that gives extensive movie, TV show, and celebrity data, including information on films, cast details, ratings, and recommendation.")
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
@@ -80,7 +82,7 @@ class SimpleWebAPIDocumentation(Agent):
         """Sets up the initial prompt for the agent."""
         initial_prompt = {
             "role": "system",
-            "content": f"You're tasked with documenting the REST APIs of a website hosted at {self.host}. "
+            "content": f"You're tasked with documenting the REST APIs of a website hosted at {self.host}. The website is {self.description}"
                        f"Start with an empty OpenAPI specification.\n"
                        f"Maintain meticulousness in documenting your observations as you traverse the APIs.",
         }
@@ -91,7 +93,9 @@ class SimpleWebAPIDocumentation(Agent):
             history=self._prompt_history,
             handlers=handlers,
             context=PromptContext.DOCUMENTATION,
-            open_api_spec=self.documentation_handler.openapi_spec
+            open_api_spec=self.documentation_handler.openapi_spec,
+            description=self.description,
+            token =self.token
         )
 
     def all_http_methods_found(self, turn):
@@ -136,8 +140,8 @@ class SimpleWebAPIDocumentation(Agent):
 
             # Explore mode: search for new endpoints until conditions are met
             while (
-                    last_endpoint_found_x_steps_ago <= new_endpoint_count + 2
-                    and last_endpoint_found_x_steps_ago <= 5
+                    last_endpoint_found_x_steps_ago <= new_endpoint_count + 5
+                    and last_endpoint_found_x_steps_ago <= 10
                     and not self.found_all_http_methods
             ):
                 self.run_documentation(turn, "explore")

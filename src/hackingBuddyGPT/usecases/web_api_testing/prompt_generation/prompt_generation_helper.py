@@ -18,7 +18,12 @@ class PromptGenerationHelper(object):
         schemas (dict): A dictionary of schemas used for constructing HTTP requests.
     """
 
-    def __init__(self, response_handler: ResponseHandler = None, schemas: dict = None, endpoints: dict = None):
+    def __init__(self,
+                 response_handler: ResponseHandler = None,
+                 schemas: dict = None,
+                 endpoints: dict = None,
+                 description:str ="",
+                 token:str=""):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
 
@@ -35,6 +40,9 @@ class PromptGenerationHelper(object):
         self.endpoint_found_methods = {}
         self.schemas = schemas
         self.endpoints = endpoints
+        self.description = description
+        self.token = token
+        self.unsuccessful_paths = []
 
     import re
 
@@ -78,14 +86,28 @@ class PromptGenerationHelper(object):
 
     def get_endpoints_needing_help(self, info=""):
         """
-        Identifies endpoints that need additional HTTP methods and returns guidance for the first missing method.
+        Identifies missing endpoints first, then checks for endpoints needing additional HTTP methods,
+        returning guidance accordingly.
 
         Args:
             info (str): Additional information to include in the response.
 
         Returns:
-            list: A list containing guidance for the first missing method of the first endpoint that needs help.
+            list: A list containing guidance for the first missing endpoint or the first missing method
+                  of an endpoint that needs help.
         """
+
+        # Step 1: Check for missing endpoints
+        missing_endpoint = self.find_missing_endpoint(endpoints=self.found_endpoints)
+
+        if missing_endpoint and not missing_endpoint in self.unsuccessful_paths:
+            formatted_endpoint = missing_endpoint.replace(":id", "1") if ":id" in missing_endpoint else missing_endpoint
+            return [
+                f"{info}\n",
+                f"For endpoint {formatted_endpoint}, find this missing method: GET."
+            ]
+
+        # Step 2: Check for endpoints needing additional HTTP methods
         http_methods_set = {"GET", "POST", "PUT", "DELETE"}
         for endpoint, methods in self.endpoint_methods.items():
             missing_methods = http_methods_set - set(methods)
@@ -94,28 +116,10 @@ class PromptGenerationHelper(object):
                 formatted_endpoint = endpoint.replace(":id", "1") if ":id" in endpoint else endpoint
                 return [
                     f"{info}\n",
-                    f"For endpoint {formatted_endpoint}, find this missing method: {needed_method}. "
+                    f"For endpoint {formatted_endpoint}, find this missing method: {needed_method}."
                 ]
 
-        # If no endpoints need help, find missing endpoints and suggest "GET"
-        missing_endpoint = self.find_missing_endpoint(endpoints=self.found_endpoints)
-        print(f"------------------------------------")
-        print(f"------------------------------------")
-        print(f"------------------------------------")
-        print(f"{info}\n{missing_endpoint}")
-        print(f"------------------------------------")
-        print(f"------------------------------------")
-        print(f"------------------------------------")
-
-        if missing_endpoint != "":
-            formatted_endpoint = missing_endpoint.replace(":id", "1") if ":id" in missing_endpoint else \
-            missing_endpoint
-            return [
-                f"{info}\n",
-                f"For endpoint {formatted_endpoint}, find this missing method: GET. "
-            ]
-
-        return []
+        return [f"Look for any endpoint that might be missing, exclude enpoints from this list :{self.unsuccessful_paths}"]
 
     def get_http_action_template(self, method):
         """
@@ -142,25 +146,26 @@ class PromptGenerationHelper(object):
         Returns:
             list: A list of initial steps combined with common steps.
         """
+        use_token = ""
+        if self.token != "":
+            header_token = {"headers": {
+        "Authorization": f"Bearer {self.token}"
+    }}
+            use_token = f"set headers of action: {header_token}."
         endpoints = list(set([ endpoint.replace(":id", "1") for endpoint in self.found_endpoints] + ['/']))
+        #TODO: create documentation information where the programmers can provide the tool with information
         documentation_steps = [
-            f"""Identify all available endpoints via GET Requests. 
-            Exclude those in this list: {endpoints} 
-            and endpoints that match this pattern: '/resource/number' where 'number' is greater than 1 (e.g., '/todos/2', '/todos/3').
-            Only include endpoints where the number is 1 or the endpoint does not end with a number at all.
-
-            Note down the response structures, status codes, and headers for each selected endpoint.
-
+            f"""Identify all available endpoints via GET Requests of {self.description}. {use_token}
+            Do not use endpoints in this list: {endpoints} and {self.unsuccessful_paths}
+            First look for endpoints of the form "/users" or "/movie/1" and later look for endpoints that match this pattern: '/resource/number' where 'number' is greater than 1 (e.g., '/todos/2', '/todos/3').
+            Only include endpoints where the number is 1 or the endpoint does not end with a number at all or look at endpoints of typse 'number/resource'
             For each selected endpoint, document the following details: 
-            - URL
-            - HTTP method
-            - Query parameters and path variables
-            - Expected request body structure for requests
-            - Response structure for successful and error responses.
+            URL,HTTP method, Query parameters and path variables,Expected request body structure for requests, Response structure for successful and error responses.
+            Note down the response structures, status codes, and headers for each selected endpoint.
             """
 
         ]
-        if strategy == PromptStrategy.IN_CONTEXT:
+        if strategy == PromptStrategy.IN_CONTEXT or strategy == PromptStrategy.TREE_OF_THOUGHT:
             return common_steps + documentation_steps
         else:
             return documentation_steps + common_steps

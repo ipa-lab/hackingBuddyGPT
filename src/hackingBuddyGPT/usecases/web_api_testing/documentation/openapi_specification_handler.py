@@ -58,6 +58,7 @@ class OpenAPISpecificationHandler(object):
         self.file_path = os.path.join(current_path, "openapi_spec", str(strategy).split(".")[1].lower())
         self.file = os.path.join(self.file_path, self.filename)
         self._capabilities = {"yaml": YAMLFile()}
+        self.unsuccessful_paths = []
 
     def is_partial_match(self, element, string_list):
         return any(element in string or string in element for string in string_list)
@@ -93,10 +94,11 @@ class OpenAPISpecificationHandler(object):
             main_path = path if len(path_parts) > 1 else ""
 
             # Initialize the path if it's not present and is valid
-            if path not in endpoints and main_path and status_code == "200":
+            if path not in endpoints and main_path and str(status_code).startswith("20"):
                 endpoints[path] = {}
                 endpoint_methods[path] = []
             if path not in endpoints:
+                self.unsuccessful_paths.append(path)
                 return list(self.openapi_spec["endpoints"].keys())
 
             # Parse the response into OpenAPI example and reference
@@ -106,8 +108,8 @@ class OpenAPISpecificationHandler(object):
             self.schemas = self.openapi_spec["components"]["schemas"]
 
             # Add example and reference to the method's responses if available
-            if example or reference:
-                if path in endpoints.keys() and  method.lower() not in endpoints[path].values():
+            if example or reference or status_message == "No Content":
+                if path in endpoints.keys() and method.lower() not in endpoints[path].values():
 
                     endpoints[path][method.lower()] = {
                     "summary": f"{method} operation on {path}",
@@ -164,17 +166,16 @@ class OpenAPISpecificationHandler(object):
             note (object): The note object containing the description of the API.
         """
         description = self.response_handler.extract_description(note)
-        from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.parsing.yaml_assistant import (
-            YamlFileAssistant,
-        )
 
         #yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
         #yaml_file_assistant.run(description)
 
     def _update_documentation(self, response, result,result_str, prompt_engineer):
-        prompt_engineer.prompt_helper.found_endpoints = self.update_openapi_spec(response, result, result_str)
-        self.write_openapi_to_yaml()
-        prompt_engineer.prompt_helper.schemas = self.schemas
+        endpoints = self.update_openapi_spec(response, result, result_str)
+        if prompt_engineer.prompt_helper.found_endpoints != endpoints and endpoints != []:
+            prompt_engineer.prompt_helper.found_endpoints = list(set(prompt_engineer.prompt_helper.found_endpoints + endpoints))
+            self.write_openapi_to_yaml()
+            prompt_engineer.prompt_helper.schemas = self.schemas
 
         http_methods_dict = defaultdict(list)
         for endpoint, methods in self.endpoint_methods.items():
@@ -183,6 +184,7 @@ class OpenAPISpecificationHandler(object):
 
         prompt_engineer.prompt_helper.endpoint_found_methods = http_methods_dict
         prompt_engineer.prompt_helper.endpoint_methods = self.endpoint_methods
+        prompt_engineer.prompt_helper.unsuccessful_paths = self.unsuccessful_paths
         return prompt_engineer
 
     def document_response(self, completion, response, log, prompt_history, prompt_engineer):

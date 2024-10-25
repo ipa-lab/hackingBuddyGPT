@@ -1,0 +1,17 @@
+{
+  "token": "",
+  "host": {
+    "description": "The host to test",
+    "default": ""
+  },
+  "description": {
+    "text": "The description of the website",
+    "default": "Ticketbuddy is a ticket creation platform, where users can report issues via creating tickets."
+  },
+  "correct_endpoints": [
+    "/users",
+    "/users/{user_id}",
+    "/tickets",
+    "ticket/{tickert_id}"
+  ]
+}

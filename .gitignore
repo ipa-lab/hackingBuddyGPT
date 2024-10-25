@@ -13,5 +13,9 @@ dist/
 .coverage
 src/hackingBuddyGPT/usecases/web_api_testing/openapi_spec/
 src/hackingBuddyGPT/usecases/web_api_testing/converted_files/
-/src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/
-/src/hackingBuddyGPT/usecases/web_api_testing/documentation/reports/
+src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/
+src/hackingBuddyGPT/usecases/web_api_testing/documentation/reports/
+src/hackingBuddyGPT/usecases/web_api_testing/retrieve_spotify_token.py
+src/hackingBuddyGPT/usecases/web_api_testing/configs/oas
+src/hackingBuddyGPT/usecases/web_api_testing/configs/tmdb.json
+src/hackingBuddyGPT/usecases/web_api_testing/configs/spotify.json

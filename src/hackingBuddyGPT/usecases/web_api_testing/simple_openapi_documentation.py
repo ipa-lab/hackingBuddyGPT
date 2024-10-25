@@ -36,7 +36,7 @@ class SimpleWebAPIDocumentation(Agent):
     """
 
     llm: OpenAILib
-    token: str =  'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyYWIxMjk2NWNiMzZhNjU5OTFhOTI1MTNhY2Q1ZmFhZiIsIm5iZiI6MTcyOTc3MTAxNC41Mzg1NzksInN1YiI6IjY3MWEzNGZlYzc4MDJjYzUwMzU5Y2NiZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sQpChf28r1faaRFTDBv_fUmoWP6A6u6RFd9oyawxxsI'
+    token: str ='eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyYWIxMjk2NWNiMzZhNjU5OTFhOTI1MTNhY2Q1ZmFhZiIsIm5iZiI6MTcyOTc3MTAxNC41Mzg1NzksInN1YiI6IjY3MWEzNGZlYzc4MDJjYzUwMzU5Y2NiZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sQpChf28r1faaRFTDBv_fUmoWP6A6u6RFd9oyawxxsI'
     host: str = parameter(desc="The host to test", default="https://api.themoviedb.org/3/")
     description: str = parameter(desc="The descrpition of the website", default="TMDB is a service that gives extensive movie, TV show, and celebrity data, including information on films, cast details, ratings, and recommendation.")
     _prompt_history: Prompt = field(default_factory=list)

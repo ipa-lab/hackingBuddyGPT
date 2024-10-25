@@ -1,0 +1,40 @@
+{
+  "token": "your_spotify_token",
+  "host": {
+    "description": "The host to test",
+    "default": "https://api.spotify.com/v1"
+  },
+  "description": {
+    "text": "The description of the website",
+    "default": "Spotify is a music streaming service that provides access to a vast catalog of music, playlists, and podcasts. Users can search for tracks, manage playlists, control playback with player endpoints, view top tracks, follow artists, and adjust volume, among other features. The Spotify API offers endpoints for managing user libraries, playback queues, playlists, and much more."
+  },
+  "correct_endpoints": [
+    "/search",
+    "/me",
+    "/users/{user_id}/playlists",
+    "/playlists/{playlist_id}/tracks",
+    "/albums/{id}/tracks",
+    "/me/player/queue",
+    "/me/playlists",
+    "/me/player/next",
+    "/me/player/volume",
+    "/me/player/currently-playing",
+    "/me/tracks",
+    "/me/following",
+    "/artists/{id}/albums",
+    "/me/player/play",
+    "/me/albums",
+    "/tracks/{id}",
+    "/me/top/{type}",
+    "/artists/{id}",
+    "/playlists/{playlist_id}",
+    "/artists/{id}/top-tracks",
+    "/track/{id}",
+    "/me/player",
+    "/me/player/devices",
+    "/artists/{id}/related-artists",
+    "/playlists/{playlist_id}",
+    "/me/player/pause",
+    "/network/{network_id}/images"
+  ]
+}

@@ -1,0 +1,4 @@
+{
+    "onCreateCommand": "./codespaces_create_and_start_containers.sh",
+    "postStartCommand": "./codespaces_start_hackingbuddygpt_against_a_container.sh"
+}

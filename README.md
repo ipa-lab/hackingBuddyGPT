@@ -209,9 +209,11 @@ https://github.com/ipa-lab/hackingBuddyGPT/pull/85#issuecomment-2331166997
 
 6. After Codespaces started, you may need to restart a new Terminal via the Command Palette:
 
-> ⇧⌘P Shift+Command+P (Mac) / Ctrl+Shift+P (Windows/Linux).
+Press the key combination:
 
-> `>` Create New Terminal (With Profile)
+> `⇧⌘P` `Shift+Command+P` (Mac) / `Ctrl+Shift+P` (Windows/Linux)
+
+In the Command Palette, type `>` and `Create New Terminal (With Profile)` and press the return key.
 
 7. You should see:
 

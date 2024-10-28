@@ -14,11 +14,11 @@ set -x  # Print each command before executing it (useful for debugging)
 echo "Start hackingBuddyGPT against a container..."
 
 # setup virtual python environment
-$ python -m venv venv
-$ source ./venv/bin/activate
+python -m venv venv
+source ./venv/bin/activate
 
 # install python requirements
-$ pip install -e .
+pip install -e .
 
 echo "Enter your OpenAI API key:"
 read OPENAI_API_KEY

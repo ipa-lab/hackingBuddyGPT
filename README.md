@@ -204,11 +204,17 @@ https://github.com/ipa-lab/hackingBuddyGPT/pull/85#issuecomment-2331166997
 3. Click the "Codespaces" tab
 4. Click the "Create codespace on main" button
 5. Wait for Codespaces to start
-6. After it started, you should see:
-7. echo "Start hackingBuddyGPT against a container..."
-8. echo "Enter your OpenAI API key:"
-9. read OPENAI_API_KEY
-10. wintermute LinuxPrivesc --llm.api_key=$OPENAI_API_KEY --llm.model=gpt-4o-mini --llm.context_size=8192 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
+6. Manually run:
+```bash
+./codespaces_start_hackingbuddygpt_against_a_container.sh
+```
+7. Eventually, you should see:
+```bash
+echo "Start hackingBuddyGPT against a container..."
+echo "Enter your OpenAI API key:"
+read OPENAI_API_KEY
+wintermute LinuxPrivesc --llm.api_key=$OPENAI_API_KEY --llm.model=gpt-4o-mini --llm.context_size=8192 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
+```
 
 **References**
 * https://docs.github.com/en/codespaces

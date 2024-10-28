@@ -209,17 +209,43 @@ https://github.com/ipa-lab/hackingBuddyGPT/pull/85#issuecomment-2331166997
 ./codespaces_start_hackingbuddygpt_against_a_container.sh
 ```
 7. Eventually, you should see:
-```bash
-echo "Currently, May 2024, running hackingBuddyGPT with GPT-4-turbo against a benchmark containing 13 VMs (with maximum 20 tries per VM) cost around $5."
-echo "Therefore, running hackingBuddyGPT with GPT-4-turbo against containing a container with maximum 10 tries would cost around $0.20."
-echo "Enter your OpenAI API key:"
-read OPENAI_API_KEY
-wintermute LinuxPrivesc --llm.api_key=$OPENAI_API_KEY --llm.model=gpt-4-turbo --llm.context_size=8192 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
-```
+
+> Currently, May 2024, running hackingBuddyGPT with GPT-4-turbo against a benchmark containing 13 VMs (with maximum 20 tries per VM) cost around $5.
+
+> Therefore, running hackingBuddyGPT with GPT-4-turbo against containing a container with maximum 10 tries would cost around $0.20.
+
+> Enter your OpenAI API key and press the return key:
+
+8. As requested, please enter your OpenAI API key and press the return key.
+
+9. hackingBuddyGPT should start:
+
+> Starting hackingBuddyGPT against a container...
+
+10. If your OpenAI API key is valid, then you should see output similar to the following:
+
+> [00:00:00] Starting turn 1 of 10
+
+> Got command from LLM:
+
+> …
+
+> [00:01:00] Starting turn 10 of 10
+
+> Got command from LLM:
+
+> …
+
+> Run finished
+
+> maximum turn number reached
 
 **References**
 * https://docs.github.com/en/codespaces
 * https://docs.github.com/en/codespaces/getting-started/quickstart
+* https://openai.com/api/pricing/
+* https://platform.openai.com/docs/quickstart
+* https://platform.openai.com/api-keys
 
 ## Run the Hacking Agent
 

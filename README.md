@@ -190,6 +190,30 @@ We are using vulnerable Linux systems running in Virtual Machines for this. Neve
 >
 > We are using virtual machines from our [Linux Privilege-Escalation Benchmark](https://github.com/ipa-lab/benchmark-privesc-linux) project. Feel free to use them for your own research!
 
+## GitHub CodeSpaces support
+
+**Backstory**
+
+https://github.com/ipa-lab/hackingBuddyGPT/pull/85#issuecomment-2331166997
+
+> Would it be possible to add codespace support to hackingbuddygpt in a way, that only spawns a single container (maybe with the suid/sudo use-case) and starts hackingBuddyGPT against that container? That might be the 'easiest' show-case/use-case for a new user.
+
+**Steps**
+1. Go to https://github.com/ipa-lab/hackingBuddyGPT
+2. Click the "Code" button
+3. Click the "Codespaces" tab
+4. Click the "Create codespace on main" button
+5. Wait for Codespaces to start
+6. After it started, you should see:
+7. echo "Start hackingBuddyGPT against a container..."
+8. echo "Enter your OpenAI API key:"
+9. read OPENAI_API_KEY
+10. wintermute LinuxPrivesc --llm.api_key=$OPENAI_API_KEY --llm.model=gpt-4o-mini --llm.context_size=8192 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
+
+**References**
+* https://docs.github.com/en/codespaces
+* https://docs.github.com/en/codespaces/getting-started/quickstart
+
 ## Run the Hacking Agent
 
 Finally we can run hackingBuddyGPT against our provided test VM. Enjoy!

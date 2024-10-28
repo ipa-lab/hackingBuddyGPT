@@ -213,9 +213,9 @@ Press the key combination:
 
 > `⇧⌘P` `Shift+Command+P` (Mac) / `Ctrl+Shift+P` (Windows/Linux)
 
-In the Command Palette, type `>` and `Create New Terminal (With Profile)` and press the return key.
+In the Command Palette, type `>` and `Terminal: Create New Terminal` and press the return key.
 
-7. You should see:
+7. You should see a new terminal similar to the following:
 
 > 👋 Welcome to Codespaces! You are on our default image.
 >

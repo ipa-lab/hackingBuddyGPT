@@ -190,7 +190,7 @@ We are using vulnerable Linux systems running in Virtual Machines for this. Neve
 >
 > We are using virtual machines from our [Linux Privilege-Escalation Benchmark](https://github.com/ipa-lab/benchmark-privesc-linux) project. Feel free to use them for your own research!
 
-## GitHub CodeSpaces support
+## GitHub Codespaces support
 
 **Backstory**
 

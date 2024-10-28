@@ -20,6 +20,8 @@ source ./venv/bin/activate
 # install python requirements
 pip install -e .
 
+echo "Currently, May 2024, running hackingBuddyGPT with GPT-4-turbo against a benchmark containing 13 VMs (with maximum 20 tries per VM) cost around $5."
+echo "Therefore, running hackingBuddyGPT with GPT-4-turbo against containing a container with maximum 10 tries would cost around $0.20."
 echo "Enter your OpenAI API key:"
 read OPENAI_API_KEY
 

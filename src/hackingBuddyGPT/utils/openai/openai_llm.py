@@ -43,7 +43,6 @@ class OpenAIConnection(LLM):
         try:
             tic = time.perf_counter()
             response = requests.post(f'{self.api_url}{self.api_path}', headers=headers, json=data, timeout=self.api_timeout)
-
             if response.status_code == 429:
                 print(f"[RestAPI-Connector] running into rate-limits, waiting for {self.api_backoff} seconds")
                 time.sleep(self.api_backoff)

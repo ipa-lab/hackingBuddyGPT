@@ -34,4 +34,4 @@ echo
 echo "Starting hackingBuddyGPT against a container..."
 echo
 
-wintermute LinuxPrivesc --llm.api_key=$OPENAI_API_KEY --llm.model=gpt-3.5-turbo --llm.context_size=8192 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
+wintermute LinuxPrivesc --llm.api_key=$OPENAI_API_KEY --llm.model=gpt-4-turbo --llm.context_size=8192 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1

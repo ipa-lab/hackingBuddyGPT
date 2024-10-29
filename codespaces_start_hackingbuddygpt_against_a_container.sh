@@ -7,7 +7,7 @@
 set -e  # Exit immediately if a command exits with a non-zero status
 set -u  # Treat unset variables as an error and exit immediately
 set -o pipefail  # Return the exit status of the last command in a pipeline that failed
-set +x  # Turn off the printing of each command before executing it (even though it is useful for debugging)
+set -x  # Print each command before executing it (useful for debugging)
 
 # Step 1: Install prerequisites
 
@@ -26,7 +26,7 @@ echo
 echo 'Therefore, running hackingBuddyGPT with GPT-4-turbo against containing a container with maximum 10 tries would cost around $0.20.'
 echo
 echo "Enter your OpenAI API key and press the return key:"
-read -s OPENAI_API_KEY
+read OPENAI_API_KEY
 echo
 
 # Step 3: Start hackingBuddyGPT against a container

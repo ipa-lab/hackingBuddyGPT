@@ -8,10 +8,6 @@ from hackingBuddyGPT.utils.configurable import configurable, parameter
 from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
 
 
-# Uncomment the following to log debug output
-# import logging
-# logging.basicConfig(level=logging.DEBUG)
-
 @configurable("openai-compatible-llm-api", "OpenAI-compatible LLM API")
 @dataclass
 class OpenAIConnection(LLM):
@@ -44,21 +40,9 @@ class OpenAIConnection(LLM):
         headers = {"Authorization": f"Bearer {self.api_key}"}
         data = {"model": self.model, "messages": [{"role": "user", "content": prompt}]}
 
-        # Log the request payload
-        #
-        # Uncomment the following to log debug output
-        # logging.debug(f"Request payload: {data}")
-
         try:
             tic = time.perf_counter()
             response = requests.post(f'{self.api_url}{self.api_path}', headers=headers, json=data, timeout=self.api_timeout)
-
-            # Log response headers, status, and body
-            #
-            # Uncomment the following to log debug output
-            # logging.debug(f"Response Headers: {response.headers}")
-            # logging.debug(f"Response Status: {response.status_code}")
-            # logging.debug(f"Response Body: {response.text}")
 
             if response.status_code == 429:
                 print(f"[RestAPI-Connector] running into rate-limits, waiting for {self.api_backoff} seconds")

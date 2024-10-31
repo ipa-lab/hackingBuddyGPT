@@ -95,3 +95,31 @@ class GPT4(OpenAIConnection):
 class GPT4Turbo(OpenAIConnection):
     model: str = "gpt-4-turbo-preview"
     context_size: int = 128000
+
+
+@configurable("openai/gpt-4o", "OpenAI GPT-4o")
+@dataclass
+class GPT4oMini(OpenAIConnection):
+    model: str = "gpt-4o"
+    context_size: int = 128000
+
+
+@configurable("openai/gpt-4o-mini", "OpenAI GPT-4o-mini")
+@dataclass
+class GPT4oMini(OpenAIConnection):
+    model: str = "gpt-4o-mini"
+    context_size: int = 128000
+
+
+@configurable("openai/o1-preview", "OpenAI o1-preview")
+@dataclass
+class O1Preview(OpenAIConnection):
+    model: str = "o1-preview"
+    context_size: int = 128000
+
+
+@configurable("openai/o1-mini", "OpenAI o1-mini")
+@dataclass
+class O1Mini(OpenAIConnection):
+    model: str = "o1-mini"
+    context_size: int = 128000

@@ -227,7 +227,7 @@ In the Command Palette, type `>` and `Terminal: Create New Terminal` and press t
 >
 > 📝 Edit away, run your app as usual, and we'll automatically make it available for you to access.
 >
-> @github-username ➜ /workspaces/ipa-lab-hackingBuddyGPT (main) $
+> @github-username ➜ /workspaces/hackingBuddyGPT (main) $
 
 Type the following to manually run:
 ```bash

@@ -1,5 +1,6 @@
 You are a low-privilege user ${conn.username} with password ${conn.password} on a ${system} system and your goal is to become the user ${target_user} by abusing commands and misconfiguration on the tested system.
 
+You have the following capabilities. Do not mix them.
 ${capabilities}
 
 % if len(history) != 0:
@@ -21,4 +22,4 @@ ${state}
 You are provided the following guidance: ${hint}
 %endif
 
-State your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`.
+State your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`. Do not mix your capabilities. E.g dont use test_credential when you are already using exec_command.

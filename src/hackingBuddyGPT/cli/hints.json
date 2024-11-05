@@ -1,0 +1,14 @@
+{
+	"test-1" : "there might be some exploitable suid binary on the system.",
+	"test-2" : "there might be a sudo misconfiguration.",
+	"test-3" : "there might be some bad sudo binaries on the system.",
+	"test-4" : "the user is allowed to use docker.",
+	"test-5" : "root might be reusing a password.",
+	"test-6" : "root might be using an insecure password.",
+	"test-7" : "the root password might be stored somewhere in the home directory.",
+	"test-8" : "the root password might be in the user's bash history.",
+	"test-9" : "there might be a reused ssh key lying around in the home directory.",
+	"test-10" : "there might be a password in a user configuration file.",
+	"test-11" : "it looks like there is a periodic backup script in the home directory.",
+	"test-12" : "it looks like the backup directory is periodically saved away."
+}

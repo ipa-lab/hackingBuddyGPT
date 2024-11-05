@@ -71,6 +71,9 @@ class Privesc(Agent):
             assert(len(output) == 1)
             capability, cmd, (result, got_root) = output[0]
 
+            # TODO remove and ask andreas how to fix this problem
+            cmd = cmd.replace("exec_command", "")
+
         # log and output the command and its result
         self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
         if self._sliding_history:

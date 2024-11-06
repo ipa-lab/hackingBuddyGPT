@@ -21,7 +21,7 @@ class SSHConnection:
         # create the SSH Connection
         conn = Connection(
             f"{self.username}@{self.host}:{self.port}",
-            connect_kwargs={"password": self.password, "look_for_keys": False, "allow_agent": False},
+            connect_kwargs={"password": self.password, "look_for_keys": False, "allow_agent": False, "banner_timeout": 200},
         )
         self._conn = conn
         self._conn.open()

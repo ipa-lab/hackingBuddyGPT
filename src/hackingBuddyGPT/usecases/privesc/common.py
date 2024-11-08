@@ -206,7 +206,7 @@ class ThesisPrivescPrototyp(Agent):
         # log and output the command and its result
         self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
         if self._sliding_history:
-            self._sliding_history.add_command(cmd, result)
+            self._sliding_history.add_command_only(cmd, result)
 
         self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
@@ -243,7 +243,7 @@ class ThesisPrivescPrototyp(Agent):
     def get_next_command(self) -> llm_util.LLMResult:
         history = ''
         if not self.disable_history:
-            history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
+            history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size()) # TODO hier aupassen wegen analyze, dass die prompt die ich schicke nicht zu groß ist.
 
         self._template_params.update({
             'history': history,

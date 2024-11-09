@@ -13,6 +13,12 @@ ${history}
 Do not repeat already tried escalation attacks.
 %endif
 
+% if len(analyze) != 0:
+You have the following analysis of the last command and its output:
+
+${analyze}
+%endif
+
 % if update_state:
 You currently expect the following about the target system:
 

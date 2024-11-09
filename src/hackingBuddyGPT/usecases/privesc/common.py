@@ -156,6 +156,7 @@ class ThesisPrivescPrototyp(Agent):
 
     _sliding_history: SlidingCliHistory = None
     _state: str = ""
+    _analyze: str = ""
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _template_params: Dict[str, Any] = field(default_factory=dict)
     _max_history_size: int = 0
@@ -240,14 +241,21 @@ class ThesisPrivescPrototyp(Agent):
         else:
             return 0
 
+    def get_analyze_size(self) -> int:
+        if self.enable_explanation:
+            return self.llm.count_tokens(self._analyze)
+        else:
+            return 0
+
     def get_next_command(self) -> llm_util.LLMResult:
         history = ''
         if not self.disable_history:
-            history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size()) # TODO hier aupassen wegen analyze, dass die prompt die ich schicke nicht zu groß ist.
+            history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size()) # TODO hier aupassen wegen analyze, dass die prompt die ich schicke nicht zu groß ist.
 
         self._template_params.update({
             'history': history,
-            'state': self._state
+            'state': self._state,
+            'analyze': self._analyze
         })
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)
@@ -255,12 +263,15 @@ class ThesisPrivescPrototyp(Agent):
         return cmd
 
     def analyze_result(self, cmd, result):
-        state_size = self.get_state_size()
-        target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - state_size
+        ctx = self.llm.context_size
 
-        # ugly, but cut down result to fit context size
+        template_size = self.llm.count_tokens(template_analyze.source)
+        target_size = ctx - llm_util.SAFETY_MARGIN - template_size
         result = llm_util.trim_result_front(self.llm, target_size, result)
-        return self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state)
+
+        result = self.llm.get_response(template_analyze, cmd=cmd, resp=result)
+        self._analyze = result.result
+        return result
 
     def update_state(self, cmd, result):
         # ugly, but cut down result to fit context size

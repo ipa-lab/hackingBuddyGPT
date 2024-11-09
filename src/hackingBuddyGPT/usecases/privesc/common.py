@@ -259,7 +259,7 @@ class ThesisPrivescPrototyp(Agent):
             if self.enable_compressed_history:
                 history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size())
             else:
-                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
+                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size() - self.get_analyze_size())
         self._template_params.update({
             'history': history,
             'state': self._state,

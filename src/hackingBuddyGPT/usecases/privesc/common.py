@@ -149,9 +149,10 @@ class Privesc(Agent):
 class ThesisPrivescPrototyp(Agent):
 
     system: str = ''
-    enable_explanation: bool = False
+    enable_analysis: bool = False
     enable_update_state: bool = False
     disable_history: bool = False
+    enable_compressed_history:bool = False
     hint: str = ""
 
     _sliding_history: SlidingCliHistory = None
@@ -207,12 +208,15 @@ class ThesisPrivescPrototyp(Agent):
         # log and output the command and its result
         self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
         if self._sliding_history:
-            self._sliding_history.add_command_only(cmd, result)
+            if self.enable_compressed_history:
+                self._sliding_history.add_command_only(cmd, result)
+            else:
+                self._sliding_history.add_command(cmd, result)
 
         self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
         # analyze the result..
-        if self.enable_explanation:
+        if self.enable_analysis:
             with self._log.console.status("[bold green]Analyze its result..."):
                 answer = self.analyze_result(cmd, result)
                 self._log.log_db.add_log_analyze_response(self._log.run_id, turn, cmd, answer.result, answer)
@@ -226,7 +230,7 @@ class ThesisPrivescPrototyp(Agent):
                 self._log.log_db.add_log_update_state(self._log.run_id, turn, "", state.result, state)
 
         # Output Round Data..
-        self._log.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self._log.run_id, self._log.log_db, turn))
+        self._log.console.print(ui.get_history_table(self.enable_analysis, self.enable_update_state, self._log.run_id, self._log.log_db, turn))
 
         # .. and output the updated state
         if self.enable_update_state:
@@ -242,7 +246,7 @@ class ThesisPrivescPrototyp(Agent):
             return 0
 
     def get_analyze_size(self) -> int:
-        if self.enable_explanation:
+        if self.enable_analysis:
             return self.llm.count_tokens(self._analyze)
         else:
             return 0
@@ -250,8 +254,10 @@ class ThesisPrivescPrototyp(Agent):
     def get_next_command(self) -> llm_util.LLMResult:
         history = ''
         if not self.disable_history:
-            history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size()) # TODO hier aupassen wegen analyze, dass die prompt die ich schicke nicht zu groß ist.
-
+            if self.enable_compressed_history:
+                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size()) # TODO hier aupassen wegen analyze, dass die prompt die ich schicke nicht zu groß ist.
+            else:
+                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
         self._template_params.update({
             'history': history,
             'state': self._state,

@@ -20,9 +20,8 @@ class SlidingCliHistory:
         self.last_output = output
         last_output_size = self.model.count_tokens(self.last_output)
         if self.maximum_target_size - last_output_size < 0:
-            print("wtf is going on")
-        # TODO fix, if the last output was gigantic, this perma loops because the target size is negativ
-        # check how big maximum_target_size is on average
+            last_output_size = 0
+            self.last_output = ''
         self.sliding_history = trim_result_front(self.model, self.maximum_target_size - last_output_size, self.sliding_history)
 
     def get_history(self, target_size: int) -> str:

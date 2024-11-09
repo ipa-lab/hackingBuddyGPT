@@ -154,6 +154,7 @@ class ThesisPrivescPrototyp(Agent):
     disable_history: bool = False
     enable_compressed_history:bool = False
     hint: str = ""
+    disable_duplicates: bool = False
 
     _sliding_history: SlidingCliHistory = None
     _state: str = ""
@@ -161,6 +162,7 @@ class ThesisPrivescPrototyp(Agent):
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _template_params: Dict[str, Any] = field(default_factory=dict)
     _max_history_size: int = 0
+    _previously_used_commands: [str] = field(default_factory=list)
 
     def init(self):
         super().init()
@@ -266,6 +268,13 @@ class ThesisPrivescPrototyp(Agent):
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)
         cmd.result = llm_util.cmd_output_fixer(cmd.result)
+
+        if self.disable_duplicates:
+            while cmd.result in self._previously_used_commands:
+                self._log.console.print(f"Repeated command: '{cmd.result}', fetching new command")
+                cmd = self.llm.get_response(template_next_cmd, **self._template_params)
+                cmd.result = llm_util.cmd_output_fixer(cmd.result)
+        self._previously_used_commands.append(cmd.result)
         return cmd
 
     def analyze_result(self, cmd, result):

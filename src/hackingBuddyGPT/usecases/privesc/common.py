@@ -255,7 +255,7 @@ class ThesisPrivescPrototyp(Agent):
         history = ''
         if not self.disable_history:
             if self.enable_compressed_history:
-                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size()) # TODO hier aupassen wegen analyze, dass die prompt die ich schicke nicht zu groß ist.
+                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size())
             else:
                 history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
         self._template_params.update({

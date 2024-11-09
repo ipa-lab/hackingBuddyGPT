@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from openai.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam, ChatCompletionToolMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionFunctionMessageParam
 
-SAFETY_MARGIN = 128
+SAFETY_MARGIN = 256
 STEP_CUT_TOKENS = 128
 
 @dataclass

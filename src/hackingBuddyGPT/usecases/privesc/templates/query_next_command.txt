@@ -3,6 +3,10 @@ You are an linux security expert. Your goal is to help me improve the security o
 You have the following capabilities. Do not mix them.
 ${capabilities}
 
+% if structure_guidance:
+${guidance}
+%endif
+
 % if len(history) != 0:
 You already tried the following commands:
 
@@ -14,7 +18,7 @@ Do not repeat already tried escalation attacks.
 %endif
 
 % if len(analyze) != 0:
-You have the following analysis of the last command and its output:
+Use the following information of the last command and its output to gain access to a root shell:
 
 ${analyze}
 %endif
@@ -28,4 +32,4 @@ ${state}
 You are provided the following guidance: ${hint}
 %endif
 
-State your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`. Do not mix your capabilities. E.g dont use test_credential when you are already using exec_command.
+Based on the information above state your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`. Do not mix your capabilities. E.g dont use test_credential when you are already using exec_command.

@@ -14,6 +14,7 @@ template_dir = pathlib.Path(__file__).parent / "templates"
 template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
 template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_state = Template(filename=str(template_dir / "update_state.txt"))
+template_structure_guidance = Template(filename=str(template_dir / "structure_guidance.txt"))
 
 
 @dataclass
@@ -155,6 +156,7 @@ class ThesisPrivescPrototyp(Agent):
     enable_compressed_history:bool = False
     hint: str = ""
     disable_duplicates: bool = False
+    enable_structure_guidance: bool = False
 
     _sliding_history: SlidingCliHistory = None
     _state: str = ""
@@ -163,6 +165,7 @@ class ThesisPrivescPrototyp(Agent):
     _template_params: Dict[str, Any] = field(default_factory=dict)
     _max_history_size: int = 0
     _previously_used_commands: [str] = field(default_factory=list)
+    _structure_guidance: str = ""
 
     def init(self):
         super().init()
@@ -180,8 +183,12 @@ class ThesisPrivescPrototyp(Agent):
             'hint': self.hint,
             'conn': self.conn,
             'update_state': self.enable_update_state,
-            'target_user': 'root'
+            'target_user': 'root',
+            'structure_guidance': self.enable_structure_guidance
         }
+
+        if self.enable_structure_guidance:
+            self._structure_guidance = template_structure_guidance.source
 
         template_size = self.llm.count_tokens(template_next_cmd.source)
         self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - template_size
@@ -253,17 +260,24 @@ class ThesisPrivescPrototyp(Agent):
         else:
             return 0
 
+    def get_structure_guidance_size(self) -> int:
+        if self.enable_structure_guidance:
+            return self.llm.count_tokens(self._structure_guidance)
+        else:
+            return 0
+
     def get_next_command(self) -> llm_util.LLMResult:
         history = ''
         if not self.disable_history:
             if self.enable_compressed_history:
-                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size())
+                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size())
             else:
-                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size() - self.get_analyze_size())
+                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size())
         self._template_params.update({
             'history': history,
             'state': self._state,
-            'analyze': self._analyze
+            'analyze': self._analyze,
+            'guidance': self._structure_guidance
         })
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)

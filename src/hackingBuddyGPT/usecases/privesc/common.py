@@ -15,7 +15,7 @@ template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt
 template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_state = Template(filename=str(template_dir / "update_state.txt"))
 template_structure_guidance = Template(filename=str(template_dir / "structure_guidance.txt"))
-
+template_chain_of_thought = Template(filename=str(template_dir / "chain_of_thought.txt"))
 
 @dataclass
 class Privesc(Agent):
@@ -157,6 +157,7 @@ class ThesisPrivescPrototyp(Agent):
     hint: str = ""
     disable_duplicates: bool = False
     enable_structure_guidance: bool = False
+    enable_chain_of_thought: bool = False
 
     _sliding_history: SlidingCliHistory = None
     _state: str = ""
@@ -166,6 +167,7 @@ class ThesisPrivescPrototyp(Agent):
     _max_history_size: int = 0
     _previously_used_commands: [str] = field(default_factory=list)
     _structure_guidance: str = ""
+    _chain_of_thought: str = ""
 
     def init(self):
         super().init()
@@ -184,11 +186,15 @@ class ThesisPrivescPrototyp(Agent):
             'conn': self.conn,
             'update_state': self.enable_update_state,
             'target_user': 'root',
-            'structure_guidance': self.enable_structure_guidance
+            'structure_guidance': self.enable_structure_guidance,
+            'chain_of_thought': self.enable_chain_of_thought
         }
 
         if self.enable_structure_guidance:
             self._structure_guidance = template_structure_guidance.source
+
+        if self.enable_chain_of_thought:
+            self._chain_of_thought = template_chain_of_thought.source
 
         template_size = self.llm.count_tokens(template_next_cmd.source)
         self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - template_size
@@ -266,18 +272,25 @@ class ThesisPrivescPrototyp(Agent):
         else:
             return 0
 
+    def get_chain_of_thought_size(self) -> int:
+        if self.enable_chain_of_thought:
+            return self.llm.count_tokens(self._chain_of_thought)
+        else:
+            return 0
+
     def get_next_command(self) -> llm_util.LLMResult:
         history = ''
         if not self.disable_history:
             if self.enable_compressed_history:
-                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size())
+                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size() - self.get_chain_of_thought_size())
             else:
-                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size())
+                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size() - self.get_chain_of_thought_size())
         self._template_params.update({
             'history': history,
             'state': self._state,
             'analyze': self._analyze,
-            'guidance': self._structure_guidance
+            'guidance': self._structure_guidance,
+            'CoT': self._chain_of_thought
         })
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)

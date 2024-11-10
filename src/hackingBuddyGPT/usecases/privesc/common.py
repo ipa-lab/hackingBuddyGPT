@@ -284,10 +284,14 @@ class ThesisPrivescPrototyp(Agent):
         cmd.result = llm_util.cmd_output_fixer(cmd.result)
 
         if self.disable_duplicates:
+            count = 0
             while cmd.result in self._previously_used_commands:
+                count += 1
                 self._log.console.print(f"Repeated command: '{cmd.result}', fetching new command")
                 cmd = self.llm.get_response(template_next_cmd, **self._template_params)
                 cmd.result = llm_util.cmd_output_fixer(cmd.result)
+                if count == 25:
+                    break
         self._previously_used_commands.append(cmd.result)
         return cmd
 

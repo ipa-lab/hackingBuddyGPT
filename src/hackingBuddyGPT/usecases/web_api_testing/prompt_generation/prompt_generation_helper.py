@@ -22,8 +22,7 @@ class PromptGenerationHelper(object):
                  response_handler: ResponseHandler = None,
                  schemas: dict = None,
                  endpoints: dict = None,
-                 description:str ="",
-                 token:str=""):
+                 description: str = ""):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
 
@@ -35,14 +34,14 @@ class PromptGenerationHelper(object):
             schemas = {}
 
         self.response_handler = response_handler
-        self.found_endpoints = ["/"]
+        self.found_endpoints = []
         self.endpoint_methods = {}
         self.endpoint_found_methods = {}
         self.schemas = schemas
         self.endpoints = endpoints
         self.description = description
-        self.token = token
-        self.unsuccessful_paths = []
+        self.unsuccessful_paths = ["/"]
+        self.current_step = 1
 
     import re
 
@@ -119,7 +118,8 @@ class PromptGenerationHelper(object):
                     f"For endpoint {formatted_endpoint}, find this missing method: {needed_method}."
                 ]
 
-        return [f"Look for any endpoint that might be missing, exclude enpoints from this list :{self.unsuccessful_paths}"]
+        return [
+            f"Look for any endpoint that might be missing, exclude enpoints from this list :{self.unsuccessful_paths}"]
 
     def get_http_action_template(self, method):
         """
@@ -146,29 +146,93 @@ class PromptGenerationHelper(object):
         Returns:
             list: A list of initial steps combined with common steps.
         """
-        use_token = ""
-        if self.token != "":
-            header_token = {"headers": {
-        "Authorization": f"Bearer {self.token}"
-    }}
-            use_token = f"set headers of action: {header_token}."
-        endpoints = list(set([ endpoint.replace(":id", "1") for endpoint in self.found_endpoints] + ['/']))
-        #TODO: create documentation information where the programmers can provide the tool with information
-        documentation_steps = [
-            f"""Identify all available endpoints via GET Requests of {self.description}. {use_token}
-            Do not use endpoints in this list: {endpoints} and {self.unsuccessful_paths}
-            First look for endpoints of the form "/users" or "/movie/1" and later look for endpoints that match this pattern: '/resource/number' where 'number' is greater than 1 (e.g., '/todos/2', '/todos/3').
-            Only include endpoints where the number is 1 or the endpoint does not end with a number at all or look at endpoints of typse 'number/resource'
-            For each selected endpoint, document the following details: 
-            URL,HTTP method, Query parameters and path variables,Expected request body structure for requests, Response structure for successful and error responses.
-            Note down the response structures, status codes, and headers for each selected endpoint.
-            """
+        self.unsuccessful_paths = list(set(self.unsuccessful_paths))
+        self.found_endpoints = list(set(self.found_endpoints))
 
+        endpoints = list(set([endpoint.replace(":id", "1") for endpoint in self.found_endpoints] + ['/']))
+
+        # Documentation steps, emphasizing mandatory header inclusion with token if available
+        documentation_steps = [
+            [f"""
+            Identify all accessible endpoints via GET requests for {self.description}. 
+            """],
+
+            [f"""Exclude:
+                - Already identified endpoints: {endpoints}.
+                - Paths previously marked as unsuccessful: {self.unsuccessful_paths}.
+                Only seek new paths not on the exclusion list."""],
+
+            [f"""Endpoint Identification Steps:
+                - Start with general endpoints like "/resource" or "/resource/1".
+                - Test specific numbered endpoints, e.g., "/todos/2", "/todos/3".
+                - Include paths ending with "1", those without numbers, and patterns like "number/resource".
+                **Note:** Always include Authorization headers with each request if token is available.
+                """],
+
+            [f"""For each identified endpoint, document:
+                - URL and HTTP Method.
+                - Query parameters and path variables.
+                - Expected request body, if applicable.
+                - Success and error response structures, including status codes and headers.
+                - **Reminder:** Include Authorization headers in documentation for endpoints requiring authentication.
+                """]
         ]
-        if strategy == PromptStrategy.IN_CONTEXT or strategy == PromptStrategy.TREE_OF_THOUGHT:
-            return common_steps + documentation_steps
+
+        # Strategy check with token emphasis in steps
+        if strategy in {PromptStrategy.IN_CONTEXT, PromptStrategy.TREE_OF_THOUGHT}:
+            steps = documentation_steps
         else:
-            return documentation_steps + common_steps
+            chain_of_thought_steps = self.generate_chain_of_thought_prompt(endpoints)
+            steps = chain_of_thought_steps
+
+        return steps
+
+    def generate_chain_of_thought_prompt(self,  endpoints: list) -> list:
+        """
+        Creates a chain of thought prompt to guide the model through the API documentation process.
+
+        Args:
+            use_token (str): A string indicating whether authentication is required.
+            endpoints (list): A list of endpoints to exclude from testing.
+
+        Returns:
+            str: A structured chain of thought prompt for documentation.
+        """
+
+        return [
+            [f"Objective: Identify all accessible endpoints via GET requests for {self.description}. """],
+
+            [f"**Step 1: Identify Accessible Endpoints**",
+             f"- Use GET requests to list available endpoints.",
+             f"- **Do NOT search** the following paths:",
+             f"  - Exclude root path: '/' (Do not include this in the search results). and found endpoints: {self.found_endpoints}",
+             f"  - Exclude any paths previously identified as unsuccessful, including: {self.unsuccessful_paths}",
+             f"- Only search for new paths not on the exclusion list above.\n"],
+
+            [f"**Step 2: Endpoint Search Strategy**",
+             f"- Start with general endpoints like '/resource' or '/resource/1'.",
+             f"- Check for specific numbered endpoints, e.g., '/todos/2', '/todos/3'.",
+             f"- Include endpoints matching:",
+             f"  - Paths ending in '1'.",
+             f"  - Paths without numbers.",
+             f"  - Patterns like 'number/resource'.\n"],
+
+            [f"**Step 3: Document Each Endpoint**",
+             f"Document the following details for each identified endpoint:",
+             f"- **URL**: Full endpoint URL.",
+             f"- **HTTP Method**: Method used for this endpoint.",
+             f"- **Query Parameters and Path Variables**: List required parameters.",
+             f"- **Request Body** (if applicable): Expected format and fields.",
+             f"- **Response Structure**: Include success and error response details, including:",
+             f"  - **Status Codes**",
+             f"  - **Response Headers**",
+             f"  - **Response Body Structure**\n"],
+
+            ["**Final Step: Verification**",
+             f"- Ensure all documented endpoints are accurate and meet initial criteria.",
+             f"- Verify no excluded endpoints are included.",
+             f"- Review each endpoint for completeness and clarity."]
+        ]
 
     def token_count(self, text):
         """
@@ -201,12 +265,12 @@ class PromptGenerationHelper(object):
 
         def validate_prompt(prompt):
             print(f'Prompt: {prompt}')
-            #if self.token_count(prompt) <= max_tokens:
+            # if self.token_count(prompt) <= max_tokens:
             return prompt
             #shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt: " + str(prompt))
-            #if self.token_count(shortened_prompt) <= max_tokens:
-             #   return shortened_prompt
-            #return "Prompt is still too long after summarization."
+            # if self.token_count(shortened_prompt) <= max_tokens:
+            #   return shortened_prompt
+            # return "Prompt is still too long after summarization."
 
         if not all(step in previous_prompt for step in steps):
             if isinstance(steps, list):

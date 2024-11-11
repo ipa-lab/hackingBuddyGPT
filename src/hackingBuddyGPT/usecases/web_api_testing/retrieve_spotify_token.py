@@ -30,6 +30,7 @@ else:
 
 # Update the "token" field in the configuration data
 config_data["token"] = access_token
+sp = spotipy.Spotify(auth=access_token)
 
 # Write the updated configuration data back to the JSON file
 with open(config_path, "w") as f:

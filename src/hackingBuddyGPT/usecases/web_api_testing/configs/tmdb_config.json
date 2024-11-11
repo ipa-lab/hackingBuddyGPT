@@ -1,13 +1,8 @@
 {
   "token": "your_tmdb_token",
-  "host": {
-    "description": "The host to test",
-    "default": "https://api.themoviedb.org/3/"
-  },
-  "description": {
-    "text": "The description of the website",
-    "default": "TMDB is a service that provides extensive movie, TV show, and celebrity data, including information on films, cast details, ratings, and recommendations."
-  },
+  "host": "https://api.themoviedb.org/3/",
+  "description": "TMDB is a service that provides extensive movie, TV show, and celebrity data, including information on films, cast details, ratings, and recommendations."
+  ,
   "correct_endpoints": [
     "/movie/{movie_id}/credits",
     "/discover/movie",

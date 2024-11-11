@@ -55,20 +55,20 @@ class LLMHandler:
 
         # Helper to adjust the prompt based on its length.
         def adjust_prompt_based_on_length(prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-            num_prompts = 3 if len(prompt) >= 20 else 5
-            return self.adjust_prompt(self.adjust_prompt_based_on_token(prompt), num_prompts=num_prompts)
+            num_prompts = int(len(prompt) - 0.5*len(prompt) if len(prompt) >= 20 else len(prompt) - 0.3*len(prompt))
+            return self.adjust_prompt(prompt, num_prompts=num_prompts)
 
         try:
             # First adjustment attempt based on prompt length
-            adjusted_prompt = adjust_prompt_based_on_length(prompt)
-            return call_model(adjusted_prompt)
+            #adjusted_prompt = adjust_prompt_based_on_length(prompt)
+            return call_model(prompt)
 
         except openai.BadRequestError as e:
             print(f"Error: {str(e)} - Adjusting prompt size and retrying.")
 
             try:
                 # Second adjustment based on token size if the first attempt fails
-                adjusted_prompt = self.adjust_prompt_based_on_token(prompt)
+                adjusted_prompt = adjust_prompt_based_on_length(prompt)
                 return call_model(adjusted_prompt)
 
             except openai.BadRequestError as e:
@@ -83,13 +83,17 @@ class LLMHandler:
         adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) : len(prompt)]
         if not isinstance(adjusted_prompt[0], dict):
             adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) -1 : len(prompt)]
-
-
         if adjusted_prompt is None:
             adjusted_prompt = prompt
-        #print(f"Adjusted prompt length: {len(adjusted_prompt)}")
-        #print(f"adjusted prompt:{adjusted_prompt}")
-        #print(f"adjusted prompt class:{adjusted_prompt.__class__.__name__}")
+        if not isinstance(prompt, str):
+            adjusted_prompt.reverse()
+        last_item = None
+        for item in adjusted_prompt:
+            if not isinstance(item, dict) and not( isinstance(last_item, dict) and last_item.get("role") == "tool") and last_item != None:
+                adjusted_prompt.remove(item)
+            last_item = item
+        adjusted_prompt.reverse()
+
         return adjusted_prompt
 
     def add_created_object(self, created_object: Any, object_type: str) -> None:
@@ -118,20 +122,41 @@ class LLMHandler:
     def adjust_prompt_based_on_token(self, prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not isinstance(prompt, str):
             prompt.reverse()
+
+        last_item = None
         tokens = 0
-        max_tokens = 10000
+        max_tokens = 100
+        last_action = ""
+        removed_item = 0
         for item in prompt:
             if tokens > max_tokens:
-                prompt.remove(item)
+                if not isinstance(last_item, dict):
+                    prompt.remove(item)
+                else:
+                    prompt.remove(item)
+                last_action = "remove"
+                removed_item = removed_item +1
             else:
+
+                if last_action == "remove":
+                    if isinstance(last_item, dict) and last_item.get('role') == 'tool':
+                        prompt.remove(item)
+                last_action = ""
                 if isinstance(item, dict):
                     new_token_count = tokens + self.get_num_tokens(item["content"])
-                    if new_token_count <= max_tokens:
-                        tokens = new_token_count
+                    tokens = new_token_count
                 else:
-                    continue
+                    new_token_count = tokens + 100
+                    tokens = new_token_count
+
+            last_item = item
 
         print(f"tokens:{tokens}")
+        if removed_item == 0:
+            counter = 5
+            for item in prompt:
+                prompt.remove(item)
+                counter = counter +1
         if not isinstance(prompt, str):
             prompt.reverse()
         return prompt

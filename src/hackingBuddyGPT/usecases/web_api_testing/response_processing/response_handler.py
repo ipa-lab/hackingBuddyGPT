@@ -36,7 +36,7 @@ class ResponseHandler:
         self.pentesting_information = PenTestingInformation()
         self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler)
 
-    def get_response_for_prompt(self, prompt: str) -> str:
+    def get_response_for_prompt(self, prompt: str) -> object:
         """
         Sends a prompt to the LLM's API and retrieves the response.
 
@@ -48,8 +48,7 @@ class ResponseHandler:
         """
         messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
         response, completion = self.llm_handler.call_llm(messages)
-        response_text = response.execute()
-        return response_text
+        return response, completion
 
     def parse_http_status_line(self, status_line: str) -> str:
         """
@@ -169,7 +168,13 @@ class ResponseHandler:
         properties_dict = {}
 
         if len(body_dict) == 1:
-            properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict[0]["id"])}
+            for key, value in body_dict.items():
+                if len(value) == 1:
+                    properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict[0]["id"])}
+                else:
+                    for key, value in body_dict.items():
+                        properties_dict = self.extract_keys(key, value, properties_dict)
+
         else:
             for param in body_dict:
                 if isinstance(body_dict, list):

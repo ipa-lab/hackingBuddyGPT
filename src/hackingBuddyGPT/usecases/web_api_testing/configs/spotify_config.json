@@ -1,13 +1,11 @@
 {
   "token": "your_spotify_token",
-  "host": {
-    "description": "The host to test",
-    "default": "https://api.spotify.com/v1"
-  },
-  "description": {
-    "text": "The description of the website",
-    "default": "Spotify is a music streaming service that provides access to a vast catalog of music, playlists, and podcasts. Users can search for tracks, manage playlists, control playback with player endpoints, view top tracks, follow artists, and adjust volume, among other features. The Spotify API offers endpoints for managing user libraries, playback queues, playlists, and much more."
-  },
+  "client_id": "b922999c3149473d8bed99902ad11d6e",
+  "client_secret": "0b68bd6fe8724d8fa9ef7bdf972f71a6",
+  "redirect_uri": "http://localhost:8888/callback",
+  "host": "https://api.spotify.com/v1",
+  "description":  "Spotify is a music streaming service that provides access to a vast catalog of music, playlists, and podcasts. Users can search for tracks, manage playlists, control playback with player endpoints, view top tracks, follow artists, and adjust volume, among other features. The Spotify API offers endpoints for managing user libraries, playback queues, playlists, and much more."
+  ,
   "correct_endpoints": [
     "/search",
     "/me",
@@ -36,5 +34,35 @@
     "/playlists/{playlist_id}",
     "/me/player/pause",
     "/network/{network_id}/images"
-  ]
+  ],
+ "query_params" : {
+    "/albums/{id}/tracks": ["market", "limit", "offset"],
+    "/artists/{id}": [],
+    "/artists/{id}/albums": ["include_groups", "market", "limit", "offset"],
+    "/artists/{id}/related-artists": [],
+    "/artists/{id}/top-tracks": ["market"],
+    "/me": [],
+    "/me/albums": ["limit", "offset"],
+    "/me/following": ["type", "after", "limit"],
+    "/me/player": [],
+    "/me/player/currently-playing": ["market"],
+    "/me/player/devices": [],
+    "/me/player/next": [],
+    "/me/player/pause": [],
+    "/me/player/play": [],
+    "/me/player/queue": [],
+    "/me/player/volume": ["volume_percent"],
+    "/me/playlists": ["limit", "offset"],
+    "/me/top/{type}": ["time_range", "limit", "offset"],
+    "/me/tracks": ["market", "limit", "offset"],
+    "/network/{network_id}/images": [],
+    "/playlists/{playlist_id}": ["market", "fields"],
+    "/playlists/{playlist_id}/tracks": ["market", "fields", "limit", "offset"],
+    "/search": ["q", "type", "market", "limit", "offset"],
+    "/track/{id}": ["market"],
+    "/tracks/{id}": ["market"],
+    "/users/{user_id}/playlists": ["limit", "offset"]
+}
+
+
 }

@@ -29,7 +29,7 @@ class OpenAPISpecificationHandler(object):
         _capabilities (dict): A dictionary to store capabilities related to YAML file handling.
     """
 
-    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler, strategy: PromptStrategy,):
+    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler, strategy: PromptStrategy, ):
         """
         Initializes the handler with a template OpenAPI specification.
 
@@ -75,7 +75,7 @@ class OpenAPISpecificationHandler(object):
         status_code, status_message = result_str.split(" ", 1)
 
         if request.__class__.__name__ == "RecordNote":  # TODO: check why isinstance does not work
-            #self.check_openapi_spec(resp)
+            # self.check_openapi_spec(resp)
             return list(self.openapi_spec["endpoints"].keys())
 
         if request.__class__.__name__ == "HTTPRequest":
@@ -110,16 +110,15 @@ class OpenAPISpecificationHandler(object):
             # Add example and reference to the method's responses if available
             if example or reference or status_message == "No Content":
                 if path in endpoints.keys() and method.lower() not in endpoints[path].values():
-
                     endpoints[path][method.lower()] = {
-                    "summary": f"{method} operation on {path}",
-                    "responses": {
-                        f"{status_code}": {
-                            "description": status_message,
-                            "content": {
-                                "application/json": {
-                                    "schema": {"$ref": reference},
-                                    "examples": example
+                        "summary": f"{method} operation on {path}",
+                        "responses": {
+                            f"{status_code}": {
+                                "description": status_message,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {"$ref": reference},
+                                        "examples": example
                                     }
                                 }
                             }
@@ -167,13 +166,14 @@ class OpenAPISpecificationHandler(object):
         """
         description = self.response_handler.extract_description(note)
 
-        #yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
-        #yaml_file_assistant.run(description)
+        # yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
+        # yaml_file_assistant.run(description)
 
-    def _update_documentation(self, response, result,result_str, prompt_engineer):
+    def _update_documentation(self, response, result, result_str, prompt_engineer):
         endpoints = self.update_openapi_spec(response, result, result_str)
         if prompt_engineer.prompt_helper.found_endpoints != endpoints and endpoints != []:
-            prompt_engineer.prompt_helper.found_endpoints = list(set(prompt_engineer.prompt_helper.found_endpoints + endpoints))
+            prompt_engineer.prompt_helper.found_endpoints = list(
+                set(prompt_engineer.prompt_helper.found_endpoints + endpoints))
             self.write_openapi_to_yaml()
             prompt_engineer.prompt_helper.schemas = self.schemas
 
@@ -187,25 +187,13 @@ class OpenAPISpecificationHandler(object):
         prompt_engineer.prompt_helper.unsuccessful_paths = self.unsuccessful_paths
         return prompt_engineer
 
-    def document_response(self, completion, response, log, prompt_history, prompt_engineer):
-        message = completion.choices[0].message
-        tool_call_id = message.tool_calls[0].id
-        command = pydantic_core.to_json(response).decode()
+    def document_response(self, result, response, result_str, prompt_history, prompt_engineer):
 
-        log.console.print(Panel(command, title="assistant"))
-        prompt_history.append(message)
+        invalid_flags = {"recorded"}
+        if result_str not in invalid_flags or any(flag in result_str for flag in invalid_flags):
+            prompt_engineer = self._update_documentation(response, result, result_str, prompt_engineer)
 
-        with log.console.status("[bold green]Executing that command..."):
-            result = response.execute()
-            log.console.print(Panel(result[:30], title="tool"))
-            result_str = self.response_handler.parse_http_status_line(result)
-            prompt_history.append(tool_message(result_str, tool_call_id))
-
-            invalid_flags = {"recorded"}
-            if result_str not in invalid_flags or any(flag in result_str for flag in invalid_flags):
-                prompt_engineer = self._update_documentation(response, result,result_str, prompt_engineer)
-
-        return log, prompt_history, prompt_engineer
+        return prompt_history, prompt_engineer
 
     def found_all_endpoints(self):
         if len(self.endpoint_methods.items()) < 10:

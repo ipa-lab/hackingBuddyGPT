@@ -1,209 +1,192 @@
+import json
+import os
 from dataclasses import field
 from typing import Dict
 
+import yaml
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
-from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import (
-    OpenAPISpecificationHandler,
-)
+from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import OpenAPISpecificationHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
-from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
 class SimpleWebAPIDocumentation(Agent):
     """
-    SimpleWebAPIDocumentation is an agent that documents REST APIs of a website by interacting with the APIs and
-    generating an OpenAPI specification.
-
-    Attributes:
-        llm (OpenAILib): The language model to use for interaction.
-        host (str): The host URL of the website to test.
-        _prompt_history (Prompt): The history of prompts and responses.
-        _context (Context): The context containing notes.
-        _capabilities (Dict[str, Capability]): The capabilities of the agent.
-        _all_http_methods_found (bool): Flag indicating if all HTTP methods were found.
-        _http_method_description (str): Description for expected HTTP methods.
-        _http_method_template (str): Template to format HTTP methods in API requests.
-        _http_methods (str): Expected HTTP methods in the API.
+    Agent to document REST APIs of a website by interacting with them and generating an OpenAPI specification.
     """
 
     llm: OpenAILib
-    token: str ='eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyYWIxMjk2NWNiMzZhNjU5OTFhOTI1MTNhY2Q1ZmFhZiIsIm5iZiI6MTcyOTc3MTAxNC41Mzg1NzksInN1YiI6IjY3MWEzNGZlYzc4MDJjYzUwMzU5Y2NiZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sQpChf28r1faaRFTDBv_fUmoWP6A6u6RFd9oyawxxsI'
-    host: str = parameter(desc="The host to test", default="https://api.themoviedb.org/3/")
-    description: str = parameter(desc="The descrpition of the website", default="TMDB is a service that gives extensive movie, TV show, and celebrity data, including information on films, cast details, ratings, and recommendation.")
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_http_methods_found: bool = False
 
-    # Description for expected HTTP methods
     _http_method_description: str = parameter(
         desc="Pattern description for expected HTTP methods in the API response",
         default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).",
     )
-
-    # Template for HTTP methods in API requests
     _http_method_template: str = parameter(
         desc="Template to format HTTP methods in API requests, with {method} replaced by actual HTTP method names.",
         default="{method}",
     )
-
-    # List of expected HTTP methods
     _http_methods: str = parameter(
         desc="Expected HTTP methods in the API, as a comma-separated list.",
         default="GET,POST,PUT,PATCH,DELETE",
     )
 
-    def init(self):
-        """Initializes the agent with its capabilities and handlers."""
+    def init(self, config_path="src/hackingBuddyGPT/usecases/web_api_testing/configs/my_configs/my_spotify_config.json"):
+        """Initialize the agent with configurations, capabilities, and handlers."""
         super().init()
         self.found_all_http_methods: bool = False
+        config = self._load_config(config_path)
+        self.token, self.host, self.description, self.correct_endpoints = (
+            config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints")
+        )
+        os.environ['SPOTIPY_CLIENT_ID'] = config['client_id']
+        os.environ['SPOTIPY_CLIENT_SECRET'] = config['client_secret']
+        os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
+        print(f'Host:{self.host}')
         self._setup_capabilities()
+        self.strategy = PromptStrategy.CHAIN_OF_THOUGHT
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.response_handler = ResponseHandler(self.llm_handler)
-        self.strategy = PromptStrategy.TREE_OF_THOUGHT
-        self.documentation_handler = OpenAPISpecificationHandler(self.llm_handler, self.response_handler, self.strategy)
+        self.documentation_handler = OpenAPISpecificationHandler(
+            self.llm_handler, self.response_handler, self.strategy
+        )
+
+        self.evaluator = Evaluator(config=config)
         self._setup_initial_prompt()
 
+    def _load_config(self, path):
+        """Loads JSON configuration from the specified path."""
+        with open(path, 'r') as file:
+            return json.load(file)
+
     def _setup_capabilities(self):
-        """Sets up the capabilities for the agent."""
-        notes = self._context["notes"]
-        self._capabilities = {"http_request": HTTPRequest(self.host), "record_note": RecordNote(notes)}
+        """Initializes agent's capabilities for API documentation."""
+        self._capabilities = {
+            "http_request": HTTPRequest(self.host),
+            "record_note": RecordNote(self._context["notes"])
+        }
 
     def _setup_initial_prompt(self):
-        """Sets up the initial prompt for the agent."""
+        """Configures the initial prompt for the documentation process."""
         initial_prompt = {
             "role": "system",
-            "content": f"You're tasked with documenting the REST APIs of a website hosted at {self.host}. The website is {self.description}"
-                       f"Start with an empty OpenAPI specification.\n"
-                       f"Maintain meticulousness in documenting your observations as you traverse the APIs.",
+            "content": (
+                f"You're tasked with documenting the REST APIs of a website hosted at {self.host}. "
+                f"The website is {self.description}. Start with an empty OpenAPI specification and be meticulous in "
+                f"documenting your observations as you traverse the APIs."
+            ),
         }
         self._prompt_history.append(initial_prompt)
-        handlers = (self.llm_handler, self.response_handler)
         self.prompt_engineer = PromptEngineer(
             strategy=self.strategy,
             history=self._prompt_history,
-            handlers=handlers,
+            handlers=(self.llm_handler, self.response_handler),
             context=PromptContext.DOCUMENTATION,
             open_api_spec=self.documentation_handler.openapi_spec,
-            description=self.description,
-            token =self.token
+            rest_api_info=(self.token, self.description, self.correct_endpoints)
         )
 
-    def all_http_methods_found(self, turn):
-        """
-        Checks if all expected HTTP methods have been found.
-
-        Args:
-            turn (int): The current turn number.
-
-        Returns:
-            bool: True if all HTTP methods are found, False otherwise.
-        """
-        found_endpoints = sum(len(value_list) for value_list in self.documentation_handler.endpoint_methods.values())
-        expected_endpoints = len(self.documentation_handler.endpoint_methods.keys()) * 4
-        print(f"found methods:{found_endpoints}")
-        print(f"expected methods:{expected_endpoints}")
-        if (
-                found_endpoints > 0
-                and (found_endpoints == expected_endpoints)
-                or turn == 20
-                and found_endpoints > 0
-                and (found_endpoints == expected_endpoints)
-        ):
+    def all_http_methods_found(self, turn: int) -> bool:
+        """Checks if all expected HTTP methods have been found."""
+        found_count = sum(len(endpoints) for endpoints in self.documentation_handler.endpoint_methods.values())
+        expected_count = len(self.documentation_handler.endpoint_methods.keys()) * 4
+        if found_count >= len(self.correct_endpoints):
             self.found_all_http_methods = True
-            return self.found_all_http_methods
         return self.found_all_http_methods
 
     def perform_round(self, turn: int) -> bool:
-        """
-        Performs a round of API documentation.
-
-        Args:
-            turn (int): The current turn number.
-
-        Returns:
-            bool: True if all HTTP methods are found, False otherwise.
-        """
+        """Executes a round of API documentation based on the turn number."""
         if turn == 1:
-            last_endpoint_found_x_steps_ago = 0
-            new_endpoint_count = len(self.documentation_handler.endpoint_methods)
-            last_number_of_found_endpoints = len(self.prompt_engineer.prompt_helper.found_endpoints)
+            self._explore_mode(turn)
+        elif turn < 20:
+            self._single_exploit_run(turn)
+        else:
+            self._exploit_until_no_help_needed(turn)
+        return self.all_http_methods_found(turn)
 
-            # Explore mode: search for new endpoints until conditions are met
-            while (
-                    last_endpoint_found_x_steps_ago <= new_endpoint_count + 5
-                    and last_endpoint_found_x_steps_ago <= 10
-                    and not self.found_all_http_methods
-            ):
-                self.run_documentation(turn, "explore")
+    def _explore_mode(self, turn: int) -> None:
+        """Initiates explore mode on the first turn."""
+        last_endpoint_found_x_steps_ago, new_endpoint_count = 0, len(self.documentation_handler.endpoint_methods)
+        last_found_endpoints = len(self.prompt_engineer.prompt_helper.found_endpoints)
 
-                # Update endpoint counts
-                current_endpoint_count = len(self.prompt_engineer.prompt_helper.found_endpoints)
-
-                if current_endpoint_count == last_number_of_found_endpoints:
-                    last_endpoint_found_x_steps_ago += 1
-                else:
-                    last_endpoint_found_x_steps_ago = 0
-                    last_number_of_found_endpoints = current_endpoint_count
-
-                # Check if new methods have been discovered
-                updated_endpoint_count = len(self.documentation_handler.endpoint_methods)
-                if updated_endpoint_count > new_endpoint_count:
-                    new_endpoint_count = updated_endpoint_count
-                    self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
-
-        elif turn == 20:
-            # Exploit mode: refine endpoints until no further help is needed
-            while self.prompt_engineer.prompt_helper.get_endpoints_needing_help():
-                self.run_documentation(turn, "exploit")
+        while (
+            last_endpoint_found_x_steps_ago <= new_endpoint_count + 5
+            and last_endpoint_found_x_steps_ago <= 10
+            and not self.found_all_http_methods
+        ):
+            self.run_documentation(turn, "explore")
+            current_count = len(self.prompt_engineer.prompt_helper.found_endpoints)
+            last_endpoint_found_x_steps_ago = last_endpoint_found_x_steps_ago + 1 if current_count == last_found_endpoints else 0
+            last_found_endpoints = current_count
+            if (updated_count := len(self.documentation_handler.endpoint_methods)) > new_endpoint_count:
+                new_endpoint_count = updated_count
                 self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
 
-        else:
-            # For other turns, run documentation in exploit mode
+    def _exploit_until_no_help_needed(self, turn: int) -> None:
+        """Runs exploit mode continuously until no endpoints need help."""
+        while self.prompt_engineer.prompt_helper.get_endpoints_needing_help():
             self.run_documentation(turn, "exploit")
             self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
 
-        return self.all_http_methods_found(turn)
+    def _single_exploit_run(self, turn: int) -> None:
+        """Executes a single exploit run."""
+        self.run_documentation(turn, "exploit")
+        self.prompt_engineer.open_api_spec = self.documentation_handler.openapi_spec
 
-    def has_no_numbers(self, path):
-        """
-        Checks if the path contains no numbers.
-
-        Args:
-            path (str): The path to check.
-
-        Returns:
-            bool: True if the path contains no numbers, False otherwise.
-        """
+    def has_no_numbers(self, path: str) -> bool:
+        """Returns True if the given path contains no numbers."""
         return not any(char.isdigit() for char in path)
 
-    def run_documentation(self, turn, move_type):
-        """
-        Runs the documentation process for a given turn and move type.
+    def run_documentation(self, turn: int, move_type: str) -> None:
+        """Runs the documentation process for the given turn and move type."""
+        is_good = False
+        while not is_good:
+            prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type=move_type,log=self._log , prompt_history=self._prompt_history, llm_handler =self.llm_handler)
+            response, completion = self.llm_handler.call_llm(prompt=prompt)
+            is_good, self._prompt_history, result, result_str = self.prompt_engineer.evaluate_response(response, completion, self._prompt_history, self._log)
+            self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
+                 result, response, result_str, self._prompt_history, self.prompt_engineer
+            )
 
-        Args:
-            turn (int): The current turn number.
-            move_type (str): The move type ('explore' or 'exploit').
-        """
-        prompt = self.prompt_engineer.generate_prompt(turn, move_type)
-        response, completion = self.llm_handler.call_llm(prompt)
-        self._log, self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
-            completion, response, self._log, self._prompt_history, self.prompt_engineer
-        )
+            # Use evaluator to record routes and parameters found
+            #routes_found = self.all_http_methods_found(turn)
+            #query_params_found = self.evaluator.all_query_params_found(turn)  # This function should return the number found
+            #false_positives = self.evaluator.check_false_positives(response)  # Define this function to determine FP count
+
+            # Record these results in the evaluator
+            #self.evaluator.results["routes_found"].append(routes_found)
+            #self.evaluator.results["query_params_found"].append(query_params_found)
+            #self.evaluator.results["false_positives"].append(false_positives)
+       # self.finalize_documentation_metrics()
+
         self.all_http_methods_found(turn)
+
+    def finalize_documentation_metrics(self):
+        """Calculate and log the final effectiveness metrics after documentation process is complete."""
+        metrics = self.evaluator.calculate_metrics()
+        print("Documentation Effectiveness Metrics:")
+        print(f"Percent Routes Found: {metrics['Percent Routes Found']:.2f}%")
+        print(f"Percent Parameters Found: {metrics['Percent Parameters Found']:.2f}%")
+        print(f"Average False Positives: {metrics['Average False Positives']}")
+        print(f"Routes Found - Best: {metrics['Routes Best/Worst'][0]}, Worst: {metrics['Routes Best/Worst'][1]}")
+        print(
+            f"Query Parameters Found - Best: {metrics['Params Best/Worst'][0]}, Worst: {metrics['Params Best/Worst'][1]}")
 
 
 @use_case("Minimal implementation of a web API testing use case")
 class SimpleWebAPIDocumentationUseCase(AutonomousAgentUseCase[SimpleWebAPIDocumentation]):
     """Use case for the SimpleWebAPIDocumentation agent."""
-
     pass

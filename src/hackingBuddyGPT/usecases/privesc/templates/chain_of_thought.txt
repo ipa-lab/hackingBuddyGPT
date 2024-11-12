@@ -1,1 +1,1 @@
-Let’s think step by step.
+Based on the information above think step by step and state your command. You should focus upon enumeration and privilege escalation. Do not add an initial `$`. Do not mix your capabilities. E.g dont use test_credential when you are already using exec_command.

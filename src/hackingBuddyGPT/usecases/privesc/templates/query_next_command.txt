@@ -31,9 +31,9 @@ ${state}
 % if hint:
 You are provided the following guidance: ${hint}
 %endif
-
+% if not chain_of_thought:
 Based on the information above state your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`. Do not mix your capabilities. E.g dont use test_credential when you are already using exec_command.
-
+%endif
 % if chain_of_thought:
 ${CoT}
 %endif

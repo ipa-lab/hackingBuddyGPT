@@ -138,6 +138,15 @@ fi
 #     docker --debug network create --subnet="${DOCKER_NETWORK_SUBNET}" "${DOCKER_NETWORK_NAME}" || echo "Network creation failed, but continuing..."
 # fi
 
+# Unfortunately, the above just hangs like this:
+
+# + echo 'Checking if the custom docker network '\''192_168_65_0_24'\'' with subnet {DOCKER_NETWORK_SUBNET} exists'
+# Checking if the custom docker network '192_168_65_0_24' with subnet {DOCKER_NETWORK_SUBNET} exists
+# + docker --debug network inspect 192_168_65_0_24
+# + docker --debug network create --subnet=192.168.65.0/24 192_168_65_0_24
+
+# (It hangs here)
+
 # For now, the workaround is to use localhost as the IP address on a dynamic or private TCP port, such as 41952
 
 # Step 7: Generate SSH key

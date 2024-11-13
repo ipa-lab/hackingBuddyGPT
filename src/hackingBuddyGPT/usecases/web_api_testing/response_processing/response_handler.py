@@ -47,7 +47,7 @@ class ResponseHandler:
             str: The response from the API.
         """
         messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
-        response, completion = self.llm_handler.call_llm(messages)
+        response, completion = self.llm_handler.execute_prompt(messages)
         return response, completion
 
     def parse_http_status_line(self, status_line: str) -> str:
@@ -149,14 +149,14 @@ class ResponseHandler:
         return note.action.content
 
     def parse_http_response_to_schema(
-        self, openapi_spec: Dict[str, Any], body_dict: Dict[str, Any], path: str
+            self, openapi_spec: Dict[str, Any], body_dict: Dict[str, Any], path: str
     ) -> Tuple[str, str, Dict[str, Any]]:
         """
         Parses an HTTP response body to generate an OpenAPI schema.
 
         Args:
             openapi_spec (Dict[str, Any]): The OpenAPI specification to update.
-            body_dict (Dict[str, Any]): The HTTP response body as a dictionary.
+            body_dict (Dict[str, Any]): The HTTP response body as a dictionary or list.
             path (str): The API path.
 
         Returns:
@@ -164,29 +164,26 @@ class ResponseHandler:
         """
         if "/" not in path:
             return None, None, openapi_spec
+
         object_name = path.split("/")[1].capitalize().rstrip("s")
         properties_dict = {}
 
-        if len(body_dict) == 1:
+        # Handle different structures of `body_dict`
+        if isinstance(body_dict, dict):
             for key, value in body_dict.items():
-                if len(value) == 1:
-                    properties_dict["id"] = {"type": "int", "format": "uuid", "example": str(body_dict[0]["id"])}
-                else:
-                    for key, value in body_dict.items():
-                        properties_dict = self.extract_keys(key, value, properties_dict)
+                # If it's a nested dictionary, extract keys recursively
+                properties_dict = self.extract_keys(key, value, properties_dict)
 
-        else:
-            for param in body_dict:
-                if isinstance(body_dict, list):
-                    for key, value in param.items():
-                        properties_dict = self.extract_keys(key, value, properties_dict)
-                    break
-                else:
-                    for key, value in body_dict.items():
-                        properties_dict = self.extract_keys(key, value, properties_dict)
+        elif isinstance(body_dict, list) and len(body_dict) > 0:
+            first_item = body_dict[0]
+            if isinstance(first_item, dict):
+                for key, value in first_item.items():
+                    properties_dict = self.extract_keys(key, value, properties_dict)
 
+        # Create the schema object for this response
         object_dict = {"type": "object", "properties": properties_dict}
 
+        # Add the schema to OpenAPI spec if not already present
         if object_name not in openapi_spec["components"]["schemas"]:
             openapi_spec["components"]["schemas"][object_name] = object_dict
 

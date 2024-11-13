@@ -130,7 +130,7 @@ class ResponseAnalyzerWithLLM:
         prompt_history.append({"role": "system", "content": step})
 
         # Call the LLM and handle the response
-        response, completion = self.llm_handler.call_llm(prompt_history)
+        response, completion = self.llm_handler.execute_prompt(prompt_history)
         message = completion.choices[0].message
         prompt_history.append(message)
         tool_call_id = message.tool_calls[0].id

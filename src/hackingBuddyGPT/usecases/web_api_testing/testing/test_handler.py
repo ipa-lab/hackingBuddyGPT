@@ -95,7 +95,7 @@ class TestHandler(object):
            """
         prompt_history.append({"role": "system", "content": prompt_text})
 
-        response, completion = self._llm_handler.call_llm(prompt_history)
+        response, completion = self._llm_handler.execute_prompt(prompt_history)
         message = completion.choices[0].message
         tool_call_id: str = message.tool_calls[0].id
         command: str = pydantic_core.to_json(response).decode()
@@ -169,7 +169,7 @@ class TestHandler(object):
         """
 
         # Call the LLM to generate the test function.
-        response = self._llm_handler.call_llm(prompt)
+        response = self._llm_handler.execute_prompt(prompt)
         test_function = response['choices'][0]['text']
 
         # Write the generated test function to a Python file.

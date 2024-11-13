@@ -29,8 +29,9 @@ class LLMHandler:
         self._capabilities = capabilities
         self.created_objects: Dict[str, List[Any]] = {}
         self._re_word_boundaries = re.compile(r"\b")
+        self.adjusting_counter = 0
 
-    def call_llm(self, prompt: List[Dict[str, Any]]) -> Any:
+    def execute_prompt(self, prompt: List[Dict[str, Any]]) -> Any:
         """
         Calls the LLM with the specified prompt and retrieves the response.
 
@@ -55,12 +56,21 @@ class LLMHandler:
 
         # Helper to adjust the prompt based on its length.
         def adjust_prompt_based_on_length(prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-            num_prompts = int(len(prompt) - 0.5*len(prompt) if len(prompt) >= 20 else len(prompt) - 0.3*len(prompt))
+            print(f'adjust_prompt_based_on_length: {self.adjusting_counter}')
+            if self.adjusting_counter == 2:
+                num_prompts = int(
+                    len(prompt) - 0.8 * len(prompt) if len(prompt) >= 20 else len(prompt) - 0.6 * len(prompt))
+                self.adjusting_counter = 0
+            else:
+                num_prompts = int(len(prompt) - 0.5*len(prompt) if len(prompt) >= 20 else len(prompt) - 0.3*len(prompt))
             return self.adjust_prompt(prompt, num_prompts=num_prompts)
 
         try:
             # First adjustment attempt based on prompt length
             #adjusted_prompt = adjust_prompt_based_on_length(prompt)
+            self.adjusting_counter = 1
+            if len(prompt) >= 30:
+                prompt = adjust_prompt_based_on_length(prompt)
             return call_model(prompt)
 
         except openai.BadRequestError as e:
@@ -69,32 +79,48 @@ class LLMHandler:
             try:
                 # Second adjustment based on token size if the first attempt fails
                 adjusted_prompt = adjust_prompt_based_on_length(prompt)
+                self.adjusting_counter = 2
                 return call_model(adjusted_prompt)
 
             except openai.BadRequestError as e:
                 print(f"Error: {str(e)} - Further adjusting and retrying.")
 
                 # Final fallback with the smallest prompt size
-                shortened_prompt = self.adjust_prompt(prompt, num_prompts=1)
+                shortened_prompt =  adjust_prompt_based_on_length(prompt)
                 #print(f"New prompt length: {len(shortened_prompt)}")
                 return call_model(shortened_prompt)
 
     def adjust_prompt(self, prompt: List[Dict[str, Any]], num_prompts: int = 5) -> List[Dict[str, Any]]:
-        adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) : len(prompt)]
-        if not isinstance(adjusted_prompt[0], dict):
-            adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) -1 : len(prompt)]
-        if adjusted_prompt is None:
-            adjusted_prompt = prompt
-        if not isinstance(prompt, str):
-            adjusted_prompt.reverse()
-        last_item = None
-        for item in adjusted_prompt:
-            if not isinstance(item, dict) and not( isinstance(last_item, dict) and last_item.get("role") == "tool") and last_item != None:
-                adjusted_prompt.remove(item)
-            last_item = item
-        adjusted_prompt.reverse()
+        # Limit to last `num_prompts` items, ensuring an even number if necessary
+        adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2): len(prompt)]
 
-        return adjusted_prompt
+        # Ensure adjusted_prompt starts with a dict item
+        if not isinstance(adjusted_prompt[0], dict):
+            adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) - 1: len(prompt)]
+
+        # If adjusted_prompt is None, fallback to the full prompt
+        if not adjusted_prompt:
+            adjusted_prompt = prompt
+
+        # Ensure adjusted_prompt items are valid dicts and follow `tool` message constraints
+        validated_prompt = []
+        last_item = None
+
+        for item in adjusted_prompt:
+            if isinstance(item, dict):
+                # Remove `tool` messages without a preceding `tool_calls` message
+                if item.get("role") == "tool" and (last_item is None or last_item.get("role") != "tool_calls"):
+                    continue
+
+                # Track valid items
+                validated_prompt.append(item)
+                last_item = item
+
+        # Reverse back if `prompt` is not a string (just in case)
+        if not isinstance(prompt, str):
+            validated_prompt.reverse()
+
+        return validated_prompt
 
     def add_created_object(self, created_object: Any, object_type: str) -> None:
         """

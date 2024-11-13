@@ -43,15 +43,53 @@ class SimpleWebAPIDocumentation(Agent):
         desc="Expected HTTP methods in the API, as a comma-separated list.",
         default="GET,POST,PUT,PATCH,DELETE",
     )
+    def categorize_endpoints(self, endpoints, query:dict):
+            root_level = []
+            single_parameter = []
+            subresource = []
+            related_resource = []
+            multi_level_resource = []
 
+            for endpoint in endpoints:
+                # Split the endpoint by '/' and filter out empty strings
+                parts = [part for part in endpoint.split('/') if part]
+
+                # Determine the category based on the structure
+                if len(parts) == 1:
+                    root_level.append(endpoint)
+                elif len(parts) == 2:
+                    if "id" in endpoint:
+                        single_parameter.append(endpoint)
+                    else:
+                        subresource.append(endpoint)
+                elif len(parts) == 3:
+                    if "id" in endpoint:
+                        related_resource.append(endpoint)
+                    else:
+                        multi_level_resource.append(endpoint)
+                else:
+                    multi_level_resource.append(endpoint)
+
+            return {
+                "root_level": root_level,
+                "instance_level": single_parameter,
+                "subresource": subresource,
+                "query": query.values(),
+                "related_resource": related_resource,
+                "multi-level_resource": multi_level_resource,
+            }
     def init(self, config_path="src/hackingBuddyGPT/usecases/web_api_testing/configs/my_configs/my_spotify_config.json"):
         """Initialize the agent with configurations, capabilities, and handlers."""
         super().init()
         self.found_all_http_methods: bool = False
         config = self._load_config(config_path)
-        self.token, self.host, self.description, self.correct_endpoints = (
-            config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints")
+        self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
+            config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"), config.get("query_params")
         )
+
+        self.categorized_endpoints = self.categorize_endpoints( self.correct_endpoints, self.query_params)
+
+
         os.environ['SPOTIPY_CLIENT_ID'] = config['client_id']
         os.environ['SPOTIPY_CLIENT_SECRET'] = config['client_secret']
         os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
@@ -96,7 +134,7 @@ class SimpleWebAPIDocumentation(Agent):
             handlers=(self.llm_handler, self.response_handler),
             context=PromptContext.DOCUMENTATION,
             open_api_spec=self.documentation_handler.openapi_spec,
-            rest_api_info=(self.token, self.description, self.correct_endpoints)
+            rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints)
         )
 
     def all_http_methods_found(self, turn: int) -> bool:
@@ -155,8 +193,10 @@ class SimpleWebAPIDocumentation(Agent):
         is_good = False
         while not is_good:
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type=move_type,log=self._log , prompt_history=self._prompt_history, llm_handler =self.llm_handler)
-            response, completion = self.llm_handler.call_llm(prompt=prompt)
+            response, completion = self.llm_handler.execute_prompt(prompt=prompt)
             is_good, self._prompt_history, result, result_str = self.prompt_engineer.evaluate_response(response, completion, self._prompt_history, self._log)
+            if result == None:
+                continue
             self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
                  result, response, result_str, self._prompt_history, self.prompt_engineer
             )

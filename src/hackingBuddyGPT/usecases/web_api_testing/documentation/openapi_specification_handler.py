@@ -84,8 +84,8 @@ class OpenAPISpecificationHandler(object):
 
             if not path or not method or path == "/":
                 return list(self.openapi_spec["endpoints"].keys())
-            if "1" in path:
-                path = path.replace("1", ":id")
+            if "/1" in path:
+                path = path.replace("/1", ":id")
             endpoint_methods = self.endpoint_methods
             endpoints = self.openapi_spec["endpoints"]
 
@@ -93,11 +93,14 @@ class OpenAPISpecificationHandler(object):
             path_parts = path.split("/")
             main_path = path if len(path_parts) > 1 else ""
 
+
+
             # Initialize the path if it's not present and is valid
             if path not in endpoints and main_path and str(status_code).startswith("20"):
                 endpoints[path] = {}
                 endpoint_methods[path] = []
-            if path not in endpoints:
+
+            if path not in endpoints and (status_code != '400'):
                 self.unsuccessful_paths.append(path)
                 return list(self.openapi_spec["endpoints"].keys())
 

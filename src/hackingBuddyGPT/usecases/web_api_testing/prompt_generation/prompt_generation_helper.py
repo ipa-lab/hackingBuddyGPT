@@ -30,8 +30,11 @@ class PromptGenerationHelper(object):
             response_handler (object): The response handler used for managing responses.
             schemas(tuple):  Schemas used
         """
+        self.current_category = "root_level"
+        self.correct_endpoint_but_some_error = {}
         if schemas is None:
             schemas = {}
+        self.hint_for_next_round = ""
 
         self.response_handler = response_handler
         self.found_endpoints = []
@@ -78,6 +81,8 @@ class PromptGenerationHelper(object):
                 return f'/{resource}'
         for resource in general_endpoints:
             if resource not in parameterized_endpoints:
+                if f'/{resource}/:id' in self.unsuccessful_paths:
+                    continue
                 return f'/{resource}/:id'
 
         # Return an empty string if no missing endpoints are found
@@ -119,7 +124,7 @@ class PromptGenerationHelper(object):
                 ]
 
         return [
-            f"Look for any endpoint that might be missing, exclude enpoints from this list :{self.unsuccessful_paths}"]
+            f"Look for any endpoint that might be missing, exclude endpoints from this list :{self.unsuccessful_paths}"]
 
     def get_http_action_template(self, method):
         """
@@ -148,46 +153,75 @@ class PromptGenerationHelper(object):
         """
         self.unsuccessful_paths = list(set(self.unsuccessful_paths))
         self.found_endpoints = list(set(self.found_endpoints))
+        endpoints_missing_id_or_query = []
+        hint = ""
+        if self.current_step == 2:
+
+            if "Missing required field: ids" in self.correct_endpoint_but_some_error.keys():
+                endpoints_missing_id_or_query = list(set(self.correct_endpoint_but_some_error['Missing required field: ids']))
+                hint = f"ADD an id after these endpoints: {endpoints_missing_id_or_query}" + f' avoid getting this error again : {self.hint_for_next_round}'
+                if "base62" in self.hint_for_next_round:
+                    hint += "Try a id like 6rqhFgbbKwnb9MLmUQDhG6"
+            else:
+                if "base62" in self.hint_for_next_round:
+                    hint = " ADD an id after endpoints!"
+
+        if self.current_step == 3:
+            if "No search query" in self.correct_endpoint_but_some_error.keys():
+                endpoints_missing_id_or_query = list(set(self.correct_endpoint_but_some_error['No search query']))
+                hint = f"First, try out these endpoints: {endpoints_missing_id_or_query}"
+            if self.current_step == 4:
+                endpoints_missing_id_or_query = [endpoint for endpoint in self.found_endpoints if "id" in endpoint]
+
+        if "Missing required field: ids" in self.hint_for_next_round  and self.current_step > 1:
+            hint += "ADD an id after endpoints"
 
         endpoints = list(set([endpoint.replace(":id", "1") for endpoint in self.found_endpoints] + ['/']))
 
         # Documentation steps, emphasizing mandatory header inclusion with token if available
         documentation_steps = [
-            [f"""
-            Identify all accessible endpoints via GET requests for {self.description}. 
-            """],
+            [f"Objective: Identify all accessible endpoints via GET requests for {self.description}. """],
 
-            [f"""Exclude:
-                - Already identified endpoints: {endpoints}.
-                - Paths previously marked as unsuccessful: {self.unsuccessful_paths}.
-                Only seek new paths not on the exclusion list."""],
-
-            [f"""Endpoint Identification Steps:
-                - Start with general endpoints like "/resource" or "/resource/1".
-                - Test specific numbered endpoints, e.g., "/todos/2", "/todos/3".
-                - Include paths ending with "1", those without numbers, and patterns like "number/resource".
-                **Note:** Always include Authorization headers with each request if token is available.
-                """],
-
-            [f"""For each identified endpoint, document:
-                - URL and HTTP Method.
-                - Query parameters and path variables.
-                - Expected request body, if applicable.
-                - Success and error response structures, including status codes and headers.
-                - **Reminder:** Include Authorization headers in documentation for endpoints requiring authentication.
-                """]
+            [
+                "Query Endpoints of Type `/resource`",
+                "Identify all endpoints of type `/resource`: Begin by scanning through all available endpoints and select only those that match the format `/resource`.",
+                "Make GET requests to these `/resource` endpoints."
+                f"Exclude already found endpoints: {self.found_endpoints}."
+                f"Exclude already unsuccessful endpoints and do not try to add resources after it: {self.unsuccessful_paths}."
+            ],
+            [
+                "Query Instance-level resource endpoint",
+                f"Look for Instance-level resource endpoint : Identify endpoints of type `/resource/id` where id is the parameter for the id.",
+                "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
+                "Ids can be integers, longs or base62 (like 6rqhFgbbKwnb9MLmUQDhG6)."
+            ],
+            [
+                "Query endpoints with query parameters",
+                "Construct and make GET requests to these endpoints using common query parameters or based on documentation hints, testing until a valid request with query parameters is achieved."
+            ],
+            [
+                "Query for related resource endpoints",
+                "Identify related resource endpoints that match the format `/resource/id/other_resource`: "
+                f"First, scan for the follwoing endpoints where an `id` in the middle position and follow them by another resource identifier.",
+                "Second, look for other endpoints and query these endpoints with appropriate `id` values to determine their behavior and document responses or errors."
+            ],
+            [
+                "Query multi-level resource endpoints",
+                "Search for multi-level endpoints of type `/resource/other_resource/another_resource`: Identify any endpoints in the format with three resource identifiers.",
+                "Test requests to these endpoints, adjusting resource identifiers as needed, and analyze responses to understand any additional parameters or behaviors."
+            ]
         ]
 
         # Strategy check with token emphasis in steps
         if strategy in {PromptStrategy.IN_CONTEXT, PromptStrategy.TREE_OF_THOUGHT}:
-            steps = documentation_steps
+            steps = documentation_steps[0] + documentation_steps[self.current_step] +[hint]
         else:
             chain_of_thought_steps = self.generate_chain_of_thought_prompt(endpoints)
-            steps = chain_of_thought_steps
+            steps = chain_of_thought_steps[0] + chain_of_thought_steps[self.current_step] + [hint]
 
         return steps
 
-    def generate_chain_of_thought_prompt(self,  endpoints: list) -> list:
+    def generate_chain_of_thought_prompt(self, endpoints: list) -> list:
         """
         Creates a chain of thought prompt to guide the model through the API documentation process.
 
@@ -198,40 +232,56 @@ class PromptGenerationHelper(object):
         Returns:
             str: A structured chain of thought prompt for documentation.
         """
-
         return [
             [f"Objective: Identify all accessible endpoints via GET requests for {self.description}. """],
 
-            [f"**Step 1: Identify Accessible Endpoints**",
-             f"- Use GET requests to list available endpoints.",
-             f"- **Do NOT search** the following paths:",
-             f"  - Exclude root path: '/' (Do not include this in the search results). and found endpoints: {self.found_endpoints}",
-             f"  - Exclude any paths previously identified as unsuccessful, including: {self.unsuccessful_paths}",
-             f"- Only search for new paths not on the exclusion list above.\n"],
+            [
+                "Step 1: Query root-level resource endpoints",
+                "Identify all root-level resource endpoints:",
+                "Make GET requests to these root-level endpoints, strictly matching only endpoints with a single path component after the root: /resource` (only 1 '/' in the beginning and only 1 word after).",
+                f"DO not create GET requests to already unsuccessful endpoints: {self.unsuccessful_paths}."
+                f"DO not create GET requests to already found endpoints: {self.found_endpoints}."
 
-            [f"**Step 2: Endpoint Search Strategy**",
-             f"- Start with general endpoints like '/resource' or '/resource/1'.",
-             f"- Check for specific numbered endpoints, e.g., '/todos/2', '/todos/3'.",
-             f"- Include endpoints matching:",
-             f"  - Paths ending in '1'.",
-             f"  - Paths without numbers.",
-             f"  - Patterns like 'number/resource'.\n"],
+            ],
+            [
+                "Step 2: Query Instance-level resource endpoint with id",
+                "Look for Instance-level resource endpoint : Identify endpoints of type `/resource/id` where id is the parameter for the id.",
+                "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
+                "Ids can be integers, longs or base62."
+                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
+                f"Exclude already found endpoints: {self.found_endpoints}."
 
-            [f"**Step 3: Document Each Endpoint**",
-             f"Document the following details for each identified endpoint:",
-             f"- **URL**: Full endpoint URL.",
-             f"- **HTTP Method**: Method used for this endpoint.",
-             f"- **Query Parameters and Path Variables**: List required parameters.",
-             f"- **Request Body** (if applicable): Expected format and fields.",
-             f"- **Response Structure**: Include success and error response details, including:",
-             f"  - **Status Codes**",
-             f"  - **Response Headers**",
-             f"  - **Response Body Structure**\n"],
+            ],
+            [
+                "Step 3: Query Subresource Endpoints",
+                "Identify subresource endpoints of the form `/resource/other_resource`.",
+                "Query these endpoints to check if they return data related to the main resource without requiring an `id` parameter."
+                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
+                f"Exclude already found endpoints: {self.found_endpoints}."
 
-            ["**Final Step: Verification**",
-             f"- Ensure all documented endpoints are accurate and meet initial criteria.",
-             f"- Verify no excluded endpoints are included.",
-             f"- Review each endpoint for completeness and clarity."]
+            ],
+            [
+                "Step 4: Query endpoints with query parameters",
+                "Construct and make GET requests to these endpoints using common query parameters or based on documentation hints, testing until a valid request with query parameters is achieved."
+                "Limit the output to the first two entries."
+                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
+                f"Exclude already found endpoints: {self.found_endpoints}."
+            ],
+            [
+                "Step 5: Query for related resource endpoints",
+                "Identify related resource endpoints that match the format `/resource/id/other_resource`: "
+                f"First, scan for the follwoing endpoints where an `id` in the middle position and follow them by another resource identifier.",
+                "Second, look for other endpoints and query these endpoints with appropriate `id` values to determine their behavior and document responses or errors."
+                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
+                f"Exclude already found endpoints: {self.found_endpoints}."
+            ],
+            [
+                "Step 6: Query multi-level resource endpoints",
+                "Search for multi-level endpoints of type `/resource/other_resource/another_resource`: Identify any endpoints in the format with three resource identifiers.",
+                "Test requests to these endpoints, adjusting resource identifiers as needed, and analyze responses to understand any additional parameters or behaviors."
+                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
+                f"Exclude already found endpoints: {self.found_endpoints}."
+            ]
         ]
 
     def token_count(self, text):
@@ -267,7 +317,7 @@ class PromptGenerationHelper(object):
             print(f'Prompt: {prompt}')
             # if self.token_count(prompt) <= max_tokens:
             return prompt
-            #shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt: " + str(prompt))
+            # shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt: " + str(prompt))
             # if self.token_count(shortened_prompt) <= max_tokens:
             #   return shortened_prompt
             # return "Prompt is still too long after summarization."

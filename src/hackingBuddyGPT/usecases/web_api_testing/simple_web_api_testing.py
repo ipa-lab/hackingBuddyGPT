@@ -161,7 +161,7 @@ class SimpleWebAPITesting(Agent):
             print(f'Self purpose: {self.purpose}')
             print(f'prompt engineer purpose: {self.purpose}')
             prompt = self.prompt_engineer.generate_prompt(turn)
-            response, completion = self._llm_handler.call_llm(prompt)
+            response, completion = self._llm_handler.execute_prompt(prompt)
             self._handle_response(completion, response, self.prompt_engineer.purpose)
         print(f'Self purpose: {self.purpose}')
         print(f'prompt engineer purpose: {self.purpose}')

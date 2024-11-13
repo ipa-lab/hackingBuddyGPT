@@ -1,7 +1,7 @@
 #!/opt/homebrew/bin/bash
 
 # Purpose: Automates the setup of docker containers for local testing on Mac.
-# Usage: ./mac_docker_setup.sh
+# Usage: ./mac_create_and_start_containers.sh
 
 # Enable strict error handling
 set -e
@@ -36,7 +36,7 @@ find_available_port() {
     local base_port="$1"
     local port=$base_port
     local max_port=65535
-    while lsof -i :$port &>/dev/null; do 
+    while lsof -i :$port; do 
         port=$((port + 1))
         if [ "$port" -gt "$max_port" ]; then
             echo "No available ports in the range $base_port-$max_port." >&2
@@ -59,15 +59,20 @@ start_container() {
     local port="$2"
     local image_name="ansible-ready-ubuntu"
 
-    if docker --debug ps -aq -f name=${container_name} &>/dev/null; then
+    if docker --debug ps -aq -f name=${container_name}; then
         echo "Container ${container_name} already exists. Removing it..." >&2
-        docker --debug stop ${container_name} &>/dev/null || true
-        docker --debug rm ${container_name} &>/dev/null || true
+        docker --debug stop ${container_name} || true
+        docker --debug rm ${container_name} || true
     fi
 
     echo "Starting docker container ${container_name} on port ${port}..." >&2
-    # docker --debug run -d --name ${container_name} -h ${container_name} --network ${DOCKER_NETWORK_NAME} -p "${port}:22" ${image_name}
-    docker --debug run -d --name ${container_name} -h ${container_name} -p "${port}:22" ${image_name}
+
+    # Uncomment the following line to use a custom Docker network
+    # docker --debug run --restart=unless-stopped -it -d --network ${DOCKER_NETWORK_NAME} -p "${port}:22" --name ${container_name} -h ${container_name} ${image_name}
+    # The line is commented out because of the bugs in Docker Desktop on Mac causing hangs
+
+    # Alternatively, start Docker container with SSH enabled on localhost without using a custom Docker network
+    docker --debug run --restart=unless-stopped -it -d -p "${port}:22" --name ${container_name} -h ${container_name} ${image_name}
 
     # Retrieve the IP address assigned by Docker
     container_ip=$(docker --debug inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_name")
@@ -103,7 +108,7 @@ if ! docker --debug info; then
     echo "ERROR: request returned Internal Server Error for API route and version http://%2FUsers%2Fusername%2F.docker%2Frun%2Fdocker.sock/v1.47/info, check if the server supports the requested API version"
     echo "errors pretty printing info"
     echo
-    echo You may need to uninstall Docker Desktop and reinstall it from https://docs.docker.com/desktop/setup/install/mac-install/ and try again.
+    echo You may need to uninstall Docker Desktop https://docs.docker.com/desktop/uninstall/ and reinstall it from https://docs.docker.com/desktop/setup/install/mac-install/ and try again.
     echo
     echo Alternatively, restart Docker Desktop and try again.
     echo
@@ -232,5 +237,20 @@ export ANSIBLE_CONFIG=$(pwd)/mac_ansible.cfg
 echo "Running Ansible playbook..."
 ansible-playbook -i mac_ansible_hosts.ini tasks.yaml
 
-echo "Setup complete. Container is ready for testing."
+echo "Setup complete. Container ansible-ready-ubuntu is ready for testing."
+
+# Step 13: Run gemini-openAI-proxy container
+
+if docker --debug ps -aq -f name=gemini-openai-proxy; then
+    echo "Container gemini-openai-proxy already exists. Removing it..." >&2
+    docker --debug stop gemini-openai-proxy || true
+    docker --debug rm gemini-openai-proxy || true
+fi
+
+docker --debug run --restart=unless-stopped -it -d -p 8080:8080 --name gemini-openai-proxy zhu327/gemini-openai-proxy:latest
+
+# Step 14: Ready to run hackingBuddyGPT
+
+echo "You can now run ./mac_start_hackingbuddygpt_against_a_container.sh"
+
 exit 0

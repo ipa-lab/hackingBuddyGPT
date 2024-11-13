@@ -89,7 +89,7 @@ start_container() {
 # Function to check if SSH is ready on a container
 check_ssh_ready() {
     local port="$1"
-    ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ./mac_ansible_id_rsa -p ${port} ansible@127.0.0.1 exit 2>/dev/null
+    ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ./mac_ansible_id_rsa -p ${port} ansible@localhost exit 2>/dev/null
     return $?
 }
 
@@ -138,7 +138,7 @@ fi
 #     docker --debug network create --subnet="${DOCKER_NETWORK_SUBNET}" "${DOCKER_NETWORK_NAME}" || echo "Network creation failed, but continuing..."
 # fi
 
-# For now, the workaround is to use 127.0.0.1 as the IP address on a dynamic or private TCP port, such as 41952
+# For now, the workaround is to use localhost as the IP address on a dynamic or private TCP port, such as 41952
 
 # Step 7: Generate SSH key
 generate_ssh_key
@@ -148,7 +148,7 @@ generate_ssh_key
 echo "Creating mac Ansible inventory..."
 cat > mac_ansible_hosts.ini << EOF
 [local]
-127.0.0.1 ansible_port=PLACEHOLDER ansible_user=ansible ansible_ssh_private_key_file=./mac_ansible_id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+localhost ansible_port=PLACEHOLDER ansible_user=ansible ansible_ssh_private_key_file=./mac_ansible_id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
 [all:vars]
 ansible_python_interpreter=/usr/bin/python3

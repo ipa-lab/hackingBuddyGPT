@@ -1,3 +1,4 @@
+import json
 import os.path
 from dataclasses import field
 from datetime import datetime
@@ -66,12 +67,18 @@ class SimpleWebAPITesting(Agent):
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_http_methods_found: bool = False
 
-    def init(self) -> None:
+    def init(self, config_path="/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/owasp_juice_shop_oas.jsonn") -> None:
         """
         Initializes the SimpleWebAPITesting use case by setting up the context, response handler,
         LLM handler, capabilities, and the initial prompt.
         """
         super().init()
+
+        config = self._load_config(config_path)
+        self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
+            config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"),
+            config.get("query_params")
+        )
         if os.path.exists(openapi_spec_filename):
             self._openapi_specification: Dict[str, Any] = OpenAPISpecificationParser(openapi_spec_filename).api_data
         self._context["host"] = self.host
@@ -81,9 +88,12 @@ class SimpleWebAPITesting(Agent):
         self._report_handler: ReportHandler = ReportHandler()
         self._test_handler: TestHandler = TestHandler(self._llm_handler)
         self._setup_initial_prompt()
-        self.purpose =  PromptPurpose.AUTHENTICATION_AUTHORIZATION
+        self.purpose =  PromptPurpose.AUTHENTICATION
 
-
+    def _load_config(self, path):
+        """Loads JSON configuration from the specified path."""
+        with open(path, 'r') as file:
+            return json.load(file)
 
     def _setup_initial_prompt(self) -> None:
         """

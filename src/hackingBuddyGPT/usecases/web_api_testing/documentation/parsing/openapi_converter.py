@@ -84,10 +84,64 @@ class OpenAPISpecificationConverter:
         """
         return self.convert_file(json_filepath, "yaml", "json", "yaml")
 
+    def extract_openapi_info(self, openapi_spec_file):
+        """
+        Extracts relevant information from an OpenAPI specification and writes it to a JSON file.
+
+        Args:
+            openapi_spec (dict): The OpenAPI specification loaded as a dictionary.
+            output_file_path (str): Path to save the extracted information in JSON format.
+
+        Returns:
+            dict: The extracted information saved in JSON format.
+        """
+        openapi_spec = json.load(open(openapi_spec_file))
+
+        # Extract the API description and host URL
+        description = openapi_spec.get("info", {}).get("description", "No description provided.")
+        host = openapi_spec.get("servers", [{}])[0].get("url", "No host URL provided.")
+
+        # Extract correct endpoints and query parameters
+        correct_endpoints = []
+        query_params = {}
+
+        for path, path_item in openapi_spec.get("paths", {}).items():
+            correct_endpoints.append(path)
+            # Collect query parameters for each endpoint
+            endpoint_query_params = []
+            for method, operation in path_item.items():
+                parameters = operation.get("parameters", [])
+                for param in parameters:
+                    if param.get("in") == "query":
+                        endpoint_query_params.append(param.get("name"))
+
+            if endpoint_query_params:
+                query_params[path] = endpoint_query_params
+
+        # Create the final output structure
+        extracted_info = {
+            "token": "your_api_token_here",
+            "host": host,
+            "description": description,
+            "correct_endpoints": correct_endpoints,
+            "query_params": query_params
+        }
+        filename = os.path.basename(openapi_spec_file)
+        output_filename = filename.replace(f".{openapi_spec_file}", f".json")
+        output_path = os.path.join(self.base_directory, "json", output_filename)
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Write to JSON file
+        with open(output_path, 'w') as json_file:
+            json.dump(extracted_info, json_file, indent=2)
+
+        return extracted_info
+
 
 # Usage example
 if __name__ == "__main__":
-    yaml_input = "/home/diana/Desktop/masterthesis/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/openapi_spec/openapi_spec_2024-06-13_17-16-25.yaml"
+    yaml_input = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/owasp.yml"
 
     converter = OpenAPISpecificationConverter("converted_files")
     # Convert YAML to JSON
@@ -96,3 +150,5 @@ if __name__ == "__main__":
     # Convert JSON to YAML
     if json_file:
         converter.json_to_yaml(json_file)
+
+    converter.extract_openapi_info("/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/owasp_juice_shop_config.json")

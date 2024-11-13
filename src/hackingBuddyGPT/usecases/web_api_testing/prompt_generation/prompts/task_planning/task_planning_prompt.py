@@ -59,40 +59,7 @@ class TaskPlanningPrompt(BasicPrompt):
         else:
             return self.prompt_helper.get_endpoints_needing_help()
 
-    def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] ="" ) -> List[str]:
-        """
-        Provides the steps for the chain-of-thought strategy when the context is pentesting.
 
-        Args:
-            move_type (str): The type of move to generate.
-            common_step (Optional[str]): A list of common steps for generating prompts.
-
-        Returns:
-            List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
-        """
-        if move_type == "explore":
-            if len(self.pentesting_information.explore_steps.keys()) > 0:
-                purpose = list(self.pentesting_information.explore_steps.keys())[0]
-                step = self.pentesting_information.explore_steps[purpose]
-                if step not in self.explored_steps:
-                    if len(step) > 1:
-                        step = self.pentesting_information.explore_steps[purpose][0]
-                        # Delete the first item from the list, automatically shifting the remaining items up
-                        del self.pentesting_information.explore_steps[purpose][0]
-                    prompt = step
-                    self.purpose = purpose
-                    self.explored_steps.append(step)
-                    if len(step) == 1:
-                        del self.pentesting_information.explore_steps[purpose]
-
-                    print(f'prompt: {prompt}')
-                    if common_step != "":
-                        prompt = common_step + prompt
-                    return prompt
-            else:
-                return ""
-        else:
-            return ["Look for exploits."]
 
     def _get_common_steps(self) -> List[str]:
         """

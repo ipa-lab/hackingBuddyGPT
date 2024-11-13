@@ -1,0 +1,12 @@
+{
+  "token": "",
+  "host": "http://localhost:3000",
+  "description":  "Ticketbuddy is a ticket creation platform, where users can report issues via creating tickets."
+  ,
+  "correct_endpoints": [
+    "/users",
+    "/users/{user_id}",
+    "/tickets",
+    "ticket/{tickert_id}"
+  ]
+}

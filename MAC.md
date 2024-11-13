@@ -28,6 +28,24 @@ wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gemini-1.5-fla
 
 The above example is consolidated into shell scripts with prerequisites as follows:
 
+**Preqrequisite: Install Homebrew and Bash version 5:**
+
+```zsh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+**Install Bash version 5 via Homebrew:**
+
+```zsh
+brew install bash
+```
+
+Bash version 4 or higher is needed for `mac_create_and_start_containers.sh`
+
+Homebrew provides GNU Bash version 5 via license GPLv3+
+
+Whereas Mac provides Bash version 3 via license GPLv2
+
 **Create and start containers:**
 
 ```zsh

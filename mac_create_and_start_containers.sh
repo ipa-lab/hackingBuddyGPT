@@ -239,7 +239,7 @@ ansible-playbook -i mac_ansible_hosts.ini tasks.yaml
 
 echo "Setup complete. Container ansible-ready-ubuntu is ready for testing."
 
-# Step 13: Run gemini-openAI-proxy container
+# Step 13: Run gemini-openai-proxy container
 
 if docker --debug ps -aq -f name=gemini-openai-proxy; then
     echo "Container gemini-openai-proxy already exists. Removing it..." >&2

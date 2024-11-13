@@ -12,13 +12,29 @@ and Gemini-OpenAI-Proxy https://github.com/zhu327/gemini-openai-proxy
 
 There are bugs in Docker Desktop on Mac that prevents creation of a custom Docker network 192.168.65.0/24
 
-Therefore, localhost TCP 49152 (or higher) dynamic port number is used in this example.
+Therefore, localhost TCP port 49152 (or higher) dynamic port number is used for an ansible-ready-ubuntu container
+
+http://localhost:8080 is genmini-openai-proxy
+
+For example:
+
+```zsh
+export GEMINI_API_KEY=
+
+export PORT=49152
+
+wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gemini-1.5-flash-latest --llm.context_size=1000000 --conn.host=localhost --conn.port $PORT --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1 --llm.api_url=http://localhost:8080 --llm.api_backoff=60 --max_turns 999999999
+```
+
+The above example is consolidated into shell scripts with prerequisites as follows:
 
 **Create and start containers:**
 
 ```zsh
 ./mac_create_and_start_containers.sh
 ```
+
+**Start hackingBuddyGPT against a container:**
 
 ```zsh
 export GEMINI_API_KEY=

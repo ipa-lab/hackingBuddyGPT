@@ -97,7 +97,26 @@ check_ssh_ready() {
 
 echo "Checking if docker Desktop is running..."
 if ! docker --debug info; then
-    echo "docker Desktop is not running. Please start Docker Desktop and try again."
+    echo If the above says
+    echo
+    echo "Server:"
+    echo "ERROR: request returned Internal Server Error for API route and version http://%2FUsers%2Fusername%2F.docker%2Frun%2Fdocker.sock/v1.47/info, check if the server supports the requested API version"
+    echo "errors pretty printing info"
+    echo
+    echo You may need to uninstall Docker Desktop and reinstall it from https://docs.docker.com/desktop/setup/install/mac-install/ and try again.
+    echo
+    echo Alternatively, restart Docker Desktop and try again.
+    echo
+    echo There are known issues with Docker Desktop on Mac, such as:
+    echo
+    echo Bug: Docker CLI Hangs for all commands
+    echo https://github.com/docker/for-mac/issues/6940
+    echo
+    echo Regression: Docker does not recover from resource saver mode
+    echo https://github.com/docker/for-mac/issues/6933
+    echo
+    echo "Docker Desktop is not running. Please start Docker Desktop and try again."
+    echo
     exit 1
 fi
 
@@ -137,6 +156,15 @@ fi
 # if ! docker --debug network inspect ${DOCKER_NETWORK_NAME} >/dev/null 2>&1; then
 #     docker --debug network create --subnet="${DOCKER_NETWORK_SUBNET}" "${DOCKER_NETWORK_NAME}" || echo "Network creation failed, but continuing..."
 # fi
+
+# Unfortunately, the above just hangs like this:
+
+# + echo 'Checking if the custom docker network '\''192_168_65_0_24'\'' with subnet {DOCKER_NETWORK_SUBNET} exists'
+# Checking if the custom docker network '192_168_65_0_24' with subnet {DOCKER_NETWORK_SUBNET} exists
+# + docker --debug network inspect 192_168_65_0_24
+# + docker --debug network create --subnet=192.168.65.0/24 192_168_65_0_24
+
+# (It hangs here)
 
 # For now, the workaround is to use localhost as the IP address on a dynamic or private TCP port, such as 41952
 

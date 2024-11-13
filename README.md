@@ -300,6 +300,53 @@ $ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...C
 $ pip install '.[testing]'
 ```
 
+## Mac
+
+**Docker Desktop runs containers in a virtual machine on Mac.**
+
+**Run hackingBuddyGPT on Mac as follows:**
+
+Target a localhost container
+
+via Docker Desktop https://docs.docker.com/desktop/setup/install/mac-install/
+
+and Gemini-OpenAI-Proxy https://github.com/zhu327/gemini-openai-proxy
+
+
+**Create and start containers:**
+
+```zsh
+./mac_create_and_start_containers.sh
+```
+
+```zsh
+export GEMINI_API_KEY=
+```
+
+```zsh
+./mac_start_hackingbuddygpt_against_a_container.sh
+```
+
+**Troubleshooting:**
+
+```zsh
+Server:
+ERROR: request returned Internal Server Error for API route and version http://%2FUsers%2Fusername%2F.docker%2Frun%2Fdocker.sock/v1.47/info, check if the server supports the requested API version
+errors pretty printing info
+```
+
+You may need to uninstall Docker Desktop and reinstall it from https://docs.docker.com/desktop/setup/install/mac-install/ and try again.
+
+Alternatively, restart Docker Desktop and try again.
+
+There are known issues with Docker Desktop on Mac, such as:
+
+Bug: Docker CLI Hangs for all commands
+https://github.com/docker/for-mac/issues/6940
+
+Regression: Docker does not recover from resource saver mode
+https://github.com/docker/for-mac/issues/6933
+
 ## Publications about hackingBuddyGPT
 
 Given our background in academia, we have authored papers that lay the groundwork and report on our efforts:

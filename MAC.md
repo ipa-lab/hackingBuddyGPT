@@ -58,15 +58,15 @@ You may need to uninstall Docker Desktop https://docs.docker.com/desktop/uninsta
 
 Alternatively, restart Docker Desktop and try again.
 
-There are known issues with Docker Desktop on Mac, such as:
+**There are known issues with Docker Desktop on Mac, such as:**
 
-Bug: Docker CLI Hangs for all commands
+* Bug: Docker CLI Hangs for all commands
 https://github.com/docker/for-mac/issues/6940
 
-Regression: Docker does not recover from resource saver mode
+* Regression: Docker does not recover from resource saver mode
 https://github.com/docker/for-mac/issues/6933
 
-**Google AI Studio: Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day**
+**Google AI Studio: Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day:**
 
 https://ai.google.dev/pricing#1_5flash
 
@@ -93,6 +93,8 @@ https://ai.google.dev/gemini-api/terms#data-use-unpaid
 > When you use Unpaid Services, including, for example, Google AI Studio and the unpaid quota on Gemini API, Google uses the content you submit to the Services and any generated responses to provide, improve, and develop Google products and services and machine learning technologies, including Google's enterprise features, products, and services, consistent with our Privacy Policy https://policies.google.com/privacy
 >
 > To help with quality and improve our products, human reviewers may read, annotate, and process your API input and output. Google takes steps to protect your privacy as part of this process. This includes disconnecting this data from your Google Account, API key, and Cloud project before reviewers see or annotate it. **Do not submit sensitive, confidential, or personal information to the Unpaid Services.**
+
+**README.md and Disclaimers:**
 
 https://github.com/ipa-lab/hackingBuddyGPT/blob/main/README.md
 

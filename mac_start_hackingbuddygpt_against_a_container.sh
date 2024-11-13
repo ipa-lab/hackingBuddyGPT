@@ -47,4 +47,6 @@ PORT=$(docker ps | grep ansible-ready-ubuntu | cut -d ':' -f2 | cut -d '-' -f1)
 # Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day
 # Hence --max_turns 999999999 will exceed the daily limit
 
+# http://localhost:8080 is genmini-openai-proxy
+
 wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gemini-1.5-flash-latest --llm.context_size=1000000 --conn.host=localhost --conn.port $PORT --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1 --llm.api_url=http://localhost:8080 --llm.api_backoff=60 --max_turns 999999999

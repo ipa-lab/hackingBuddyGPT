@@ -93,3 +93,9 @@ https://ai.google.dev/gemini-api/terms#data-use-unpaid
 > When you use Unpaid Services, including, for example, Google AI Studio and the unpaid quota on Gemini API, Google uses the content you submit to the Services and any generated responses to provide, improve, and develop Google products and services and machine learning technologies, including Google's enterprise features, products, and services, consistent with our Privacy Policy https://policies.google.com/privacy
 >
 > To help with quality and improve our products, human reviewers may read, annotate, and process your API input and output. Google takes steps to protect your privacy as part of this process. This includes disconnecting this data from your Google Account, API key, and Cloud project before reviewers see or annotate it. **Do not submit sensitive, confidential, or personal information to the Unpaid Services.**
+
+https://github.com/ipa-lab/hackingBuddyGPT/blob/main/README.md
+
+**Please refer to [README.md](https://github.com/ipa-lab/hackingBuddyGPT/blob/main/README.md) for all disclaimers.**
+
+Please note and accept all of them.

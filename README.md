@@ -300,6 +300,28 @@ $ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...C
 $ pip install '.[testing]'
 ```
 
+##  Mac experiment
+
+Docker Desktop runs containers in a virtual machine on Mac.
+
+Experiment running hackingBuddyGPT on a Mac computer as follows:
+
+**Create and start containers:**
+
+```zsh
+./mac_create_and_start_containers.sh
+```
+
+**Target a localhost container via Gemini OpenAI Proxy:**
+
+```zsh
+export GEMINI_API_KEY=
+```
+
+```zsh
+./mac_start_hackingbuddygpt_against_a_container.sh
+```
+
 ## Publications about hackingBuddyGPT
 
 Given our background in academia, we have authored papers that lay the groundwork and report on our efforts:

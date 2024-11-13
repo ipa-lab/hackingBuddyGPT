@@ -1,0 +1,79 @@
+## Use Case: Mac, Docker Desktop and Gemini-OpenAI-Proxy
+
+**Docker Desktop runs containers in a virtual machine on Mac.**
+
+**Run hackingBuddyGPT on Mac as follows:**
+
+Target a localhost container ansible-ready-ubuntu
+
+via Docker Desktop https://docs.docker.com/desktop/setup/install/mac-install/
+
+and Gemini-OpenAI-Proxy https://github.com/zhu327/gemini-openai-proxy
+
+There are bugs in Docker Desktop on Mac that prevents creation of a custom Docker network 192.168.65.0/24
+
+Therefore, localhost TCP 49152 (or higher) dynamic port number is used in this example.
+
+**Create and start containers:**
+
+```zsh
+./mac_create_and_start_containers.sh
+```
+
+```zsh
+export GEMINI_API_KEY=
+```
+
+```zsh
+./mac_start_hackingbuddygpt_against_a_container.sh
+```
+
+**Troubleshooting:**
+
+**Docker Desktop: Internal Server Error**
+
+```zsh
+Server:
+ERROR: request returned Internal Server Error for API route and version http://%2FUsers%2Fusername%2F.docker%2Frun%2Fdocker.sock/v1.47/info, check if the server supports the requested API version
+errors pretty printing info
+```
+
+You may need to uninstall Docker Desktop https://docs.docker.com/desktop/uninstall/ and reinstall it from https://docs.docker.com/desktop/setup/install/mac-install/ and try again.
+
+Alternatively, restart Docker Desktop and try again.
+
+There are known issues with Docker Desktop on Mac, such as:
+
+Bug: Docker CLI Hangs for all commands
+https://github.com/docker/for-mac/issues/6940
+
+Regression: Docker does not recover from resource saver mode
+https://github.com/docker/for-mac/issues/6933
+
+**Google AI Studio: Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day**
+
+https://ai.google.dev/pricing#1_5flash
+
+> Gemini 1.5 Flash
+>
+> The Gemini API “free tier” is offered through the API service with lower rate limits for testing purposes. Google AI Studio usage is completely free in all available countries.
+>
+> Rate Limits
+>
+> 15 RPM (requests per minute)
+>
+> 1 million TPM (tokens per minute)
+>
+> 1,500 RPD (requests per day)
+>
+> Used to improve Google's products
+>
+> Yes
+
+https://ai.google.dev/gemini-api/terms#data-use-unpaid
+
+> How Google Uses Your Data
+>
+> When you use Unpaid Services, including, for example, Google AI Studio and the unpaid quota on Gemini API, Google uses the content you submit to the Services and any generated responses to provide, improve, and develop Google products and services and machine learning technologies, including Google's enterprise features, products, and services, consistent with our Privacy Policy https://policies.google.com/privacy
+>
+> To help with quality and improve our products, human reviewers may read, annotate, and process your API input and output. Google takes steps to protect your privacy as part of this process. This includes disconnecting this data from your Google Account, API key, and Cloud project before reviewers see or annotate it. **Do not submit sensitive, confidential, or personal information to the Unpaid Services.**

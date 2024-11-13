@@ -18,13 +18,7 @@ source ./venv/bin/activate
 # install python requirements
 pip install -e .
 
-# Step 2: Run Gemini-OpenAI-Proxy
-
-docker --debug stop gemini-openai-proxy || true
-docker --debug rm gemini-openai-proxy || true
-docker --debug run --restart=unless-stopped -it -d -p 8080:8080 --name gemini-openai-proxy zhu327/gemini-openai-proxy:latest
-
-# Step 3: Request a Gemini API key
+# Step 2: Request a Gemini API key
 
 echo You can obtain a Gemini API key from the following URLs:
 echo https://aistudio.google.com/
@@ -43,7 +37,7 @@ fi
 
 echo
 
-# Step 4: Start hackingBuddyGPT against a container
+# Step 3: Start hackingBuddyGPT against a container
 
 echo "Starting hackingBuddyGPT against a container..."
 echo
@@ -53,4 +47,4 @@ PORT=$(docker ps | grep ansible-ready-ubuntu | cut -d ':' -f2 | cut -d '-' -f1)
 # Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day
 # Hence --max_turns 999999999 will exceed the daily limit
 
-wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gemini-1.5-flash-latest --llm.context_size=8192 --conn.host=localhost --conn.port $PORT --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1 --llm.api_url=http://localhost:8080 --llm.api_backoff=60 --max_turns 999999999
+wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gemini-1.5-flash-latest --llm.context_size=1000000 --conn.host=localhost --conn.port $PORT --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1 --llm.api_url=http://localhost:8080 --llm.api_backoff=60 --max_turns 999999999

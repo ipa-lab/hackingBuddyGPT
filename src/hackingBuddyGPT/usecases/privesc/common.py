@@ -1,4 +1,5 @@
 import pathlib
+import re
 from dataclasses import dataclass, field
 from mako.template import Template
 from rich.panel import Panel
@@ -206,8 +207,14 @@ class ThesisPrivescPrototyp(Agent):
             answer = self.get_next_command()
         cmd = answer.result
 
+        if self.enable_chain_of_thought:
+            command = re.findall("<command>(.*?)</command>", answer.result)
+
+            if len(command) > 0:
+                cmd = command[0]
+
         with self._log.console.status("[bold green]Executing that command..."):
-            self._log.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
+            self._log.console.print(Panel(cmd, title="[bold cyan]Got command from LLM:"))
             _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities, default_capability=self._default_capability)
             success, *output = parser(cmd)
             if not success:

@@ -20,9 +20,9 @@ pip install -e .
 
 # Step 2: Run Gemini-OpenAI-Proxy
 
-docker stop gemini-openai-proxy
-docker rm gemini-openai-proxy
-docker run --restart=unless-stopped -it -d -p 8080:8080 --name gemini-openai-proxy zhu327/gemini-openai-proxy:latest
+docker --debug stop gemini-openai-proxy || true
+docker --debug rm gemini-openai-proxy || true
+docker --debug run --restart=unless-stopped -it -d -p 8080:8080 --name gemini-openai-proxy zhu327/gemini-openai-proxy:latest
 
 # Step 3: Request a Gemini API key
 
@@ -33,7 +33,14 @@ echo
 
 echo "Enter your Gemini API key and press the return key:"
 
-read GEMINI_API_KEY
+# Check if GEMINI_API_KEY is set, prompt if not
+if [ -z "${GEMINI_API_KEY:-}" ]; then
+    echo "Enter your Gemini API key and press the return key:"
+    read -r GEMINI_API_KEY
+else
+    echo "Using existing GEMINI_API_KEY from environment."
+fi
+
 echo
 
 # Step 4: Start hackingBuddyGPT against a container

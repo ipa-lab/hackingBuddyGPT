@@ -10,7 +10,7 @@ via Docker Desktop https://docs.docker.com/desktop/setup/install/mac-install/
 
 and Gemini-OpenAI-Proxy https://github.com/zhu327/gemini-openai-proxy
 
-There are bugs in Docker Desktop on Mac that prevents creation of a custom Docker network 192.168.65.0/24
+There are bugs in Docker Desktop on Mac that prevent creation of a custom Docker network 192.168.65.0/24
 
 Therefore, localhost TCP port 49152 (or higher) dynamic port number is used for an ansible-ready-ubuntu container
 

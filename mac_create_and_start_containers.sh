@@ -138,6 +138,8 @@ fi
 #     docker --debug network create --subnet="${DOCKER_NETWORK_SUBNET}" "${DOCKER_NETWORK_NAME}" || echo "Network creation failed, but continuing..."
 # fi
 
+# For now, the workaround is to use 127.0.0.1 as the IP address on a dynamic or private TCP port, such as 41952
+
 # Step 7: Generate SSH key
 generate_ssh_key
 

@@ -302,9 +302,9 @@ $ pip install '.[testing]'
 
 ## Use Cases
 
-Mac, Docker Desktop and Gemini-OpenAI-Proxy
+Mac, Docker Desktop and Gemini-OpenAI-Proxy:
 
-See https://github.com/ipa-lab/hackingBuddyGPT/blob/main/MAC.md
+* See https://github.com/ipa-lab/hackingBuddyGPT/blob/main/MAC.md
 
 ## Publications about hackingBuddyGPT
 

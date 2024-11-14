@@ -19,3 +19,7 @@ codespaces_ansible.cfg
 codespaces_ansible_hosts.ini
 codespaces_ansible_id_rsa
 codespaces_ansible_id_rsa.pub
+mac_ansible.cfg
+mac_ansible_hosts.ini
+mac_ansible_id_rsa
+mac_ansible_id_rsa.pub

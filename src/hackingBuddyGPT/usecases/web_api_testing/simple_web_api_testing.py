@@ -28,7 +28,6 @@ from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 # OpenAPI specification file path
-openapi_spec_filename = "src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/in_context/openapi_spec_2024-10-16_15-36-11.yaml"
 
 
 class SimpleWebAPITesting(Agent):
@@ -61,34 +60,76 @@ class SimpleWebAPITesting(Agent):
         desc="Comma-separated list of HTTP methods expected to be used in the API response.",
         default="GET,POST,PUT,DELETE",
     )
+    config_path: str = parameter(
+        desc="Configuration file path",
+        default="",
+    )
 
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases":list})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_http_methods_found: bool = False
 
-    def init(self, config_path="/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/owasp_juice_shop_oas.jsonn") -> None:
+    def init(self) -> None:
         """
         Initializes the SimpleWebAPITesting use case by setting up the context, response handler,
         LLM handler, capabilities, and the initial prompt.
         """
         super().init()
+        self.openapi_spec_filename = self._load_config("src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/owasp_juice_shop_REST_oas.json")
 
-        config = self._load_config(config_path)
+        config = self._load_config(self.config_path)
         self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
             config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"),
             config.get("query_params")
         )
-        if os.path.exists(openapi_spec_filename):
-            self._openapi_specification: Dict[str, Any] = OpenAPISpecificationParser(openapi_spec_filename).api_data
+        if os.path.exists(config_path):
+            self._openapi_specification: Dict[str, Any] = OpenAPISpecificationParser(config_path).api_data
         self._context["host"] = self.host
         self._setup_capabilities()
+        self.categorized_endpoints = self.categorize_endpoints( self.correct_endpoints, self.query_params)
+
         self._llm_handler: LLMHandler = LLMHandler(self.llm, self._capabilities)
         self._response_handler: ResponseHandler = ResponseHandler(self._llm_handler)
         self._report_handler: ReportHandler = ReportHandler()
         self._test_handler: TestHandler = TestHandler(self._llm_handler)
         self._setup_initial_prompt()
         self.purpose =  PromptPurpose.AUTHENTICATION
+    def categorize_endpoints(self, endpoints, query:dict):
+            root_level = []
+            single_parameter = []
+            subresource = []
+            related_resource = []
+            multi_level_resource = []
+
+            for endpoint in endpoints:
+                # Split the endpoint by '/' and filter out empty strings
+                parts = [part for part in endpoint.split('/') if part]
+
+                # Determine the category based on the structure
+                if len(parts) == 1:
+                    root_level.append(endpoint)
+                elif len(parts) == 2:
+                    if "id" in endpoint:
+                        single_parameter.append(endpoint)
+                    else:
+                        subresource.append(endpoint)
+                elif len(parts) == 3:
+                    if "id" in endpoint:
+                        related_resource.append(endpoint)
+                    else:
+                        multi_level_resource.append(endpoint)
+                else:
+                    multi_level_resource.append(endpoint)
+
+            return {
+                "root_level": root_level,
+                "instance_level": single_parameter,
+                "subresource": subresource,
+                "query": query.values(),
+                "related_resource": related_resource,
+                "multi-level_resource": multi_level_resource,
+            }
 
     def _load_config(self, path):
         """Loads JSON configuration from the specified path."""
@@ -112,18 +153,23 @@ class SimpleWebAPITesting(Agent):
         }
         self._prompt_history.append(initial_prompt)
         handlers = (self._llm_handler, self._response_handler)
-        schemas: Dict[str, Any] = self._openapi_specification["components"]["schemas"] if os.path.exists(
-            openapi_spec_filename) else {}
-        endpoints: Dict[str, Any] = self._openapi_specification["paths"].keys() if os.path.exists(
-            openapi_spec_filename) else {}
+        schemas: Dict[str, Any] = {}
+        endpoints: Dict[str, Any] = self.correct_endpoints
         self.prompt_engineer: PromptEngineer = PromptEngineer(
             strategy=PromptStrategy.CHAIN_OF_THOUGHT,
             history=self._prompt_history,
             handlers=handlers,
             context=PromptContext.PENTESTING,
-            schemas=schemas,
-            endpoints= endpoints,
-
+            rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints)
+        )
+        self.strategy = PromptStrategy.CHAIN_OF_THOUGHT
+        self.prompt_engineer = PromptEngineer(
+            strategy=self.strategy,
+            history=self._prompt_history,
+            handlers=(self._llm_handler, self._response_handler),
+            context=PromptContext.PENTESTING,
+            open_api_spec=self._openapi_specification,
+            rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints)
         )
 
     def all_http_methods_found(self) -> None:

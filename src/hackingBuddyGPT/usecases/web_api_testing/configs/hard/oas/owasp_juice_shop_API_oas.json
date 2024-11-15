@@ -1,0 +1,341 @@
+
+ {
+  "openapi": "3.0.0",
+     "servers": [
+    {
+      "url": "http://localhost:3000/api"
+    }
+  ],
+  "info": {
+    "title": "Application API",
+    "description": "API documentation for user, basket, privacy, and payment functionalities.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/Users": {
+      "post": {
+        "summary": "Register new user or admin",
+        "operationId": "registerUser",
+        "responses": {
+          "200": {
+            "description": "User registered successfully"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/b2b/v2": {
+      "use": {
+        "summary": "B2B API - Access restricted to authorized users",
+        "operationId": "b2bAccess",
+        "responses": {
+          "403": {
+            "description": "Forbidden - Unauthorized users"
+          }
+        }
+      }
+    },
+    "/api/BasketItems/{id}": {
+      "put": {
+        "summary": "Update basket item quantity",
+        "operationId": "updateBasketItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Basket item updated successfully"
+          },
+          "400": {
+            "description": "Quantity check failed"
+          }
+        }
+      }
+    },
+    "/api/BasketItems": {
+      "post": {
+        "summary": "Add item to basket",
+        "operationId": "addBasketItem",
+        "responses": {
+          "201": {
+            "description": "Basket item added successfully"
+          },
+          "400": {
+            "description": "Failed to add item to basket"
+          }
+        }
+      }
+    },
+    "/api/Quantitys/{id}": {
+      "delete": {
+        "summary": "Delete quantity entry",
+        "operationId": "deleteQuantity",
+        "responses": {
+          "403": {
+            "description": "Forbidden - Access denied"
+          }
+        }
+      },
+      "use": {
+        "summary": "Restricted access to quantity management",
+        "operationId": "manageQuantity",
+        "responses": {
+          "403": {
+            "description": "Forbidden - Restricted to accounting users"
+          }
+        }
+      }
+    },
+    "/api/Feedbacks/{id}": {
+      "put": {
+        "summary": "Modify feedback entry",
+        "operationId": "updateFeedback",
+        "responses": {
+          "403": {
+            "description": "Forbidden - Modification not allowed"
+          }
+        }
+      }
+    },
+    "/api/PrivacyRequests": {
+      "post": {
+        "summary": "Submit a privacy request",
+        "operationId": "createPrivacyRequest",
+        "responses": {
+          "201": {
+            "description": "Privacy request created successfully"
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve all privacy requests",
+        "operationId": "getPrivacyRequests",
+        "responses": {
+          "403": {
+            "description": "Forbidden - Access denied"
+          }
+        }
+      }
+    },
+    "/api/PrivacyRequests/{id}": {
+      "use": {
+        "summary": "Access a specific privacy request",
+        "operationId": "getPrivacyRequestById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden - Access denied"
+          }
+        }
+      }
+    },
+    "/api/Cards": {
+      "post": {
+        "summary": "Add new payment method",
+        "operationId": "addPaymentMethod",
+        "responses": {
+          "201": {
+            "description": "Payment method added successfully"
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve payment methods",
+        "operationId": "getPaymentMethods",
+        "responses": {
+          "200": {
+            "description": "Payment methods retrieved successfully"
+          }
+        }
+      }
+    },
+    "/api/Cards/{id}": {
+      "put": {
+        "summary": "Update payment method",
+        "operationId": "updatePaymentMethod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden - Access denied"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete payment method",
+        "operationId": "deletePaymentMethod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment method deleted successfully"
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve a specific payment method",
+        "operationId": "getPaymentMethodById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment method details retrieved"
+          }
+        }
+      }
+    },
+    "/api/Addresss": {
+      "post": {
+        "summary": "Add a new address",
+        "operationId": "addAddress",
+        "responses": {
+          "201": {
+            "description": "Address added successfully"
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve all addresses",
+        "operationId": "getAddresses",
+        "responses": {
+          "200": {
+            "description": "Addresses retrieved successfully"
+          }
+        }
+      }
+    },
+    "/api/Addresss/{id}": {
+      "put": {
+        "summary": "Update an address",
+        "operationId": "updateAddress",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Address updated successfully"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an address",
+        "operationId": "deleteAddress",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Address deleted successfully"
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve a specific address",
+        "operationId": "getAddressById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Address details retrieved"
+          }
+        }
+      }
+    },
+    "/api/Deliverys": {
+      "get": {
+        "summary": "Retrieve delivery methods",
+        "operationId": "getDeliveryMethods",
+        "responses": {
+          "200": {
+            "description": "Delivery methods retrieved"
+          }
+        }
+      }
+    },
+    "/api/Deliverys/{id}": {
+      "get": {
+        "summary": "Retrieve specific delivery method",
+        "operationId": "getDeliveryMethodById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery method details retrieved"
+          }
+        }
+      }
+    }
+  }
+}

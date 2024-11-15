@@ -177,7 +177,7 @@ def configurable(service_name: str, service_desc: str):
 
     def inner(cls) -> Configurable:
         cls.name = service_name
-        cls.description = service_desc
+        cls.host = service_desc
         cls.__service__ = True
         cls.__parameters__ = get_class_parameters(cls)
 

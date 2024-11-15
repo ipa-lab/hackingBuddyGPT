@@ -1,12 +1,15 @@
 import os
+import re
 from collections import defaultdict
 from datetime import datetime
+
 
 import pydantic_core
 import yaml
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
+from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
@@ -60,6 +63,8 @@ class OpenAPISpecificationHandler(object):
         self._capabilities = {"yaml": YAMLFile()}
         self.unsuccessful_paths = []
 
+        self.pattern_matcher = PatternMatcher()
+
     def is_partial_match(self, element, string_list):
         return any(element in string or string in element for string in string_list)
 
@@ -84,8 +89,11 @@ class OpenAPISpecificationHandler(object):
 
             if not path or not method or path == "/":
                 return list(self.openapi_spec["endpoints"].keys())
-            if "/1" in path:
-                path = path.replace("/1", ":id")
+
+
+            # replace specific values with generic values for doc
+            path = self.pattern_matcher.replace_according_to_pattern(path)
+
             endpoint_methods = self.endpoint_methods
             endpoints = self.openapi_spec["endpoints"]
 
@@ -203,3 +211,19 @@ class OpenAPISpecificationHandler(object):
             return False
         else:
             return True
+
+    def match_patterns(self, path):
+        if bool(re.search(r"/\d+", path)):
+            path = re.sub(r"/\d+", "/:id", path)
+
+        # Check if the path matches the pattern
+        if re.match(r"^/api/books/\d+/characters\?page=\d+$", path):
+            path = re.sub(r"(?<=page=)\d+", ":id", path)
+            pattern = r"^characters\?page=\d+&pageSize=\d+$"
+        pattern = r"^characters\?page=\d+&pageSize=\d+$"
+        # Check if the pattern matches the entire string
+        if re.match(pattern, path ):
+                updated_path = re.sub(r"(page=)\d+", r"\1{page}", path)
+                updated_path = re.sub(r"(pageSize=)\d+", r"\1{pagesize}", updated_path)
+
+        return path

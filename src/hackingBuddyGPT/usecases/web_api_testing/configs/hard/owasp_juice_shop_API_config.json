@@ -1,0 +1,22 @@
+{
+  "token": "your_api_token_here",
+  "host": "http://localhost:3000/api",
+  "description": "API documentation for user, basket, privacy, and payment functionalities.",
+  "correct_endpoints": [
+    "/api/Users",
+    "/b2b/v2",
+    "/api/BasketItems/{id}",
+    "/api/BasketItems",
+    "/api/Quantitys/{id}",
+    "/api/Feedbacks/{id}",
+    "/api/PrivacyRequests",
+    "/api/PrivacyRequests/{id}",
+    "/api/Cards",
+    "/api/Cards/{id}",
+    "/api/Addresss",
+    "/api/Addresss/{id}",
+    "/api/Deliverys",
+    "/api/Deliverys/{id}"
+  ],
+  "query_params": {}
+}

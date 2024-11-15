@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from bs4 import BeautifulSoup
 
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.pentesting_information import (
     PenTestingInformation,
 )
@@ -25,7 +26,7 @@ class ResponseHandler:
         response_analyzer (ResponseAnalyzerWithLLM): An instance for analyzing responses with the LLM.
     """
 
-    def __init__(self, llm_handler: LLMHandler) -> None:
+    def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext) -> None:
         """
         Initializes the ResponseHandler with the specified LLM handler.
 
@@ -33,8 +34,9 @@ class ResponseHandler:
             llm_handler (LLMHandler): An instance of the LLM handler for interacting with the LLM.
         """
         self.llm_handler = llm_handler
-        self.pentesting_information = PenTestingInformation()
-        self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler)
+        if prompt_context == PromptContext.PENTESTING:
+            self.pentesting_information = PenTestingInformation()
+            self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler)
 
     def get_response_for_prompt(self, prompt: str) -> object:
         """

@@ -1,5 +1,6 @@
 import ast
 import json
+from itertools import cycle
 
 import pydantic_core
 from instructor.retry import InstructorRetryException
@@ -27,15 +28,15 @@ class PromptEngineer:
     """Prompt engineer that creates prompts of different types."""
 
     def __init__(
-        self,
-        strategy: PromptStrategy = None,
-        history: Prompt = None,
-        handlers=(),
-        context: PromptContext = None,
-        open_api_spec: dict = None,
-        schemas: dict = None,
-        endpoints: dict = None,
-        rest_api_info: tuple = None,
+            self,
+            strategy: PromptStrategy = None,
+            history: Prompt = None,
+            handlers=(),
+            context: PromptContext = None,
+            open_api_spec: dict = None,
+            schemas: dict = None,
+            endpoints: dict = None,
+            rest_api_info: tuple = None,
     ):
         """
         Initializes the PromptEngineer with a specific strategy and handlers for LLM and responses.
@@ -51,22 +52,26 @@ class PromptEngineer:
             description (str, optional): The description of the context.
         """
         self.query_counter = 0
-        token, description, correct_endpoints,  categorized_endpoints= rest_api_info
-        self.correct_endpoints = correct_endpoints
+        token, host, correct_endpoints, categorized_endpoints = rest_api_info
+        self.correct_endpoints = cycle(correct_endpoints)  # Creates an infinite cycle of endpoints
+        self.current_endpoint = next(self.correct_endpoints)
         self.categorized_endpoints = categorized_endpoints
         self.token = token
         self.strategy = strategy
         self.open_api_spec = open_api_spec
+        self.last_path = ""
+        self.repeat_counter = 0
         self.llm_handler, self.response_handler = handlers
         self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler,
                                                     schemas=schemas or {},
                                                     endpoints=endpoints,
-                                                    description=description)
+                                                    host=host)
+        self.common_endpoints = cycle([ '/api', '/auth', '/users', '/products', '/orders', '/cart', '/checkout', '/payments', '/transactions', '/notifications', '/messages', '/files', '/admin', '/settings', '/status', '/health', '/healthcheck', '/info', '/docs', '/swagger', '/openapi', '/metrics', '/logs', '/analytics', '/search', '/feedback', '/support', '/profile', '/account', '/reports', '/dashboard', '/activity', '/subscriptions', '/webhooks', '/events', '/upload', '/download', '/images', '/videos', '/user/login', '/api/v1', '/api/v2', '/auth/login', '/auth/logout', '/auth/register', '/auth/refresh', '/users/{id}', '/users/me', '/users/profile', '/users/settings', '/products/{id}', '/products/search', '/orders/{id}', '/orders/history', '/cart/items', '/cart/checkout', '/checkout/confirm', '/payments/{id}', '/payments/methods', '/transactions/{id}', '/transactions/history', '/notifications/{id}', '/messages/{id}', '/messages/send', '/files/upload', '/files/{id}', '/admin/users', '/admin/settings', '/settings/preferences', '/search/results', '/feedback/{id}', '/support/tickets', '/profile/update', '/password/reset', '/password/change', '/account/delete', '/account/activate',  '/account/deactivate', '/account/settings', '/account/preferences', '/reports/{id}', '/reports/download',  '/dashboard/stats', '/activity/log', '/subscriptions/{id}', '/subscriptions/cancel', '/webhooks/{id}',  '/events/{id}', '/images/{id}', '/videos/{id}', '/files/download/{id}', '/support/tickets/{id}'])
+
         self.context = context
         self.turn = 0
         self._prompt_history = history or []
         self.previous_prompt = ""
-        self.description = description
 
         self.strategies = {
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(
@@ -79,11 +84,11 @@ class PromptEngineer:
                 context=self.context,
                 prompt_helper=self.prompt_helper,
                 context_information={self.turn: {"content": "initial_prompt"}},
-                open_api_spec= open_api_spec
+                open_api_spec=open_api_spec
             ),
         }
 
-        self.purpose =  PromptPurpose.AUTHENTICATION_AUTHORIZATION
+        self.purpose = PromptPurpose.AUTHENTICATION
 
     def generate_prompt(self, turn: int, move_type="explore", log=None, prompt_history=None, llm_handler=None, hint=""):
         """
@@ -109,11 +114,13 @@ class PromptEngineer:
         is_good = False
         self.turn = turn
         prompt = prompt_func.generate_prompt(
-                    move_type=move_type, hint=hint, previous_prompt=self._prompt_history, turn=0
-                )
+            move_type=move_type, hint=hint, previous_prompt=self._prompt_history, turn=0
+        )
         self.purpose = prompt_func.purpose
-         #is_good, prompt_history = self.evaluate_response(prompt, log, prompt_history, llm_handler)
+        # is_good, prompt_history = self.evaluate_response(prompt, log, prompt_history, llm_handler)
 
+        if self.purpose == PromptPurpose.LOGGING_MONITORING:
+            self.prompt_helper.current_endpoint = next(self.correct_endpoints)
 
         prompt_history.append({"role": "system", "content": prompt})
         self.previous_prompt = prompt
@@ -150,17 +157,22 @@ class PromptEngineer:
         message = completion.choices[0].message
         tool_call_id = message.tool_calls[0].id
 
-        parts = parts = [part for part in response.action.path.split("/") if part]
+        if self.repeat_counter == 5:
+            self.repeat_counter = 0
+            self.prompt_helper.hint_for_next_round = f'Try this endpoint in the next round {next(self.common_endpoints)}'
 
+        parts = parts = [part for part in response.action.path.split("/") if part]
+        if response.action.path == self.last_path or response.action.path in self.prompt_helper.unsuccessful_paths or response.action.path in self.prompt_helper.found_endpoints:
+            self.prompt_helper.hint_for_next_round = f"DO not try this path {self.last_path}. You already tried this before!"
+            self.repeat_counter += 1
+            return False, prompt_history, None, None
 
         if self.prompt_helper.current_step == "instance_level" and len(parts) != 2:
             self.prompt_helper.hint_for_next_round = "Endpoint path has to consist of a resource + / + and id."
             return False, prompt_history, None, None
 
-
-
         # Add Authorization header if token is available
-        if self.token:
+        if self.token != "":
             response.action.headers = {"Authorization": f"Bearer {self.token}"}
 
         # Convert response to JSON and display it
@@ -185,6 +197,7 @@ class PromptEngineer:
         # Determine if the response is successful
         is_successful = result_str.startswith("200")
         prompt_history.append(message)
+        self.last_path = request_path
 
         # Determine if the request path is correct and set the status message
         if is_successful:
@@ -195,6 +208,7 @@ class PromptEngineer:
             # Handle unsuccessful paths and error message
 
             error_msg = result_dict.get("error", {}).get("message", "unknown error")
+            print(f'ERROR MSG: {error_msg}')
 
             if result_str.startswith("400"):
                 status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"
@@ -208,9 +222,10 @@ class PromptEngineer:
                 self.prompt_helper.unsuccessful_paths.append(request_path)
                 status_message = f"{request_path} is not a correct endpoint; Reason: {error_msg}"
 
-        if self.query_counter > 50 :
+        if self.query_counter > 30:
             self.prompt_helper.current_step += 1
-            self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category, self.categorized_endpoints)
+            self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
+                                                                    self.categorized_endpoints)
             self.query_counter = 0
 
         # Append status message to prompt history
@@ -225,7 +240,6 @@ class PromptEngineer:
             return keys[current_index + 1]  # Return the next key
         except (ValueError, IndexError):
             return None  # Return None if the current key is not found or there is no next key
-
 
     def get_purpose(self):
         """Returns the purpose of the current prompt strategy."""

@@ -71,7 +71,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
-        if move_type == "explore" and self.pentesting_information.explore_steps:
+        if move_type == "explore" and self.pentesting_information.init_steps(self.prompt_helper.current_endpoint):
             purpose = list(self.pentesting_information.explore_steps.keys())[0]
             steps = self.pentesting_information.explore_steps[purpose]
 

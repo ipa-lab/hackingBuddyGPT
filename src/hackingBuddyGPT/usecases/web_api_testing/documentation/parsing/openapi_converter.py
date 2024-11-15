@@ -84,7 +84,7 @@ class OpenAPISpecificationConverter:
         """
         return self.convert_file(json_filepath, "yaml", "json", "yaml")
 
-    def extract_openapi_info(self, openapi_spec_file):
+    def extract_openapi_info(self, openapi_spec_file, output_path=""):
         """
         Extracts relevant information from an OpenAPI specification and writes it to a JSON file.
 
@@ -127,8 +127,9 @@ class OpenAPISpecificationConverter:
             "query_params": query_params
         }
         filename = os.path.basename(openapi_spec_file)
+        filename = filename.replace("_oas", "_config")
         output_filename = filename.replace(f".{openapi_spec_file}", f".json")
-        output_path = os.path.join(self.base_directory, "json", output_filename)
+        output_path = os.path.join(output_path, output_filename)
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -141,14 +142,15 @@ class OpenAPISpecificationConverter:
 
 # Usage example
 if __name__ == "__main__":
-    yaml_input = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/owasp.yml"
+    #yaml_input = "src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/hard/coincap_oas.json"
 
     converter = OpenAPISpecificationConverter("converted_files")
-    # Convert YAML to JSON
-    json_file = converter.yaml_to_json(yaml_input)
+    ## Convert YAML to JSON
+    #json_file = converter.yaml_to_json(yaml_input)
+    #
+    ## Convert JSON to YAML
+    #if json_file:
+    #    converter.json_to_yaml(json_file)
 
-    # Convert JSON to YAML
-    if json_file:
-        converter.json_to_yaml(json_file)
-
-    converter.extract_openapi_info("/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/owasp_juice_shop_config.json")
+    openapi_path = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/hard/oas/tmdb_oas.json"
+    converter.extract_openapi_info(openapi_path, output_path ="/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/hard")

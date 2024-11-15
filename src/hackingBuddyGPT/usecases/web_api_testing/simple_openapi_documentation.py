@@ -24,12 +24,15 @@ class SimpleWebAPIDocumentation(Agent):
     """
     Agent to document REST APIs of a website by interacting with them and generating an OpenAPI specification.
     """
-
     llm: OpenAILib
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_http_methods_found: bool = False
+    config_path: str = parameter(
+        desc="Configuration file path",
+        default="",
+    )
 
     _http_method_description: str = parameter(
         desc="Pattern description for expected HTTP methods in the API response",
@@ -78,26 +81,31 @@ class SimpleWebAPIDocumentation(Agent):
                 "related_resource": related_resource,
                 "multi-level_resource": multi_level_resource,
             }
-    def init(self, config_path="src/hackingBuddyGPT/usecases/web_api_testing/configs/my_configs/my_spotify_config.json"):
+    def init(self):
         """Initialize the agent with configurations, capabilities, and handlers."""
         super().init()
         self.found_all_http_methods: bool = False
-        config = self._load_config(config_path)
+        if self.config_path != "":
+            self.config_path = os.path.join("src/hackingBuddyGPT/usecases/web_api_testing/configs/", self.config_path)
+        config = self._load_config(self.config_path)
         self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
             config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"), config.get("query_params")
         )
+        self.all_steps_done = False
 
         self.categorized_endpoints = self.categorize_endpoints( self.correct_endpoints, self.query_params)
 
+        if "spotify" in self.config_path:
 
-        os.environ['SPOTIPY_CLIENT_ID'] = config['client_id']
-        os.environ['SPOTIPY_CLIENT_SECRET'] = config['client_secret']
-        os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
+            os.environ['SPOTIPY_CLIENT_ID'] = config['client_id']
+            os.environ['SPOTIPY_CLIENT_SECRET'] = config['client_secret']
+            os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
         print(f'Host:{self.host}')
         self._setup_capabilities()
         self.strategy = PromptStrategy.CHAIN_OF_THOUGHT
+        self.prompt_context = PromptContext.DOCUMENTATION
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
-        self.response_handler = ResponseHandler(self.llm_handler)
+        self.response_handler = ResponseHandler(self.llm_handler, self.prompt_context)
         self.documentation_handler = OpenAPISpecificationHandler(
             self.llm_handler, self.response_handler, self.strategy
         )
@@ -132,16 +140,16 @@ class SimpleWebAPIDocumentation(Agent):
             strategy=self.strategy,
             history=self._prompt_history,
             handlers=(self.llm_handler, self.response_handler),
-            context=PromptContext.DOCUMENTATION,
+            context=self.prompt_context,
             open_api_spec=self.documentation_handler.openapi_spec,
-            rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints)
+            rest_api_info=(self.token, self.host, self.correct_endpoints, self.categorized_endpoints)
         )
 
     def all_http_methods_found(self, turn: int) -> bool:
         """Checks if all expected HTTP methods have been found."""
         found_count = sum(len(endpoints) for endpoints in self.documentation_handler.endpoint_methods.values())
         expected_count = len(self.documentation_handler.endpoint_methods.keys()) * 4
-        if found_count >= len(self.correct_endpoints):
+        if found_count >= len(self.correct_endpoints) and self.all_steps_done:
             self.found_all_http_methods = True
         return self.found_all_http_methods
 
@@ -200,6 +208,9 @@ class SimpleWebAPIDocumentation(Agent):
             self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
                  result, response, result_str, self._prompt_history, self.prompt_engineer
             )
+
+            if self.prompt_engineer.prompt_helper.current_step == 6:
+                self.all_steps_done = True
 
             # Use evaluator to record routes and parameters found
             #routes_found = self.all_http_methods_found(turn)

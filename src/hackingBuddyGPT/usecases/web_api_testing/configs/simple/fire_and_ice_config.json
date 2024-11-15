@@ -1,0 +1,27 @@
+{
+  "token": "",
+  "host": "https://anapioficeandfire.com/api",
+  "description": "Access data from the 'A Song of Ice and Fire' series by George R.R. Martin.",
+  "correct_endpoints": [
+    "/books",
+    "/books/{id}",
+    "/characters",
+    "/characters/{id}",
+    "/houses",
+    "/houses/{id}"
+  ],
+  "query_params": {
+    "/books": [
+      "page",
+      "pageSize"
+    ],
+    "/characters": [
+      "page",
+      "pageSize"
+    ],
+    "/houses": [
+      "page",
+      "pageSize"
+    ]
+  }
+}

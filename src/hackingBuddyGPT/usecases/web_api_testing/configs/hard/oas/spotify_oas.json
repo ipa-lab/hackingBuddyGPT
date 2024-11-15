@@ -6704,7 +6704,7 @@
       }
     },
     "x-spotify-policy": {
-      "$ref": "../policies.yaml",
+      "$ref": "",
       "Attribution": {},
       "Broadcasting": {},
       "CommercialStreaming": {},

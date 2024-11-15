@@ -22,7 +22,7 @@ class PromptGenerationHelper(object):
                  response_handler: ResponseHandler = None,
                  schemas: dict = None,
                  endpoints: dict = None,
-                 description: str = ""):
+                 host: str = ""):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
 
@@ -35,6 +35,7 @@ class PromptGenerationHelper(object):
         if schemas is None:
             schemas = {}
         self.hint_for_next_round = ""
+        self.current_endpoint = None
 
         self.response_handler = response_handler
         self.found_endpoints = []
@@ -42,7 +43,7 @@ class PromptGenerationHelper(object):
         self.endpoint_found_methods = {}
         self.schemas = schemas
         self.endpoints = endpoints
-        self.description = description
+        self.host = host
         self.unsuccessful_paths = ["/"]
         self.current_step = 1
 
@@ -155,10 +156,12 @@ class PromptGenerationHelper(object):
         self.found_endpoints = list(set(self.found_endpoints))
         endpoints_missing_id_or_query = []
         hint = ""
+
         if self.current_step == 2:
 
             if "Missing required field: ids" in self.correct_endpoint_but_some_error.keys():
-                endpoints_missing_id_or_query = list(set(self.correct_endpoint_but_some_error['Missing required field: ids']))
+                endpoints_missing_id_or_query = list(
+                    set(self.correct_endpoint_but_some_error['Missing required field: ids']))
                 hint = f"ADD an id after these endpoints: {endpoints_missing_id_or_query}" + f' avoid getting this error again : {self.hint_for_next_round}'
                 if "base62" in self.hint_for_next_round:
                     hint += "Try a id like 6rqhFgbbKwnb9MLmUQDhG6"
@@ -173,14 +176,16 @@ class PromptGenerationHelper(object):
             if self.current_step == 4:
                 endpoints_missing_id_or_query = [endpoint for endpoint in self.found_endpoints if "id" in endpoint]
 
-        if "Missing required field: ids" in self.hint_for_next_round  and self.current_step > 1:
+        if "Missing required field: ids" in self.hint_for_next_round and self.current_step > 1:
             hint += "ADD an id after endpoints"
 
+        if self.hint_for_next_round != "":
+            hint += self.hint_for_next_round
         endpoints = list(set([endpoint.replace(":id", "1") for endpoint in self.found_endpoints] + ['/']))
 
         # Documentation steps, emphasizing mandatory header inclusion with token if available
         documentation_steps = [
-            [f"Objective: Identify all accessible endpoints via GET requests for {self.description}. """],
+            [f"Objective: Identify all accessible endpoints via GET requests for {self.host}. """],
 
             [
                 "Query Endpoints of Type `/resource`",
@@ -214,7 +219,7 @@ class PromptGenerationHelper(object):
 
         # Strategy check with token emphasis in steps
         if strategy in {PromptStrategy.IN_CONTEXT, PromptStrategy.TREE_OF_THOUGHT}:
-            steps = documentation_steps[0] + documentation_steps[self.current_step] +[hint]
+            steps = documentation_steps[0] + documentation_steps[self.current_step] + [hint]
         else:
             chain_of_thought_steps = self.generate_chain_of_thought_prompt(endpoints)
             steps = chain_of_thought_steps[0] + chain_of_thought_steps[self.current_step] + [hint]
@@ -233,14 +238,14 @@ class PromptGenerationHelper(object):
             str: A structured chain of thought prompt for documentation.
         """
         return [
-            [f"Objective: Identify all accessible endpoints via GET requests for {self.description}. """],
+            [
+                f"        Objective: Find accessible endpoints via GET requests for API documentation of {self.host}. """
+            ],
 
             [
-                "Step 1: Query root-level resource endpoints",
-                "Identify all root-level resource endpoints:",
-                "Make GET requests to these root-level endpoints, strictly matching only endpoints with a single path component after the root: /resource` (only 1 '/' in the beginning and only 1 word after).",
-                f"DO not create GET requests to already unsuccessful endpoints: {self.unsuccessful_paths}."
-                f"DO not create GET requests to already found endpoints: {self.found_endpoints}."
+                f""" Step 1: Check root-level resource endpoints.
+Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').                    1. Send GET requests to new paths only, avoiding any in the lists above.
+                    2. Do not reuse previously tested paths."""
 
             ],
             [
@@ -249,7 +254,6 @@ class PromptGenerationHelper(object):
                 "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
                 "Ids can be integers, longs or base62."
                 f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
-                f"Exclude already found endpoints: {self.found_endpoints}."
 
             ],
             [

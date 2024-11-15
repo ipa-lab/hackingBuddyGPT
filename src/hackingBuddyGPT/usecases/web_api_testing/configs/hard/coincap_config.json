@@ -1,0 +1,203 @@
+{
+  "token": "your_api_token_here",
+  "host": "https://api.coincap.io",
+  "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - CoinCap API is a cryptocurrency data service that provides real-time market data and historical information for various digital assets.",
+  "correct_endpoints": [
+    "/v2/assets",
+    "/v2/assets/bitcoin",
+    "/v2/assets/ethereum",
+    "/v2/assets/litecoin",
+    "/v2/assets/cardano",
+    "/v2/assets/polkadot",
+    "/v2/assets/stellar",
+    "/v2/assets/chainlink",
+    "/v2/assets/dogecoin",
+    "/v2/assets/eos",
+    "/v2/exchanges",
+    "/v2/markets",
+    "/v2/rates",
+    "/v2/assets/dogecoin/markets",
+    "/v2/assets/tron",
+    "/v2/assets/tezos",
+    "/v2/candles",
+    "/v2/rates/:interval",
+    "/v2/assets/ethereum/markets",
+    "/v2/assets/ethereum/history"
+  ],
+  "query_params": {
+    "/v2/assets": [
+      "limit",
+      "convert",
+      "interval",
+      "exchangeId",
+      "ids",
+      "search",
+      "sort"
+    ],
+    "/v2/assets/bitcoin": [
+      "limit",
+      "convert",
+      "interval",
+      "ids",
+      "sort",
+      "search"
+    ],
+    "/v2/assets/ethereum": [
+      "limit",
+      "convert",
+      "interval"
+    ],
+    "/v2/assets/litecoin": [
+      "limit",
+      "convert",
+      "interval",
+      "offset",
+      "sort",
+      "search",
+      "ids",
+      "symbol",
+      "minCap",
+      "maxSupply",
+      "start",
+      "end"
+    ],
+    "/v2/assets/cardano": [
+      "limit",
+      "convert"
+    ],
+    "/v2/assets/polkadot": [
+      "limit",
+      "convert",
+      "ids",
+      "interval",
+      "sort",
+      "search",
+      "offset",
+      "status",
+      "symbol",
+      "rank",
+      "minCap",
+      "maxCap",
+      "changePercent"
+    ],
+    "/v2/assets/stellar": [
+      "limit",
+      "convert",
+      "ids",
+      "interval",
+      "time",
+      "start",
+      "end",
+      "minSupply",
+      "maxSupply",
+      "sort"
+    ],
+    "/v2/assets/chainlink": [
+      "limit",
+      "convert"
+    ],
+    "/v2/assets/dogecoin": [
+      "limit",
+      "convert",
+      "sort",
+      "interval",
+      "start",
+      "end",
+      "rank",
+      "offset",
+      "page",
+      "ids",
+      "symbol",
+      "search"
+    ],
+    "/v2/assets/eos": [
+      "limit",
+      "convert"
+    ],
+    "/v2/exchanges": [
+      "limit",
+      "convert",
+      "sort",
+      "status",
+      "type",
+      "rank",
+      "country",
+      "volume",
+      "assets",
+      "id",
+      "name",
+      "slug",
+      "interval",
+      "exchangeId",
+      "ids"
+    ],
+    "/v2/markets": [
+      "limit",
+      "convert",
+      "exchangeId",
+      "interval",
+      "ids",
+      "sort"
+    ],
+    "/v2/rates": [
+      "limit",
+      "convert",
+      "interval",
+      "start",
+      "sort",
+      "filter",
+      "symbol",
+      "ids",
+      "rank",
+      "offset",
+      "search",
+      "exchangeId"
+    ],
+    "/v2/assets/dogecoin/markets": [
+      "limit",
+      "start",
+      "interval",
+      "sort",
+      "convert",
+      "quote",
+      "exchange",
+      "time",
+      "end",
+      "ids"
+    ],
+    "/v2/assets/tron": [
+      "limit",
+      "convert",
+      "interval",
+      "sort",
+      "search",
+      "ids",
+      "offset",
+      "start",
+      "end"
+    ],
+    "/v2/assets/tezos": [
+      "limit",
+      "convert"
+    ],
+    "/v2/candles": [
+      "exchangeId",
+      "limit",
+      "convert",
+      "interval",
+      "sort"
+    ],
+    "/v2/rates/:interval": [
+      "ids"
+    ],
+    "/v2/assets/ethereum/markets": [
+      "limit",
+      "convert"
+    ],
+    "/v2/assets/ethereum/history": [
+      "interval",
+      "limit",
+      "convert"
+    ]
+  }
+}

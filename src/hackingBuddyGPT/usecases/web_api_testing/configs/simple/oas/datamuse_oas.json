@@ -1,0 +1,1109 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Datamuse API",
+        "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - The Datamuse API is a service that provides access to a vast collection of linguistic data for various applications and language-related tasks.",
+        "termsOfService": "",
+        "contact": {
+            "name": "Datamuse API Contact",
+            "url": "https://www.datamuse.com/api",
+            "email": "contact@datamuse.com"
+        },
+        "license": {
+            "name": "MIT License",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "v1"
+    },
+    "servers": [
+        {
+            "url": "https://api.datamuse.com",
+            "description": "Production Server of the Datamuse API.",
+            "x-base-routes": 0
+        }
+    ],
+    "externalDocs": {
+        "url": "https://www.datamuse.com/api",
+        "description": "Find more about the Datamuse API here:"
+    },
+    "paths": {
+        "/words": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "rel_syn",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "car": {
+                                "value": "car"
+                            },
+                            "value": {
+                                "value": "value"
+                            },
+                            "love": {
+                                "value": "love"
+                            },
+                            "cat": {
+                                "value": "cat"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "similar": {
+                                "value": "similar"
+                            },
+                            "pear": {
+                                "value": "pear"
+                            }
+                        }
+                    },
+                    {
+                        "name": "md",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "d": {
+                                "value": "d"
+                            },
+                            "dp": {
+                                "value": "dp"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sl",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "computer": {
+                                "value": "computer"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_ant",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "value": {
+                                "value": "value"
+                            },
+                            "small": {
+                                "value": "small"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "opposite": {
+                                "value": "opposite"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_bga",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "value": {
+                                "value": "value"
+                            },
+                            "tree": {
+                                "value": "tree"
+                            }
+                        }
+                    },
+                    {
+                        "name": "ml",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "car": {
+                                "value": "car"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "python": {
+                                "value": "python"
+                            },
+                            "hello": {
+                                "value": "hello"
+                            },
+                            "cat": {
+                                "value": "cat"
+                            },
+                            "fruit": {
+                                "value": "fruit"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_gen",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_jjb",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "value": {
+                                "value": "value"
+                            },
+                            "blue": {
+                                "value": "blue"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "red": {
+                                "value": "red"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_jja",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "value": {
+                                "value": "value"
+                            },
+                            "fast": {
+                                "value": "fast"
+                            },
+                            "juicy": {
+                                "value": "juicy"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_trg",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "value": {
+                                "value": "value"
+                            },
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "banana": {
+                                "value": "banana"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_bgb",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "value": {
+                                "value": "value"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_rhy",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "value": {
+                                "value": "value"
+                            },
+                            "cat": {
+                                "value": "cat"
+                            },
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_nry",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "value": {
+                                "value": "value"
+                            }
+                        }
+                    },
+                    {
+                        "name": "max",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            },
+                            "5": {
+                                "value": "5"
+                            }
+                        }
+                    },
+                    {
+                        "name": "topics",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "programming": {
+                                "value": "programming"
+                            },
+                            "science": {
+                                "value": "science"
+                            },
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "food": {
+                                "value": "food"
+                            },
+                            "farm": {
+                                "value": "farm"
+                            },
+                            "orchard": {
+                                "value": "orchard"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sp",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "python": {
+                                "value": "python"
+                            },
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "apple*": {
+                                "value": "apple*"
+                            },
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "v",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "es": {
+                                "value": "es"
+                            }
+                        }
+                    },
+                    {
+                        "name": "lc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "en": {
+                                "value": "en"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_hom",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_spc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "rel_com",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "rel_par",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "ipa",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_words"
+                                },
+                                "example": [
+                                    {
+                                        "word": "peculiar",
+                                        "score": 1984
+                                    },
+                                    {
+                                        "word": "curious",
+                                        "score": 1827
+                                    },
+                                    {
+                                        "word": "sick",
+                                        "score": 1671
+                                    },
+                                    {
+                                        "word": "odd",
+                                        "score": 1616
+                                    },
+                                    {
+                                        "word": "queer",
+                                        "score": 1535
+                                    },
+                                    {
+                                        "word": "risible",
+                                        "score": 1415
+                                    },
+                                    {
+                                        "word": "ill",
+                                        "score": 1385
+                                    },
+                                    {
+                                        "word": "suspect",
+                                        "score": 1360
+                                    },
+                                    {
+                                        "word": "strange",
+                                        "score": 1246
+                                    },
+                                    {
+                                        "word": "suspicious",
+                                        "score": 1178
+                                    },
+                                    {
+                                        "word": "singular",
+                                        "score": 1151
+                                    },
+                                    {
+                                        "word": "humorous",
+                                        "score": 964
+                                    },
+                                    {
+                                        "word": "unusual",
+                                        "score": 927
+                                    },
+                                    {
+                                        "word": "rum",
+                                        "score": 917
+                                    },
+                                    {
+                                        "word": "comic",
+                                        "score": 822
+                                    },
+                                    {
+                                        "word": "shady",
+                                        "score": 768
+                                    },
+                                    {
+                                        "word": "fishy",
+                                        "score": 631
+                                    },
+                                    {
+                                        "word": "amusing",
+                                        "score": 615
+                                    },
+                                    {
+                                        "word": "rummy",
+                                        "score": 588
+                                    },
+                                    {
+                                        "word": "questionable",
+                                        "score": 585
+                                    },
+                                    {
+                                        "word": "oddly",
+                                        "score": 412
+                                    },
+                                    {
+                                        "word": "comical",
+                                        "score": 405
+                                    },
+                                    {
+                                        "word": "mirthful",
+                                        "score": 380
+                                    },
+                                    {
+                                        "word": "laughable",
+                                        "score": 280
+                                    },
+                                    {
+                                        "word": "humourous",
+                                        "score": 257
+                                    },
+                                    {
+                                        "word": "strangely",
+                                        "score": 210
+                                    },
+                                    {
+                                        "word": "funnily",
+                                        "score": 190
+                                    },
+                                    {
+                                        "word": "queerly",
+                                        "score": 94
+                                    },
+                                    {
+                                        "word": "comically",
+                                        "score": 73
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": {
+                                    "code": 404,
+                                    "message": "HTTP 404 Not Found"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sug": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "rel_syn",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            }
+                        }
+                    },
+                    {
+                        "name": "s",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "python": {
+                                "value": "python"
+                            },
+                            "th": {
+                                "value": "th"
+                            },
+                            "": {
+                                "value": ""
+                            },
+                            "happy": {
+                                "value": "happy"
+                            },
+                            "love": {
+                                "value": "love"
+                            },
+                            "angry": {
+                                "value": "angry"
+                            },
+                            "hilarious": {
+                                "value": "hilarious"
+                            },
+                            "laughter": {
+                                "value": "laughter"
+                            },
+                            "humor": {
+                                "value": "humor"
+                            }
+                        }
+                    },
+                    {
+                        "name": "max",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "5": {
+                                "value": "5"
+                            },
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "md",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "d": {
+                                "value": "d"
+                            },
+                            "df": {
+                                "value": "df"
+                            },
+                            "p": {
+                                "value": "p"
+                            },
+                            "s": {
+                                "value": "s"
+                            },
+                            "f": {
+                                "value": "f"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_trg",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "funny": {
+                                "value": "funny"
+                            },
+                            "cat": {
+                                "value": "cat"
+                            }
+                        }
+                    },
+                    {
+                        "name": "ml",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "apple": {
+                                "value": "apple"
+                            },
+                            "dog": {
+                                "value": "dog"
+                            },
+                            "python": {
+                                "value": "python"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "laugh": {
+                                "value": "laugh"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sp",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "apple": {
+                                "value": "apple"
+                            },
+                            "red": {
+                                "value": "red"
+                            },
+                            "love": {
+                                "value": "love"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "1": {
+                                "value": "1"
+                            },
+                            "th*": {
+                                "value": "th*"
+                            },
+                            "hello": {
+                                "value": "hello"
+                            },
+                            "eng": {
+                                "value": "eng"
+                            }
+                        }
+                    },
+                    {
+                        "name": "topics",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "politics": {
+                                "value": "politics"
+                            },
+                            "programming": {
+                                "value": "programming"
+                            },
+                            "python": {
+                                "value": "python"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "entertainment": {
+                                "value": "entertainment"
+                            },
+                            "food": {
+                                "value": "food"
+                            }
+                        }
+                    },
+                    {
+                        "name": "ipa",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "\u0259\u02c8ple\u026a": {
+                                "value": "\u0259\u02c8ple\u026a"
+                            },
+                            "1": {
+                                "value": "1"
+                            },
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "lc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "en": {
+                                "value": "en"
+                            },
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_ant",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "hot": {
+                                "value": "hot"
+                            },
+                            "love": {
+                                "value": "love"
+                            },
+                            "big": {
+                                "value": "big"
+                            }
+                        }
+                    },
+                    {
+                        "name": "v",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "enwiktionary": {
+                                "value": "enwiktionary"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "es": {
+                                "value": "es"
+                            }
+                        }
+                    },
+                    {
+                        "name": "qe",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "ml": {
+                                "value": "ml"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sl",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "fr": {
+                                "value": "fr"
+                            }
+                        }
+                    },
+                    {
+                        "name": "term",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "apple": {
+                                "value": "apple"
+                            },
+                            "hello": {
+                                "value": "hello"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_jjb",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            },
+                            "happy": {
+                                "value": "happy"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_jja",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            },
+                            "smart": {
+                                "value": "smart"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "rel_rhy",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "blue": {
+                                "value": "blue"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sad",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "mds",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json;charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_sug"
+                                },
+                                "example": []
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": {
+                                    "code": 404,
+                                    "message": "HTTP 404 Not Found"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorSchema": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "message"
+                ]
+            },
+            "ResponseSchema_words": {},
+            "ResponseSchema_sug": {}
+        }
+    }
+}

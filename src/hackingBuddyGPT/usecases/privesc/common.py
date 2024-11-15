@@ -1,6 +1,9 @@
+import os
 import pathlib
 import re
 from dataclasses import dataclass, field
+
+from langchain_core.vectorstores import VectorStoreRetriever
 from mako.template import Template
 from rich.panel import Panel
 from typing import Any, Dict
@@ -10,6 +13,7 @@ from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.utils import llm_util, ui
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
+from hackingBuddyGPT.utils.rag_utility import initiate_rag
 
 template_dir = pathlib.Path(__file__).parent / "templates"
 template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
@@ -17,6 +21,7 @@ template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_state = Template(filename=str(template_dir / "update_state.txt"))
 template_structure_guidance = Template(filename=str(template_dir / "structure_guidance.txt"))
 template_chain_of_thought = Template(filename=str(template_dir / "chain_of_thought.txt"))
+template_rag = Template(filename=str(template_dir / "rag_prompt.txt"))
 
 @dataclass
 class Privesc(Agent):
@@ -159,6 +164,7 @@ class ThesisPrivescPrototyp(Agent):
     disable_duplicates: bool = False
     enable_structure_guidance: bool = False
     enable_chain_of_thought: bool = False
+    enable_rag: bool = False
 
     _sliding_history: SlidingCliHistory = None
     _state: str = ""
@@ -169,6 +175,8 @@ class ThesisPrivescPrototyp(Agent):
     _previously_used_commands: [str] = field(default_factory=list)
     _structure_guidance: str = ""
     _chain_of_thought: str = ""
+    _rag_text: str = ""
+    _rag_document_retriever: VectorStoreRetriever = None
 
     def init(self):
         super().init()
@@ -180,6 +188,10 @@ class ThesisPrivescPrototyp(Agent):
         if self.disable_history is False:
             self._sliding_history = SlidingCliHistory(self.llm)
 
+        if self.enable_rag:
+            self._rag_document_retriever = initiate_rag()
+
+
         self._template_params = {
             'capabilities': self.get_capability_block(),
             'system': self.system,
@@ -188,7 +200,7 @@ class ThesisPrivescPrototyp(Agent):
             'update_state': self.enable_update_state,
             'target_user': 'root',
             'structure_guidance': self.enable_structure_guidance,
-            'chain_of_thought': self.enable_chain_of_thought
+            'chain_of_thought': self.enable_chain_of_thought,
         }
 
         if self.enable_structure_guidance:
@@ -236,6 +248,14 @@ class ThesisPrivescPrototyp(Agent):
                 self._sliding_history.add_command(cmd, result)
 
         self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+
+        # retrieving additional information
+        if self.enable_rag:
+            with self._log.console.status("[bold green]Retrieving relevant documents from Vectorstore..."):
+                query = self.get_rag_query(cmd, result)
+                relevant_documents = self._rag_document_retriever.invoke(query.result)
+                relevant_information = "".join([d.page_content + "\n" for d in relevant_documents])
+                self._rag_text = llm_util.trim_result_front(self.llm, int(os.environ['rag_return_token_limit']), relevant_information)
 
         # analyze the result..
         if self.enable_analysis:
@@ -285,6 +305,12 @@ class ThesisPrivescPrototyp(Agent):
         else:
             return 0
 
+    def get_rag_size(self) -> int:
+        if self.enable_rag:
+            return self.llm.count_tokens(self._rag_text)
+        else:
+            return 0
+
     def get_next_command(self) -> llm_util.LLMResult:
         history = ''
         if not self.disable_history:
@@ -297,7 +323,7 @@ class ThesisPrivescPrototyp(Agent):
             'state': self._state,
             'analyze': self._analyze,
             'guidance': self._structure_guidance,
-            'CoT': self._chain_of_thought
+            'CoT': self._chain_of_thought,
         })
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)
@@ -319,13 +345,21 @@ class ThesisPrivescPrototyp(Agent):
         ctx = self.llm.context_size
 
         template_size = self.llm.count_tokens(template_analyze.source)
-        target_size = ctx - llm_util.SAFETY_MARGIN - template_size
+        target_size = ctx - llm_util.SAFETY_MARGIN - template_size - self.get_rag_size()
         result = llm_util.trim_result_front(self.llm, target_size, result)
 
-        result = self.llm.get_response(template_analyze, cmd=cmd, resp=result)
+        result = self.llm.get_response(template_analyze, cmd=cmd, resp=result, rag_enabled=self.enable_rag, rag_text=self._rag_text)
         self._analyze = result.result
         return result
 
+    def get_rag_query(self, cmd, result):
+        ctx = self.llm.context_size
+        template_size = self.llm.count_tokens(template_rag.source)
+        target_size = ctx - llm_util.SAFETY_MARGIN - template_size
+        result = llm_util.trim_result_front(self.llm, target_size, result)
+
+        result = self.llm.get_response(template_rag, cmd=cmd, resp=result)
+        return result
     def update_state(self, cmd, result):
         # ugly, but cut down result to fit context size
         # don't do this linearly as this can take too long

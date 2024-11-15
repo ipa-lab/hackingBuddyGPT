@@ -36,7 +36,11 @@ dependencies = [
 	'pydantic == 2.8.2',
 	'openai == 1.28.0',
 	'BeautifulSoup4',
-	'nltk'
+	'nltk',
+	'langchain-community',
+	'langchain-openai',
+	'markdown',
+	'chromadb'
 ]
 
 [project.urls]

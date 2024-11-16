@@ -77,8 +77,10 @@ class DbStorage:
 
         # insert commands
         self.query_cmd_id = self.insert_or_select_cmd('query_cmd')
+        self.rag_response_id = self.insert_or_select_cmd('rag_response')
         self.analyze_response_id = self.insert_or_select_cmd('analyze_response')
         self.state_update_id = self.insert_or_select_cmd('update_state')
+
 
     def create_new_run(self, model, tag):
         self.cursor.execute(
@@ -97,6 +99,12 @@ class DbStorage:
         self.cursor.execute(
             "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (run_id, round, self.analyze_response_id, cmd, result, answer.duration, answer.tokens_query,
+             answer.tokens_response, answer.prompt, answer.answer))
+
+    def add_log_rag_response(self, run_id, round, cmd, result, answer):
+        self.cursor.execute(
+            "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (run_id, round, self.rag_response_id, cmd, result, answer.duration, answer.tokens_query,
              answer.tokens_response, answer.prompt, answer.answer))
 
     def add_log_update_state(self, run_id, round, cmd, result, answer):

@@ -256,6 +256,7 @@ class ThesisPrivescPrototyp(Agent):
                 relevant_documents = self._rag_document_retriever.invoke(query.result)
                 relevant_information = "".join([d.page_content + "\n" for d in relevant_documents])
                 self._rag_text = llm_util.trim_result_front(self.llm, int(os.environ['rag_return_token_limit']), relevant_information)
+                self._log.log_db.add_log_rag_response(self._log.run_id, turn, cmd, query.result, query)
 
         # analyze the result..
         if self.enable_analysis:

@@ -52,15 +52,14 @@ class LLMHandler:
                 model=self.llm.model,
                 messages=adjusted_prompt,
                 response_model=capabilities_to_action_model(self._capabilities),
-                max_tokens=100 # adjust as needed
+                max_tokens=300 # adjust as needed
             )
 
         # Helper to adjust the prompt based on its length.
         def adjust_prompt_based_on_length(prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             print(f'adjust_prompt_based_on_length: {self.adjusting_counter}')
             if self.adjusting_counter == 2:
-                num_prompts = int(
-                    len(prompt) - 0.8 * len(prompt) if len(prompt) >= 20 else len(prompt) - 0.6 * len(prompt))
+                num_prompts = 10
                 self.adjusting_counter = 0
             else:
                 num_prompts = int(len(prompt) - 0.5*len(prompt) if len(prompt) >= 20 else len(prompt) - 0.3*len(prompt))
@@ -87,7 +86,7 @@ class LLMHandler:
                 print(f"Error: {str(e)} - Further adjusting and retrying.")
 
                 # Final fallback with the smallest prompt size
-                shortened_prompt =  adjust_prompt_based_on_length(prompt, num_prompt=3)
+                shortened_prompt =  adjust_prompt_based_on_length(prompt)
                 #print(f"New prompt length: {len(shortened_prompt)}")
                 return call_model(shortened_prompt)
 

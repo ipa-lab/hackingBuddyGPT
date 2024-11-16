@@ -46,6 +46,7 @@ class PromptGenerationHelper(object):
         self.host = host
         self.unsuccessful_paths = ["/"]
         self.current_step = 1
+        self.document_steps = 0
 
     import re
 
@@ -219,10 +220,15 @@ class PromptGenerationHelper(object):
 
         # Strategy check with token emphasis in steps
         if strategy in {PromptStrategy.IN_CONTEXT, PromptStrategy.TREE_OF_THOUGHT}:
+            self.document_steps = len(documentation_steps)
+
             steps = documentation_steps[0] + documentation_steps[self.current_step] + [hint]
         else:
             chain_of_thought_steps = self.generate_chain_of_thought_prompt(endpoints)
+            self.document_steps = len(chain_of_thought_steps)
+
             steps = chain_of_thought_steps[0] + chain_of_thought_steps[self.current_step] + [hint]
+
 
         return steps
 

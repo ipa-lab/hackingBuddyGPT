@@ -1,0 +1,380 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Bored API",
+        "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - The Bored API provides random activities to overcome boredom.",
+        "termsOfService": "https://www.boredapi.com/terms",
+        "contact": {
+            "name": "Bored API Contact",
+            "url": "https://www.boredapi.com/contact",
+            "email": "hello@boredapi.com"
+        },
+        "license": {
+            "name": "MIT License",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "v1"
+    },
+    "servers": [
+        {
+            "url": "https://www.boredapi.com",
+            "description": "Production Server of the Bored API.",
+            "x-base-routes": 1
+        }
+    ],
+    "externalDocs": {
+        "url": "https://www.boredapi.com/documentation",
+        "description": "Find more about the Bored API here:"
+    },
+    "paths": {
+        "/api/activity": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "participants",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            },
+                            "2": {
+                                "value": "2"
+                            },
+                            "3": {
+                                "value": "3"
+                            },
+                            "4": {
+                                "value": "4"
+                            },
+                            "5": {
+                                "value": "5"
+                            }
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "education": {
+                                "value": "education"
+                            },
+                            "recreational": {
+                                "value": "recreational"
+                            },
+                            "social": {
+                                "value": "social"
+                            },
+                            "diy": {
+                                "value": "diy"
+                            },
+                            "charity": {
+                                "value": "charity"
+                            },
+                            "cooking": {
+                                "value": "cooking"
+                            },
+                            "relaxation": {
+                                "value": "relaxation"
+                            },
+                            "music": {
+                                "value": "music"
+                            },
+                            "busywork": {
+                                "value": "busywork"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "examples": {
+                            "0.5": {
+                                "value": "0.5"
+                            },
+                            "0": {
+                                "value": "0"
+                            }
+                        }
+                    },
+                    {
+                        "name": "accessibility",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "examples": {
+                            "0.1": {
+                                "value": "0.1"
+                            },
+                            "0.2": {
+                                "value": "0.2"
+                            },
+                            "0": {
+                                "value": "0"
+                            },
+                            "0.5": {
+                                "value": "0.5"
+                            },
+                            "0.3": {
+                                "value": "0.3"
+                            },
+                            "0.9": {
+                                "value": "0.9"
+                            },
+                            "0.8": {
+                                "value": "0.8"
+                            }
+                        }
+                    },
+                    {
+                        "name": "minaccessibility",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "examples": {
+                            "0.2": {
+                                "value": "0.2"
+                            },
+                            "0.1": {
+                                "value": "0.1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "maxparticipants",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "5": {
+                                "value": "5"
+                            },
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "minprice",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "0": {
+                                "value": "0"
+                            },
+                            "0.1": {
+                                "value": "0.1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "maxprice",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            },
+                            "0.9": {
+                                "value": "0.9"
+                            },
+                            "0.5": {
+                                "value": "0.5"
+                            }
+                        }
+                    },
+                    {
+                        "name": "minparticipants",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "5": {
+                                "value": "5"
+                            },
+                            "3": {
+                                "value": "3"
+                            }
+                        }
+                    },
+                    {
+                        "name": "maxaccessibility",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "examples": {
+                            "0.5": {
+                                "value": "0.5"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_activity"
+                                },
+                                "example": {
+                                    "activity": "Hold a yard sale",
+                                    "type": "social",
+                                    "participants": 1,
+                                    "price": 0,
+                                    "link": "",
+                                    "key": "1432113",
+                                    "accessibility": 0.1
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=UTF-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><link rel=stylesheet href=https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css integrity=sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M crossorigin=anonymous><script src=https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js></scri..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "participants",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "accessibility",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "examples": {
+                            "0.1": {
+                                "value": "0.1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "diy": {
+                                "value": "diy"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api"
+                                },
+                                "example": {
+                                    "message": "Bored API"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=UTF-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><link rel=stylesheet href=https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css integrity=sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M crossorigin=anonymous><script src=https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js></scri..."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorSchema": {
+                "type": "string"
+            },
+            "ResponseSchema_api_activity": {},
+            "ResponseSchema_api": {}
+        }
+    }
+}

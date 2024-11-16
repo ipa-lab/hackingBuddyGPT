@@ -209,7 +209,8 @@ class SimpleWebAPIDocumentation(Agent):
                  result, response, result_str, self._prompt_history, self.prompt_engineer
             )
 
-            if self.prompt_engineer.prompt_helper.current_step == 6:
+            if self.prompt_engineer.prompt_helper.current_step == self.prompt_engineer.prompt_helper.document_steps-1:
+                is_good = True
                 self.all_steps_done = True
 
             # Use evaluator to record routes and parameters found

@@ -349,7 +349,7 @@ class ThesisPrivescPrototyp(Agent):
         target_size = ctx - llm_util.SAFETY_MARGIN - template_size - self.get_rag_size()
         result = llm_util.trim_result_front(self.llm, target_size, result)
 
-        result = self.llm.get_response(template_analyze, cmd=cmd, resp=result, rag_enabled=self.enable_rag, rag_text=self._rag_text)
+        result = self.llm.get_response(template_analyze, cmd=cmd, resp=result, rag_enabled=self.enable_rag, rag_text=self._rag_text, hint=self.hint)
         self._analyze = result.result
         return result
 

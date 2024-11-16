@@ -131,7 +131,7 @@ class DbStorage:
             "INSERT INTO tool_calls (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration))
 
-    def get_round_data(self, run_id, round, explanation, status_update):
+    def get_round_data(self, run_id, round, explanation, status_update, rag_response: bool = False):
         rows = self.cursor.execute(
             "select cmd_id, query, response, duration, tokens_query, tokens_response from queries where run_id = ? and round = ?",
             (run_id, round)).fetchall()
@@ -151,8 +151,13 @@ class DbStorage:
             if row[0] == self.state_update_id and status_update:
                 state_time = f"{row[3]:.4f}"
                 state_token = f"{row[4]}/{row[5]}"
+            if row[0] == self.rag_response_id and rag_response:
+                rag_response_db = row[2]
+                rag_time = f"{row[3]:.4f}"
 
         result = [duration, tokens, cmd, size_resp]
+        if rag_response:
+            result += [rag_time, rag_response_db]
         if explanation:
             result += [analyze_time, analyze_token, reason]
         if status_update:

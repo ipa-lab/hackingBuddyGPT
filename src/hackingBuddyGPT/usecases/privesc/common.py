@@ -273,7 +273,7 @@ class ThesisPrivescPrototyp(Agent):
                 self._log.log_db.add_log_update_state(self._log.run_id, turn, "", state.result, state)
 
         # Output Round Data..
-        self._log.console.print(ui.get_history_table(self.enable_analysis, self.enable_update_state, self._log.run_id, self._log.log_db, turn))
+        self._log.console.print(ui.get_history_table(self.enable_analysis, self.enable_update_state, self._log.run_id, self._log.log_db, turn, self.enable_rag))
 
         # .. and output the updated state
         if self.enable_update_state:

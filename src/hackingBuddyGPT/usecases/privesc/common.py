@@ -225,16 +225,31 @@ class ThesisPrivescPrototyp(Agent):
             if len(command) > 0:
                 cmd = command[0]
 
+        # split if there are multiple commands
+        commands = self.split_into_multiple_commands(cmd)
+
         with self._log.console.status("[bold green]Executing that command..."):
             self._log.console.print(Panel(cmd, title="[bold cyan]Got command from LLM:"))
             _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities, default_capability=self._default_capability)
-            success, *output = parser(cmd)
-            if not success:
-                self._log.console.print(Panel(output[0], title="[bold red]Error parsing command:"))
-                return False
 
-            assert(len(output) == 1)
-            capability, cmd, (result, got_root) = output[0]
+            output_list = []
+            for c in commands:
+                success, *output = parser(c)
+                if not success:
+                    self._log.console.print(Panel(output[0], title="[bold red]Error parsing command:"))
+                    return False
+                output_list.append(output)
+            cmd = ""
+            result = ""
+            got_root = False
+            for o in output_list:
+                assert (len(output) == 1)
+                capability, cmd_, (result_, got_root_) = o[0]
+                cmd += cmd_ + "\n"
+                result += result_ + "\n"
+                got_root = got_root or got_root_
+            cmd = cmd.rstrip()
+            result = result.rstrip()
 
             # TODO remove and ask andreas how to fix this problem
             cmd = cmd.replace("exec_command", "")
@@ -372,3 +387,24 @@ class ThesisPrivescPrototyp(Agent):
         result = self.llm.get_response(template_state, cmd=cmd, resp=result, facts=self._state)
         self._state = result.result
         return result
+
+    def split_into_multiple_commands(self, response: str):
+        ret = self.split_with_delimiters(response, ["test_credential", "exec_command"])
+
+        # strip trailing newlines
+        ret = [r.rstrip() for r in ret]
+
+        # remove first entry. For some reason its always empty
+        ret = ret[1:]
+
+        # combine keywords with their corresponding input
+        ret = [ret[i] + ret[i + 1] for i in range(0, len(ret) - 1, 2)]
+        return ret
+
+    def split_with_delimiters(self, input: str, delimiters):
+        # Create a regex pattern to match any of the delimiters
+        regex_pattern = f"({'|'.join(map(re.escape, delimiters))})"
+        # Use re.split to split the text while keeping the delimiters
+        return re.split(regex_pattern, input)
+
+

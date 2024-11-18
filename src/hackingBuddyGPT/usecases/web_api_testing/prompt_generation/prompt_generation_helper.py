@@ -3,7 +3,6 @@ import re
 import nltk
 
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 
 
 class PromptGenerationHelper(object):
@@ -19,9 +18,6 @@ class PromptGenerationHelper(object):
     """
 
     def __init__(self,
-                 response_handler: ResponseHandler = None,
-                 schemas: dict = None,
-                 endpoints: dict = None,
                  host: str = ""):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
@@ -32,17 +28,13 @@ class PromptGenerationHelper(object):
         """
         self.current_category = "root_level"
         self.correct_endpoint_but_some_error = {}
-        if schemas is None:
-            schemas = {}
         self.hint_for_next_round = ""
         self.current_endpoint = None
-
-        self.response_handler = response_handler
+        self.schemas = []
+        self.endpoints = []
         self.found_endpoints = []
         self.endpoint_methods = {}
         self.endpoint_found_methods = {}
-        self.schemas = schemas
-        self.endpoints = endpoints
         self.host = host
         self.unsuccessful_paths = ["/"]
         self.current_step = 1

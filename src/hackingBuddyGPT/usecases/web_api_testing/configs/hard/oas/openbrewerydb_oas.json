@@ -1,0 +1,1998 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Open Brewery DB API",
+        "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - The Open Brewery DB API is an open-source database that provides information about breweries worldwide.",
+        "termsOfService": "",
+        "contact": {
+            "name": "Open Brewery DB API Contact",
+            "url": "",
+            "email": "info@openbrewerydb.org"
+        },
+        "license": {
+            "name": "CC BY-SA 4.0",
+            "url": "https://creativecommons.org/licenses/by-sa/4.0"
+        },
+        "version": "v1"
+    },
+    "servers": [
+        {
+            "url": "https://api.openbrewerydb.org",
+            "description": "Production Server of the Open Brewery DB API.",
+            "x-base-routes": 0
+        }
+    ],
+    "externalDocs": {
+        "url": "https://www.openbrewerydb.org/documentation",
+        "description": "Find more about the Open Brewery DB API here:"
+    },
+    "paths": {
+        "/breweries": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "by_city",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "Chicago": {
+                                "value": "Chicago"
+                            },
+                            "New+York": {
+                                "value": "New+York"
+                            },
+                            "Seattle": {
+                                "value": "Seattle"
+                            },
+                            "New_York": {
+                                "value": "New_York"
+                            },
+                            "san+francisco": {
+                                "value": "san+francisco"
+                            },
+                            "san+diego": {
+                                "value": "san+diego"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_state",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "Illinois": {
+                                "value": "Illinois"
+                            },
+                            "California": {
+                                "value": "California"
+                            }
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            },
+                            "50": {
+                                "value": "50"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_name",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "ABC": {
+                                "value": "ABC"
+                            },
+                            "Stone+Brewing": {
+                                "value": "Stone+Brewing"
+                            },
+                            "BreweryName": {
+                                "value": "BreweryName"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_tag",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "craft": {
+                                "value": "craft"
+                            },
+                            "dog-friendly": {
+                                "value": "dog-friendly"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_type",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "micro": {
+                                "value": "micro"
+                            },
+                            "regional": {
+                                "value": "regional"
+                            },
+                            "brewpub": {
+                                "value": "brewpub"
+                            },
+                            "large": {
+                                "value": "large"
+                            },
+                            "planning": {
+                                "value": "planning"
+                            },
+                            "bar": {
+                                "value": "bar"
+                            },
+                            "contract": {
+                                "value": "contract"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_postal",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "94107": {
+                                "value": "94107"
+                            },
+                            "90210": {
+                                "value": "90210"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "name": {
+                                "value": "name"
+                            },
+                            "-brewery_type": {
+                                "value": "-brewery_type"
+                            }
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "query",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "IPA": {
+                                "value": "IPA"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_tagged",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "dog-friendly": {
+                                "value": "dog-friendly"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_breweries"
+                                },
+                                "example": [
+                                    {
+                                        "id": "f927d8d6-3151-4073-9d20-410ca617853e",
+                                        "name": "5 Rabbit Cerveceria Inc",
+                                        "brewery_type": "micro",
+                                        "address_1": "6398 W 74th St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60638-6129",
+                                        "country": "United States",
+                                        "longitude": "-87.6572069",
+                                        "latitude": "41.7595502",
+                                        "phone": "3128959591",
+                                        "website_url": "http://www.5rabbitbrewery.com",
+                                        "state": "Illinois",
+                                        "street": "6398 W 74th St"
+                                    },
+                                    {
+                                        "id": "4f79f427-8214-4048-8636-63cef96b33da",
+                                        "name": "Alarmist Brewing Co",
+                                        "brewery_type": "micro",
+                                        "address_1": "4055 W Peterson Ave Ste REAR",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60646-6072",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "7739882536",
+                                        "website_url": "http://alarmistbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "4055 W Peterson Ave Ste REAR"
+                                    },
+                                    {
+                                        "id": "1170049c-c20d-43c8-9475-0a42599f144c",
+                                        "name": "Aleman Brewing",
+                                        "brewery_type": "micro",
+                                        "address_1": "3304 N Knox Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60641-4434",
+                                        "country": "United States",
+                                        "longitude": "-87.74301213",
+                                        "latitude": "41.94087994",
+                                        "phone": "8123404198",
+                                        "website_url": "http://www.alemanchicago.com",
+                                        "state": "Illinois",
+                                        "street": "3304 N Knox Ave"
+                                    },
+                                    {
+                                        "id": "108b8592-3098-42a3-b466-5c60e2e626af",
+                                        "name": "All Rise Brewing Co",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "235 N Ashland Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60607-1401",
+                                        "country": "United States",
+                                        "longitude": "-87.6667328",
+                                        "latitude": "41.8864021",
+                                        "phone": "3122266300",
+                                        "website_url": "http://www.allrisebrewing.com",
+                                        "state": "Illinois",
+                                        "street": "235 N Ashland Ave"
+                                    },
+                                    {
+                                        "id": "7a5dc3de-6ec7-4407-94fa-3ea9a5b627aa",
+                                        "name": "Argus Brewery",
+                                        "brewery_type": "micro",
+                                        "address_1": "11314 S Front Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60628-5007",
+                                        "country": "United States",
+                                        "longitude": "-87.61206845",
+                                        "latitude": "41.68854885",
+                                        "phone": "7739414050",
+                                        "website_url": "http://www.argusbrewery.com",
+                                        "state": "Illinois",
+                                        "street": "11314 S Front Ave"
+                                    },
+                                    {
+                                        "id": "1aefb103-ced0-49cb-96c2-b65a2222fb3d",
+                                        "name": "Ballast Point Brewing Company",
+                                        "brewery_type": "planning",
+                                        "address_1": null,
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60607",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": null,
+                                        "website_url": null,
+                                        "state": "Illinois",
+                                        "street": null
+                                    },
+                                    {
+                                        "id": "2b725797-9b61-4bf9-bb7f-85127e955905",
+                                        "name": "Band Of Bohemia",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "4710 N Ravenswood Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60640-4408",
+                                        "country": "United States",
+                                        "longitude": "-87.6750827",
+                                        "latitude": "41.9675954",
+                                        "phone": "7732714710",
+                                        "website_url": "http://bandofbohemia.com",
+                                        "state": "Illinois",
+                                        "street": "4710 N Ravenswood Ave"
+                                    },
+                                    {
+                                        "id": "01883283-4a13-4857-9aad-e06298863ff3",
+                                        "name": "Begyle Brewing",
+                                        "brewery_type": "micro",
+                                        "address_1": "1800 W Cuyler Ave Ste 1E",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60613-3892",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "7736616963",
+                                        "website_url": "http://www.begylebrewing.com",
+                                        "state": "Illinois",
+                                        "street": "1800 W Cuyler Ave Ste 1E"
+                                    },
+                                    {
+                                        "id": "66cb7863-0a8f-49e0-96e5-d29ed5b69e86",
+                                        "name": "Birreria @ Eataly",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "43 E Ohio St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60611-2701",
+                                        "country": "United States",
+                                        "longitude": "-87.6262332",
+                                        "latitude": "41.89209845",
+                                        "phone": null,
+                                        "website_url": "http://www.eataly.com",
+                                        "state": "Illinois",
+                                        "street": "43 E Ohio St"
+                                    },
+                                    {
+                                        "id": "e869121f-a5be-4382-8243-8a51ab8af429",
+                                        "name": "Buchanan Craft LLC",
+                                        "brewery_type": "planning",
+                                        "address_1": null,
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60647-9735",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "6307722199",
+                                        "website_url": null,
+                                        "state": "Illinois",
+                                        "street": null
+                                    },
+                                    {
+                                        "id": "a4aa30b0-6073-4a0b-b9ca-c8669fa9f816",
+                                        "name": "Burnt City Brewing",
+                                        "brewery_type": "micro",
+                                        "address_1": "2747 N Lincoln Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60614-1320",
+                                        "country": "United States",
+                                        "longitude": "-87.65722732",
+                                        "latitude": "41.93185255",
+                                        "phone": "7732951270",
+                                        "website_url": "http://www.burntcitybrewing.com",
+                                        "state": "Illinois",
+                                        "street": "2747 N Lincoln Ave"
+                                    },
+                                    {
+                                        "id": "3c820163-0cdf-4f61-a2d7-bb294da08380",
+                                        "name": "Chicago Beer Company",
+                                        "brewery_type": "contract",
+                                        "address_1": "1140 W Randolph St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60607-1619",
+                                        "country": "United States",
+                                        "longitude": "-87.65589165",
+                                        "latitude": "41.88434",
+                                        "phone": "7732448696",
+                                        "website_url": "http://www.chicagobeerco.com",
+                                        "state": "Illinois",
+                                        "street": "1140 W Randolph St"
+                                    },
+                                    {
+                                        "id": "99bf7864-8bb8-44cb-a933-49a45b5e47af",
+                                        "name": "Corridor Brewery & Provisions",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "3446 N Southport Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60657-1420",
+                                        "country": "United States",
+                                        "longitude": "-87.6643524",
+                                        "latitude": "41.9447594",
+                                        "phone": "7732704272",
+                                        "website_url": null,
+                                        "state": "Illinois",
+                                        "street": "3446 N Southport Ave"
+                                    },
+                                    {
+                                        "id": "1d2b23a3-7fdf-4f47-b96d-36bd027fe822",
+                                        "name": "Cruz Blanca Brewery",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "904 W Randolph St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60607-2208",
+                                        "country": "United States",
+                                        "longitude": "-87.6501403",
+                                        "latitude": "41.8846013",
+                                        "phone": "3127331975",
+                                        "website_url": "http://www.cruzblanca.com",
+                                        "state": "Illinois",
+                                        "street": "904 W Randolph St"
+                                    },
+                                    {
+                                        "id": "c71cd9d0-be0f-4528-8d21-9f89957372f9",
+                                        "name": "Dovetail Brewery",
+                                        "brewery_type": "micro",
+                                        "address_1": "1800 W Belle Plaine Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60613-1827",
+                                        "country": "United States",
+                                        "longitude": "-87.6743858",
+                                        "latitude": "41.9561589",
+                                        "phone": null,
+                                        "website_url": "http://www.dovetailbrewery.com",
+                                        "state": "Illinois",
+                                        "street": "1800 W Belle Plaine Ave"
+                                    },
+                                    {
+                                        "id": "d1ad3b1d-f62b-46d5-a5fa-a22a402b61a3",
+                                        "name": "Dryhop Brewers",
+                                        "brewery_type": "micro",
+                                        "address_1": "3155 N Broadway St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60657-4508",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "7738573155",
+                                        "website_url": "http://www.dryhopchicago.com",
+                                        "state": "Illinois",
+                                        "street": "3155 N Broadway St"
+                                    },
+                                    {
+                                        "id": "e40c10b9-391e-457d-b734-5c79bf4a5480",
+                                        "name": "Empirical Brewery",
+                                        "brewery_type": "micro",
+                                        "address_1": "1801 W Foster Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60640-1023",
+                                        "country": "United States",
+                                        "longitude": "-87.6749395",
+                                        "latitude": "41.9762555",
+                                        "phone": null,
+                                        "website_url": "http://www.empiricalbrewery.com",
+                                        "state": "Illinois",
+                                        "street": "1801 W Foster Ave"
+                                    },
+                                    {
+                                        "id": "8551ddb7-d116-460e-b82d-4003bf816287",
+                                        "name": "Eris Brewery And Cider House",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "4240 W Irving Park Rd",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60641",
+                                        "country": "United States",
+                                        "longitude": "-87.7342346",
+                                        "latitude": "41.95388195",
+                                        "phone": "5623086582",
+                                        "website_url": null,
+                                        "state": "Illinois",
+                                        "street": "4240 W Irving Park Rd"
+                                    },
+                                    {
+                                        "id": "d9ee2acf-01b7-48d2-ae25-db12c2143eb3",
+                                        "name": "Finch Beer Company",
+                                        "brewery_type": "micro",
+                                        "address_1": "1800 W Walnut St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60612-2526",
+                                        "country": "United States",
+                                        "longitude": "-87.6721651",
+                                        "latitude": "41.8861899",
+                                        "phone": "3129294773",
+                                        "website_url": "http://www.finchbeer.com",
+                                        "state": "Illinois",
+                                        "street": "1800 W Walnut St"
+                                    },
+                                    {
+                                        "id": "ecc59506-755c-4197-bdd7-5322484cddc6",
+                                        "name": "Forbidden Root Restaurant & Brewery",
+                                        "brewery_type": "micro",
+                                        "address_1": "1746 W Chicago Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60622-5012",
+                                        "country": "United States",
+                                        "longitude": "-87.6715393",
+                                        "latitude": "41.8961658",
+                                        "phone": "3129292202",
+                                        "website_url": "http://www.forbiddenroot.com",
+                                        "state": "Illinois",
+                                        "street": "1746 W Chicago Ave"
+                                    },
+                                    {
+                                        "id": "c0299ec0-af83-4a32-8c75-6d51d9c6956e",
+                                        "name": "Gino's Brewing Company",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "500 N La Salle Dr",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60654-7109",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "3129884200",
+                                        "website_url": null,
+                                        "state": "Illinois",
+                                        "street": "500 N La Salle Dr"
+                                    },
+                                    {
+                                        "id": "8e309724-11ae-4fc0-8d18-3ae64eeaa84a",
+                                        "name": "Goose Island Beer Co / Fulton St",
+                                        "brewery_type": "large",
+                                        "address_1": "1800 W Fulton St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60612-2512",
+                                        "country": "United States",
+                                        "longitude": "-87.6722122",
+                                        "latitude": "41.8870058",
+                                        "phone": "3122261119",
+                                        "website_url": "http://www.gooseisland.com",
+                                        "state": "Illinois",
+                                        "street": "1800 W Fulton St"
+                                    },
+                                    {
+                                        "id": "8ef0b76f-0cd8-4c9d-ad65-61627c7276d7",
+                                        "name": "Goose Island Brewpub",
+                                        "brewery_type": "large",
+                                        "address_1": "1800 N Clybourn Ave Ste B",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60614-4895",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "3129150071",
+                                        "website_url": "http://www.gooseisland.com",
+                                        "state": "Illinois",
+                                        "street": "1800 N Clybourn Ave Ste B"
+                                    },
+                                    {
+                                        "id": "dc1ca2e3-86c7-44b5-aaae-adad3420225f",
+                                        "name": "Great Central Brewing Company",
+                                        "brewery_type": "micro",
+                                        "address_1": "221 N Wood St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60612-2614",
+                                        "country": "United States",
+                                        "longitude": "-87.6712098",
+                                        "latitude": "41.8858315",
+                                        "phone": "8554644222",
+                                        "website_url": "http://www.greatcentralbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "221 N Wood St"
+                                    },
+                                    {
+                                        "id": "1850dc68-99e4-4ae4-8c66-f31497c9129c",
+                                        "name": "Greenstar Brewing At Uncommon Ground",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "3810 N Clark St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60613-2812",
+                                        "country": "United States",
+                                        "longitude": "-87.66001045",
+                                        "latitude": "41.95128495",
+                                        "phone": "8472198834",
+                                        "website_url": "http://www.uncommonground.com",
+                                        "state": "Illinois",
+                                        "street": "3810 N Clark St"
+                                    },
+                                    {
+                                        "id": "49cf8feb-2997-4da6-99ba-6c2228ffaab1",
+                                        "name": "Half Acre Beer Co",
+                                        "brewery_type": "regional",
+                                        "address_1": "4257 N Lincoln Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60618-2953",
+                                        "country": "United States",
+                                        "longitude": "-87.6820201",
+                                        "latitude": "41.9591945",
+                                        "phone": "7737548488",
+                                        "website_url": "http://www.halfacrebeer.com",
+                                        "state": "Illinois",
+                                        "street": "4257 N Lincoln Ave"
+                                    },
+                                    {
+                                        "id": "ba77ee7a-a62c-482e-8c3e-436ef62f11d8",
+                                        "name": "Hamburger Mary's/Andersonville Brewing Company",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "5402 N Clark St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60640-1210",
+                                        "country": "United States",
+                                        "longitude": "-87.66855092",
+                                        "latitude": "41.97997865",
+                                        "phone": "7737846969",
+                                        "website_url": "http://www.hamburgermaryschicago.com",
+                                        "state": "Illinois",
+                                        "street": "5402 N Clark St"
+                                    },
+                                    {
+                                        "id": "51c00792-038b-4a5a-af2c-efade94f169f",
+                                        "name": "Haymarket Pub and Brewery",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "737 W Randolph St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60661-2103",
+                                        "country": "United States",
+                                        "longitude": "-87.6472956",
+                                        "latitude": "41.8841895",
+                                        "phone": "3126380707",
+                                        "website_url": "http://www.haymarketbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "737 W Randolph St"
+                                    },
+                                    {
+                                        "id": "0e74966f-2dd7-422f-92b1-e04e71ea842d",
+                                        "name": "Hopewell Brewing Co",
+                                        "brewery_type": "micro",
+                                        "address_1": "2760 N Milwaukee Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60647-1337",
+                                        "country": "United States",
+                                        "longitude": "-87.7878762",
+                                        "latitude": "41.9973481",
+                                        "phone": "7736986178",
+                                        "website_url": "http://www.hopewellbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "2760 N Milwaukee Ave"
+                                    },
+                                    {
+                                        "id": "abc32f81-11fb-43ca-8f37-04b62a3e0d5c",
+                                        "name": "Horse Thief Hollow Brewery",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "10426 S Western Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60643-2508",
+                                        "country": "United States",
+                                        "longitude": "-87.68195116",
+                                        "latitude": "41.70388555",
+                                        "phone": "7737792739",
+                                        "website_url": "http://www.horsethiefbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "10426 S Western Ave"
+                                    },
+                                    {
+                                        "id": "22e59bb4-690e-41f4-9d63-b65ad57452b1",
+                                        "name": "Illuminated Brew Works",
+                                        "brewery_type": "micro",
+                                        "address_1": "415 N Sangamon St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60642-6546",
+                                        "country": "United States",
+                                        "longitude": "-87.65074933",
+                                        "latitude": "41.88958325",
+                                        "phone": "7737262874",
+                                        "website_url": "http://www.ibw-chicago.com",
+                                        "state": "Illinois",
+                                        "street": "415 N Sangamon St"
+                                    },
+                                    {
+                                        "id": "f9f49460-31c1-4237-b59a-69cf2285e694",
+                                        "name": "Lagunitas Brewing Co",
+                                        "brewery_type": "large",
+                                        "address_1": "2607 W 17th St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60608-1823",
+                                        "country": "United States",
+                                        "longitude": "-87.6932373",
+                                        "latitude": "41.8583603",
+                                        "phone": "7735222503",
+                                        "website_url": "http://www.lagunitas.com",
+                                        "state": "Illinois",
+                                        "street": "2607 W 17th St"
+                                    },
+                                    {
+                                        "id": "760581e5-1ed8-452e-82e5-4a845f088c12",
+                                        "name": "Lake Effect Brewing Company",
+                                        "brewery_type": "micro",
+                                        "address_1": "4727 W Montrose Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60641-1504",
+                                        "country": "United States",
+                                        "longitude": "-87.7459687",
+                                        "latitude": "41.9604369",
+                                        "phone": "3129194473",
+                                        "website_url": "http://www.lakeeffectbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "4727 W Montrose Ave"
+                                    },
+                                    {
+                                        "id": "9af7465c-dcff-4144-a1fe-205ab8da7772",
+                                        "name": "Lo Rez Brewing",
+                                        "brewery_type": "micro",
+                                        "address_1": "2101 S Carpenter St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60608-4529",
+                                        "country": "United States",
+                                        "longitude": "-87.6524429",
+                                        "latitude": "41.8533096",
+                                        "phone": "3128043283",
+                                        "website_url": "http://lorezbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "2101 S Carpenter St"
+                                    },
+                                    {
+                                        "id": "451c482b-18e0-4dd2-bfbc-8b94d25902aa",
+                                        "name": "Local Option",
+                                        "brewery_type": "contract",
+                                        "address_1": "1102 W Webster Ave Ste 1",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60614-7089",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "7733482008",
+                                        "website_url": "http://www.localoptionbier.com",
+                                        "state": "Illinois",
+                                        "street": "1102 W Webster Ave Ste 1"
+                                    },
+                                    {
+                                        "id": "b76e67fb-fe15-41c3-8a43-531bfb7a4d20",
+                                        "name": "Mad Mouse Brewery",
+                                        "brewery_type": "contract",
+                                        "address_1": null,
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60607-5017",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": null,
+                                        "website_url": "http://www.moxeerestaurant.com",
+                                        "state": "Illinois",
+                                        "street": null
+                                    },
+                                    {
+                                        "id": "a1a02e31-20d5-47dc-8a57-607f4b6d77e4",
+                                        "name": "Maplewood Brewing Company",
+                                        "brewery_type": "micro",
+                                        "address_1": "2717 N Maplewood Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60647-1930",
+                                        "country": "United States",
+                                        "longitude": "-87.69106414",
+                                        "latitude": "41.93075205",
+                                        "phone": "7732701061",
+                                        "website_url": "http://www.maplewoodbrew.com",
+                                        "state": "Illinois",
+                                        "street": "2717 N Maplewood Ave"
+                                    },
+                                    {
+                                        "id": "a74e31ee-d113-4a2b-9daf-5d1c6a06aefb",
+                                        "name": "Marz Community Brewing",
+                                        "brewery_type": "proprietor",
+                                        "address_1": "3630 S Iron St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60609",
+                                        "country": "United States",
+                                        "longitude": "-87.6595253",
+                                        "latitude": "41.827819",
+                                        "phone": null,
+                                        "website_url": "http://www.marzbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "3630 S Iron St"
+                                    },
+                                    {
+                                        "id": "10dcbe08-3216-43ef-bddc-1a5235bf68f1",
+                                        "name": "Maverick Ales & Lager",
+                                        "brewery_type": "planning",
+                                        "address_1": null,
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60612",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "4086051508",
+                                        "website_url": "http://www.maverickbrews.com",
+                                        "state": "Illinois",
+                                        "street": null
+                                    },
+                                    {
+                                        "id": "80cea19e-4e59-4e82-94a3-5b3cb0cd29b3",
+                                        "name": "Metropolitan Brewing",
+                                        "brewery_type": "micro",
+                                        "address_1": "3057 N Rockwell St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60618-7917",
+                                        "country": "United States",
+                                        "longitude": "-87.6912391",
+                                        "latitude": "41.9376382",
+                                        "phone": "7734746489",
+                                        "website_url": "http://www.metrobrewing.com",
+                                        "state": "Illinois",
+                                        "street": "3057 N Rockwell St"
+                                    },
+                                    {
+                                        "id": "b7b96ece-e357-4fcf-b195-954b618ca4b6",
+                                        "name": "Middle Brow Beer Company",
+                                        "brewery_type": "micro",
+                                        "address_1": "2840 W Armitage Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60647",
+                                        "country": "United States",
+                                        "longitude": "-87.6988905",
+                                        "latitude": "41.9177811",
+                                        "phone": "7088465511",
+                                        "website_url": "http://www.middlebrowbeer.com",
+                                        "state": "Illinois",
+                                        "street": "2840 W Armitage Ave"
+                                    },
+                                    {
+                                        "id": "f8b36211-efe3-4174-9de6-9b160719e6d6",
+                                        "name": "Moody Tongue Brewing Company",
+                                        "brewery_type": "micro",
+                                        "address_1": "2136 S Peoria St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60608-4526",
+                                        "country": "United States",
+                                        "longitude": "-87.6483419",
+                                        "latitude": "41.8532798",
+                                        "phone": "3126005111",
+                                        "website_url": "http://www.moodytongue.com",
+                                        "state": "Illinois",
+                                        "street": "2136 S Peoria St"
+                                    },
+                                    {
+                                        "id": "84a43e6a-7223-4304-b87f-9502498ab235",
+                                        "name": "Motor Row Brewing",
+                                        "brewery_type": "micro",
+                                        "address_1": "2337 S Michigan Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60616-2104",
+                                        "country": "United States",
+                                        "longitude": "-87.6233063",
+                                        "latitude": "41.8499832",
+                                        "phone": null,
+                                        "website_url": "http://www.motorrowbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "2337 S Michigan Ave"
+                                    },
+                                    {
+                                        "id": "c8e69ab9-60b6-44b9-8188-cf3d719b8d82",
+                                        "name": "Off Color Brewing",
+                                        "brewery_type": "micro",
+                                        "address_1": "3925 W Dickens Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60647-3453",
+                                        "country": "United States",
+                                        "longitude": "-87.72538437",
+                                        "latitude": "41.91892697",
+                                        "phone": null,
+                                        "website_url": "http://www.offcolorbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "3925 W Dickens Ave"
+                                    },
+                                    {
+                                        "id": "bacebf35-8146-4ec3-abe8-545c53d935a7",
+                                        "name": "Old Irving Brewing Co.",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "4419 W Montrose Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60641-2021",
+                                        "country": "United States",
+                                        "longitude": "-87.7394333",
+                                        "latitude": "41.9605751",
+                                        "phone": "7739166421",
+                                        "website_url": "http://www.oldirvingbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "4419 W Montrose Ave"
+                                    },
+                                    {
+                                        "id": "b16226d8-7fb9-4f93-99b8-055edbb68325",
+                                        "name": "Old Town Abbey Ales",
+                                        "brewery_type": "proprietor",
+                                        "address_1": "125 S Jefferson St Unit 2709",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60661-3731",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "3126226544",
+                                        "website_url": "http://www.oldtownabbey.com",
+                                        "state": "Illinois",
+                                        "street": "125 S Jefferson St Unit 2709"
+                                    },
+                                    {
+                                        "id": "a3261795-e389-45f6-9d4f-5ef77392416f",
+                                        "name": "On Tour Brewing Co.",
+                                        "brewery_type": "micro",
+                                        "address_1": "1725 W Hubbard St",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60622-6213",
+                                        "country": "United States",
+                                        "longitude": "-87.670578",
+                                        "latitude": "41.8896255",
+                                        "phone": "3127963119",
+                                        "website_url": "http://www.ontourbrewing.com",
+                                        "state": "Illinois",
+                                        "street": "1725 W Hubbard St"
+                                    },
+                                    {
+                                        "id": "460f7adb-fa4e-4c32-aa32-367065e140fc",
+                                        "name": "One Allegiance Brewing",
+                                        "brewery_type": "planning",
+                                        "address_1": null,
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago Ridge",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60415-1347",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": null,
+                                        "website_url": "http://www.OneAllegiance.com",
+                                        "state": "Illinois",
+                                        "street": null
+                                    },
+                                    {
+                                        "id": "a8004c53-8b0b-4fb1-9516-1230cde7bc8e",
+                                        "name": "Open Outcry",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "10934 S Western Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60643-3228",
+                                        "country": "United States",
+                                        "longitude": "-87.6814747",
+                                        "latitude": "41.6943819",
+                                        "phone": "7736296055",
+                                        "website_url": "http://www.openoutcrybrewing.com",
+                                        "state": "Illinois",
+                                        "street": "10934 S Western Ave"
+                                    },
+                                    {
+                                        "id": "48140e90-91e9-483e-b66f-99b99b1448e9",
+                                        "name": "Piece Brewery",
+                                        "brewery_type": "brewpub",
+                                        "address_1": "1927 W North Ave",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Chicago",
+                                        "state_province": "Illinois",
+                                        "postal_code": "60622-1316",
+                                        "country": "United States",
+                                        "longitude": "-87.6760621",
+                                        "latitude": "41.9102937",
+                                        "phone": "7737724422",
+                                        "website_url": "http://www.piecechicago.com",
+                                        "state": "Illinois",
+                                        "street": "1927 W North Ave"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=UTF-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<text/html; charset=UTF-8 DATA>"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/breweries/random": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "by_city",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "Chicago": {
+                                "value": "Chicago"
+                            },
+                            "san+francisco": {
+                                "value": "san+francisco"
+                            },
+                            "Portland": {
+                                "value": "Portland"
+                            },
+                            "Denver": {
+                                "value": "Denver"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_state",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "Illinois": {
+                                "value": "Illinois"
+                            },
+                            "California": {
+                                "value": "California"
+                            },
+                            "New+York": {
+                                "value": "New+York"
+                            },
+                            "Texas": {
+                                "value": "Texas"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_name",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "BreweryName": {
+                                "value": "BreweryName"
+                            },
+                            "BeerCo": {
+                                "value": "BeerCo"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_tag",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "craft": {
+                                "value": "craft"
+                            },
+                            "micro": {
+                                "value": "micro"
+                            },
+                            "brewpub": {
+                                "value": "brewpub"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_type",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "micro": {
+                                "value": "micro"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_breweries_random"
+                                },
+                                "example": [
+                                    {
+                                        "id": "30f16fe6-539b-4238-affb-1ad6604de275",
+                                        "name": "Quaff On Brewing",
+                                        "brewery_type": "micro",
+                                        "address_1": "1934 State Road 135 N",
+                                        "address_2": null,
+                                        "address_3": null,
+                                        "city": "Nashville",
+                                        "state_province": "Indiana",
+                                        "postal_code": "47448-8418",
+                                        "country": "United States",
+                                        "longitude": null,
+                                        "latitude": null,
+                                        "phone": "8129886006",
+                                        "website_url": "http://www.quaffon.com",
+                                        "state": "Indiana",
+                                        "street": "1934 State Road 135 N"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=UTF-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<text/html; charset=UTF-8 DATA>"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/breweries/search": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "by_city",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "Chicago": {
+                                "value": "Chicago"
+                            },
+                            "san+francisco": {
+                                "value": "san+francisco"
+                            },
+                            "San+Francisco": {
+                                "value": "San+Francisco"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_state",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "Illinois": {
+                                "value": "Illinois"
+                            },
+                            "California": {
+                                "value": "California"
+                            }
+                        }
+                    },
+                    {
+                        "name": "query",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "IPA": {
+                                "value": "IPA"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_name",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "BreweryName": {
+                                "value": "BreweryName"
+                            },
+                            "Stone+Brewing": {
+                                "value": "Stone+Brewing"
+                            },
+                            "Hoppy": {
+                                "value": "Hoppy"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_tag",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "craft": {
+                                "value": "craft"
+                            },
+                            "IPA": {
+                                "value": "IPA"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_postal",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "90210": {
+                                "value": "90210"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_distance",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "by_tags",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "per_page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "20": {
+                                "value": "20"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            },
+                            "name": {
+                                "value": "name"
+                            },
+                            "-name": {
+                                "value": "-name"
+                            },
+                            "city": {
+                                "value": "city"
+                            },
+                            "-city": {
+                                "value": "-city"
+                            },
+                            "state": {
+                                "value": "state"
+                            }
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "q",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "California": {
+                                "value": "California"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_type",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "micro": {
+                                "value": "micro"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_country",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "United+States": {
+                                "value": "United+States"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_tagged",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "dog-friendly": {
+                                "value": "dog-friendly"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_street",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "Main+St": {
+                                "value": "Main+St"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_phone",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "555-123-4567": {
+                                "value": "555-123-4567"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_website",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "www.example.com": {
+                                "value": "www.example.com"
+                            }
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "city",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "state",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "country",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "tag",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "phone",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "postal",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    },
+                    {
+                        "name": "website",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "example": {
+                                "value": "example"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_breweries_search"
+                                },
+                                "example": []
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=UTF-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<text/html; charset=UTF-8 DATA>"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/breweries/autocomplete": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "by_city",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "Chicago": {
+                                "value": "Chicago"
+                            },
+                            "Portland": {
+                                "value": "Portland"
+                            },
+                            "San+Francisco": {
+                                "value": "San+Francisco"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_state",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "Illinois": {
+                                "value": "Illinois"
+                            },
+                            "California": {
+                                "value": "California"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_name",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "BreweryName": {
+                                "value": "BreweryName"
+                            },
+                            "ABC+Brewery": {
+                                "value": "ABC+Brewery"
+                            },
+                            "XYZ+Brewery": {
+                                "value": "XYZ+Brewery"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_type",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "micro": {
+                                "value": "micro"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_tag",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "dog-friendly": {
+                                "value": "dog-friendly"
+                            },
+                            "IPA": {
+                                "value": "IPA"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_postal",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "90210": {
+                                "value": "90210"
+                            },
+                            "12345": {
+                                "value": "12345"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_country",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "United+States": {
+                                "value": "United+States"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_phone",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "555-1234": {
+                                "value": "555-1234"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_website",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "www.example.com": {
+                                "value": "www.example.com"
+                            }
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "25": {
+                                "value": "25"
+                            },
+                            "50": {
+                                "value": "50"
+                            },
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "by_tags",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "sort",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "state": {
+                                "value": "state"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_breweries_autocomplete"
+                                },
+                                "example": []
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=UTF-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<text/html; charset=UTF-8 DATA>"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorSchema": {
+                "type": "string"
+            },
+            "ResponseSchema_breweries": {},
+            "ResponseSchema_breweries_random": {},
+            "ResponseSchema_breweries_search": {},
+            "ResponseSchema_breweries_autocomplete": {}
+        }
+    }
+}

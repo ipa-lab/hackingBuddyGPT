@@ -1,5 +1,6 @@
 {
   "token": "",
+  "strategy": "COT",
   "host": "https://anapioficeandfire.com/api",
   "description": "Access data from the 'A Song of Ice and Fire' series by George R.R. Martin.",
   "correct_endpoints": [

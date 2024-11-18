@@ -1,9 +1,13 @@
 import json
 import re
+from itertools import cycle
 from typing import Any, Dict, Optional, Tuple
 
+import pydantic_core
 from bs4 import BeautifulSoup
+from rich.panel import Panel
 
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.pentesting_information import (
     PenTestingInformation,
@@ -13,6 +17,7 @@ from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analy
 )
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt
+from hackingBuddyGPT.utils import tool_message
 
 
 class ResponseHandler:
@@ -26,7 +31,7 @@ class ResponseHandler:
         response_analyzer (ResponseAnalyzerWithLLM): An instance for analyzing responses with the LLM.
     """
 
-    def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext) -> None:
+    def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext, token:str, prompt_helper:PromptGenerationHelper) -> None:
         """
         Initializes the ResponseHandler with the specified LLM handler.
 
@@ -37,6 +42,13 @@ class ResponseHandler:
         if prompt_context == PromptContext.PENTESTING:
             self.pentesting_information = PenTestingInformation()
             self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler)
+        self.common_endpoints = cycle([ '/api', '/auth', '/users', '/products', '/orders', '/cart', '/checkout', '/payments', '/transactions', '/notifications', '/messages', '/files', '/admin', '/settings', '/status', '/health', '/healthcheck', '/info', '/docs', '/swagger', '/openapi', '/metrics', '/logs', '/analytics', '/search', '/feedback', '/support', '/profile', '/account', '/reports', '/dashboard', '/activity', '/subscriptions', '/webhooks', '/events', '/upload', '/download', '/images', '/videos', '/user/login', '/api/v1', '/api/v2', '/auth/login', '/auth/logout', '/auth/register', '/auth/refresh', '/users/{id}', '/users/me', '/users/profile', '/users/settings', '/products/{id}', '/products/search', '/orders/{id}', '/orders/history', '/cart/items', '/cart/checkout', '/checkout/confirm', '/payments/{id}', '/payments/methods', '/transactions/{id}', '/transactions/history', '/notifications/{id}', '/messages/{id}', '/messages/send', '/files/upload', '/files/{id}', '/admin/users', '/admin/settings', '/settings/preferences', '/search/results', '/feedback/{id}', '/support/tickets', '/profile/update', '/password/reset', '/password/change', '/account/delete', '/account/activate',  '/account/deactivate', '/account/settings', '/account/preferences', '/reports/{id}', '/reports/download',  '/dashboard/stats', '/activity/log', '/subscriptions/{id}', '/subscriptions/cancel', '/webhooks/{id}',  '/events/{id}', '/images/{id}', '/videos/{id}', '/files/download/{id}', '/support/tickets/{id}'])
+        self.query_counter = 0
+        self.repeat_counter = 0
+        self.token = token
+        self.last_path = ""
+        self.prompt_helper = prompt_helper
+
 
     def get_response_for_prompt(self, prompt: str) -> object:
         """
@@ -277,3 +289,116 @@ class ResponseHandler:
     def extract_key_elements_of_response(self, raw_response: Any) ->str:
         status_code, headers, body = self.response_analyzer.parse_http_response(raw_response)
         return "Status Code: " + str(status_code) + "\nHeaders:"+ str(headers)+ "\nBody"+ str(body)
+    def evaluate_response(self, response, completion, prompt_history, log, categorized_endpoints):
+        """
+        Evaluates the response to determine if it is acceptable.
+
+        Args:
+            response (str): The response to evaluate.
+            completion (Completion): The completion object with tool call results.
+            prompt_history (list): History of prompts and responses.
+            log (Log): Logging object for console output.
+
+        Returns:
+            tuple: (bool, prompt_history, result, result_str) indicating if response is acceptable.
+        """
+        # Extract message and tool call information
+        message = completion.choices[0].message
+        tool_call_id = message.tool_calls[0].id
+
+        if self.repeat_counter == 5:
+            self.repeat_counter = 0
+            self.prompt_helper.hint_for_next_round = f'Try this endpoint in the next round {next(self.common_endpoints)}'
+
+        parts = parts = [part for part in response.action.path.split("/") if part]
+        if response.action.path == self.last_path or response.action.path in self.prompt_helper.unsuccessful_paths or response.action.path in self.prompt_helper.found_endpoints:
+            self.prompt_helper.hint_for_next_round = f"DO not try this path {self.last_path}. You already tried this before!"
+            self.repeat_counter += 1
+            return False, prompt_history, None, None
+
+        if self.prompt_helper.current_step == "instance_level" and len(parts) != 2:
+            self.prompt_helper.hint_for_next_round = "Endpoint path has to consist of a resource + / + and id."
+            return False, prompt_history, None, None
+
+        # Add Authorization header if token is available
+        if self.token != "":
+            response.action.headers = {"Authorization": f"Bearer {self.token}"}
+
+        # Convert response to JSON and display it
+        command = json.loads(pydantic_core.to_json(response).decode())
+        log.console.print(Panel(json.dumps(command, indent=2), title="assistant"))
+
+        # Execute the command and parse the result
+        with log.console.status("[bold green]Executing command..."):
+            result = response.execute()
+            self.query_counter += 1
+            result_dict = self.extract_json(result)
+            log.console.print(Panel(result, title="tool"))
+
+        # Parse HTTP status and request path
+        result_str = self.parse_http_status_line(result)
+        request_path = command.get("action", {}).get("path")
+
+        # Check for missing action
+        if "action" not in command:
+            return False, prompt_history, response, completion
+
+        # Determine if the response is successful
+        is_successful = result_str.startswith("200")
+        prompt_history.append(message)
+        self.last_path = request_path
+
+        # Determine if the request path is correct and set the status message
+        if is_successful:
+            # Update current step and add to found endpoints
+            self.prompt_helper.found_endpoints.append(request_path)
+            status_message = f"{request_path} is a correct endpoint"
+        else:
+            # Handle unsuccessful paths and error message
+
+            error_msg = result_dict.get("error", {}).get("message", "unknown error")
+            print(f'ERROR MSG: {error_msg}')
+
+            if result_str.startswith("400"):
+                status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"
+
+                if error_msg not in self.prompt_helper.correct_endpoint_but_some_error.keys():
+                    self.prompt_helper.correct_endpoint_but_some_error[error_msg] = []
+                self.prompt_helper.correct_endpoint_but_some_error[error_msg].append(request_path)
+                self.prompt_helper.hint_for_next_round = error_msg
+
+            else:
+                self.prompt_helper.unsuccessful_paths.append(request_path)
+                status_message = f"{request_path} is not a correct endpoint; Reason: {error_msg}"
+
+        if self.query_counter > 30:
+            self.prompt_helper.current_step += 1
+            self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
+                                                                    categorized_endpoints)
+            self.query_counter = 0
+
+        # Append status message to prompt history
+        prompt_history.append(tool_message(status_message, tool_call_id))
+
+        return is_successful, prompt_history, result, result_str
+
+    def get_next_key(self, current_key, dictionary):
+        keys = list(dictionary.keys())  # Convert keys to a list
+        try:
+            current_index = keys.index(current_key)  # Find the index of the current key
+            return keys[current_index + 1]  # Return the next key
+        except (ValueError, IndexError):
+            return None  # Return None if the current key is not found or there is no next key
+
+    def extract_json(self, response: str) -> dict:
+        try:
+            # Find the start of the JSON body by locating the first '{' character
+            json_start = response.index('{')
+            # Extract the JSON part of the response
+            json_data = response[json_start:]
+            # Convert the JSON string to a dictionary
+            data_dict = json.loads(json_data)
+            return data_dict
+        except (ValueError, json.JSONDecodeError) as e:
+            print(f"Error extracting JSON: {e}")
+            return {}

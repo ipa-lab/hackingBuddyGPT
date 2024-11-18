@@ -1,0 +1,77 @@
+{
+  "token": "your_api_token_here",
+  "host": "https://api.openbrewerydb.org",
+  "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - The Open Brewery DB API is an open-source database that provides information about breweries worldwide.",
+  "correct_endpoints": [
+    "/breweries",
+    "/breweries/random",
+    "/breweries/search",
+    "/breweries/autocomplete"
+  ],
+  "query_params": {
+    "/breweries": [
+      "by_city",
+      "by_state",
+      "per_page",
+      "by_name",
+      "by_tag",
+      "by_type",
+      "by_postal",
+      "sort",
+      "page",
+      "query",
+      "by_tagged"
+    ],
+    "/breweries/random": [
+      "by_city",
+      "by_state",
+      "by_name",
+      "by_tag",
+      "by_type"
+    ],
+    "/breweries/search": [
+      "by_city",
+      "by_state",
+      "query",
+      "by_name",
+      "by_tag",
+      "by_postal",
+      "by_distance",
+      "by_tags",
+      "per_page",
+      "sort",
+      "page",
+      "q",
+      "by_type",
+      "by_country",
+      "by_tagged",
+      "by_street",
+      "by_phone",
+      "by_website",
+      "name",
+      "city",
+      "state",
+      "country",
+      "type",
+      "tag",
+      "phone",
+      "postal",
+      "website"
+    ],
+    "/breweries/autocomplete": [
+      "by_city",
+      "by_state",
+      "by_name",
+      "by_type",
+      "by_tag",
+      "by_postal",
+      "by_country",
+      "by_phone",
+      "by_website",
+      "per_page",
+      "by_tags",
+      "page",
+      "sort"
+    ]
+  }
+}

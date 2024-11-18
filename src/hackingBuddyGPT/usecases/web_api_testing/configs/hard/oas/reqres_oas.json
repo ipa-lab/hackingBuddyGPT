@@ -1,0 +1,2772 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "ReqRes API",
+        "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - ReqRes API is a testing API that allows developers to simulate RESTful interactions.",
+        "termsOfService": "",
+        "contact": {
+            "name": "ReqRes API Contact",
+            "url": "https://reqres.in/#support",
+            "email": "The e-mail address used to contact the 'ReqRes API' is info@reqres.in"
+        },
+        "license": {
+            "name": "MIT License",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "v1"
+    },
+    "servers": [
+        {
+            "url": "https://reqres.in",
+            "description": "Production Server of the ReqRes API.",
+            "x-base-routes": 1
+        }
+    ],
+    "externalDocs": {
+        "url": "https://reqres.in",
+        "description": "Find more about the ReqRes API here:"
+    },
+    "paths": {
+        "/api/users": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_users"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "email": "michael.lawson@reqres.in",
+                                            "first_name": "Michael",
+                                            "last_name": "Lawson",
+                                            "avatar": "https://reqres.in/img/faces/7-image.jpg"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "email": "lindsay.ferguson@reqres.in",
+                                            "first_name": "Lindsay",
+                                            "last_name": "Ferguson",
+                                            "avatar": "https://reqres.in/img/faces/8-image.jpg"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "email": "tobias.funke@reqres.in",
+                                            "first_name": "Tobias",
+                                            "last_name": "Funke",
+                                            "avatar": "https://reqres.in/img/faces/9-image.jpg"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "email": "byron.fields@reqres.in",
+                                            "first_name": "Byron",
+                                            "last_name": "Fields",
+                                            "avatar": "https://reqres.in/img/faces/10-image.jpg"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "email": "george.edwards@reqres.in",
+                                            "first_name": "George",
+                                            "last_name": "Edwards",
+                                            "avatar": "https://reqres.in/img/faces/11-image.jpg"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "email": "rachel.howell@reqres.in",
+                                            "first_name": "Rachel",
+                                            "last_name": "Howell",
+                                            "avatar": "https://reqres.in/img/faces/12-image.jpg"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/users/{id}": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "description": "ID path parameter for the /api/users/{id} route.",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "John": {
+                                "value": "John"
+                            }
+                        }
+                    },
+                    {
+                        "name": "delay",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "3": {
+                                "value": "3"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "desc": {
+                                "value": "desc"
+                            }
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "15": {
+                                "value": "15"
+                            }
+                        }
+                    },
+                    {
+                        "name": "filter",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "active": {
+                                "value": "active"
+                            }
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "John": {
+                                "value": "John"
+                            }
+                        }
+                    },
+                    {
+                        "name": "order",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "asc": {
+                                "value": "asc"
+                            }
+                        }
+                    },
+                    {
+                        "name": "role",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "admin": {
+                                "value": "admin"
+                            }
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "active": {
+                                "value": "active"
+                            }
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "50": {
+                                "value": "50"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_users_id"
+                                },
+                                "example": {
+                                    "data": {
+                                        "id": 1,
+                                        "email": "george.bluth@reqres.in",
+                                        "first_name": "George",
+                                        "last_name": "Bluth",
+                                        "avatar": "https://reqres.in/img/faces/1-image.jpg"
+                                    },
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/products": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "electronics": {
+                                "value": "electronics"
+                            },
+                            "clothing": {
+                                "value": "clothing"
+                            }
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "desc": {
+                                "value": "desc"
+                            },
+                            "asc": {
+                                "value": "asc"
+                            },
+                            "price": {
+                                "value": "price"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "color",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "blue": {
+                                "value": "blue"
+                            }
+                        }
+                    },
+                    {
+                        "name": "size",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "XL": {
+                                "value": "XL"
+                            }
+                        }
+                    },
+                    {
+                        "name": "brand",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "nike": {
+                                "value": "nike"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_products"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "username",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "johndoe": {
+                                "value": "johndoe"
+                            },
+                            "test": {
+                                "value": "test"
+                            },
+                            "myUsername": {
+                                "value": "myUsername"
+                            },
+                            "myusername": {
+                                "value": "myusername"
+                            },
+                            "testuser": {
+                                "value": "testuser"
+                            }
+                        }
+                    },
+                    {
+                        "name": "password",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "pass123": {
+                                "value": "pass123"
+                            },
+                            "12345": {
+                                "value": "12345"
+                            },
+                            "secret": {
+                                "value": "secret"
+                            },
+                            "myPassword": {
+                                "value": "myPassword"
+                            },
+                            "123456": {
+                                "value": "123456"
+                            },
+                            "mypassword": {
+                                "value": "mypassword"
+                            }
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "5": {
+                                "value": "5"
+                            }
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "John": {
+                                "value": "John"
+                            }
+                        }
+                    },
+                    {
+                        "name": "email",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "john@example.com": {
+                                "value": "john@example.com"
+                            }
+                        }
+                    },
+                    {
+                        "name": "job",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "developer": {
+                                "value": "developer"
+                            }
+                        }
+                    },
+                    {
+                        "name": "age",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "25": {
+                                "value": "25"
+                            }
+                        }
+                    },
+                    {
+                        "name": "gender",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "male": {
+                                "value": "male"
+                            }
+                        }
+                    },
+                    {
+                        "name": "city",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "New+York": {
+                                "value": "New+York"
+                            }
+                        }
+                    },
+                    {
+                        "name": "country",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "USA": {
+                                "value": "USA"
+                            }
+                        }
+                    },
+                    {
+                        "name": "role",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "admin": {
+                                "value": "admin"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_login"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/register": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "email",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "test@example.com": {
+                                "value": "test@example.com"
+                            }
+                        }
+                    },
+                    {
+                        "name": "password",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "password123": {
+                                "value": "password123"
+                            },
+                            "pass123": {
+                                "value": "pass123"
+                            }
+                        }
+                    },
+                    {
+                        "name": "username",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "johndoe": {
+                                "value": "johndoe"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_register"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/comments": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_comments"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/categories": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_categories"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/photos": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_photos"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/events": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_events"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/invoices": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_invoices"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/jobs": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_jobs"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{id}": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "description": "ID path parameter for the /api/{id} route.",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_id"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/orders": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_orders"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/dashboard": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_dashboard"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/products/{id}": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "description": "ID path parameter for the /api/products/{id} route.",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "clothing": {
+                                "value": "clothing"
+                            }
+                        }
+                    },
+                    {
+                        "name": "color",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "blue": {
+                                "value": "blue"
+                            }
+                        }
+                    },
+                    {
+                        "name": "param1",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "value1": {
+                                "value": "value1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "param2",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "value2": {
+                                "value": "value2"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_products_id"
+                                },
+                                "example": {
+                                    "data": {
+                                        "id": 1,
+                                        "name": "cerulean",
+                                        "year": 2000,
+                                        "color": "#98B2D1",
+                                        "pantone_value": "15-4020"
+                                    },
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/settings": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_settings"
+                                },
+                                "example": {
+                                    "page": 1,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 1,
+                                            "name": "cerulean",
+                                            "year": 2000,
+                                            "color": "#98B2D1",
+                                            "pantone_value": "15-4020"
+                                        },
+                                        {
+                                            "id": 2,
+                                            "name": "fuchsia rose",
+                                            "year": 2001,
+                                            "color": "#C74375",
+                                            "pantone_value": "17-2031"
+                                        },
+                                        {
+                                            "id": 3,
+                                            "name": "true red",
+                                            "year": 2002,
+                                            "color": "#BF1932",
+                                            "pantone_value": "19-1664"
+                                        },
+                                        {
+                                            "id": 4,
+                                            "name": "aqua sky",
+                                            "year": 2003,
+                                            "color": "#7BC4C4",
+                                            "pantone_value": "14-4811"
+                                        },
+                                        {
+                                            "id": 5,
+                                            "name": "tigerlily",
+                                            "year": 2004,
+                                            "color": "#E2583E",
+                                            "pantone_value": "17-1456"
+                                        },
+                                        {
+                                            "id": 6,
+                                            "name": "blue turquoise",
+                                            "year": 2005,
+                                            "color": "#53B0AE",
+                                            "pantone_value": "15-5217"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/messages": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_messages"
+                                },
+                                "example": {
+                                    "page": 1,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 1,
+                                            "name": "cerulean",
+                                            "year": 2000,
+                                            "color": "#98B2D1",
+                                            "pantone_value": "15-4020"
+                                        },
+                                        {
+                                            "id": 2,
+                                            "name": "fuchsia rose",
+                                            "year": 2001,
+                                            "color": "#C74375",
+                                            "pantone_value": "17-2031"
+                                        },
+                                        {
+                                            "id": 3,
+                                            "name": "true red",
+                                            "year": 2002,
+                                            "color": "#BF1932",
+                                            "pantone_value": "19-1664"
+                                        },
+                                        {
+                                            "id": 4,
+                                            "name": "aqua sky",
+                                            "year": 2003,
+                                            "color": "#7BC4C4",
+                                            "pantone_value": "14-4811"
+                                        },
+                                        {
+                                            "id": 5,
+                                            "name": "tigerlily",
+                                            "year": 2004,
+                                            "color": "#E2583E",
+                                            "pantone_value": "17-1456"
+                                        },
+                                        {
+                                            "id": 6,
+                                            "name": "blue turquoise",
+                                            "year": 2005,
+                                            "color": "#53B0AE",
+                                            "pantone_value": "15-5217"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/todos": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_todos"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/posts": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_posts"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/resources": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_resources"
+                                },
+                                "example": {
+                                    "page": 2,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 7,
+                                            "name": "sand dollar",
+                                            "year": 2006,
+                                            "color": "#DECDBE",
+                                            "pantone_value": "13-1106"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "name": "chili pepper",
+                                            "year": 2007,
+                                            "color": "#9B1B30",
+                                            "pantone_value": "19-1557"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "name": "blue iris",
+                                            "year": 2008,
+                                            "color": "#5A5B9F",
+                                            "pantone_value": "18-3943"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "name": "mimosa",
+                                            "year": 2009,
+                                            "color": "#F0C05A",
+                                            "pantone_value": "14-0848"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "name": "turquoise",
+                                            "year": 2010,
+                                            "color": "#45B5AA",
+                                            "pantone_value": "15-5519"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "name": "honeysuckle",
+                                            "year": 2011,
+                                            "color": "#D94F70",
+                                            "pantone_value": "18-2120"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/teams": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_teams"
+                                },
+                                "example": {
+                                    "page": 1,
+                                    "per_page": 6,
+                                    "total": 12,
+                                    "total_pages": 2,
+                                    "data": [
+                                        {
+                                            "id": 1,
+                                            "name": "cerulean",
+                                            "year": 2000,
+                                            "color": "#98B2D1",
+                                            "pantone_value": "15-4020"
+                                        },
+                                        {
+                                            "id": 2,
+                                            "name": "fuchsia rose",
+                                            "year": 2001,
+                                            "color": "#C74375",
+                                            "pantone_value": "17-2031"
+                                        },
+                                        {
+                                            "id": 3,
+                                            "name": "true red",
+                                            "year": 2002,
+                                            "color": "#BF1932",
+                                            "pantone_value": "19-1664"
+                                        },
+                                        {
+                                            "id": 4,
+                                            "name": "aqua sky",
+                                            "year": 2003,
+                                            "color": "#7BC4C4",
+                                            "pantone_value": "14-4811"
+                                        },
+                                        {
+                                            "id": 5,
+                                            "name": "tigerlily",
+                                            "year": 2004,
+                                            "color": "#E2583E",
+                                            "pantone_value": "17-1456"
+                                        },
+                                        {
+                                            "id": 6,
+                                            "name": "blue turquoise",
+                                            "year": 2005,
+                                            "color": "#53B0AE",
+                                            "pantone_value": "15-5217"
+                                        }
+                                    ],
+                                    "support": {
+                                        "url": "https://reqres.in/#support-heading",
+                                        "text": "To keep ReqRes free, contributions towards server costs are appreciated!"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <!-- Google Tag Manager -->\n        <script>\n            ;(function (w, d, s, l, i) {\n                w[l] = w[l] || []\n                w[l].push({\n                    'gtm.start': new Date().getTime(),\n                    event: 'gtm.js',\n                })\n                var f = d.getElementsByTagName(s)[0],\n                    j = d.createEle..."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorSchema": {
+                "type": "string"
+            },
+            "ResponseSchema_api_users": {},
+            "ResponseSchema_api_users_id": {},
+            "ResponseSchema_api_products": {},
+            "ResponseSchema_api_login": {},
+            "ResponseSchema_api_register": {},
+            "ResponseSchema_api_comments": {},
+            "ResponseSchema_api_categories": {},
+            "ResponseSchema_api_photos": {},
+            "ResponseSchema_api_events": {},
+            "ResponseSchema_api_invoices": {},
+            "ResponseSchema_api_jobs": {},
+            "ResponseSchema_api_id": {},
+            "ResponseSchema_api_orders": {},
+            "ResponseSchema_api_dashboard": {},
+            "ResponseSchema_api_products_id": {},
+            "ResponseSchema_api_settings": {},
+            "ResponseSchema_api_messages": {},
+            "ResponseSchema_api_todos": {},
+            "ResponseSchema_api_posts": {},
+            "ResponseSchema_api_resources": {},
+            "ResponseSchema_api_teams": {}
+        }
+    }
+}

@@ -1,0 +1,559 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Random User Generator API",
+        "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - The Random User Generator API is a tool that creates random user profiles with various information such as name, email, address, and more.",
+        "termsOfService": "https://randomuser.me/documentation",
+        "contact": {
+            "name": "Random User Generator API Contact",
+            "url": "https://randomuser.me/documentation#contact",
+            "email": "contact@randomuser.me"
+        },
+        "license": {
+            "name": "MIT License",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "v1"
+    },
+    "servers": [
+        {
+            "url": "https://randomuser.me",
+            "description": "Production Server of the Random User Generator API.",
+            "x-base-routes": 1
+        }
+    ],
+    "externalDocs": {
+        "url": "https://randomuser.me/documentation",
+        "description": "Find more about the Random User Generator API here:"
+    },
+    "paths": {
+        "/api": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "results",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "5": {
+                                "value": "5"
+                            },
+                            "10": {
+                                "value": "10"
+                            },
+                            "3": {
+                                "value": "3"
+                            }
+                        }
+                    },
+                    {
+                        "name": "gender",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "male": {
+                                "value": "male"
+                            },
+                            "female": {
+                                "value": "female"
+                            }
+                        }
+                    },
+                    {
+                        "name": "nat",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "us": {
+                                "value": "us"
+                            },
+                            "gb": {
+                                "value": "gb"
+                            },
+                            "ca": {
+                                "value": "ca"
+                            },
+                            "gb,ca,au": {
+                                "value": "gb,ca,au"
+                            },
+                            "au": {
+                                "value": "au"
+                            }
+                        }
+                    },
+                    {
+                        "name": "inc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "name,email": {
+                                "value": "name,email"
+                            },
+                            "name,email,dob": {
+                                "value": "name,email,dob"
+                            },
+                            "name": {
+                                "value": "name"
+                            },
+                            "location": {
+                                "value": "location"
+                            },
+                            "name,email,phone": {
+                                "value": "name,email,phone"
+                            },
+                            "picture": {
+                                "value": "picture"
+                            },
+                            "gender": {
+                                "value": "gender"
+                            }
+                        }
+                    },
+                    {
+                        "name": "exc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "login": {
+                                "value": "login"
+                            },
+                            "age": {
+                                "value": "age"
+                            },
+                            "picture,phone": {
+                                "value": "picture,phone"
+                            },
+                            "login,registered": {
+                                "value": "login,registered"
+                            },
+                            "registered": {
+                                "value": "registered"
+                            },
+                            "id": {
+                                "value": "id"
+                            },
+                            "cell,dob": {
+                                "value": "cell,dob"
+                            }
+                        }
+                    },
+                    {
+                        "name": "seed",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "abc123": {
+                                "value": "abc123"
+                            },
+                            "xyz789": {
+                                "value": "xyz789"
+                            },
+                            "123": {
+                                "value": "123"
+                            },
+                            "12345": {
+                                "value": "12345"
+                            },
+                            "abc": {
+                                "value": "abc"
+                            }
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            },
+                            "3": {
+                                "value": "3"
+                            }
+                        }
+                    },
+                    {
+                        "name": "password",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "upper": {
+                                "value": "upper"
+                            }
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "json": {
+                                "value": "json"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api"
+                                },
+                                "example": {
+                                    "results": [
+                                        {
+                                            "gender": "male",
+                                            "name": {
+                                                "title": "Mr",
+                                                "first": "Johan",
+                                                "last": "Poulsen"
+                                            },
+                                            "location": {
+                                                "street": {
+                                                    "number": 9535,
+                                                    "name": "Hjejlevej"
+                                                },
+                                                "city": "\u00d8lstykke",
+                                                "state": "Syddanmark",
+                                                "country": "Denmark",
+                                                "postcode": 52157,
+                                                "coordinates": {
+                                                    "latitude": "-44.5911",
+                                                    "longitude": "-135.7536"
+                                                },
+                                                "timezone": {
+                                                    "offset": "+9:00",
+                                                    "description": "Tokyo, Seoul, Osaka, Sapporo, Yakutsk"
+                                                }
+                                            },
+                                            "email": "johan.poulsen@example.com",
+                                            "login": {
+                                                "uuid": "6cdf5fe7-4df2-40b4-8644-10d4d1e808c3",
+                                                "username": "brownelephant186",
+                                                "password": "girsl",
+                                                "salt": "r38lcSsa",
+                                                "md5": "a4d45e80398da1b54c0c2b8a1493ceeb",
+                                                "sha1": "71a8da00b3584ab519f8a6887cdfa60eb347b427",
+                                                "sha256": "2a71f6e4a9520979fed9242abda5f6794133b78402c5e5bbeda87311b8651789"
+                                            },
+                                            "dob": {
+                                                "date": "1945-07-07T14:56:14.104Z",
+                                                "age": 78
+                                            },
+                                            "registered": {
+                                                "date": "2019-03-24T11:25:46.716Z",
+                                                "age": 4
+                                            },
+                                            "phone": "80950572",
+                                            "cell": "84221573",
+                                            "id": {
+                                                "name": "CPR",
+                                                "value": "070745-9054"
+                                            },
+                                            "picture": {
+                                                "large": "https://randomuser.me/api/portraits/men/27.jpg",
+                                                "medium": "https://randomuser.me/api/portraits/med/men/27.jpg",
+                                                "thumbnail": "https://randomuser.me/api/portraits/thumb/men/27.jpg"
+                                            },
+                                            "nat": "DK"
+                                        },
+                                        {
+                                            "gender": "male",
+                                            "name": {
+                                                "title": "Mr",
+                                                "first": "Lincoln",
+                                                "last": "Jones"
+                                            },
+                                            "location": {
+                                                "street": {
+                                                    "number": 1742,
+                                                    "name": "Dee Street"
+                                                },
+                                                "city": "Hamilton",
+                                                "state": "Tasman",
+                                                "country": "New Zealand",
+                                                "postcode": 50728,
+                                                "coordinates": {
+                                                    "latitude": "59.8304",
+                                                    "longitude": "-17.7885"
+                                                },
+                                                "timezone": {
+                                                    "offset": "+9:30",
+                                                    "description": "Adelaide, Darwin"
+                                                }
+                                            },
+                                            "email": "lincoln.jones@example.com",
+                                            "login": {
+                                                "uuid": "3418b5e0-87c5-4a5e-a34c-7ff77a3d18fc",
+                                                "username": "yellowrabbit180",
+                                                "password": "leelee",
+                                                "salt": "99DBPn2f",
+                                                "md5": "54edbc561e2750576cfd6c02644d739c",
+                                                "sha1": "4f451956163075a9b11a2516bfe5376e2d295269",
+                                                "sha256": "6386dde4920e18d535c66db995f4e18e885549f708d3da8448d96a5c174e4551"
+                                            },
+                                            "dob": {
+                                                "date": "1997-02-26T06:07:37.675Z",
+                                                "age": 26
+                                            },
+                                            "registered": {
+                                                "date": "2002-04-21T21:13:03.294Z",
+                                                "age": 21
+                                            },
+                                            "phone": "(696)-434-2887",
+                                            "cell": "(380)-518-8819",
+                                            "id": {
+                                                "name": "",
+                                                "value": null
+                                            },
+                                            "picture": {
+                                                "large": "https://randomuser.me/api/portraits/men/4.jpg",
+                                                "medium": "https://randomuser.me/api/portraits/med/men/4.jpg",
+                                                "thumbnail": "https://randomuser.me/api/portraits/thumb/men/4.jpg"
+                                            },
+                                            "nat": "NZ"
+                                        },
+                                        {
+                                            "gender": "female",
+                                            "name": {
+                                                "title": "Ms",
+                                                "first": "Addison",
+                                                "last": "Margaret"
+                                            },
+                                            "location": {
+                                                "street": {
+                                                    "number": 5522,
+                                                    "name": "Richmond Ave"
+                                                },
+                                                "city": "Chipman",
+                                                "state": "New Brunswick",
+                                                "country": "Canada",
+                                                "postcode": "S1T 9T5",
+                                                "coordinates": {
+                                                    "latitude": "-73.8070",
+                                                    "longitude": "153.0364"
+                                                },
+                                                "timezone": {
+                                                    "offset": "-8:00",
+                                                    "description": "Pacific Time (US & Canada)"
+                                                }
+                                            },
+                                            "email": "addison.margaret@example.com",
+                                            "login": {
+                                                "uuid": "00afb767-3dcb-45d1-82dd-d2e190ac28c3",
+                                                "username": "angrysnake518",
+                                                "password": "clean",
+                                                "salt": "QSZ2pDHb",
+                                                "md5": "32b63e85de82032b0719430383ece118",
+                                                "sha1": "5b602393aa3a9103c2f9e0db74de613bd9c49592",
+                                                "sha256": "9b359baf86666a94fb8a3f88ea81ec899d7cb2e6dfa0f02a99f6b75a7ae1b16c"
+                                            },
+                                            "dob": {
+                                                "date": "1955-12-26T22:30:16.149Z",
+                                                "age": 67
+                                            },
+                                            "registered": {
+                                                "date": "2009-05-28T22:27:19.930Z",
+                                                "age": 14
+                                            },
+                                            "phone": "X74 T36-9528",
+                                            "cell": "T44 R90-3799",
+                                            "id": {
+                                                "name": "SIN",
+                                                "value": "510788425"
+                                            },
+                                            "picture": {
+                                                "large": "https://randomuser.me/api/portraits/women/65.jpg",
+                                                "medium": "https://randomuser.me/api/portraits/med/women/65.jpg",
+                                                "thumbnail": "https://randomuser.me/api/portraits/thumb/women/65.jpg"
+                                            },
+                                            "nat": "CA"
+                                        },
+                                        {
+                                            "gender": "female",
+                                            "name": {
+                                                "title": "Ms",
+                                                "first": "Cindy",
+                                                "last": "Nelson"
+                                            },
+                                            "location": {
+                                                "street": {
+                                                    "number": 1038,
+                                                    "name": "Samaritan Dr"
+                                                },
+                                                "city": "The Colony",
+                                                "state": "Wyoming",
+                                                "country": "United States",
+                                                "postcode": 46282,
+                                                "coordinates": {
+                                                    "latitude": "-45.5792",
+                                                    "longitude": "175.6449"
+                                                },
+                                                "timezone": {
+                                                    "offset": "-10:00",
+                                                    "description": "Hawaii"
+                                                }
+                                            },
+                                            "email": "cindy.nelson@example.com",
+                                            "login": {
+                                                "uuid": "abdd3780-30c7-435a-ab7c-5af84ec77af0",
+                                                "username": "redtiger675",
+                                                "password": "ramrod",
+                                                "salt": "DiSjWTeB",
+                                                "md5": "ce540ea4a9b37e6b8b50bc0caacfb11d",
+                                                "sha1": "590ce2f59c4bb308518fb2d7d4ada4215daab5aa",
+                                                "sha256": "9ce6b40c439b91f42f2587febec5f69021387636aa4fca9859e6c242045a941a"
+                                            },
+                                            "dob": {
+                                                "date": "1954-06-09T11:43:50.873Z",
+                                                "age": 69
+                                            },
+                                            "registered": {
+                                                "date": "2021-08-17T20:00:57.274Z",
+                                                "age": 2
+                                            },
+                                            "phone": "(663) 911-2632",
+                                            "cell": "(964) 252-6980",
+                                            "id": {
+                                                "name": "SSN",
+                                                "value": "072-90-7114"
+                                            },
+                                            "picture": {
+                                                "large": "https://randomuser.me/api/portraits/women/81.jpg",
+                                                "medium": "https://randomuser.me/api/portraits/med/women/81.jpg",
+                                                "thumbnail": "https://randomuser.me/api/portraits/thumb/women/81.jpg"
+                                            },
+                                            "nat": "US"
+                                        },
+                                        {
+                                            "gender": "female",
+                                            "name": {
+                                                "title": "Miss",
+                                                "first": "Alisa",
+                                                "last": "Doniy"
+                                            },
+                                            "location": {
+                                                "street": {
+                                                    "number": 8965,
+                                                    "name": "Proviantska"
+                                                },
+                                                "city": "Berislav",
+                                                "state": "Chernivecka",
+                                                "country": "Ukraine",
+                                                "postcode": 18133,
+                                                "coordinates": {
+                                                    "latitude": "-24.7948",
+                                                    "longitude": "107.1470"
+                                                },
+                                                "timezone": {
+                                                    "offset": "+1:00",
+                                                    "description": "Brussels, Copenhagen, Madrid, Paris"
+                                                }
+                                            },
+                                            "email": "alisa.doniy@example.com",
+                                            "login": {
+                                                "uuid": "ffea280f-fe09-4fa7-a68e-f2855ea9331f",
+                                                "username": "whiteleopard488",
+                                                "password": "animated",
+                                                "salt": "KktXz2sE",
+                                                "md5": "488cfc1e38718aa91f2b4fc7bb42da11",
+                                                "sha1": "39cf7719520bae4461330c3b5b5249c300924d18",
+                                                "sha256": "2fe1c3940445b221576d6be69b998a6d87822e4ede66d2cedbdf9a1d020a1421"
+                                            },
+                                            "dob": {
+                                                "date": "1993-01-31T20:15:09.566Z",
+                                                "age": 30
+                                            },
+                                            "registered": {
+                                                "date": "2018-05-17T05:36:55.798Z",
+                                                "age": 5
+                                            },
+                                            "phone": "(099) I39-5036",
+                                            "cell": "(097) M02-7255",
+                                            "id": {
+                                                "name": "",
+                                                "value": null
+                                            },
+                                            "picture": {
+                                                "large": "https://randomuser.me/api/portraits/women/36.jpg",
+                                                "medium": "https://randomuser.me/api/portraits/med/women/36.jpg",
+                                                "thumbnail": "https://randomuser.me/api/portraits/thumb/women/36.jpg"
+                                            },
+                                            "nat": "UA"
+                                        }
+                                    ],
+                                    "info": {
+                                        "seed": "c7052d849fc4053c",
+                                        "results": 5,
+                                        "page": 1,
+                                        "version": "1.4"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/plain; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "Not Found"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorSchema": {
+                "type": "string"
+            },
+            "ResponseSchema_api": {}
+        }
+    }
+}

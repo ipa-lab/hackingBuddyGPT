@@ -1,0 +1,2107 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "CheapShark API",
+        "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - The CheapShark API is an application programming interface that provides access to pricing and deals data for video games.",
+        "termsOfService": "https://apidocs.cheapshark.com",
+        "contact": {
+            "name": "CheapShark API Contact",
+            "url": "https://www.cheapshark.com/api",
+            "email": "support@cheapshark.com"
+        },
+        "license": {
+            "name": "MIT License",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "v1"
+    },
+    "servers": [
+        {
+            "url": "https://www.cheapshark.com/api",
+            "description": "Production Server of the CheapShark API.",
+            "x-base-routes": 1
+        }
+    ],
+    "externalDocs": {
+        "url": "https://apidocs.cheapshark.com",
+        "description": "Find more about the CheapShark API here:"
+    },
+    "paths": {
+        "/1.0/deals": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "storeID",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "title",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "batman": {
+                                "value": "batman"
+                            },
+                            "fallout": {
+                                "value": "fallout"
+                            },
+                            "game": {
+                                "value": "game"
+                            }
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            },
+                            "5": {
+                                "value": "5"
+                            },
+                            "20": {
+                                "value": "20"
+                            }
+                        }
+                    },
+                    {
+                        "name": "desc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "examples": {
+                            "true": {
+                                "value": "true"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "upperPrice",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "50": {
+                                "value": "50"
+                            }
+                        }
+                    },
+                    {
+                        "name": "lowerPrice",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sortBy",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "price": {
+                                "value": "price"
+                            }
+                        }
+                    },
+                    {
+                        "name": "pageNumber",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "onSale",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            },
+                            "true": {
+                                "value": "true"
+                            }
+                        }
+                    },
+                    {
+                        "name": "AAA",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            },
+                            "0": {
+                                "value": "0"
+                            },
+                            "true": {
+                                "value": "true"
+                            }
+                        }
+                    },
+                    {
+                        "name": "release",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2022": {
+                                "value": "2022"
+                            }
+                        }
+                    },
+                    {
+                        "name": "steamRating",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "70": {
+                                "value": "70"
+                            }
+                        }
+                    },
+                    {
+                        "name": "metacritic",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "75": {
+                                "value": "75"
+                            }
+                        }
+                    },
+                    {
+                        "name": "exact",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "cheaper",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "steamAppID",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    },
+                    {
+                        "name": "limit",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "x-null"
+                        },
+                        "examples": {}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_1.0_deals"
+                                },
+                                "example": [
+                                    {
+                                        "internalName": "LEGOBATMAN2DCSUPERHEROES",
+                                        "title": "LEGO Batman 2: DC Super Heroes",
+                                        "metacriticLink": "/game/lego-batman-2-dc-super-heroes/",
+                                        "dealID": "PLK%2BInMYUooml%2FkEGWW%2Bw8MluNwy5q9ZSzKcLaciTU4%3D",
+                                        "storeID": "1",
+                                        "gameID": "88269",
+                                        "salePrice": "4.99",
+                                        "normalPrice": "19.99",
+                                        "isOnSale": "1",
+                                        "savings": "75.037519",
+                                        "metacriticScore": "81",
+                                        "steamRatingText": "Very Positive",
+                                        "steamRatingPercent": "93",
+                                        "steamRatingCount": "4381",
+                                        "steamAppID": "213330",
+                                        "releaseDate": 1340064000,
+                                        "lastChange": 1700592589,
+                                        "dealRating": "8.2",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/213330/capsule_sm_120.jpg?t=1681923916"
+                                    },
+                                    {
+                                        "internalName": "LEGOBATMANTHEVIDEOGAME",
+                                        "title": "LEGO Batman: The Videogame",
+                                        "metacriticLink": "/game/lego-batman-the-videogame/",
+                                        "dealID": "uCO441gpSEGJP6K9x66LeC7yi7ILolaTmvo8lOMCdIc%3D",
+                                        "storeID": "1",
+                                        "gameID": "2425",
+                                        "salePrice": "4.99",
+                                        "normalPrice": "19.99",
+                                        "isOnSale": "1",
+                                        "savings": "75.037519",
+                                        "metacriticScore": "80",
+                                        "steamRatingText": "Very Positive",
+                                        "steamRatingPercent": "89",
+                                        "steamRatingCount": "7248",
+                                        "steamAppID": "21000",
+                                        "releaseDate": 1222128000,
+                                        "lastChange": 1700592489,
+                                        "dealRating": "8.2",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/21000/capsule_sm_120.jpg?t=1681923978"
+                                    },
+                                    {
+                                        "internalName": "BATMANARKHAMKNIGHT",
+                                        "title": "Batman: Arkham Knight",
+                                        "metacriticLink": "/game/batman-arkham-knight/",
+                                        "dealID": "%2BRR8iNYa2ZB%2FIhfZml8B1USYGhQVeYAv0Tl8JPkZ8UM%3D",
+                                        "storeID": "1",
+                                        "gameID": "107598",
+                                        "salePrice": "3.99",
+                                        "normalPrice": "19.99",
+                                        "isOnSale": "1",
+                                        "savings": "80.040020",
+                                        "metacriticScore": "70",
+                                        "steamRatingText": "Very Positive",
+                                        "steamRatingPercent": "90",
+                                        "steamRatingCount": "71426",
+                                        "steamAppID": "208650",
+                                        "releaseDate": 1435017600,
+                                        "lastChange": 1700592217,
+                                        "dealRating": "8.1",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/208650/capsule_sm_120.jpg?t=1694042300"
+                                    },
+                                    {
+                                        "internalName": "BATMANARKHAMORIGINS",
+                                        "title": "Batman: Arkham Origins",
+                                        "metacriticLink": "/game/batman-arkham-origins/",
+                                        "dealID": "6YSaSYFA%2Bjmj9L4HsCBLThDoYEUhWPQ1ssIZ0t2k%2BnU%3D",
+                                        "storeID": "1",
+                                        "gameID": "97941",
+                                        "salePrice": "4.99",
+                                        "normalPrice": "19.99",
+                                        "isOnSale": "1",
+                                        "savings": "75.037519",
+                                        "metacriticScore": "74",
+                                        "steamRatingText": "Very Positive",
+                                        "steamRatingPercent": "88",
+                                        "steamRatingCount": "30484",
+                                        "steamAppID": "209000",
+                                        "releaseDate": 1382572800,
+                                        "lastChange": 1700592250,
+                                        "dealRating": "7.8",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/209000/capsule_sm_120.jpg?t=1681234740"
+                                    },
+                                    {
+                                        "internalName": "BATMANARKHAMORIGINSBLACKGATEDELUXEEDITION",
+                                        "title": "Batman: Arkham Origins Blackgate - Deluxe Edition",
+                                        "metacriticLink": "/game/batman-arkham-origins-blackgate-deluxe-edition/",
+                                        "dealID": "6aW%2BsA5i2cZ8pb2wvI0kuSfspYxuaeFKWl2iWWoCU7k%3D",
+                                        "storeID": "1",
+                                        "gameID": "107869",
+                                        "salePrice": "4.99",
+                                        "normalPrice": "19.99",
+                                        "isOnSale": "1",
+                                        "savings": "75.037519",
+                                        "metacriticScore": "60",
+                                        "steamRatingText": "Mixed",
+                                        "steamRatingPercent": "43",
+                                        "steamRatingCount": "1230",
+                                        "steamAppID": "267490",
+                                        "releaseDate": 1396310400,
+                                        "lastChange": 1700592750,
+                                        "dealRating": "7.3",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/267490/capsule_sm_120.jpg?t=1651865751"
+                                    },
+                                    {
+                                        "internalName": "BATMANARKHAMCOLLECTION",
+                                        "title": "Batman: Arkham Collection",
+                                        "metacriticLink": null,
+                                        "dealID": "g5zcqhDot%2FhT5s%2BIfHgygYaagbxBH09cSgR5xdyVS5g%3D",
+                                        "storeID": "1",
+                                        "gameID": "198317",
+                                        "salePrice": "8.99",
+                                        "normalPrice": "59.99",
+                                        "isOnSale": "1",
+                                        "savings": "85.014169",
+                                        "metacriticScore": "0",
+                                        "steamRatingText": "Very Positive",
+                                        "steamRatingPercent": "93",
+                                        "steamRatingCount": "151105",
+                                        "steamAppID": "320795",
+                                        "releaseDate": 0,
+                                        "lastChange": 1700592441,
+                                        "dealRating": "6.7",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/subs/320795/capsule_sm_120.jpg?t=1636658684"
+                                    },
+                                    {
+                                        "internalName": "BATMANTHETELLTALESERIES",
+                                        "title": "Batman - The Telltale Series",
+                                        "metacriticLink": "/game/batman-the-telltale-series/",
+                                        "dealID": "jKMCsUExLDEtg%2FOa5LB5JMdWAa%2B%2BDEORIDEtb9L4a9w%3D",
+                                        "storeID": "1",
+                                        "gameID": "155074",
+                                        "salePrice": "5.99",
+                                        "normalPrice": "14.99",
+                                        "isOnSale": "1",
+                                        "savings": "60.040027",
+                                        "metacriticScore": "64",
+                                        "steamRatingText": "Very Positive",
+                                        "steamRatingPercent": "84",
+                                        "steamRatingCount": "11816",
+                                        "steamAppID": "498240",
+                                        "releaseDate": 1470096000,
+                                        "lastChange": 1700592432,
+                                        "dealRating": "6.3",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/498240/capsule_sm_120.jpg?t=1686747257"
+                                    },
+                                    {
+                                        "internalName": "BATMANARKHAMASYLUMGAMEOFTHEYEAREDITION",
+                                        "title": "Batman: Arkham Asylum Game of the Year Edition",
+                                        "metacriticLink": "/game/batman-arkham-asylum-game-of-the-year-edition/",
+                                        "dealID": "HR5V6hEl39sGwYodeqwwWuo8dKtKukteV0W9we9pI7I%3D",
+                                        "storeID": "1",
+                                        "gameID": "146",
+                                        "salePrice": "4.99",
+                                        "normalPrice": "19.99",
+                                        "isOnSale": "1",
+                                        "savings": "75.037519",
+                                        "metacriticScore": "0",
+                                        "steamRatingText": "Overwhelmingly Positive",
+                                        "steamRatingPercent": "96",
+                                        "steamRatingCount": "39510",
+                                        "steamAppID": "35140",
+                                        "releaseDate": 1269561600,
+                                        "lastChange": 1700592360,
+                                        "dealRating": "6.2",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/35140/capsule_sm_120.jpg?t=1681938587"
+                                    },
+                                    {
+                                        "internalName": "BATMANARKHAMCITYGAMEOFTHEYEAREDITION",
+                                        "title": "Batman Arkham City Game of the Year Edition",
+                                        "metacriticLink": "/game/batman-arkham-city-game-of-the-year-edition/",
+                                        "dealID": "RPqJV%2BI3Cw5NOoq%2B89MzssePMS%2BQgv2M1OnDzsdR0Jo%3D",
+                                        "storeID": "1",
+                                        "gameID": "89095",
+                                        "salePrice": "4.99",
+                                        "normalPrice": "19.99",
+                                        "isOnSale": "1",
+                                        "savings": "75.037519",
+                                        "metacriticScore": "0",
+                                        "steamRatingText": "Overwhelmingly Positive",
+                                        "steamRatingPercent": "95",
+                                        "steamRatingCount": "39831",
+                                        "steamAppID": "200260",
+                                        "releaseDate": 1346976000,
+                                        "lastChange": 1700592325,
+                                        "dealRating": "6.2",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/200260/capsule_sm_120.jpg?t=1681938743"
+                                    },
+                                    {
+                                        "internalName": "LEGOBATMAN3BEYONDGOTHAM",
+                                        "title": "LEGO Batman 3: Beyond Gotham",
+                                        "metacriticLink": "/game/lego-batman-3-beyond-gotham/",
+                                        "dealID": "%2BA3ge6nu7jMLKH1mWUj9rq6VYWRTsENzY%2B08DdMR1FE%3D",
+                                        "storeID": "1",
+                                        "gameID": "126255",
+                                        "salePrice": "4.99",
+                                        "normalPrice": "19.99",
+                                        "isOnSale": "1",
+                                        "savings": "75.037519",
+                                        "metacriticScore": "0",
+                                        "steamRatingText": "Very Positive",
+                                        "steamRatingPercent": "89",
+                                        "steamRatingCount": "5026",
+                                        "steamAppID": "313690",
+                                        "releaseDate": 1415664000,
+                                        "lastChange": 1700592310,
+                                        "dealRating": "6.2",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/313690/capsule_sm_120.jpg?t=1573510385"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<title>Not Found | CheapShark</title>\n<meta name=\"description\" content=\"404 Page Not Found!\" />\n<meta name=\"robots\" content=\"noindex\">\n\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n<meta name=\"keywords\" content=\"game,deals,steam,digital,downloads,pc,sales,compare,prices,search,gamersgate,greenmangaming,gog\">\n<meta property=\"og:title\" ..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/1.0/games": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "storeID",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            },
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "title",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "batman": {
+                                "value": "batman"
+                            },
+                            "fallout": {
+                                "value": "fallout"
+                            },
+                            "Mass+Effect": {
+                                "value": "Mass+Effect"
+                            },
+                            "Call+of+Duty": {
+                                "value": "Call+of+Duty"
+                            },
+                            "fortnite": {
+                                "value": "fortnite"
+                            },
+                            "call+of+duty": {
+                                "value": "call+of+duty"
+                            },
+                            "assassins+creed": {
+                                "value": "assassins+creed"
+                            },
+                            "example": {
+                                "value": "example"
+                            },
+                            "borderlands": {
+                                "value": "borderlands"
+                            }
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            },
+                            "20": {
+                                "value": "20"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sortBy",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "price": {
+                                "value": "price"
+                            }
+                        }
+                    },
+                    {
+                        "name": "desc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "0": {
+                                "value": "0"
+                            },
+                            "1": {
+                                "value": "1"
+                            },
+                            "False": {
+                                "value": "False"
+                            }
+                        }
+                    },
+                    {
+                        "name": "exact",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "0": {
+                                "value": "0"
+                            },
+                            "1": {
+                                "value": "1"
+                            },
+                            "False": {
+                                "value": "False"
+                            }
+                        }
+                    },
+                    {
+                        "name": "steamworks",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            },
+                            "0": {
+                                "value": "0"
+                            }
+                        }
+                    },
+                    {
+                        "name": "onSale",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "AAA",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "metacritic",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "75": {
+                                "value": "75"
+                            },
+                            "80": {
+                                "value": "80"
+                            },
+                            "90": {
+                                "value": "90"
+                            }
+                        }
+                    },
+                    {
+                        "name": "pageNumber",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "steamAppID",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "12345": {
+                                "value": "12345"
+                            },
+                            "377160": {
+                                "value": "377160"
+                            },
+                            "730": {
+                                "value": "730"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "price": {
+                                "value": "price"
+                            }
+                        }
+                    },
+                    {
+                        "name": "lowerPrice",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "5": {
+                                "value": "5"
+                            },
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "upperPrice",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "20": {
+                                "value": "20"
+                            },
+                            "50": {
+                                "value": "50"
+                            },
+                            "30": {
+                                "value": "30"
+                            }
+                        }
+                    },
+                    {
+                        "name": "steamRating",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "90": {
+                                "value": "90"
+                            },
+                            "80": {
+                                "value": "80"
+                            },
+                            "positive": {
+                                "value": "positive"
+                            },
+                            "overwhelmingly+positive": {
+                                "value": "overwhelmingly+positive"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sortby",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "price": {
+                                "value": "price"
+                            }
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "savings",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "50": {
+                                "value": "50"
+                            }
+                        }
+                    },
+                    {
+                        "name": "releaseDate",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "2022-01-01": {
+                                "value": "2022-01-01"
+                            }
+                        }
+                    },
+                    {
+                        "name": "dealRating",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "80": {
+                                "value": "80"
+                            }
+                        }
+                    },
+                    {
+                        "name": "isOnSale",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "examples": {
+                            "true": {
+                                "value": "true"
+                            },
+                            "false": {
+                                "value": "false"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_1.0_games"
+                                },
+                                "example": [
+                                    {
+                                        "gameID": "612",
+                                        "steamAppID": null,
+                                        "cheapest": "3.89",
+                                        "cheapestDealID": "tyTH88J0PXRvYALBjV3cNHd5Juq1qKcu4tG4lBiUCt4%3D",
+                                        "external": "LEGO Batman",
+                                        "internalName": "LEGOBATMAN",
+                                        "thumb": "https://cdn.fanatical.com/production/product/400x225/105f34ca-7757-47ad-953e-7df7f016741e.jpeg"
+                                    },
+                                    {
+                                        "gameID": "167613",
+                                        "steamAppID": null,
+                                        "cheapest": "3.89",
+                                        "cheapestDealID": "0r0ce2sASn%2BPnDjouUO2QY7dIcPzWF1bXeV1espcrGw%3D",
+                                        "external": "LEGO Batman 2",
+                                        "internalName": "LEGOBATMAN2",
+                                        "thumb": "https://cdn.fanatical.com/production/product/400x225/4cf0701e-77bf-4539-bda7-129ab3e81f8b.jpeg"
+                                    },
+                                    {
+                                        "gameID": "167910",
+                                        "steamAppID": "502820",
+                                        "cheapest": "3.89",
+                                        "cheapestDealID": "duswFlPNu%2B0QtHl5kEcEA%2BVFeNFm2CAuPOkaTx6nS3g%3D",
+                                        "external": "Batman: Arkham VR",
+                                        "internalName": "BATMANARKHAMVR",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/502820/capsule_sm_120.jpg?t=1684483128"
+                                    },
+                                    {
+                                        "gameID": "136751",
+                                        "steamAppID": null,
+                                        "cheapest": "49.99",
+                                        "cheapestDealID": "tWdHYhBxTi%2Boen9dGX6I0I%2BfklTJOHB0SykaLcbpsqk%3D",
+                                        "external": "LEGO Batman Trilogy",
+                                        "internalName": "LEGOBATMANTRILOGY",
+                                        "thumb": "https://hb.imgix.net/fec566de2b11fbe22a542086fb3758652f790551.jpg?auto=compress,format&fit=crop&h=84&w=135&s=1159b53389e7c72d23ef72b5c883d725"
+                                    },
+                                    {
+                                        "gameID": "107598",
+                                        "steamAppID": "208650",
+                                        "cheapest": "3.12",
+                                        "cheapestDealID": "tBc2DBV6R%2FAMzl%2Bib3g454gMJJZYAylmI3LnNGu0q8k%3D",
+                                        "external": "Batman: Arkham Knight",
+                                        "internalName": "BATMANARKHAMKNIGHT",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/208650/capsule_sm_120.jpg?t=1694042300"
+                                    },
+                                    {
+                                        "gameID": "97941",
+                                        "steamAppID": "209000",
+                                        "cheapest": "4.99",
+                                        "cheapestDealID": "6YSaSYFA%2Bjmj9L4HsCBLThDoYEUhWPQ1ssIZ0t2k%2BnU%3D",
+                                        "external": "Batman: Arkham Origins",
+                                        "internalName": "BATMANARKHAMORIGINS",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/209000/capsule_sm_120.jpg?t=1681234740"
+                                    },
+                                    {
+                                        "gameID": "198190",
+                                        "steamAppID": null,
+                                        "cheapest": "15.99",
+                                        "cheapestDealID": "DnVEZriqpYWyJoC4CN2%2Fe07Su8RZ61DATyjmfNk%2FwKI%3D",
+                                        "external": "Batman Arkham City GOTY",
+                                        "internalName": "BATMANARKHAMCITYGOTY",
+                                        "thumb": "https://us.gamesplanet.com/acache/15/46/1/us/packshot-92b3116edd0584b61a131fa716d0a766.jpg"
+                                    },
+                                    {
+                                        "gameID": "198317",
+                                        "steamAppID": "320795",
+                                        "cheapest": "6.98",
+                                        "cheapestDealID": "gMIYG%2BOxGg6YDudPepsbZSz3QCnSv0z9xRKSxyDsHQ4%3D",
+                                        "external": "Batman: Arkham Collection",
+                                        "internalName": "BATMANARKHAMCOLLECTION",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/subs/320795/capsule_sm_120.jpg?t=1636658684"
+                                    },
+                                    {
+                                        "gameID": "2425",
+                                        "steamAppID": "21000",
+                                        "cheapest": "3.90",
+                                        "cheapestDealID": "7IKccuq7EWnLanrL0x%2F0qz%2FHsWtORokNOKwho1kALIU%3D",
+                                        "external": "LEGO Batman: The Videogame",
+                                        "internalName": "LEGOBATMANTHEVIDEOGAME",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/21000/capsule_sm_120.jpg?t=1681923978"
+                                    },
+                                    {
+                                        "gameID": "126255",
+                                        "steamAppID": "313690",
+                                        "cheapest": "2.39",
+                                        "cheapestDealID": "GIen44MQlervWwNXw1e1k2ydTlgX8fzBHFbRgWKUGSs%3D",
+                                        "external": "LEGO Batman 3: Beyond Gotham",
+                                        "internalName": "LEGOBATMAN3BEYONDGOTHAM",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/313690/capsule_sm_120.jpg?t=1573510385"
+                                    },
+                                    {
+                                        "gameID": "199261",
+                                        "steamAppID": null,
+                                        "cheapest": "39.98",
+                                        "cheapestDealID": "vVlFdl8%2BVYZuEwKlNPy7iUrK49IXdqtNSKDgTrhw4sM%3D",
+                                        "external": "Batman Game of the Year Pack",
+                                        "internalName": "BATMANGAMEOFTHEYEARPACK",
+                                        "thumb": "https://images.greenmangaming.com/9c282eceace145df99f76f0d08febdfe/1fbba96f5f8a4ffbb135e320bcc2346c.jpg"
+                                    },
+                                    {
+                                        "gameID": "155074",
+                                        "steamAppID": "498240",
+                                        "cheapest": "5.25",
+                                        "cheapestDealID": "bohtaO54%2B6nxd22EIRpoqxdjwgdBhjC4tPbmXDhQCjE%3D",
+                                        "external": "Batman - The Telltale Series",
+                                        "internalName": "BATMANTHETELLTALESERIES",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/498240/capsule_sm_120.jpg?t=1686747257"
+                                    },
+                                    {
+                                        "gameID": "262248",
+                                        "steamAppID": null,
+                                        "cheapest": "14.99",
+                                        "cheapestDealID": "OKARgK1wBMW6W6Mod6tfJ%2FS582x6mmaZzcsrhKNN9zw%3D",
+                                        "external": "HOT WHEELS - Batman Expansion",
+                                        "internalName": "HOTWHEELSBATMANEXPANSION",
+                                        "thumb": "https://cdn1.epicgames.com/salesEvent/salesEvent/EGS_HOTWHEELSBatmanExpansion_MilestoneSrl_DLC_S2_1200x1600-eb509c7f016c85c206fb702fe7483ebf"
+                                    },
+                                    {
+                                        "gameID": "88269",
+                                        "steamAppID": "213330",
+                                        "cheapest": "3.90",
+                                        "cheapestDealID": "gzdRaRqy6ekoqc9C0XWpMqsFVD7fym15S82RWAdTL18%3D",
+                                        "external": "LEGO Batman 2: DC Super Heroes",
+                                        "internalName": "LEGOBATMAN2DCSUPERHEROES",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/213330/capsule_sm_120.jpg?t=1681923916"
+                                    },
+                                    {
+                                        "gameID": "214905",
+                                        "steamAppID": null,
+                                        "cheapest": "1.99",
+                                        "cheapestDealID": "OTJxScRuO1D3hoLSFDjrWKZKm%2FrcXvSACoDDGijZjrY%3D",
+                                        "external": "Telltale Batman Shadows Mode",
+                                        "internalName": "TELLTALEBATMANSHADOWSMODE",
+                                        "thumb": "https://images.gog-statics.com/e60c4596e9f9a74ca587efcb561b94d0e61e80648bd478a7e74ec8f6cd93c44a_product_tile_117h.webp"
+                                    },
+                                    {
+                                        "gameID": "89107",
+                                        "steamAppID": null,
+                                        "cheapest": "19.99",
+                                        "cheapestDealID": "yPE8bI5eH%2FFwI0L7KaEUTfOzYmWLPj%2F76DHrJEnFWeY%3D",
+                                        "external": "Batman: Arkham City GOTY Edition",
+                                        "internalName": "BATMANARKHAMCITYGOTYEDITION",
+                                        "thumb": "https://hb.imgix.net/08abd0c1b25f2ffc652ae7d6537443cee7eccf94.jpg?auto=compress,format&fit=crop&h=84&w=135&s=6ae6339224425ee6e7b7e48ddea68e1d"
+                                    },
+                                    {
+                                        "gameID": "143771",
+                                        "steamAppID": null,
+                                        "cheapest": "3.89",
+                                        "cheapestDealID": "69tZA0nu%2Bbnm7IcOTfAwd4ZXEaXX5hYEmPQjf%2FjL0Uc%3D",
+                                        "external": "Batman: Arkham Knight - Season Pass",
+                                        "internalName": "BATMANARKHAMKNIGHTSEASONPASS",
+                                        "thumb": "https://gamersgatep.imgix.net/5/3/c/4e1ffbac131e5f3599463e11377e24b6cfb67c35.jpg?auto=&w="
+                                    },
+                                    {
+                                        "gameID": "214906",
+                                        "steamAppID": null,
+                                        "cheapest": "10.49",
+                                        "cheapestDealID": "A3hjhaYvTj0ZcYKpdslQ4PASVGEwe0Zwfrd61gkWLXE%3D",
+                                        "external": "Telltale Batman Shadows Edition",
+                                        "internalName": "TELLTALEBATMANSHADOWSEDITION",
+                                        "thumb": "https://images.greenmangaming.com/bb1f86edd3be41e3bb8948c00523e5ef/bd6b538c1a7b4f138b862d3c825ff005.jpg"
+                                    },
+                                    {
+                                        "gameID": "87778",
+                                        "steamAppID": null,
+                                        "cheapest": "16.99",
+                                        "cheapestDealID": "uppD8xHMJiqlB88HAnAVeVuInMdQh8eIXN0r2eaC6VI%3D",
+                                        "external": "Batman Arkham Asylum GOTY Edition",
+                                        "internalName": "BATMANARKHAMASYLUMGOTYEDITION",
+                                        "thumb": "https://hb.imgix.net/2a07e9e90c9af53c5120151c9ff4e0aa3771ce99.jpeg?auto=compress,format&fit=crop&h=84&w=135&s=0f42069b4949098d7d589d28a9f66311"
+                                    },
+                                    {
+                                        "gameID": "246183",
+                                        "steamAppID": null,
+                                        "cheapest": "19.99",
+                                        "cheapestDealID": "3VlwNpcd%2FDMETYgzpXd1WDzLWBTn9qHFBhtkSUbnCMs%3D",
+                                        "external": "Batman Arkham City: Game of the Year",
+                                        "internalName": "BATMANARKHAMCITYGAMEOFTHEYEAR",
+                                        "thumb": "https://images.greenmangaming.com/3e529338224949f280276fa6a5b75fec/933b9d36ea2d49b4b389899814729378.jpg"
+                                    },
+                                    {
+                                        "gameID": "102510",
+                                        "steamAppID": null,
+                                        "cheapest": "14.99",
+                                        "cheapestDealID": "%2BThIUJIoyxRy9u7NDjuvidcljQ6heP%2FiEmWT%2FkUc5aE%3D",
+                                        "external": "Batman Arkham Origins Season Pass",
+                                        "internalName": "BATMANARKHAMORIGINSSEASONPASS",
+                                        "thumb": "https://images.greenmangaming.com/1c43fd1ff43744c08e854d6ff963c91d/2c8b09a294f4401ab3747b99b6d828f1.jpg"
+                                    },
+                                    {
+                                        "gameID": "225758",
+                                        "steamAppID": null,
+                                        "cheapest": "4.99",
+                                        "cheapestDealID": "PUPfxJiMyt4dbcslwvOVad0v%2BgtknEhy8c90qOpVp9w%3D",
+                                        "external": "Telltale Batman Shadows Mode Bundle",
+                                        "internalName": "TELLTALEBATMANSHADOWSMODEBUNDLE",
+                                        "thumb": "https://hb.imgix.net/bcd6694f5442c730d3b16bdb07e956e52fe17b32.png?auto=compress,format&fit=crop&h=84&w=135&s=748daa2aa04096c42a24db2baf8320ff"
+                                    },
+                                    {
+                                        "gameID": "250727",
+                                        "steamAppID": null,
+                                        "cheapest": "19.99",
+                                        "cheapestDealID": "WT%2FMFjw1bIOhh5gs6slTqvwUdrGR2W4wEwyYGlT1G98%3D",
+                                        "external": "Batman: Arkham Asylum Game of the Year",
+                                        "internalName": "BATMANARKHAMASYLUMGAMEOFTHEYEAR",
+                                        "thumb": "https://images.greenmangaming.com/0c2b457baa0a4e778c31771ead715300/88c9e725b8ff4610a2e1970e0f4a08f1.jpg"
+                                    },
+                                    {
+                                        "gameID": "214907",
+                                        "steamAppID": null,
+                                        "cheapest": "1.99",
+                                        "cheapestDealID": "lBW7zyO4rDYgP9peypdBSZC%2B6dp8bUJMtwXlUVt9ghY%3D",
+                                        "external": "Batman Shadows Mode: The Enemy Within",
+                                        "internalName": "BATMANSHADOWSMODETHEENEMYWITHIN",
+                                        "thumb": "https://images.gog-statics.com/70d653226ede85bb70a8d4022a2d02b6c2e2bb9775e87b6a9ca5c30d6ac7f815_product_tile_117h.webp"
+                                    },
+                                    {
+                                        "gameID": "221906",
+                                        "steamAppID": null,
+                                        "cheapest": "1.75",
+                                        "cheapestDealID": "E7P6Oz50WDEWzQZZjj8b1l6e7C3S0sr43hOQnoDCtqk%3D",
+                                        "external": "Batman - The Enemy Within Shadows Mode",
+                                        "internalName": "BATMANTHEENEMYWITHINSHADOWSMODE",
+                                        "thumb": "https://images.greenmangaming.com/85ad7081bac34a3cb4151daeb6540b50/9e93071c54604454974132c72bab146f.jpg"
+                                    },
+                                    {
+                                        "gameID": "246576",
+                                        "steamAppID": null,
+                                        "cheapest": "29.99",
+                                        "cheapestDealID": "Fi5iMIssmS3PtiA3m42zXTR22B9GvIcr2NE8Csb5kFw%3D",
+                                        "external": "The Telltale Batman Shadows Edition",
+                                        "internalName": "THETELLTALEBATMANSHADOWSEDITION",
+                                        "thumb": "https://cdn1.epicgames.com/f2bfff793b224f6190a394f461c9a4b8/offer/TheTelltaleBatmanShadowsEdition-2560x1440-1ababb36a948b5c732ab85a330787e85.jpg"
+                                    },
+                                    {
+                                        "gameID": "108605",
+                                        "steamAppID": null,
+                                        "cheapest": "8.49",
+                                        "cheapestDealID": "1kwCcJiqxMJJyas58G3FQ4Od%2BbujQrxSF19FRSAmcPE%3D",
+                                        "external": "Batman: Arkham Origins - Cold, Cold Heart",
+                                        "internalName": "BATMANARKHAMORIGINSCOLDCOLDHEART",
+                                        "thumb": "https://images.greenmangaming.com/ba8d4cd6e14e40fca132f346e2d0d3b4/44f1b54092f3498f88b3d7c1df88451b.jpg"
+                                    },
+                                    {
+                                        "gameID": "143817",
+                                        "steamAppID": null,
+                                        "cheapest": "6.23",
+                                        "cheapestDealID": "jmXx3skg%2FdKIZzSGTEVFUxE3th1f0%2BPbNlP96is7CqM%3D",
+                                        "external": "Batman: Arkham Knight - Premium Edition",
+                                        "internalName": "BATMANARKHAMKNIGHTPREMIUMEDITION",
+                                        "thumb": "https://images.greenmangaming.com/b47c3b1bc8a5468ab3ada8832be8355c/4de3b472f988463abf6a869bcdda44d7.jpg"
+                                    },
+                                    {
+                                        "gameID": "136749",
+                                        "steamAppID": null,
+                                        "cheapest": "2.34",
+                                        "cheapestDealID": "uiBS531IfLD1uXS5%2Fhh6MpL%2F6YDXzQDaIudZGr%2FPugY%3D",
+                                        "external": "LEGO Batman 3: Beyond Gotham Season Pass",
+                                        "internalName": "LEGOBATMAN3BEYONDGOTHAMSEASONPASS",
+                                        "thumb": "https://gamersgatep.imgix.net/1/3/d/c9e3d167515514f2dba073881bedb44c1477cd31.jpg?auto=&w="
+                                    },
+                                    {
+                                        "gameID": "221904",
+                                        "steamAppID": null,
+                                        "cheapest": "1.75",
+                                        "cheapestDealID": "oWzY%2BWDZExyELDQrL4xy3kd6P1p%2BOQMQ%2FIOeMaN0QaU%3D",
+                                        "external": "Batman - The Telltale Series Shadows Mode",
+                                        "internalName": "BATMANTHETELLTALESERIESSHADOWSMODE",
+                                        "thumb": "https://images.greenmangaming.com/9cc80f2eb57e4588b159b818fed76288/7afd0ac5cde2472b8fde02a4720dc0ad.jpg"
+                                    },
+                                    {
+                                        "gameID": "89095",
+                                        "steamAppID": "200260",
+                                        "cheapest": "4.85",
+                                        "cheapestDealID": "4IHQZCPmag1PiUJ2deyTdKU%2F4V%2BeGnstt30macbPsB0%3D",
+                                        "external": "Batman Arkham City Game of the Year Edition",
+                                        "internalName": "BATMANARKHAMCITYGAMEOFTHEYEAREDITION",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/200260/capsule_sm_120.jpg?t=1681938743"
+                                    },
+                                    {
+                                        "gameID": "178376",
+                                        "steamAppID": null,
+                                        "cheapest": "34.99",
+                                        "cheapestDealID": "pTeQKzHuRK4TDqHYLY4xolVHA5s%2BVlwXQrlqzqnLCks%3D",
+                                        "external": "LEGO Batman 3: Beyond Gotham Premium Edition",
+                                        "internalName": "LEGOBATMAN3BEYONDGOTHAMPREMIUMEDITION",
+                                        "thumb": "https://images.gog-statics.com/0d81cdadc840148cbd6e1f1a6897bdf9d38994b3045c7a394f8426a82775b9f4_product_tile_117h.webp"
+                                    },
+                                    {
+                                        "gameID": "171102",
+                                        "steamAppID": "675260",
+                                        "cheapest": "5.25",
+                                        "cheapestDealID": "ikdG0z1ta2LwJZVzkYKuCnt%2B%2FD63TJea4TJEbKNgpnQ%3D",
+                                        "external": "Batman: The Enemy Within - The Telltale Series",
+                                        "internalName": "BATMANTHEENEMYWITHINTHETELLTALESERIES",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/675260/capsule_sm_120.jpg?t=1686747613"
+                                    },
+                                    {
+                                        "gameID": "146",
+                                        "steamAppID": "35140",
+                                        "cheapest": "4.99",
+                                        "cheapestDealID": "HR5V6hEl39sGwYodeqwwWuo8dKtKukteV0W9we9pI7I%3D",
+                                        "external": "Batman: Arkham Asylum Game of the Year Edition",
+                                        "internalName": "BATMANARKHAMASYLUMGAMEOFTHEYEAREDITION",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/35140/capsule_sm_120.jpg?t=1681938587"
+                                    },
+                                    {
+                                        "gameID": "107869",
+                                        "steamAppID": "267490",
+                                        "cheapest": "3.90",
+                                        "cheapestDealID": "jP%2BcylLj42BXc0qG7JMkE4nVDpxGOPR601Rj2XrdYYE%3D",
+                                        "external": "Batman: Arkham Origins Blackgate - Deluxe Edition",
+                                        "internalName": "BATMANARKHAMORIGINSBLACKGATEDELUXEEDITION",
+                                        "thumb": "https://cdn.cloudflare.steamstatic.com/steam/apps/267490/capsule_sm_120.jpg?t=1651865751"
+                                    },
+                                    {
+                                        "gameID": "250195",
+                                        "steamAppID": null,
+                                        "cheapest": "2.99",
+                                        "cheapestDealID": "A2XgGTglsm6iTyN%2BzxnWqIrErGb1uxYlGt4vUZyeG0k%3D",
+                                        "external": "LEGO DC Super-Villains Batman: The Animated Series Level Pack",
+                                        "internalName": "LEGODCSUPERVILLAINSBATMANTHEANIMATEDSERIESLEVELPACK",
+                                        "thumb": "https://images.gog-statics.com/7b55f49b5d2898986176e45d97391b263cc46b804ce7e8dc81ecb242c72f1e7d_product_tile_117h.webp"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<title>Not Found | CheapShark</title>\n<meta name=\"description\" content=\"404 Page Not Found!\" />\n<meta name=\"robots\" content=\"noindex\">\n\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n<meta name=\"keywords\" content=\"game,deals,steam,digital,downloads,pc,sales,compare,prices,search,gamersgate,greenmangaming,gog\">\n<meta property=\"og:title\" ..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/1.0/stores": {
+            "get": {
+                "description": "No description.",
+                "parameters": [
+                    {
+                        "name": "storeID",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            },
+                            "2": {
+                                "value": "2"
+                            },
+                            "3": {
+                                "value": "3"
+                            },
+                            "4": {
+                                "value": "4"
+                            },
+                            "5": {
+                                "value": "5"
+                            },
+                            "6": {
+                                "value": "6"
+                            },
+                            "7": {
+                                "value": "7"
+                            },
+                            "8": {
+                                "value": "8"
+                            },
+                            "9": {
+                                "value": "9"
+                            },
+                            "10": {
+                                "value": "10"
+                            }
+                        }
+                    },
+                    {
+                        "name": "title",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "batman": {
+                                "value": "batman"
+                            },
+                            "fallout": {
+                                "value": "fallout"
+                            },
+                            "game": {
+                                "value": "game"
+                            },
+                            "superman": {
+                                "value": "superman"
+                            }
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            },
+                            "5": {
+                                "value": "5"
+                            },
+                            "20": {
+                                "value": "20"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sortBy",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "name": {
+                                "value": "name"
+                            },
+                            "price": {
+                                "value": "price"
+                            }
+                        }
+                    },
+                    {
+                        "name": "desc",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            },
+                            "0": {
+                                "value": "0"
+                            }
+                        }
+                    },
+                    {
+                        "name": "onSale",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "steamworks",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "AAA",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            },
+                            "2": {
+                                "value": "2"
+                            },
+                            "3": {
+                                "value": "3"
+                            },
+                            "4": {
+                                "value": "4"
+                            },
+                            "5": {
+                                "value": "5"
+                            },
+                            "6": {
+                                "value": "6"
+                            },
+                            "7": {
+                                "value": "7"
+                            },
+                            "9": {
+                                "value": "9"
+                            },
+                            "0": {
+                                "value": "0"
+                            }
+                        }
+                    },
+                    {
+                        "name": "metacritic",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "80": {
+                                "value": "80"
+                            },
+                            "75": {
+                                "value": "75"
+                            }
+                        }
+                    },
+                    {
+                        "name": "releaseDate",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "2021-01-01": {
+                                "value": "2021-01-01"
+                            }
+                        }
+                    },
+                    {
+                        "name": "lowerPrice",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "10": {
+                                "value": "10"
+                            },
+                            "5": {
+                                "value": "5"
+                            }
+                        }
+                    },
+                    {
+                        "name": "upperPrice",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "50": {
+                                "value": "50"
+                            }
+                        }
+                    },
+                    {
+                        "name": "pageNumber",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "2": {
+                                "value": "2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "ascending",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "examples": {
+                            "true": {
+                                "value": "true"
+                            },
+                            "false": {
+                                "value": "false"
+                            }
+                        }
+                    },
+                    {
+                        "name": "exact",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "steamAppID",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "570": {
+                                "value": "570"
+                            }
+                        }
+                    },
+                    {
+                        "name": "storeId",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "examples": {
+                            "price": {
+                                "value": "price"
+                            }
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "50": {
+                                "value": "50"
+                            }
+                        }
+                    },
+                    {
+                        "name": "activate",
+                        "description": "No description.",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "examples": {
+                            "1": {
+                                "value": "1"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No description.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseSchema_api_1.0_stores"
+                                },
+                                "example": [
+                                    {
+                                        "storeID": "1",
+                                        "storeName": "Steam",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/0.png",
+                                            "logo": "/img/stores/logos/0.png",
+                                            "icon": "/img/stores/icons/0.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "2",
+                                        "storeName": "GamersGate",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/1.png",
+                                            "logo": "/img/stores/logos/1.png",
+                                            "icon": "/img/stores/icons/1.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "3",
+                                        "storeName": "GreenManGaming",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/2.png",
+                                            "logo": "/img/stores/logos/2.png",
+                                            "icon": "/img/stores/icons/2.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "4",
+                                        "storeName": "Amazon",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/3.png",
+                                            "logo": "/img/stores/logos/3.png",
+                                            "icon": "/img/stores/icons/3.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "5",
+                                        "storeName": "GameStop",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/4.png",
+                                            "logo": "/img/stores/logos/4.png",
+                                            "icon": "/img/stores/icons/4.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "6",
+                                        "storeName": "Direct2Drive",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/5.png",
+                                            "logo": "/img/stores/logos/5.png",
+                                            "icon": "/img/stores/icons/5.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "7",
+                                        "storeName": "GOG",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/6.png",
+                                            "logo": "/img/stores/logos/6.png",
+                                            "icon": "/img/stores/icons/6.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "8",
+                                        "storeName": "Origin",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/7.png",
+                                            "logo": "/img/stores/logos/7.png",
+                                            "icon": "/img/stores/icons/7.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "9",
+                                        "storeName": "Get Games",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/8.png",
+                                            "logo": "/img/stores/logos/8.png",
+                                            "icon": "/img/stores/icons/8.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "10",
+                                        "storeName": "Shiny Loot",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/9.png",
+                                            "logo": "/img/stores/logos/9.png",
+                                            "icon": "/img/stores/icons/9.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "11",
+                                        "storeName": "Humble Store",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/10.png",
+                                            "logo": "/img/stores/logos/10.png",
+                                            "icon": "/img/stores/icons/10.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "12",
+                                        "storeName": "Desura",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/11.png",
+                                            "logo": "/img/stores/logos/11.png",
+                                            "icon": "/img/stores/icons/11.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "13",
+                                        "storeName": "Uplay",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/12.png",
+                                            "logo": "/img/stores/logos/12.png",
+                                            "icon": "/img/stores/icons/12.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "14",
+                                        "storeName": "IndieGameStand",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/13.png",
+                                            "logo": "/img/stores/logos/13.png",
+                                            "icon": "/img/stores/icons/13.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "15",
+                                        "storeName": "Fanatical",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/14.png",
+                                            "logo": "/img/stores/logos/14.png",
+                                            "icon": "/img/stores/icons/14.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "16",
+                                        "storeName": "Gamesrocket",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/15.png",
+                                            "logo": "/img/stores/logos/15.png",
+                                            "icon": "/img/stores/icons/15.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "17",
+                                        "storeName": "Games Republic",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/16.png",
+                                            "logo": "/img/stores/logos/16.png",
+                                            "icon": "/img/stores/icons/16.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "18",
+                                        "storeName": "SilaGames",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/17.png",
+                                            "logo": "/img/stores/logos/17.png",
+                                            "icon": "/img/stores/icons/17.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "19",
+                                        "storeName": "Playfield",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/18.png",
+                                            "logo": "/img/stores/logos/18.png",
+                                            "icon": "/img/stores/icons/18.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "20",
+                                        "storeName": "ImperialGames",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/19.png",
+                                            "logo": "/img/stores/logos/19.png",
+                                            "icon": "/img/stores/icons/19.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "21",
+                                        "storeName": "WinGameStore",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/20.png",
+                                            "logo": "/img/stores/logos/20.png",
+                                            "icon": "/img/stores/icons/20.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "22",
+                                        "storeName": "FunStockDigital",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/21.png",
+                                            "logo": "/img/stores/logos/21.png",
+                                            "icon": "/img/stores/icons/21.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "23",
+                                        "storeName": "GameBillet",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/22.png",
+                                            "logo": "/img/stores/logos/22.png",
+                                            "icon": "/img/stores/icons/22.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "24",
+                                        "storeName": "Voidu",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/23.png",
+                                            "logo": "/img/stores/logos/23.png",
+                                            "icon": "/img/stores/icons/23.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "25",
+                                        "storeName": "Epic Games Store",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/24.png",
+                                            "logo": "/img/stores/logos/24.png",
+                                            "icon": "/img/stores/icons/24.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "26",
+                                        "storeName": "Razer Game Store",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/25.png",
+                                            "logo": "/img/stores/logos/25.png",
+                                            "icon": "/img/stores/icons/25.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "27",
+                                        "storeName": "Gamesplanet",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/26.png",
+                                            "logo": "/img/stores/logos/26.png",
+                                            "icon": "/img/stores/icons/26.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "28",
+                                        "storeName": "Gamesload",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/27.png",
+                                            "logo": "/img/stores/logos/27.png",
+                                            "icon": "/img/stores/icons/27.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "29",
+                                        "storeName": "2Game",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/28.png",
+                                            "logo": "/img/stores/logos/28.png",
+                                            "icon": "/img/stores/icons/28.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "30",
+                                        "storeName": "IndieGala",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/29.png",
+                                            "logo": "/img/stores/logos/29.png",
+                                            "icon": "/img/stores/icons/29.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "31",
+                                        "storeName": "Blizzard Shop",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/30.png",
+                                            "logo": "/img/stores/logos/30.png",
+                                            "icon": "/img/stores/icons/30.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "32",
+                                        "storeName": "AllYouPlay",
+                                        "isActive": 0,
+                                        "images": {
+                                            "banner": "/img/stores/banners/31.png",
+                                            "logo": "/img/stores/logos/31.png",
+                                            "icon": "/img/stores/icons/31.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "33",
+                                        "storeName": "DLGamer",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/32.png",
+                                            "logo": "/img/stores/logos/32.png",
+                                            "icon": "/img/stores/icons/32.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "34",
+                                        "storeName": "Noctre",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/33.png",
+                                            "logo": "/img/stores/logos/33.png",
+                                            "icon": "/img/stores/icons/33.png"
+                                        }
+                                    },
+                                    {
+                                        "storeID": "35",
+                                        "storeName": "DreamGame",
+                                        "isActive": 1,
+                                        "images": {
+                                            "banner": "/img/stores/banners/34.png",
+                                            "logo": "/img/stores/logos/34.png",
+                                            "icon": "/img/stores/icons/34.png"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Request Error",
+                        "content": {
+                            "text/html; charset=utf-8": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorSchema"
+                                },
+                                "example": "\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<title>Not Found | CheapShark</title>\n<meta name=\"description\" content=\"404 Page Not Found!\" />\n<meta name=\"robots\" content=\"noindex\">\n\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n<meta name=\"keywords\" content=\"game,deals,steam,digital,downloads,pc,sales,compare,prices,search,gamersgate,greenmangaming,gog\">\n<meta property=\"og:title\" ..."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorSchema": {
+                "type": "string"
+            },
+            "ResponseSchema_api_1.0_deals": {},
+            "ResponseSchema_api_1.0_games": {},
+            "ResponseSchema_api_1.0_stores": {}
+        }
+    }
+}

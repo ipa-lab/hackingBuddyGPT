@@ -32,7 +32,7 @@ class OpenAPISpecificationHandler(object):
         _capabilities (dict): A dictionary to store capabilities related to YAML file handling.
     """
 
-    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler, strategy: PromptStrategy, ):
+    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler, strategy: PromptStrategy,  url: str, description:str, name:str) -> None:
         """
         Initializes the handler with a template OpenAPI specification.
 
@@ -43,16 +43,17 @@ class OpenAPISpecificationHandler(object):
         """
         self.response_handler = response_handler
         self.schemas = {}
+        print(f'Name:{name}')
         self.endpoint_methods = {}
-        self.filename = f"openapi_spec_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
+        self.filename = f"{name.lower()}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
         self.openapi_spec = {
             "openapi": "3.0.0",
             "info": {
-                "title": "Generated API Documentation",
+                "title": f"Generated API Documentation via {name}",
                 "version": "1.0",
-                "description": "Automatically generated description of the API.",
+                "description": f"{description}",
             },
-            "servers": [{"url": "https://jsonplaceholder.typicode.com"}],
+            "servers": [{"url": f"{url}"}], #https://jsonplaceholder.typicode.com
             "endpoints": {},
             "components": {"schemas": {}},
         }

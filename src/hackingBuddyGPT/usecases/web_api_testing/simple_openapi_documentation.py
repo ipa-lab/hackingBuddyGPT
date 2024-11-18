@@ -10,6 +10,7 @@ from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import OpenAPISpecificationHandler
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
@@ -91,6 +92,7 @@ class SimpleWebAPIDocumentation(Agent):
         self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
             config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"), config.get("query_params")
         )
+
         self.all_steps_done = False
 
         self.categorized_endpoints = self.categorize_endpoints( self.correct_endpoints, self.query_params)
@@ -102,15 +104,20 @@ class SimpleWebAPIDocumentation(Agent):
             os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
         print(f'Host:{self.host}')
         self._setup_capabilities()
-        self.strategy = PromptStrategy.CHAIN_OF_THOUGHT
+        if config.get("strategy") == "COT":
+            self.strategy = PromptStrategy.CHAIN_OF_THOUGHT
+        elif config.get("strategy") == "TOT":
+            self.strategy = PromptStrategy.TREE_OF_THOUGHT
+        else:
+            self.strategy = PromptStrategy.IN_CONTEXT
+
+
         self.prompt_context = PromptContext.DOCUMENTATION
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
-        self.response_handler = ResponseHandler(self.llm_handler, self.prompt_context)
-        self.documentation_handler = OpenAPISpecificationHandler(
-            self.llm_handler, self.response_handler, self.strategy
-        )
-
         self.evaluator = Evaluator(config=config)
+
+
+
         self._setup_initial_prompt()
 
     def _load_config(self, path):
@@ -135,15 +142,33 @@ class SimpleWebAPIDocumentation(Agent):
                 f"documenting your observations as you traverse the APIs."
             ),
         }
+
+        base_name = os.path.basename(self.config_path)
+
+        # Split the base name by '_config' and take the first part
+        name = base_name.split('_config')[0]
+        print(f'NAME:{name}')
+
+        self.prompt_helper = PromptGenerationHelper(
+                               host=self.host)
+        self.response_handler = ResponseHandler(llm_handler=self.llm_handler, prompt_context=self.prompt_context,
+                                                prompt_helper=self.prompt_helper, token=self.token)
+        self.documentation_handler = OpenAPISpecificationHandler(
+            self.llm_handler, self.response_handler, self.strategy, self.host, self.description, name
+        )
+
         self._prompt_history.append(initial_prompt)
+
         self.prompt_engineer = PromptEngineer(
             strategy=self.strategy,
             history=self._prompt_history,
             handlers=(self.llm_handler, self.response_handler),
             context=self.prompt_context,
+            prompt_helper= self.prompt_helper,
             open_api_spec=self.documentation_handler.openapi_spec,
             rest_api_info=(self.token, self.host, self.correct_endpoints, self.categorized_endpoints)
         )
+
 
     def all_http_methods_found(self, turn: int) -> bool:
         """Checks if all expected HTTP methods have been found."""
@@ -202,7 +227,7 @@ class SimpleWebAPIDocumentation(Agent):
         while not is_good:
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type=move_type,log=self._log , prompt_history=self._prompt_history, llm_handler =self.llm_handler)
             response, completion = self.llm_handler.execute_prompt(prompt=prompt)
-            is_good, self._prompt_history, result, result_str = self.prompt_engineer.evaluate_response(response, completion, self._prompt_history, self._log)
+            is_good, self._prompt_history, result, result_str = self.response_handler.evaluate_response(response, completion, self._prompt_history, self._log, self.categorized_endpoints)
             if result == None:
                 continue
             self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(

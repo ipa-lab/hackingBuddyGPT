@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 
 from hackingBuddyGPT.utils.configurable import configurable, parameter
 
@@ -15,7 +16,7 @@ class DbStorage:
         self.setup_db()
 
     def connect(self):
-        self.db = sqlite3.connect(self.connection_string)
+        self.db = sqlite3.connect(self.connection_string + f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}") # Added for running more tests at once
         self.cursor = self.db.cursor()
 
     def insert_or_select_cmd(self, name: str) -> int:

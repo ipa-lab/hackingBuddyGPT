@@ -34,8 +34,7 @@ class PromptEngineer:
             handlers=(),
             context: PromptContext = None,
             open_api_spec: dict = None,
-            schemas: dict = None,
-            endpoints: dict = None,
+            prompt_helper: PromptGenerationHelper =None,
             rest_api_info: tuple = None,
     ):
         """
@@ -51,22 +50,14 @@ class PromptEngineer:
             endpoints (dict, optional): Endpoints relevant for the context.
             description (str, optional): The description of the context.
         """
-        self.query_counter = 0
         token, host, correct_endpoints, categorized_endpoints = rest_api_info
         self.correct_endpoints = cycle(correct_endpoints)  # Creates an infinite cycle of endpoints
         self.current_endpoint = next(self.correct_endpoints)
-        self.categorized_endpoints = categorized_endpoints
         self.token = token
         self.strategy = strategy
         self.open_api_spec = open_api_spec
-        self.last_path = ""
-        self.repeat_counter = 0
         self.llm_handler, self.response_handler = handlers
-        self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler,
-                                                    schemas=schemas or {},
-                                                    endpoints=endpoints,
-                                                    host=host)
-        self.common_endpoints = cycle([ '/api', '/auth', '/users', '/products', '/orders', '/cart', '/checkout', '/payments', '/transactions', '/notifications', '/messages', '/files', '/admin', '/settings', '/status', '/health', '/healthcheck', '/info', '/docs', '/swagger', '/openapi', '/metrics', '/logs', '/analytics', '/search', '/feedback', '/support', '/profile', '/account', '/reports', '/dashboard', '/activity', '/subscriptions', '/webhooks', '/events', '/upload', '/download', '/images', '/videos', '/user/login', '/api/v1', '/api/v2', '/auth/login', '/auth/logout', '/auth/register', '/auth/refresh', '/users/{id}', '/users/me', '/users/profile', '/users/settings', '/products/{id}', '/products/search', '/orders/{id}', '/orders/history', '/cart/items', '/cart/checkout', '/checkout/confirm', '/payments/{id}', '/payments/methods', '/transactions/{id}', '/transactions/history', '/notifications/{id}', '/messages/{id}', '/messages/send', '/files/upload', '/files/{id}', '/admin/users', '/admin/settings', '/settings/preferences', '/search/results', '/feedback/{id}', '/support/tickets', '/profile/update', '/password/reset', '/password/change', '/account/delete', '/account/activate',  '/account/deactivate', '/account/settings', '/account/preferences', '/reports/{id}', '/reports/download',  '/dashboard/stats', '/activity/log', '/subscriptions/{id}', '/subscriptions/cancel', '/webhooks/{id}',  '/events/{id}', '/images/{id}', '/videos/{id}', '/files/download/{id}', '/support/tickets/{id}'])
+        self.prompt_helper = prompt_helper
 
         self.context = context
         self.turn = 0
@@ -127,119 +118,7 @@ class PromptEngineer:
         self.turn += 1
         return prompt_history
 
-    def extract_json(self, response: str) -> dict:
-        try:
-            # Find the start of the JSON body by locating the first '{' character
-            json_start = response.index('{')
-            # Extract the JSON part of the response
-            json_data = response[json_start:]
-            # Convert the JSON string to a dictionary
-            data_dict = json.loads(json_data)
-            return data_dict
-        except (ValueError, json.JSONDecodeError) as e:
-            print(f"Error extracting JSON: {e}")
-            return {}
 
-    def evaluate_response(self, response, completion, prompt_history, log):
-        """
-        Evaluates the response to determine if it is acceptable.
-
-        Args:
-            response (str): The response to evaluate.
-            completion (Completion): The completion object with tool call results.
-            prompt_history (list): History of prompts and responses.
-            log (Log): Logging object for console output.
-
-        Returns:
-            tuple: (bool, prompt_history, result, result_str) indicating if response is acceptable.
-        """
-        # Extract message and tool call information
-        message = completion.choices[0].message
-        tool_call_id = message.tool_calls[0].id
-
-        if self.repeat_counter == 5:
-            self.repeat_counter = 0
-            self.prompt_helper.hint_for_next_round = f'Try this endpoint in the next round {next(self.common_endpoints)}'
-
-        parts = parts = [part for part in response.action.path.split("/") if part]
-        if response.action.path == self.last_path or response.action.path in self.prompt_helper.unsuccessful_paths or response.action.path in self.prompt_helper.found_endpoints:
-            self.prompt_helper.hint_for_next_round = f"DO not try this path {self.last_path}. You already tried this before!"
-            self.repeat_counter += 1
-            return False, prompt_history, None, None
-
-        if self.prompt_helper.current_step == "instance_level" and len(parts) != 2:
-            self.prompt_helper.hint_for_next_round = "Endpoint path has to consist of a resource + / + and id."
-            return False, prompt_history, None, None
-
-        # Add Authorization header if token is available
-        if self.token != "":
-            response.action.headers = {"Authorization": f"Bearer {self.token}"}
-
-        # Convert response to JSON and display it
-        command = json.loads(pydantic_core.to_json(response).decode())
-        log.console.print(Panel(json.dumps(command, indent=2), title="assistant"))
-
-        # Execute the command and parse the result
-        with log.console.status("[bold green]Executing command..."):
-            result = response.execute()
-            self.query_counter += 1
-            result_dict = self.extract_json(result)
-            log.console.print(Panel(result, title="tool"))
-
-        # Parse HTTP status and request path
-        result_str = self.response_handler.parse_http_status_line(result)
-        request_path = command.get("action", {}).get("path")
-
-        # Check for missing action
-        if "action" not in command:
-            return False, prompt_history, response, completion
-
-        # Determine if the response is successful
-        is_successful = result_str.startswith("200")
-        prompt_history.append(message)
-        self.last_path = request_path
-
-        # Determine if the request path is correct and set the status message
-        if is_successful:
-            # Update current step and add to found endpoints
-            self.prompt_helper.found_endpoints.append(request_path)
-            status_message = f"{request_path} is a correct endpoint"
-        else:
-            # Handle unsuccessful paths and error message
-
-            error_msg = result_dict.get("error", {}).get("message", "unknown error")
-            print(f'ERROR MSG: {error_msg}')
-
-            if result_str.startswith("400"):
-                status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"
-
-                if error_msg not in self.prompt_helper.correct_endpoint_but_some_error.keys():
-                    self.prompt_helper.correct_endpoint_but_some_error[error_msg] = []
-                self.prompt_helper.correct_endpoint_but_some_error[error_msg].append(request_path)
-                self.prompt_helper.hint_for_next_round = error_msg
-
-            else:
-                self.prompt_helper.unsuccessful_paths.append(request_path)
-                status_message = f"{request_path} is not a correct endpoint; Reason: {error_msg}"
-
-        if self.query_counter > 30:
-            self.prompt_helper.current_step += 1
-            self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
-                                                                    self.categorized_endpoints)
-            self.query_counter = 0
-
-        # Append status message to prompt history
-        prompt_history.append(tool_message(status_message, tool_call_id))
-
-        return is_successful, prompt_history, result, result_str
-
-    def get_next_key(self, current_key, dictionary):
-        keys = list(dictionary.keys())  # Convert keys to a list
-        try:
-            current_index = keys.index(current_key)  # Find the index of the current key
-            return keys[current_index + 1]  # Return the next key
-        except (ValueError, IndexError):
-            return None  # Return None if the current key is not found or there is no next key
 
     def get_purpose(self):
         """Returns the purpose of the current prompt strategy."""

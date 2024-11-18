@@ -54,6 +54,14 @@ class PatternMatcher:
             return self.replace_parameters(path)
         return path
 
+    def extract_query_params(self, path):
+        # Extract query parameters from a path and return them as a dictionary
+        params = {}
+        matches = self.patterns['query_params'].findall(path)
+        for _, param, value in matches:
+            params[param] = value
+        return params
+
 
 if __name__ == "__main__":
     # Example usage
@@ -67,3 +75,9 @@ if __name__ == "__main__":
 
     print(modified_path)
     print(modified_nested_path)
+    print(f'{example_path}')
+
+    print(f'extracted parameters: {matcher.extract_query_params(example_path)}')
+    print(f'{example_nested_path}')
+
+    print(f'extracted parameters: {matcher.extract_query_params(example_nested_path)}')

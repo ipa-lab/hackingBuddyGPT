@@ -227,7 +227,7 @@ class SimpleWebAPIDocumentation(Agent):
         while not is_good:
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type=move_type,log=self._log , prompt_history=self._prompt_history, llm_handler =self.llm_handler)
             response, completion = self.llm_handler.execute_prompt(prompt=prompt)
-            is_good, self._prompt_history, result, result_str = self.response_handler.evaluate_response(response, completion, self._prompt_history, self._log, self.categorized_endpoints)
+            is_good, self._prompt_history, result, result_str = self.response_handler.handle_response(response, completion, self._prompt_history, self._log, self.categorized_endpoints)
             if result == None:
                 continue
             self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
@@ -238,16 +238,10 @@ class SimpleWebAPIDocumentation(Agent):
                 is_good = True
                 self.all_steps_done = True
 
-            # Use evaluator to record routes and parameters found
-            #routes_found = self.all_http_methods_found(turn)
-            #query_params_found = self.evaluator.all_query_params_found(turn)  # This function should return the number found
-            #false_positives = self.evaluator.check_false_positives(response)  # Define this function to determine FP count
+            self.evaluator.evaluate_response(turn, response, self.prompt_engineer.prompt_helper.found_endpoints)
 
-            # Record these results in the evaluator
-            #self.evaluator.results["routes_found"].append(routes_found)
-            #self.evaluator.results["query_params_found"].append(query_params_found)
-            #self.evaluator.results["false_positives"].append(false_positives)
-       # self.finalize_documentation_metrics()
+
+        self.finalize_documentation_metrics()
 
         self.all_http_methods_found(turn)
 

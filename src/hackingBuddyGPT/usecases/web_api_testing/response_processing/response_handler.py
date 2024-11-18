@@ -289,7 +289,7 @@ class ResponseHandler:
     def extract_key_elements_of_response(self, raw_response: Any) ->str:
         status_code, headers, body = self.response_analyzer.parse_http_response(raw_response)
         return "Status Code: " + str(status_code) + "\nHeaders:"+ str(headers)+ "\nBody"+ str(body)
-    def evaluate_response(self, response, completion, prompt_history, log, categorized_endpoints):
+    def handle_response(self, response, completion, prompt_history, log, categorized_endpoints):
         """
         Evaluates the response to determine if it is acceptable.
 
@@ -310,6 +310,15 @@ class ResponseHandler:
             self.repeat_counter = 0
             self.prompt_helper.hint_for_next_round = f'Try this endpoint in the next round {next(self.common_endpoints)}'
 
+        if response.__class__.__name__ == "RecordNote":
+            prompt_history.append(tool_message(response, tool_call_id))
+            return False, prompt_history, None, None
+
+        else:
+            return self.handle_http_response(response, prompt_history, log, completion, message, categorized_endpoints, tool_call_id)
+
+
+    def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any, categorized_endpoints, tool_call_id) -> Any:
         parts = parts = [part for part in response.action.path.split("/") if part]
         if response.action.path == self.last_path or response.action.path in self.prompt_helper.unsuccessful_paths or response.action.path in self.prompt_helper.found_endpoints:
             self.prompt_helper.hint_for_next_round = f"DO not try this path {self.last_path}. You already tried this before!"
@@ -377,7 +386,6 @@ class ResponseHandler:
                                                                     categorized_endpoints)
             self.query_counter = 0
 
-        # Append status message to prompt history
         prompt_history.append(tool_message(status_message, tool_call_id))
 
         return is_successful, prompt_history, result, result_str
@@ -402,3 +410,4 @@ class ResponseHandler:
         except (ValueError, json.JSONDecodeError) as e:
             print(f"Error extracting JSON: {e}")
             return {}
+

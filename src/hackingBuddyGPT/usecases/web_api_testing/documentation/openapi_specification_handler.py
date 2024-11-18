@@ -43,6 +43,7 @@ class OpenAPISpecificationHandler(object):
         """
         self.response_handler = response_handler
         self.schemas = {}
+        self.query_params = {}
         print(f'Name:{name}')
         self.endpoint_methods = {}
         self.filename = f"{name.lower()}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
@@ -119,6 +120,7 @@ class OpenAPISpecificationHandler(object):
             )
             self.schemas = self.openapi_spec["components"]["schemas"]
 
+
             # Add example and reference to the method's responses if available
             if example or reference or status_message == "No Content":
                 if path in endpoints.keys() and method.lower() not in endpoints[path].values():
@@ -142,6 +144,25 @@ class OpenAPISpecificationHandler(object):
 
                     # Ensure uniqueness of methods for each path
                     endpoint_methods[path] = list(set(endpoint_methods[path]))
+
+            # Add query parameters to the OpenAPI path item object
+            query_params_dict = self.pattern_matcher.extract_query_params(path)
+            if query_params_dict != {}:
+                query_params = query_params_dict.keys()
+                endpoints[path][method.lower()].setdefault('parameters', [])
+                for param, value in query_params.items():
+                    param_entry = {
+                        "name": param,
+                        "in": "query",
+                        "required": True,  # Change this as needed
+                        "schema": {
+                            "type": self.get_type(value)  # Adjust the type based on actual data type
+                        }
+                    }
+                    endpoints[path][method.lower()]['parameters'].append(param_entry)
+                    if path not in self.query_params.keys():
+                        self.query_params[path] = []
+                    self.query_params[path].append(param)
 
         return list(self.openapi_spec["endpoints"].keys())
 
@@ -213,18 +234,16 @@ class OpenAPISpecificationHandler(object):
         else:
             return True
 
-    def match_patterns(self, path):
-        if bool(re.search(r"/\d+", path)):
-            path = re.sub(r"/\d+", "/:id", path)
 
-        # Check if the path matches the pattern
-        if re.match(r"^/api/books/\d+/characters\?page=\d+$", path):
-            path = re.sub(r"(?<=page=)\d+", ":id", path)
-            pattern = r"^characters\?page=\d+&pageSize=\d+$"
-        pattern = r"^characters\?page=\d+&pageSize=\d+$"
-        # Check if the pattern matches the entire string
-        if re.match(pattern, path ):
-                updated_path = re.sub(r"(page=)\d+", r"\1{page}", path)
-                updated_path = re.sub(r"(pageSize=)\d+", r"\1{pagesize}", updated_path)
 
-        return path
+    def get_type(self, value):
+        def is_double(s):
+            # Matches numbers like -123.456, +7.890, and excludes integers
+            return re.fullmatch(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?", s) is not None
+        if value.isdigit():
+            return "integer"
+        elif is_double(value):
+            return "double"
+        else:
+            return "string"
+

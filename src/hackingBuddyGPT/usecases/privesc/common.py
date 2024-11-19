@@ -22,6 +22,7 @@ template_state = Template(filename=str(template_dir / "update_state.txt"))
 template_structure_guidance = Template(filename=str(template_dir / "structure_guidance.txt"))
 template_chain_of_thought = Template(filename=str(template_dir / "chain_of_thought.txt"))
 template_rag = Template(filename=str(template_dir / "rag_prompt.txt"))
+template_rag_alt = Template(filename=str(template_dir / "rag_alt_prompt.txt"))
 
 @dataclass
 class Privesc(Agent):
@@ -165,6 +166,7 @@ class ThesisPrivescPrototyp(Agent):
     enable_structure_guidance: bool = False
     enable_chain_of_thought: bool = False
     enable_rag: bool = False
+    enable_alt_rag: bool = False
 
     _sliding_history: SlidingCliHistory = None
     _state: str = ""
@@ -177,6 +179,7 @@ class ThesisPrivescPrototyp(Agent):
     _chain_of_thought: str = ""
     _rag_text: str = ""
     _rag_document_retriever: VectorStoreRetriever = None
+    _rag_alt_text: str = ""
 
     def init(self):
         super().init()
@@ -188,7 +191,7 @@ class ThesisPrivescPrototyp(Agent):
         if self.disable_history is False:
             self._sliding_history = SlidingCliHistory(self.llm)
 
-        if self.enable_rag:
+        if self.enable_rag or self.enable_alt_rag:
             self._rag_document_retriever = initiate_rag()
 
 
@@ -201,6 +204,7 @@ class ThesisPrivescPrototyp(Agent):
             'target_user': 'root',
             'structure_guidance': self.enable_structure_guidance,
             'chain_of_thought': self.enable_chain_of_thought,
+            'alt_rag_enabled': self.enable_alt_rag
         }
 
         if self.enable_structure_guidance:
@@ -263,6 +267,15 @@ class ThesisPrivescPrototyp(Agent):
                 self._sliding_history.add_command(cmd, result)
 
         self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
+
+        # alternative RAG
+        if self.enable_alt_rag:
+            with self._log.console.status("[bold green]Retrieving relevant documents from Vectorstore..."):
+                query = self.get_alt_rag_query(cmd, result)
+                relevant_documents = self._rag_document_retriever.invoke(query.result)
+                relevant_information = "".join([d.page_content + "\n" for d in relevant_documents])
+                self._rag_alt_text = llm_util.trim_result_front(self.llm, 1000, relevant_information)
+                self._log.log_db.add_log_rag_response(self._log.run_id, turn, cmd, query.result, query)
 
         # retrieving additional information
         if self.enable_rag:
@@ -327,19 +340,26 @@ class ThesisPrivescPrototyp(Agent):
         else:
             return 0
 
+    def get_alt_rag_size(self) -> int:
+        if self.enable_alt_rag:
+            return self.llm.count_tokens(self._rag_alt_text)
+        else:
+            return 0
+
     def get_next_command(self) -> llm_util.LLMResult:
         history = ''
         if not self.disable_history:
             if self.enable_compressed_history:
-                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size() - self.get_chain_of_thought_size())
+                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size() - self.get_chain_of_thought_size() - self.get_alt_rag_size())
             else:
-                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size() - self.get_chain_of_thought_size())
+                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size() - self.get_analyze_size() - self.get_structure_guidance_size() - self.get_chain_of_thought_size() - self.get_alt_rag_size())
         self._template_params.update({
             'history': history,
             'state': self._state,
             'analyze': self._analyze,
             'guidance': self._structure_guidance,
             'CoT': self._chain_of_thought,
+            'alt_rag_text': self._rag_alt_text
         })
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)
@@ -406,5 +426,14 @@ class ThesisPrivescPrototyp(Agent):
         regex_pattern = f"({'|'.join(map(re.escape, delimiters))})"
         # Use re.split to split the text while keeping the delimiters
         return re.split(regex_pattern, input)
+
+    def get_alt_rag_query(self, cmd, result):
+        ctx = self.llm.context_size
+        template_size = self.llm.count_tokens(template_rag_alt.source)
+        target_size = ctx - llm_util.SAFETY_MARGIN - template_size
+        result = llm_util.trim_result_front(self.llm, target_size, result)
+
+        result = self.llm.get_response(template_rag, cmd=cmd, resp=result)
+        return result
 
 

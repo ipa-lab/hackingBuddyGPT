@@ -227,7 +227,10 @@ class ThesisPrivescPrototyp(Agent):
             command = re.findall("<command>(.*?)</command>", answer.result)
 
             if len(command) > 0:
-                cmd = command[0]
+                command = "\n".join(command)
+                cmd = command
+            # if len(command) > 0:
+            #     cmd = command[0]
 
         # split if there are multiple commands
         commands = self.split_into_multiple_commands(cmd)
@@ -301,7 +304,7 @@ class ThesisPrivescPrototyp(Agent):
                 self._log.log_db.add_log_update_state(self._log.run_id, turn, "", state.result, state)
 
         # Output Round Data..
-        self._log.console.print(ui.get_history_table(self.enable_analysis, self.enable_update_state, self._log.run_id, self._log.log_db, turn, self.enable_rag))
+        self._log.console.print(ui.get_history_table(self.enable_analysis, self.enable_update_state, self._log.run_id, self._log.log_db, turn, self.enable_rag or self.enable_alt_rag))
 
         # .. and output the updated state
         if self.enable_update_state:
@@ -415,7 +418,8 @@ class ThesisPrivescPrototyp(Agent):
         ret = [r.rstrip() for r in ret]
 
         # remove first entry. For some reason its always empty
-        ret = ret[1:]
+        if len(ret) > 1:
+            ret = ret[1:]
 
         # combine keywords with their corresponding input
         ret = [ret[i] + ret[i + 1] for i in range(0, len(ret) - 1, 2)]

@@ -13,6 +13,8 @@ from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext, \
     PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
@@ -76,24 +78,31 @@ class SimpleWebAPITesting(Agent):
         LLM handler, capabilities, and the initial prompt.
         """
         super().init()
-        self.openapi_spec_filename = self._load_config("src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/owasp_juice_shop_REST_oas.json")
-
+        if self.config_path != "":
+            current_file_path =  os.path.dirname(os.path.abspath(__file__))
+            self.config_path = os.path.join(current_file_path, "configs", self.config_path)
         config = self._load_config(self.config_path)
         self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
             config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"),
             config.get("query_params")
         )
-        if os.path.exists(config_path):
-            self._openapi_specification: Dict[str, Any] = OpenAPISpecificationParser(config_path).api_data
+        self.strategy = config.get("strategy")
+        if os.path.exists(self.config_path):
+            self._openapi_specification: Dict[str, Any] = OpenAPISpecificationParser(self.config_path).api_data
         self._context["host"] = self.host
         self._setup_capabilities()
         self.categorized_endpoints = self.categorize_endpoints( self.correct_endpoints, self.query_params)
-
+        self.prompt_context = PromptContext.PENTESTING
         self._llm_handler: LLMHandler = LLMHandler(self.llm, self._capabilities)
-        self._response_handler: ResponseHandler = ResponseHandler(self._llm_handler)
+        self.prompt_helper = PromptGenerationHelper(
+                               host=self.host)
+        self._response_handler = ResponseHandler(llm_handler=self._llm_handler, prompt_context=self.prompt_context,
+                                                prompt_helper=self.prompt_helper, token=self.token)
         self._report_handler: ReportHandler = ReportHandler()
         self._test_handler: TestHandler = TestHandler(self._llm_handler)
         self._setup_initial_prompt()
+
+
         self.purpose =  PromptPurpose.AUTHENTICATION
     def categorize_endpoints(self, endpoints, query:dict):
             root_level = []
@@ -162,7 +171,9 @@ class SimpleWebAPITesting(Agent):
             context=PromptContext.PENTESTING,
             rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints)
         )
-        self.strategy = PromptStrategy.CHAIN_OF_THOUGHT
+
+        self.pentesting_information = PenTestingInformation(schemas=self.prompt_helper.schemas, endpoints=self.correct_endpoints)
+
         self.prompt_engineer = PromptEngineer(
             strategy=self.strategy,
             history=self._prompt_history,

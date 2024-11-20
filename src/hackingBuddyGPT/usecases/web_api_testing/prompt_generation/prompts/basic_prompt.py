@@ -47,10 +47,6 @@ class BasicPrompt(ABC):
         self.planning_type = planning_type
         self.prompt_helper = prompt_helper
         self.strategy = strategy
-        self.pentesting_information: Optional[PenTestingInformation] = None
-
-        if self.context == PromptContext.PENTESTING:
-            self.pentesting_information = PenTestingInformation(schemas=prompt_helper.schemas, endpoints=prompt_helper.endpoints)
 
     @abstractmethod
     def generate_prompt(

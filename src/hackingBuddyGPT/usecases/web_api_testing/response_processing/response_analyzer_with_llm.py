@@ -34,7 +34,7 @@ class ResponseAnalyzerWithLLM:
         """
         self.purpose = purpose
         self.llm_handler = llm_handler
-        self.pentesting_information = PenTestingInformation()
+        #self.pentesting_information = PenTestingInformation()
 
     def set_purpose(self, purpose: PromptPurpose):
         """

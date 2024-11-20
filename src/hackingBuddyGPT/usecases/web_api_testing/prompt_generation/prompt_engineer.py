@@ -66,7 +66,7 @@ class PromptEngineer:
 
         self.strategies = {
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(
-                context=self.context, prompt_helper=self.prompt_helper
+                context=self.context, prompt_helper=self.prompt_helper, 
             ),
             PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(
                 context=self.context, prompt_helper=self.prompt_helper

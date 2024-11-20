@@ -87,7 +87,9 @@ class SimpleWebAPIDocumentation(Agent):
         super().init()
         self.found_all_http_methods: bool = False
         if self.config_path != "":
-            self.config_path = os.path.join("src/hackingBuddyGPT/usecases/web_api_testing/configs/", self.config_path)
+            if self.config_path != "":
+                current_file_path = os.path.dirname(os.path.abspath(__file__))
+                self.config_path = os.path.join(current_file_path, "configs", self.config_path)
         config = self._load_config(self.config_path)
         self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
             config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"), config.get("query_params")
@@ -110,7 +112,6 @@ class SimpleWebAPIDocumentation(Agent):
             self.strategy = PromptStrategy.TREE_OF_THOUGHT
         else:
             self.strategy = PromptStrategy.IN_CONTEXT
-
 
         self.prompt_context = PromptContext.DOCUMENTATION
         self.llm_handler = LLMHandler(self.llm, self._capabilities)

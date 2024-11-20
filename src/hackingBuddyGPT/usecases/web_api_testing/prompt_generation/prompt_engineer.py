@@ -34,7 +34,7 @@ class PromptEngineer:
             handlers=(),
             context: PromptContext = None,
             open_api_spec: dict = None,
-            prompt_helper: PromptGenerationHelper =None,
+            prompt_helper: PromptGenerationHelper = None,
             rest_api_info: tuple = None,
     ):
         """
@@ -66,7 +66,7 @@ class PromptEngineer:
 
         self.strategies = {
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(
-                context=self.context, prompt_helper=self.prompt_helper
+                context=self.context, prompt_helper=self.prompt_helper,
             ),
             PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(
                 context=self.context, prompt_helper=self.prompt_helper
@@ -80,6 +80,8 @@ class PromptEngineer:
         }
 
         self.purpose = PromptPurpose.AUTHENTICATION
+
+        self.prompt_func = self.strategies.get(self.strategy)
 
     def generate_prompt(self, turn: int, move_type="explore", log=None, prompt_history=None, llm_handler=None, hint=""):
         """
@@ -96,18 +98,17 @@ class PromptEngineer:
         Raises:
             ValueError: If an invalid prompt strategy is specified.
         """
-        prompt_func = self.strategies.get(self.strategy)
-        if prompt_func.strategy == PromptStrategy.IN_CONTEXT:
-            prompt_func.open_api_spec = self.open_api_spec
-        if not prompt_func:
+        if self.prompt_func.strategy == PromptStrategy.IN_CONTEXT:
+            self.prompt_func.open_api_spec = self.open_api_spec
+        if not self.prompt_func:
             raise ValueError("Invalid prompt strategy")
 
         is_good = False
         self.turn = turn
-        prompt = prompt_func.generate_prompt(
+        prompt = self.prompt_func.generate_prompt(
             move_type=move_type, hint=hint, previous_prompt=self._prompt_history, turn=0
         )
-        self.purpose = prompt_func.purpose
+        self.purpose = self.prompt_func.purpose
         # is_good, prompt_history = self.evaluate_response(prompt, log, prompt_history, llm_handler)
 
         if self.purpose == PromptPurpose.LOGGING_MONITORING:
@@ -117,8 +118,6 @@ class PromptEngineer:
         self.previous_prompt = prompt
         self.turn += 1
         return prompt_history
-
-
 
     def get_purpose(self):
         """Returns the purpose of the current prompt strategy."""
@@ -152,3 +151,7 @@ class PromptEngineer:
         prompt_history.append(tool_message(str(result), tool_call_id))
 
         return prompt_history, result
+
+    def set_pentesting_information(self, pentesting_information):
+        self.pentesting_information = pentesting_information
+        self.prompt_func.set_pentesting_information(pentesting_information)

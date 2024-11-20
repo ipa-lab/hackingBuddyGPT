@@ -9,7 +9,8 @@ from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
-from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import OpenAPISpecificationHandler
+from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import \
+    OpenAPISpecificationHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
@@ -47,76 +48,77 @@ class SimpleWebAPIDocumentation(Agent):
         desc="Expected HTTP methods in the API, as a comma-separated list.",
         default="GET,POST,PUT,PATCH,DELETE",
     )
-    def categorize_endpoints(self, endpoints, query:dict):
-            root_level = []
-            single_parameter = []
-            subresource = []
-            related_resource = []
-            multi_level_resource = []
 
-            for endpoint in endpoints:
-                # Split the endpoint by '/' and filter out empty strings
-                parts = [part for part in endpoint.split('/') if part]
+    def categorize_endpoints(self, endpoints, query: dict):
+        root_level = []
+        single_parameter = []
+        subresource = []
+        related_resource = []
+        multi_level_resource = []
 
-                # Determine the category based on the structure
-                if len(parts) == 1:
-                    root_level.append(endpoint)
-                elif len(parts) == 2:
-                    if "id" in endpoint:
-                        single_parameter.append(endpoint)
-                    else:
-                        subresource.append(endpoint)
-                elif len(parts) == 3:
-                    if "id" in endpoint:
-                        related_resource.append(endpoint)
-                    else:
-                        multi_level_resource.append(endpoint)
+        for endpoint in endpoints:
+            # Split the endpoint by '/' and filter out empty strings
+            parts = [part for part in endpoint.split('/') if part]
+
+            # Determine the category based on the structure
+            if len(parts) == 1:
+                root_level.append(endpoint)
+            elif len(parts) == 2:
+                if "id" in endpoint:
+                    single_parameter.append(endpoint)
+                else:
+                    subresource.append(endpoint)
+            elif len(parts) == 3:
+                if "id" in endpoint:
+                    related_resource.append(endpoint)
                 else:
                     multi_level_resource.append(endpoint)
+            else:
+                multi_level_resource.append(endpoint)
 
-            return {
-                "root_level": root_level,
-                "instance_level": single_parameter,
-                "subresource": subresource,
-                "query": query.values(),
-                "related_resource": related_resource,
-                "multi-level_resource": multi_level_resource,
-            }
+        return {
+            "root_level": root_level,
+            "instance_level": single_parameter,
+            "subresource": subresource,
+            "query": query.values(),
+            "related_resource": related_resource,
+            "multi-level_resource": multi_level_resource,
+        }
+
     def init(self):
         """Initialize the agent with configurations, capabilities, and handlers."""
         super().init()
         self.found_all_http_methods: bool = False
         if self.config_path != "":
-            self.config_path = os.path.join("src/hackingBuddyGPT/usecases/web_api_testing/configs/", self.config_path)
+            if self.config_path != "":
+                current_file_path = os.path.dirname(os.path.abspath(__file__))
+                self.config_path = os.path.join(current_file_path, "configs", self.config_path)
         config = self._load_config(self.config_path)
         self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
-            config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"), config.get("query_params")
+            config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"),
+            config.get("query_params")
         )
 
         self.all_steps_done = False
 
-        self.categorized_endpoints = self.categorize_endpoints( self.correct_endpoints, self.query_params)
+        self.categorized_endpoints = self.categorize_endpoints(self.correct_endpoints, self.query_params)
 
         if "spotify" in self.config_path:
-
             os.environ['SPOTIPY_CLIENT_ID'] = config['client_id']
             os.environ['SPOTIPY_CLIENT_SECRET'] = config['client_secret']
             os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
         print(f'Host:{self.host}')
         self._setup_capabilities()
-        if config.get("strategy") == "COT":
+        if config.get("strategy") == "cot":
             self.strategy = PromptStrategy.CHAIN_OF_THOUGHT
-        elif config.get("strategy") == "TOT":
+        elif config.get("strategy") == "tot":
             self.strategy = PromptStrategy.TREE_OF_THOUGHT
         else:
             self.strategy = PromptStrategy.IN_CONTEXT
 
-
         self.prompt_context = PromptContext.DOCUMENTATION
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
         self.evaluator = Evaluator(config=config)
-
-
 
         self._setup_initial_prompt()
 
@@ -150,9 +152,9 @@ class SimpleWebAPIDocumentation(Agent):
         print(f'NAME:{name}')
 
         self.prompt_helper = PromptGenerationHelper(
-                               host=self.host)
+            host=self.host)
         self.response_handler = ResponseHandler(llm_handler=self.llm_handler, prompt_context=self.prompt_context,
-                                                prompt_helper=self.prompt_helper, token=self.token)
+                                                prompt_helper=self.prompt_helper, token=self.token )
         self.documentation_handler = OpenAPISpecificationHandler(
             self.llm_handler, self.response_handler, self.strategy, self.host, self.description, name
         )
@@ -164,11 +166,10 @@ class SimpleWebAPIDocumentation(Agent):
             history=self._prompt_history,
             handlers=(self.llm_handler, self.response_handler),
             context=self.prompt_context,
-            prompt_helper= self.prompt_helper,
+            prompt_helper=self.prompt_helper,
             open_api_spec=self.documentation_handler.openapi_spec,
             rest_api_info=(self.token, self.host, self.correct_endpoints, self.categorized_endpoints)
         )
-
 
     def all_http_methods_found(self, turn: int) -> bool:
         """Checks if all expected HTTP methods have been found."""
@@ -194,9 +195,9 @@ class SimpleWebAPIDocumentation(Agent):
         last_found_endpoints = len(self.prompt_engineer.prompt_helper.found_endpoints)
 
         while (
-            last_endpoint_found_x_steps_ago <= new_endpoint_count + 5
-            and last_endpoint_found_x_steps_ago <= 10
-            and not self.found_all_http_methods
+                last_endpoint_found_x_steps_ago <= new_endpoint_count + 5
+                and last_endpoint_found_x_steps_ago <= 10
+                and not self.found_all_http_methods
         ):
             self.run_documentation(turn, "explore")
             current_count = len(self.prompt_engineer.prompt_helper.found_endpoints)
@@ -225,21 +226,26 @@ class SimpleWebAPIDocumentation(Agent):
         """Runs the documentation process for the given turn and move type."""
         is_good = False
         while not is_good:
-            prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type=move_type,log=self._log , prompt_history=self._prompt_history, llm_handler =self.llm_handler)
+            prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type=move_type, log=self._log,
+                                                          prompt_history=self._prompt_history,
+                                                          llm_handler=self.llm_handler)
             response, completion = self.llm_handler.execute_prompt(prompt=prompt)
-            is_good, self._prompt_history, result, result_str = self.response_handler.handle_response(response, completion, self._prompt_history, self._log, self.categorized_endpoints)
+            is_good, self._prompt_history, result, result_str = self.response_handler.handle_response(response,
+                                                                                                      completion,
+                                                                                                      self._prompt_history,
+                                                                                                      self._log,
+                                                                                                      self.categorized_endpoints)
             if result == None:
                 continue
             self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
-                 result, response, result_str, self._prompt_history, self.prompt_engineer
+                result, response, result_str, self._prompt_history, self.prompt_engineer
             )
 
-            if self.prompt_engineer.prompt_helper.current_step == self.prompt_engineer.prompt_helper.document_steps-1:
+            if self.prompt_engineer.prompt_helper.current_step == self.prompt_engineer.prompt_helper.document_steps - 1:
                 is_good = True
                 self.all_steps_done = True
 
             self.evaluator.evaluate_response(turn, response, self.prompt_engineer.prompt_helper.found_endpoints)
-
 
         self.finalize_documentation_metrics()
 
@@ -249,7 +255,7 @@ class SimpleWebAPIDocumentation(Agent):
         """Calculate and log the final effectiveness metrics after documentation process is complete."""
         metrics = self.evaluator.calculate_metrics()
         # Specify the file path
-        file_path = self.documentation_handler.file_path.split(".yaml")[0]+ ".txt"
+        file_path = self.documentation_handler.file_path.split(".yaml")[0] + ".txt"
 
         print(f'Writing metrics to {file_path}')
 

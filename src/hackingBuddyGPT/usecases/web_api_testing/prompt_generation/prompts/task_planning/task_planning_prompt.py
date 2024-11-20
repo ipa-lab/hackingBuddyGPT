@@ -59,8 +59,6 @@ class TaskPlanningPrompt(BasicPrompt):
         else:
             return self.prompt_helper.get_endpoints_needing_help()
 
-
-
     def _get_common_steps(self) -> List[str]:
         """
         Provides a list of common steps for generating prompts.
@@ -89,12 +87,12 @@ class TaskPlanningPrompt(BasicPrompt):
         elif self.strategy == PromptStrategy.TREE_OF_THOUGHT:
             if self.context == PromptContext.DOCUMENTATION:
                 return [
-                        "Imagine three different OpenAPI specification specialists.\n"
-                        "All experts will write down one step of their thinking,\n"
-                        "then share it with the group.\n"
-                        "After that, all remaining specialists will proceed to the next step, and so on.\n"
-                        "If any specialist realizes they're wrong at any point, they will leave.\n"
-                        f"The question is: "
+                    "Imagine three different OpenAPI specification specialists.\n"
+                    "All experts will write down one step of their thinking,\n"
+                    "then share it with the group.\n"
+                    "After that, all remaining specialists will proceed to the next step, and so on.\n"
+                    "If any specialist realizes they're wrong at any point, they will leave.\n"
+                    f"The question is: "
 
                 ]
             else:
@@ -109,18 +107,3 @@ class TaskPlanningPrompt(BasicPrompt):
 
         else:
             raise TypeError(f"There exists no PromptStrategy of the type {self.strategy}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -142,15 +142,16 @@ class OpenAPISpecificationConverter:
 
 # Usage example
 if __name__ == "__main__":
-    #yaml_input = "src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/hard/coincap_oas.json"
+    # yaml_input = "src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/hard/coincap_oas.json"
 
     converter = OpenAPISpecificationConverter("converted_files")
     ## Convert YAML to JSON
-    #json_file = converter.yaml_to_json(yaml_input)
+    # json_file = converter.yaml_to_json(yaml_input)
     #
     ## Convert JSON to YAML
-    #if json_file:
+    # if json_file:
     #    converter.json_to_yaml(json_file)
 
     openapi_path = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/hard/oas/reqres_oas.json"
-    converter.extract_openapi_info(openapi_path, output_path ="/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/hard")
+    converter.extract_openapi_info(openapi_path,
+                                   output_path="/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/hard")

@@ -1,8 +1,7 @@
 {
   "token": "",
   "host": "",
-  "description":  "Ticketbuddy is a ticket creation platform, where users can report issues via creating tickets."
-  ,
+  "description": "Ticketbuddy is a ticket creation platform, where users can report issues via creating tickets.",
   "correct_endpoints": [
     "/users",
     "/users/{user_id}",

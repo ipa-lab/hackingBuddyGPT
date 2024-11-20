@@ -48,10 +48,10 @@ class MinimalWebTesting(Agent):
             {
                 "role": "system",
                 "content": f"You are a senior penetration tester, having received a new project of testing a website at {self.host}."
-                f"Your goal is first to explore the website, building up your knowledge about its parts and inner workings, and then try to plan and execute possible exploitations.\n"
-                f"Make sure to take lots of notes about the pages you visit, so that you can later more easily work through the page.\n"
-                f"Do not brute-force anything, all information that you might need can be found on the webserver.\n"
-                f"THE MOST IMPORTANT THING TO DO IS, that if you see a flag ({self.flag_format_description}), you should submit it immediately.",
+                           f"Your goal is first to explore the website, building up your knowledge about its parts and inner workings, and then try to plan and execute possible exploitations.\n"
+                           f"Make sure to take lots of notes about the pages you visit, so that you can later more easily work through the page.\n"
+                           f"Do not brute-force anything, all information that you might need can be found on the webserver.\n"
+                           f"THE MOST IMPORTANT THING TO DO IS, that if you see a flag ({self.flag_format_description}), you should submit it immediately.",
             }
         )
         self._context["host"] = self.host

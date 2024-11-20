@@ -18,50 +18,51 @@ class TestHandler(object):
         self.file = os.path.join(self.test_path, self.filename)
 
     def parse_test_case(self, note: str) -> Dict[str, Any]:
-            """
-            Parses a note containing a test case into a structured format.
+        """
+        Parses a note containing a test case into a structured format.
 
-            Args:
-                note (str): The note string containing the test case information.
+        Args:
+            note (str): The note string containing the test case information.
 
-            Returns:
-                Dict[str, Any]: The parsed test case in a structured format.
-            """
-            # Regular expressions to extract the method, endpoint, input, and expected output
-            method_endpoint_pattern = re.compile(r"Test Case for (\w+) (\/\S+):")
-            description_pattern = re.compile(r"Description: (.+)")
-            input_data_pattern = re.compile(r"Input Data: (\{.*\})")
-            expected_output_pattern = re.compile(r"Expected Output: (.+)")
+        Returns:
+            Dict[str, Any]: The parsed test case in a structured format.
+        """
+        # Regular expressions to extract the method, endpoint, input, and expected output
+        method_endpoint_pattern = re.compile(r"Test Case for (\w+) (\/\S+):")
+        description_pattern = re.compile(r"Description: (.+)")
+        input_data_pattern = re.compile(r"Input Data: (\{.*\})")
+        expected_output_pattern = re.compile(r"Expected Output: (.+)")
 
-            # Extract method and endpoint
-            method_endpoint_match = method_endpoint_pattern.search(note)
-            if method_endpoint_match:
-                method, endpoint = method_endpoint_match.groups()
-            else:
-                raise ValueError("Method and endpoint not found in the note")
+        # Extract method and endpoint
+        method_endpoint_match = method_endpoint_pattern.search(note)
+        if method_endpoint_match:
+            method, endpoint = method_endpoint_match.groups()
+        else:
+            raise ValueError("Method and endpoint not found in the note")
 
-            # Extract description
-            description_match = description_pattern.search(note)
-            description = description_match.group(1) if description_match else "No description found"
+        # Extract description
+        description_match = description_pattern.search(note)
+        description = description_match.group(1) if description_match else "No description found"
 
-            # Extract input data
-            input_data_match = input_data_pattern.search(note)
-            input_data = input_data_match.group(1) if input_data_match else "{}"
+        # Extract input data
+        input_data_match = input_data_pattern.search(note)
+        input_data = input_data_match.group(1) if input_data_match else "{}"
 
-            # Extract expected output
-            expected_output_match = expected_output_pattern.search(note)
-            expected_output = expected_output_match.group(1) if expected_output_match else "No expected output found"
+        # Extract expected output
+        expected_output_match = expected_output_pattern.search(note)
+        expected_output = expected_output_match.group(1) if expected_output_match else "No expected output found"
 
-            # Construct the structured test case
-            test_case = {
-                "description": f"Test case for {method} {endpoint}",
-                "input": input_data,
-                "expected_output": expected_output
-            }
+        # Construct the structured test case
+        test_case = {
+            "description": f"Test case for {method} {endpoint}",
+            "input": input_data,
+            "expected_output": expected_output
+        }
 
-            return test_case
+        return test_case
 
-    def generate_test_case(self, analysis: str, endpoint: str, method: str, prompt_history) -> Tuple[str, Dict[str, Any]]:
+    def generate_test_case(self, analysis: str, endpoint: str, method: str, prompt_history) -> Tuple[
+        str, Dict[str, Any]]:
         """
         Generates a test case based on the provided analysis of the API response.
 

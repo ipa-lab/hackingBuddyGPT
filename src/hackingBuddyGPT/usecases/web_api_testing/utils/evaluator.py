@@ -13,6 +13,7 @@ class Evaluator:
             "query_params_found": [],
             "false_positives": [],
         }
+
     def calculate_metrics(self):
         """
         Calculate evaluation metrics based on the simulated runs.
@@ -119,4 +120,3 @@ class Evaluator:
             self.results["routes_found"].append(routes_found)
             self.results["query_params_found"].append(query_params_found)
             self.results["false_positives"].append(false_positives)
-

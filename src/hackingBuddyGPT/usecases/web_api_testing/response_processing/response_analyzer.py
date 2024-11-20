@@ -77,7 +77,7 @@ class ResponseAnalyzer:
         return self.analyze_parsed_response(status_code, headers, body)
 
     def analyze_parsed_response(
-        self, status_code: Optional[int], headers: Dict[str, str], body: str
+            self, status_code: Optional[int], headers: Dict[str, str], body: str
     ) -> Optional[Dict[str, Any]]:
         """
         Analyzes the parsed HTTP response based on the purpose, invoking the appropriate method.
@@ -99,7 +99,7 @@ class ResponseAnalyzer:
         return analysis_methods.get(self.purpose)
 
     def analyze_authentication_authorization(
-        self, status_code: Optional[int], headers: Dict[str, str], body: str
+            self, status_code: Optional[int], headers: Dict[str, str], body: str
     ) -> Dict[str, Any]:
         """
         Analyzes the HTTP response with a focus on authentication and authorization.
@@ -134,7 +134,7 @@ class ResponseAnalyzer:
         return analysis
 
     def analyze_input_validation(
-        self, status_code: Optional[int], headers: Dict[str, str], body: str
+            self, status_code: Optional[int], headers: Dict[str, str], body: str
     ) -> Dict[str, Any]:
         """
         Analyzes the HTTP response with a focus on input validation.
@@ -176,12 +176,12 @@ class ResponseAnalyzer:
             return "Unexpected"
 
     def document_findings(
-        self,
-        status_code: Optional[int],
-        headers: Dict[str, str],
-        body: str,
-        expected_behavior: str,
-        actual_behavior: str,
+            self,
+            status_code: Optional[int],
+            headers: Dict[str, str],
+            body: str,
+            expected_behavior: str,
+            actual_behavior: str,
     ) -> Dict[str, Any]:
         """
         Documents the findings from the analysis, comparing expected and actual behavior.

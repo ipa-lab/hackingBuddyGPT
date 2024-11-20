@@ -27,7 +27,9 @@ class InContextLearningPrompt(StatePlanningPrompt):
         purpose (Optional[PromptPurpose]): The purpose of the prompt generation, which can be set during the process.
         open_api_spec (Any) : Samples including the context.
     """
-    def __init__(self, context: PromptContext, prompt_helper, context_information: Dict[int, Dict[str, str]], open_api_spec: Any) -> None:
+
+    def __init__(self, context: PromptContext, prompt_helper, context_information: Dict[int, Dict[str, str]],
+                 open_api_spec: Any) -> None:
         """
         Initializes the InContextLearningPrompt with a specific context, prompt helper, and initial prompt.
 
@@ -41,11 +43,11 @@ class InContextLearningPrompt(StatePlanningPrompt):
         self.prompt: Dict[int, Dict[str, str]] = context_information
         self.purpose: Optional[PromptPurpose] = None
         self.open_api_spec = open_api_spec
-        self.response_history  = {
-            }
+        self.response_history = {
+        }
 
     def generate_prompt(
-        self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
+            self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
     ) -> str:
         """
         Generates a prompt using the in-context learning strategy.
@@ -59,7 +61,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
             str: The generated prompt.
         """
         if self.context == PromptContext.DOCUMENTATION:
-            steps =  self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt)
+            steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt)
 
         return self.prompt_helper.check_prompt(previous_prompt=previous_prompt, steps=steps)
 
@@ -71,7 +73,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
             example_response = {}
             endpoint = ""
             endpoints = [endpoint for endpoint in self.open_api_spec["endpoints"]]
-            if len(endpoints) > 0 :
+            if len(endpoints) > 0:
                 previous_prompt = self.sort_previous_prompt(previous_prompt)
                 for prompt in previous_prompt:
                     if isinstance(prompt, dict) and prompt["role"] == "system":
@@ -84,8 +86,9 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
                                     break
 
-                    #if endpoint != "": break
-                method_example_response = self.extract_example_response(self.open_api_spec["endpoints"], endpoint=endpoint)
+                    # if endpoint != "": break
+                method_example_response = self.extract_example_response(self.open_api_spec["endpoints"],
+                                                                        endpoint=endpoint)
                 icl_prompt = self.generate_icl_prompt(properties, method_example_response, endpoint)
             else:
                 icl_prompt = ""
@@ -96,9 +99,10 @@ class InContextLearningPrompt(StatePlanningPrompt):
         if move_type == "explore":
             return self.prompt_helper._get_initial_documentation_steps(
                 [f"Based on this information :\n{icl_prompt}\n Do the following: "],
-            strategy=self.strategy)
+                strategy=self.strategy)
         else:
-            return self.prompt_helper.get_endpoints_needing_help(info=f"Based on this information :\n{icl_prompt}\n Do the following: ")
+            return self.prompt_helper.get_endpoints_needing_help(
+                info=f"Based on this information :\n{icl_prompt}\n Do the following: ")
 
     def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> List[str]:
         """
@@ -166,7 +170,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
     # Function to extract example response from paths
     def extract_example_response(self, api_paths, endpoint, method="get"):
-        example_method ={}
+        example_method = {}
         example_response = {}
         # Ensure that the provided endpoint and method exist in the schema
         if endpoint in api_paths and method in api_paths[endpoint]:
@@ -180,7 +184,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
                     # Extract example responses
                     for example_name, example_details in examples.items():
-                        if len(example_response) ==1:
+                        if len(example_response) == 1:
                             break
                         example_value = example_details.get("value", {})
                         example_response[example_name] = example_value
@@ -259,5 +263,3 @@ class InContextLearningPrompt(StatePlanningPrompt):
             icl_prompts[purpose] = prompts
 
         return icl_prompts
-
-

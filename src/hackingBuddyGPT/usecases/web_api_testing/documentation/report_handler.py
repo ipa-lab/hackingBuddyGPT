@@ -4,6 +4,8 @@ from datetime import datetime
 from enum import Enum
 from typing import List
 from fpdf import FPDF
+
+
 class ReportHandler:
     """
     A handler for creating and managing report files that document operations and data.

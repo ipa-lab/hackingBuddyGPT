@@ -8,7 +8,7 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information impo
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PlanningType,
     PromptContext,
-    PromptStrategy,
+    PromptStrategy, PromptPurpose,
 )
 
 
@@ -28,11 +28,11 @@ class BasicPrompt(ABC):
     """
 
     def __init__(
-        self,
-        context: PromptContext = None,
-        planning_type: PlanningType = None,
-        prompt_helper=None,
-        strategy: PromptStrategy = None,
+            self,
+            context: PromptContext = None,
+            planning_type: PlanningType = None,
+            prompt_helper=None,
+            strategy: PromptStrategy = None,
     ):
         """
         Initializes the BasicPrompt with a specific context, prompt helper, and strategy.
@@ -47,14 +47,15 @@ class BasicPrompt(ABC):
         self.planning_type = planning_type
         self.prompt_helper = prompt_helper
         self.strategy = strategy
-        self.pentesting_information: Optional[PenTestingInformation] = None
 
-        if self.context == PromptContext.PENTESTING:
-            self.pentesting_information = PenTestingInformation(schemas=prompt_helper.schemas, endpoints=prompt_helper.endpoints)
+    def set_pentesting_information(self, pentesting_information: PenTestingInformation):
+        self.pentesting_information = pentesting_information
+        self.purpose = PromptPurpose.AUTHENTICATION
+        self.pentesting_information.next_testing_endpoint()
 
     @abstractmethod
     def generate_prompt(
-        self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
+            self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
     ) -> str:
         """
         Abstract method to generate a prompt.

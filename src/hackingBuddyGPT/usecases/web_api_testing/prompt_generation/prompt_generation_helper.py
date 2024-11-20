@@ -29,7 +29,6 @@ class PromptGenerationHelper(object):
         self.current_category = "root_level"
         self.correct_endpoint_but_some_error = {}
         self.hint_for_next_round = ""
-        self.current_endpoint = None
         self.schemas = []
         self.endpoints = []
         self.found_endpoints = []
@@ -40,9 +39,10 @@ class PromptGenerationHelper(object):
         self.current_step = 1
         self.document_steps = 0
 
-    import re
-
-    import re
+    def setup_prompt_information(self, schemas, endpoints):
+        self.schemas = schemas
+        self.endpoints = endpoints
+        self.current_endpoint = endpoints[0]
 
     def find_missing_endpoint(self, endpoints: dict) -> str:
         """
@@ -220,7 +220,6 @@ class PromptGenerationHelper(object):
             self.document_steps = len(chain_of_thought_steps)
 
             steps = chain_of_thought_steps[0] + chain_of_thought_steps[self.current_step] + [hint]
-
 
         return steps
 

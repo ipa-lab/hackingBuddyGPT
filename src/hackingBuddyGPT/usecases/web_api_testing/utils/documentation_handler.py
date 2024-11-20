@@ -3,6 +3,7 @@ import yaml
 from datetime import datetime
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 
+
 class DocumentationHandler:
     """
     Handles the generation and updating of an OpenAPI specification document based on dynamic API responses.
@@ -72,7 +73,8 @@ class DocumentationHandler:
                 if path not in self.openapi_spec['endpoints']:
                     self.openapi_spec['endpoints'][path] = {}
                 # Update the method description within the path
-                example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(self.openapi_spec, result, path, method)
+                example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(
+                    self.openapi_spec, result, path, method)
                 if example is not None or reference is not None:
                     self.openapi_spec['endpoints'][path][method.lower()] = {
                         "summary": f"{method} operation on {path}",

@@ -2,7 +2,6 @@ import os
 import json
 import spotipy.util
 
-
 os.environ['SPOTIPY_CLIENT_ID'] = 'your_client_id'
 os.environ['SPOTIPY_CLIENT_SECRET'] = 'your_client_secret'
 os.environ['SPOTIPY_REDIRECT_URI'] = 'your_redirect_uri'
@@ -11,7 +10,7 @@ current_dir = os.path.dirname(__file__)
 
 # Define relative paths to JSON files
 oas_path = os.path.join(current_dir, "configs", "oas", "spotify_oas.json")
-config_path = os.path.join(current_dir,"configs", "spotify_config.json")
+config_path = os.path.join(current_dir, "configs", "spotify_config.json")
 
 # Load the Spotify OAS JSON file to retrieve scopes
 with open(oas_path) as f:
@@ -37,4 +36,3 @@ with open(config_path, "w") as f:
     json.dump(config_data, f, indent=4)
 
 print(f'Access Token saved to spotify_config.json')
-

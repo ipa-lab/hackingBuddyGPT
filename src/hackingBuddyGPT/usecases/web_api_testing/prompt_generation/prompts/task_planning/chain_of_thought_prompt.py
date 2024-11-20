@@ -1,5 +1,4 @@
 from typing import List, Optional
-
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PromptContext,
     PromptPurpose,
@@ -34,6 +33,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
+
 
     def generate_prompt(
             self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
@@ -71,9 +71,9 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
-        if move_type == "explore" and self.pentesting_information.init_steps(self.prompt_helper.current_endpoint):
-            purpose = list(self.pentesting_information.explore_steps.keys())[0]
-            steps = self.pentesting_information.explore_steps[purpose]
+        if move_type == "explore":
+            purpose = self.purpose
+            steps = self.pentesting_information.get_steps_of_phase(purpose)
 
             # Transform steps into hierarchical conditional CoT
             transformed_steps = self.transform_to_hierarchical_conditional_cot({purpose: [steps]})
@@ -89,12 +89,6 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                     # Apply common steps if provided
                     if common_step:
                         step = common_step + step
-
-                    # Remove the processed step from explore_steps
-                    if len(self.pentesting_information.explore_steps[purpose]) > 0:
-                        del self.pentesting_information.explore_steps[purpose][0]
-                    else:
-                        del self.pentesting_information.explore_steps[purpose]  # Clean up if all steps are processed
 
                     print(f'Prompt: {step}')
                     return step

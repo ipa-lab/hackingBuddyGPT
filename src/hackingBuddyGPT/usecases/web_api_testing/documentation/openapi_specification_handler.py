@@ -3,7 +3,6 @@ import re
 from collections import defaultdict
 from datetime import datetime
 
-
 import pydantic_core
 import yaml
 from rich.panel import Panel
@@ -32,7 +31,8 @@ class OpenAPISpecificationHandler(object):
         _capabilities (dict): A dictionary to store capabilities related to YAML file handling.
     """
 
-    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler, strategy: PromptStrategy,  url: str, description:str, name:str) -> None:
+    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler, strategy: PromptStrategy, url: str,
+                 description: str, name: str) -> None:
         """
         Initializes the handler with a template OpenAPI specification.
 
@@ -54,7 +54,7 @@ class OpenAPISpecificationHandler(object):
                 "version": "1.0",
                 "description": f"{description}",
             },
-            "servers": [{"url": f"{url}"}], #https://jsonplaceholder.typicode.com
+            "servers": [{"url": f"{url}"}],  # https://jsonplaceholder.typicode.com
             "endpoints": {},
             "components": {"schemas": {}},
         }
@@ -92,7 +92,6 @@ class OpenAPISpecificationHandler(object):
             if not path or not method or path == "/":
                 return list(self.openapi_spec["endpoints"].keys())
 
-
             # replace specific values with generic values for doc
             path = self.pattern_matcher.replace_according_to_pattern(path)
 
@@ -102,8 +101,6 @@ class OpenAPISpecificationHandler(object):
             # Extract the main part of the path for checking partial matches
             path_parts = path.split("/")
             main_path = path if len(path_parts) > 1 else ""
-
-
 
             # Initialize the path if it's not present and is valid
             if path not in endpoints and main_path and str(status_code).startswith("20"):
@@ -119,7 +116,6 @@ class OpenAPISpecificationHandler(object):
                 self.openapi_spec, result, path, method
             )
             self.schemas = self.openapi_spec["components"]["schemas"]
-
 
             # Add example and reference to the method's responses if available
             if example or reference or status_message == "No Content":
@@ -163,6 +159,7 @@ class OpenAPISpecificationHandler(object):
                     if path not in self.query_params.keys():
                         self.query_params[path] = []
                     self.query_params[path].append(param)
+
 
         return list(self.openapi_spec["endpoints"].keys())
 
@@ -234,16 +231,14 @@ class OpenAPISpecificationHandler(object):
         else:
             return True
 
-
-
     def get_type(self, value):
         def is_double(s):
             # Matches numbers like -123.456, +7.890, and excludes integers
             return re.fullmatch(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?", s) is not None
+
         if value.isdigit():
             return "integer"
         elif is_double(value):
             return "double"
         else:
             return "string"
-

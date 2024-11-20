@@ -31,7 +31,8 @@ class ResponseHandler:
         response_analyzer (ResponseAnalyzerWithLLM): An instance for analyzing responses with the LLM.
     """
 
-    def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext, token:str, prompt_helper:PromptGenerationHelper) -> None:
+    def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext, token: str,
+                 prompt_helper: PromptGenerationHelper, pentesting_information: PenTestingInformation=None) -> None:
         """
         Initializes the ResponseHandler with the specified LLM handler.
 
@@ -40,15 +41,30 @@ class ResponseHandler:
         """
         self.llm_handler = llm_handler
         if prompt_context == PromptContext.PENTESTING:
-            self.pentesting_information = PenTestingInformation()
-            self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler)
-        self.common_endpoints = cycle([ '/api', '/auth', '/users', '/products', '/orders', '/cart', '/checkout', '/payments', '/transactions', '/notifications', '/messages', '/files', '/admin', '/settings', '/status', '/health', '/healthcheck', '/info', '/docs', '/swagger', '/openapi', '/metrics', '/logs', '/analytics', '/search', '/feedback', '/support', '/profile', '/account', '/reports', '/dashboard', '/activity', '/subscriptions', '/webhooks', '/events', '/upload', '/download', '/images', '/videos', '/user/login', '/api/v1', '/api/v2', '/auth/login', '/auth/logout', '/auth/register', '/auth/refresh', '/users/{id}', '/users/me', '/users/profile', '/users/settings', '/products/{id}', '/products/search', '/orders/{id}', '/orders/history', '/cart/items', '/cart/checkout', '/checkout/confirm', '/payments/{id}', '/payments/methods', '/transactions/{id}', '/transactions/history', '/notifications/{id}', '/messages/{id}', '/messages/send', '/files/upload', '/files/{id}', '/admin/users', '/admin/settings', '/settings/preferences', '/search/results', '/feedback/{id}', '/support/tickets', '/profile/update', '/password/reset', '/password/change', '/account/delete', '/account/activate',  '/account/deactivate', '/account/settings', '/account/preferences', '/reports/{id}', '/reports/download',  '/dashboard/stats', '/activity/log', '/subscriptions/{id}', '/subscriptions/cancel', '/webhooks/{id}',  '/events/{id}', '/images/{id}', '/videos/{id}', '/files/download/{id}', '/support/tickets/{id}'])
+            self.pentesting_information = pentesting_information
+            self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler, pentesting_info= pentesting_information)
+
+        self.common_endpoints = cycle(
+            ['/api', '/auth', '/users', '/products', '/orders', '/cart', '/checkout', '/payments', '/transactions',
+             '/notifications', '/messages', '/files', '/admin', '/settings', '/status', '/health', '/healthcheck',
+             '/info', '/docs', '/swagger', '/openapi', '/metrics', '/logs', '/analytics', '/search', '/feedback',
+             '/support', '/profile', '/account', '/reports', '/dashboard', '/activity', '/subscriptions', '/webhooks',
+             '/events', '/upload', '/download', '/images', '/videos', '/user/login', '/api/v1', '/api/v2',
+             '/auth/login', '/auth/logout', '/auth/register', '/auth/refresh', '/users/{id}', '/users/me',
+             '/users/profile', '/users/settings', '/products/{id}', '/products/search', '/orders/{id}',
+             '/orders/history', '/cart/items', '/cart/checkout', '/checkout/confirm', '/payments/{id}',
+             '/payments/methods', '/transactions/{id}', '/transactions/history', '/notifications/{id}',
+             '/messages/{id}', '/messages/send', '/files/upload', '/files/{id}', '/admin/users', '/admin/settings',
+             '/settings/preferences', '/search/results', '/feedback/{id}', '/support/tickets', '/profile/update',
+             '/password/reset', '/password/change', '/account/delete', '/account/activate', '/account/deactivate',
+             '/account/settings', '/account/preferences', '/reports/{id}', '/reports/download', '/dashboard/stats',
+             '/activity/log', '/subscriptions/{id}', '/subscriptions/cancel', '/webhooks/{id}', '/events/{id}',
+             '/images/{id}', '/videos/{id}', '/files/download/{id}', '/support/tickets/{id}'])
         self.query_counter = 0
         self.repeat_counter = 0
         self.token = token
         self.last_path = ""
         self.prompt_helper = prompt_helper
-
 
     def get_response_for_prompt(self, prompt: str) -> object:
         """
@@ -108,7 +124,7 @@ class ResponseHandler:
         return None
 
     def parse_http_response_to_openapi_example(
-        self, openapi_spec: Dict[str, Any], http_response: str, path: str, method: str
+            self, openapi_spec: Dict[str, Any], http_response: str, path: str, method: str
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str], Dict[str, Any]]:
         """
         Parses an HTTP response to generate an OpenAPI example.
@@ -286,9 +302,10 @@ class ResponseHandler:
         llm_responses = self.response_analyzer.analyze_response(result, prompt_history)
         return llm_responses
 
-    def extract_key_elements_of_response(self, raw_response: Any) ->str:
+    def extract_key_elements_of_response(self, raw_response: Any) -> str:
         status_code, headers, body = self.response_analyzer.parse_http_response(raw_response)
-        return "Status Code: " + str(status_code) + "\nHeaders:"+ str(headers)+ "\nBody"+ str(body)
+        return "Status Code: " + str(status_code) + "\nHeaders:" + str(headers) + "\nBody" + str(body)
+
     def handle_response(self, response, completion, prompt_history, log, categorized_endpoints):
         """
         Evaluates the response to determine if it is acceptable.
@@ -315,10 +332,11 @@ class ResponseHandler:
             return False, prompt_history, None, None
 
         else:
-            return self.handle_http_response(response, prompt_history, log, completion, message, categorized_endpoints, tool_call_id)
+            return self.handle_http_response(response, prompt_history, log, completion, message, categorized_endpoints,
+                                             tool_call_id)
 
-
-    def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any, categorized_endpoints, tool_call_id) -> Any:
+    def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any,
+                             categorized_endpoints, tool_call_id) -> Any:
         parts = parts = [part for part in response.action.path.split("/") if part]
         if response.action.path == self.last_path or response.action.path in self.prompt_helper.unsuccessful_paths or response.action.path in self.prompt_helper.found_endpoints:
             self.prompt_helper.hint_for_next_round = f"DO not try this path {self.last_path}. You already tried this before!"
@@ -410,4 +428,3 @@ class ResponseHandler:
         except (ValueError, json.JSONDecodeError) as e:
             print(f"Error extracting JSON: {e}")
             return {}
-

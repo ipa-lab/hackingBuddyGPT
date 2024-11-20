@@ -13,6 +13,8 @@ from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext, \
     PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
@@ -26,6 +28,7 @@ from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandle
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
+
 
 # OpenAPI specification file path
 
@@ -66,75 +69,103 @@ class SimpleWebAPITesting(Agent):
     )
 
     _prompt_history: Prompt = field(default_factory=list)
-    _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases":list})
+    _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_http_methods_found: bool = False
 
-    def init(self) -> None:
-        """
-        Initializes the SimpleWebAPITesting use case by setting up the context, response handler,
-        LLM handler, capabilities, and the initial prompt.
-        """
+    def init(self):
         super().init()
-        self.openapi_spec_filename = self._load_config("src/hackingBuddyGPT/usecases/web_api_testing/configs/oas/owasp_juice_shop_REST_oas.json")
+        self._setup_config_path()
+        config = self._load_config()
+        self._extract_config_values(config)
+        self._set_strategy()
+        self._load_openapi_specification()
+        self._setup_environment()
+        self._setup_handlers()
+        self._setup_initial_prompt()
 
-        config = self._load_config(self.config_path)
-        self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
-            config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"),
-            config.get("query_params")
-        )
-        if os.path.exists(config_path):
-            self._openapi_specification: Dict[str, Any] = OpenAPISpecificationParser(config_path).api_data
+    def _setup_config_path(self):
+        if self.config_path:
+            current_file_path = os.path.dirname(os.path.abspath(__file__))
+            self.config_path = os.path.join(current_file_path, "configs", self.config_path)
+
+    def _load_config(self):
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError(f"Configuration file not found at {self.config_path}")
+        with open(self.config_path, 'r') as file:
+            return json.load(file)
+
+    def _extract_config_values(self, config):
+        self.token = config.get("token")
+        self.host = config.get("host")
+        self.description = config.get("description")
+        self.correct_endpoints = config.get("correct_endpoints", {})
+        self.query_params = config.get("query_params", {})
+
+    def _set_strategy(self):
+        strategies = {
+            "cot": PromptStrategy.CHAIN_OF_THOUGHT,
+            "tot": PromptStrategy.TREE_OF_THOUGHT,
+            "icl": PromptStrategy.IN_CONTEXT
+        }
+        self.strategy = strategies.get(self.strategy, PromptStrategy.IN_CONTEXT)
+
+    def _load_openapi_specification(self):
+        if os.path.exists(self.config_path):
+            self._openapi_specification_parser = OpenAPISpecificationParser(self.config_path)
+            self._openapi_specification = self._openapi_specification_parser.api_data
+
+    def _setup_environment(self):
         self._context["host"] = self.host
         self._setup_capabilities()
-        self.categorized_endpoints = self.categorize_endpoints( self.correct_endpoints, self.query_params)
+        self.categorized_endpoints = self.categorize_endpoints(self.correct_endpoints, self.query_params)
+        self.prompt_context = PromptContext.PENTESTING
 
-        self._llm_handler: LLMHandler = LLMHandler(self.llm, self._capabilities)
-        self._response_handler: ResponseHandler = ResponseHandler(self._llm_handler)
-        self._report_handler: ReportHandler = ReportHandler()
-        self._test_handler: TestHandler = TestHandler(self._llm_handler)
-        self._setup_initial_prompt()
-        self.purpose =  PromptPurpose.AUTHENTICATION
-    def categorize_endpoints(self, endpoints, query:dict):
-            root_level = []
-            single_parameter = []
-            subresource = []
-            related_resource = []
-            multi_level_resource = []
+    def _setup_handlers(self):
+        self._llm_handler = LLMHandler(self.llm, self._capabilities)
+        self.prompt_helper = PromptGenerationHelper(host=self.host)
+        self.pentesting_information = PenTestingInformation(self._openapi_specification_parser)
+        self._response_handler = ResponseHandler(
+            llm_handler=self._llm_handler, prompt_context=self.prompt_context, prompt_helper=self.prompt_helper,
+            token=self.token, pentesting_information = self.pentesting_information)
+        self._report_handler = ReportHandler()
+        self._test_handler = TestHandler(self._llm_handler)
 
-            for endpoint in endpoints:
-                # Split the endpoint by '/' and filter out empty strings
-                parts = [part for part in endpoint.split('/') if part]
+    def categorize_endpoints(self, endpoints, query: dict):
+        root_level = []
+        single_parameter = []
+        subresource = []
+        related_resource = []
+        multi_level_resource = []
 
-                # Determine the category based on the structure
-                if len(parts) == 1:
-                    root_level.append(endpoint)
-                elif len(parts) == 2:
-                    if "id" in endpoint:
-                        single_parameter.append(endpoint)
-                    else:
-                        subresource.append(endpoint)
-                elif len(parts) == 3:
-                    if "id" in endpoint:
-                        related_resource.append(endpoint)
-                    else:
-                        multi_level_resource.append(endpoint)
+        for endpoint in endpoints:
+            # Split the endpoint by '/' and filter out empty strings
+            parts = [part for part in endpoint.split('/') if part]
+
+            # Determine the category based on the structure
+            if len(parts) == 1:
+                root_level.append(endpoint)
+            elif len(parts) == 2:
+                if "id" in endpoint:
+                    single_parameter.append(endpoint)
+                else:
+                    subresource.append(endpoint)
+            elif len(parts) == 3:
+                if "id" in endpoint:
+                    related_resource.append(endpoint)
                 else:
                     multi_level_resource.append(endpoint)
+            else:
+                multi_level_resource.append(endpoint)
 
-            return {
-                "root_level": root_level,
-                "instance_level": single_parameter,
-                "subresource": subresource,
-                "query": query.values(),
-                "related_resource": related_resource,
-                "multi-level_resource": multi_level_resource,
-            }
-
-    def _load_config(self, path):
-        """Loads JSON configuration from the specified path."""
-        with open(path, 'r') as file:
-            return json.load(file)
+        return {
+            "root_level": root_level,
+            "instance_level": single_parameter,
+            "subresource": subresource,
+            "query": query.values(),
+            "related_resource": related_resource,
+            "multi-level_resource": multi_level_resource,
+        }
 
     def _setup_initial_prompt(self) -> None:
         """
@@ -155,22 +186,18 @@ class SimpleWebAPITesting(Agent):
         handlers = (self._llm_handler, self._response_handler)
         schemas: Dict[str, Any] = {}
         endpoints: Dict[str, Any] = self.correct_endpoints
-        self.prompt_engineer: PromptEngineer = PromptEngineer(
-            strategy=PromptStrategy.CHAIN_OF_THOUGHT,
-            history=self._prompt_history,
-            handlers=handlers,
-            context=PromptContext.PENTESTING,
-            rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints)
-        )
-        self.strategy = PromptStrategy.CHAIN_OF_THOUGHT
+
         self.prompt_engineer = PromptEngineer(
             strategy=self.strategy,
             history=self._prompt_history,
             handlers=(self._llm_handler, self._response_handler),
             context=PromptContext.PENTESTING,
             open_api_spec=self._openapi_specification,
-            rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints)
+            rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints),
+            prompt_helper=self.prompt_helper
         )
+        self.prompt_engineer.set_pentesting_information(self.pentesting_information)
+        self.purpose = PromptPurpose.AUTHENTICATION
 
     def all_http_methods_found(self) -> None:
         """
@@ -216,12 +243,16 @@ class SimpleWebAPITesting(Agent):
         while self.purpose == self.prompt_engineer.purpose:
             print(f'Self purpose: {self.purpose}')
             print(f'prompt engineer purpose: {self.purpose}')
-            prompt = self.prompt_engineer.generate_prompt(turn)
+            prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore", log=self._log,
+                                                          prompt_history=self._prompt_history,
+                                                          llm_handler=self._llm_handler)
             response, completion = self._llm_handler.execute_prompt(prompt)
             self._handle_response(completion, response, self.prompt_engineer.purpose)
         print(f'Self purpose: {self.purpose}')
         print(f'prompt engineer purpose: {self.purpose}')
         self.purpose = self.prompt_engineer.purpose
+        if self.purpose == PromptPurpose.LOGGING_MONITORING:
+            self.pentesting_information.next_testing_endpoint()
 
     def _handle_response(self, completion: Any, response: Any, purpose: str) -> None:
         """
@@ -246,14 +277,18 @@ class SimpleWebAPITesting(Agent):
                 endpoint: str = str(response.action.path).split("/")[1]
                 self._report_handler.write_endpoint_to_report(endpoint)
 
-            self._prompt_history.append(tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
+            self._prompt_history.append(
+                tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
             analysis = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history)
 
-            self._test_handler.generate_and_save_test_cases(analysis=analysis, endpoint=response.action.path, method=response.action.method, prompt_history= self._prompt_history)
+            self._test_handler.generate_and_save_test_cases(analysis=analysis, endpoint=response.action.path,
+                                                            method=response.action.method,
+                                                            prompt_history=self._prompt_history)
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
 
         self.all_http_methods_found()
+
 
 
 @use_case("Minimal implementation of a web API testing use case")

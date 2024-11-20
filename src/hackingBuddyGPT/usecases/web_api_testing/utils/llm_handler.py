@@ -46,13 +46,13 @@ class LLMHandler:
         def call_model(adjusted_prompt: List[Dict[str, Any]]) -> Any:
             """Helper function to make the API call with the adjusted prompt."""
             print(f'------------------------------------------------')
-            print(f'Prompt:{adjusted_prompt[len(adjusted_prompt)-1]}')
+            print(f'Prompt:{adjusted_prompt[len(adjusted_prompt) - 1]}')
             print(f'------------------------------------------------')
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,
                 messages=adjusted_prompt,
                 response_model=capabilities_to_action_model(self._capabilities),
-                max_tokens=300 # adjust as needed
+                max_tokens=300  # adjust as needed
             )
 
         # Helper to adjust the prompt based on its length.
@@ -62,12 +62,13 @@ class LLMHandler:
                 num_prompts = 10
                 self.adjusting_counter = 0
             else:
-                num_prompts = int(len(prompt) - 0.5*len(prompt) if len(prompt) >= 20 else len(prompt) - 0.3*len(prompt))
+                num_prompts = int(
+                    len(prompt) - 0.5 * len(prompt) if len(prompt) >= 20 else len(prompt) - 0.3 * len(prompt))
             return self.adjust_prompt(prompt, num_prompts=num_prompts)
 
         try:
             # First adjustment attempt based on prompt length
-            #adjusted_prompt = adjust_prompt_based_on_length(prompt)
+            # adjusted_prompt = adjust_prompt_based_on_length(prompt)
             self.adjusting_counter = 1
             if len(prompt) >= 30:
                 prompt = adjust_prompt_based_on_length(prompt)
@@ -86,8 +87,8 @@ class LLMHandler:
                 print(f"Error: {str(e)} - Further adjusting and retrying.")
 
                 # Final fallback with the smallest prompt size
-                shortened_prompt =  adjust_prompt_based_on_length(prompt)
-                #print(f"New prompt length: {len(shortened_prompt)}")
+                shortened_prompt = adjust_prompt_based_on_length(prompt)
+                # print(f"New prompt length: {len(shortened_prompt)}")
                 return call_model(shortened_prompt)
 
     def adjust_prompt(self, prompt: List[Dict[str, Any]], num_prompts: int = 5) -> List[Dict[str, Any]]:
@@ -161,7 +162,7 @@ class LLMHandler:
                 else:
                     prompt.remove(item)
                 last_action = "remove"
-                removed_item = removed_item +1
+                removed_item = removed_item + 1
             else:
 
                 if last_action == "remove":
@@ -182,7 +183,7 @@ class LLMHandler:
             counter = 5
             for item in prompt:
                 prompt.remove(item)
-                counter = counter +1
+                counter = counter + 1
         if not isinstance(prompt, str):
             prompt.reverse()
         return prompt

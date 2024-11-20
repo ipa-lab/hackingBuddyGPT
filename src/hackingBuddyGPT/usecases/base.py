@@ -135,7 +135,6 @@ class _WrappedUseCase:
 
 use_cases: Dict[str, _WrappedUseCase] = dict()
 
-
 T = typing.TypeVar("T")
 
 

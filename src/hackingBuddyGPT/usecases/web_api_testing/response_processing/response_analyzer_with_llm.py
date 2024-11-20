@@ -23,7 +23,7 @@ class ResponseAnalyzerWithLLM:
         purpose (PromptPurpose): The specific purpose for analyzing the HTTP response.
     """
 
-    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None):
+    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None, pentesting_info: PenTestingInformation = None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
 
@@ -34,7 +34,7 @@ class ResponseAnalyzerWithLLM:
         """
         self.purpose = purpose
         self.llm_handler = llm_handler
-        self.pentesting_information = PenTestingInformation()
+        self.pentesting_information = pentesting_info
 
     def set_purpose(self, purpose: PromptPurpose):
         """
@@ -78,7 +78,7 @@ class ResponseAnalyzerWithLLM:
             for step in steps:
                 prompt_history, response = self.process_step(step, prompt_history)
                 llm_responses.append(response)
-                #print(f'Response:{response}')
+                # print(f'Response:{response}')
 
         return llm_responses
 
@@ -105,7 +105,7 @@ class ResponseAnalyzerWithLLM:
         elif status_code in [500, 400, 404, 422]:
             body = body
         else:
-            #print(f'Body:{body}')
+            # print(f'Body:{body}')
             if body != '' or body != "":
                 body = json.loads(body)
             if isinstance(body, list) and len(body) > 1:

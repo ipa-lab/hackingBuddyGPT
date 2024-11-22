@@ -1,37 +1,37 @@
 {
   "token": "your_api_token_here",
-  "host": "https://reqres.in",
-  "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - ReqRes API is a testing API that allows developers to simulate RESTful interactions.",
+  "host": "https://reqres.in/api",
+  "description": "ReqRes API is a testing API that allows developers to simulate RESTful interactions.",
   "correct_endpoints": [
-    "/api/users",
-    "/api/users/{id}",
-    "/api/products",
-    "/api/login",
-    "/api/register",
-    "/api/comments",
-    "/api/categories",
-    "/api/photos",
-    "/api/events",
-    "/api/invoices",
-    "/api/jobs",
-    "/api/{id}",
-    "/api/orders",
-    "/api/dashboard",
-    "/api/products/{id}",
-    "/api/settings",
-    "/api/messages",
-    "/api/todos",
-    "/api/posts",
-    "/api/resources",
-    "/api/teams"
+    "/users",
+    "/users/{id}",
+    "/products",
+    "/login",
+    "/register",
+    "/comments",
+    "/categories",
+    "/photos",
+    "/events",
+    "/invoices",
+    "/jobs",
+    "/{id}",
+    "/orders",
+    "/dashboard",
+    "/products/{id}",
+    "/settings",
+    "/messages",
+    "/todos",
+    "/posts",
+    "/resources",
+    "/teams"
   ],
   "query_params": {
-    "/api/users": [
+    "/users": [
       "page",
       "per_page",
       "price"
     ],
-    "/api/users/{id}": [
+    "/users/{id}": [
       "page",
       "name",
       "delay",
@@ -44,7 +44,7 @@
       "status",
       "limit"
     ],
-    "/api/products": [
+    "/products": [
       "page",
       "category",
       "per_page",
@@ -54,7 +54,7 @@
       "size",
       "brand"
     ],
-    "/api/login": [
+    "/login": [
       "page",
       "username",
       "password",
@@ -69,69 +69,69 @@
       "role",
       "price"
     ],
-    "/api/register": [
+    "/register": [
       "page",
       "email",
       "password",
       "username",
       "price"
     ],
-    "/api/comments": [
+    "/comments": [
       "page",
       "price"
     ],
-    "/api/categories": [
+    "/categories": [
       "page"
     ],
-    "/api/photos": [
+    "/photos": [
       "page",
       "price"
     ],
-    "/api/events": [
+    "/events": [
       "page",
       "price"
     ],
-    "/api/invoices": [
+    "/invoices": [
       "page",
       "price"
     ],
-    "/api/jobs": [
+    "/jobs": [
       "page",
       "price"
     ],
-    "/api/{id}": [
+    "/{id}": [
       "page",
       "price"
     ],
-    "/api/orders": [
+    "/orders": [
       "page"
     ],
-    "/api/dashboard": [
+    "/dashboard": [
       "page"
     ],
-    "/api/products/{id}": [
+    "/products/{id}": [
       "category",
       "color",
       "param1",
       "param2"
     ],
-    "/api/settings": [
+    "/settings": [
       "price"
     ],
-    "/api/messages": [
+    "/messages": [
       "price"
     ],
-    "/api/todos": [
+    "/todos": [
       "page",
       "price"
     ],
-    "/api/posts": [
+    "/posts": [
       "page"
     ],
-    "/api/resources": [
+    "/resources": [
       "page"
     ],
-    "/api/teams": [
+    "/teams": [
       "price"
     ]
   }

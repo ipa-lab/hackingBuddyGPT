@@ -109,9 +109,9 @@ class SimpleWebAPIDocumentation(Agent):
             os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
         print(f'Host:{self.host}')
         self._setup_capabilities()
-        if config.get("strategy") == "cot":
+        if self.strategy == "cot":
             self.strategy = PromptStrategy.CHAIN_OF_THOUGHT
-        elif config.get("strategy") == "tot":
+        elif self.strategy  == "tot":
             self.strategy = PromptStrategy.TREE_OF_THOUGHT
         else:
             self.strategy = PromptStrategy.IN_CONTEXT
@@ -152,7 +152,7 @@ class SimpleWebAPIDocumentation(Agent):
         print(f'NAME:{name}')
 
         self.prompt_helper = PromptGenerationHelper(
-            host=self.host)
+            host=self.host, description=self.description)
         self.response_handler = ResponseHandler(llm_handler=self.llm_handler, prompt_context=self.prompt_context,
                                                 prompt_helper=self.prompt_helper, token=self.token )
         self.documentation_handler = OpenAPISpecificationHandler(
@@ -183,7 +183,7 @@ class SimpleWebAPIDocumentation(Agent):
         """Executes a round of API documentation based on the turn number."""
         if turn == 1:
             self._explore_mode(turn)
-        elif turn < 20:
+        elif turn < 15:
             self._single_exploit_run(turn)
         else:
             self._exploit_until_no_help_needed(turn)
@@ -245,31 +245,12 @@ class SimpleWebAPIDocumentation(Agent):
                 is_good = True
                 self.all_steps_done = True
 
-            self.evaluator.evaluate_response(turn, response, self.prompt_engineer.prompt_helper.found_endpoints)
+            self.evaluator.evaluate_response(response, self.prompt_engineer.prompt_helper.found_endpoints)
 
-        self.finalize_documentation_metrics()
+        self.evaluator.finalize_documentation_metrics(file_path=  self.documentation_handler.file.split(".yaml")[0] + ".txt")
 
         self.all_http_methods_found(turn)
 
-    def finalize_documentation_metrics(self):
-        """Calculate and log the final effectiveness metrics after documentation process is complete."""
-        metrics = self.evaluator.calculate_metrics()
-        # Specify the file path
-        file_path = self.documentation_handler.file_path.split(".yaml")[0] + ".txt"
-
-        print(f'Writing metrics to {file_path}')
-
-        # Writing the formatted data to a text file
-        with open(file_path, 'w') as file:
-            file.write("Documentation Effectiveness Metrics:\n")
-            file.write(f"Percent Routes Found: {metrics['Percent Routes Found']:.2f}%\n")
-            file.write(f"Percent Parameters Found: {metrics['Percent Parameters Found']:.2f}%\n")
-            file.write(f"Average False Positives: {metrics['Average False Positives']}\n")
-            file.write(
-                f"Routes Found - Best: {metrics['Routes Best/Worst'][0]}, Worst: {metrics['Routes Best/Worst'][1]}\n")
-            file.write(
-                f"Query Parameters Found - Best: {metrics['Params Best/Worst'][0]}, Worst: {metrics['Params Best/Worst'][1]}\n"
-            )
 
 
 @use_case("Minimal implementation of a web API testing use case")

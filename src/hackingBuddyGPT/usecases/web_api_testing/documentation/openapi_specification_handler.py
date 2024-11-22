@@ -41,6 +41,7 @@ class OpenAPISpecificationHandler(object):
             response_handler (object): An instance of the response handler for processing API responses.
             strategy (PromptStrategy): An instance of the PromptStrategy class.
         """
+        self.unsuccessful_methods = {}
         self.response_handler = response_handler
         self.schemas = {}
         self.query_params = {}
@@ -50,9 +51,9 @@ class OpenAPISpecificationHandler(object):
         self.openapi_spec = {
             "openapi": "3.0.0",
             "info": {
-                "title": f"Generated API Documentation via {name}",
+                "title": f"Generated API Documentation {name}",
                 "version": "1.0",
-                "description": f"{description}",
+                "description": f"{description} + \nUrl:{url}",
             },
             "servers": [{"url": f"{url}"}],  # https://jsonplaceholder.typicode.com
             "endpoints": {},
@@ -89,7 +90,7 @@ class OpenAPISpecificationHandler(object):
             path = request.path
             method = request.method
 
-            if not path or not method or path == "/":
+            if not path or not method or path == "/" or not path.startswith("/"):
                 return list(self.openapi_spec["endpoints"].keys())
 
             # replace specific values with generic values for doc
@@ -109,6 +110,9 @@ class OpenAPISpecificationHandler(object):
 
             if path not in endpoints and (status_code != '400'):
                 self.unsuccessful_paths.append(path)
+                if path not in  self.unsuccessful_methods:
+                    self.unsuccessful_methods[path] = []
+                self.unsuccessful_methods[path].append(method)
                 return list(self.openapi_spec["endpoints"].keys())
 
             # Parse the response into OpenAPI example and reference
@@ -142,23 +146,25 @@ class OpenAPISpecificationHandler(object):
                     endpoint_methods[path] = list(set(endpoint_methods[path]))
 
             # Add query parameters to the OpenAPI path item object
-            query_params_dict = self.pattern_matcher.extract_query_params(path)
-            if query_params_dict != {}:
-                query_params = query_params_dict.keys()
-                endpoints[path][method.lower()].setdefault('parameters', [])
-                for param, value in query_params.items():
-                    param_entry = {
-                        "name": param,
-                        "in": "query",
-                        "required": True,  # Change this as needed
-                        "schema": {
-                            "type": self.get_type(value)  # Adjust the type based on actual data type
+            if path.__contains__('?'):
+                query_params_dict = self.pattern_matcher.extract_query_params(path)
+                if query_params_dict != {}:
+                    endpoints[path][method.lower()].setdefault('parameters', [])
+                    print(f'query_params: {query_params_dict}')
+                    print(f'query_params: {query_params_dict.items()}')
+                    for param, value in query_params_dict.items():
+                        param_entry = {
+                            "name": param,
+                            "in": "query",
+                            "required": True,  # Change this as needed
+                            "schema": {
+                                "type": self.get_type(value)  # Adjust the type based on actual data type
+                            }
                         }
-                    }
-                    endpoints[path][method.lower()]['parameters'].append(param_entry)
-                    if path not in self.query_params.keys():
-                        self.query_params[path] = []
-                    self.query_params[path].append(param)
+                        endpoints[path][method.lower()]['parameters'].append(param_entry)
+                        if path not in self.query_params.keys():
+                            self.query_params[path] = []
+                        self.query_params[path].append(param)
 
 
         return list(self.openapi_spec["endpoints"].keys())
@@ -215,6 +221,7 @@ class OpenAPISpecificationHandler(object):
         prompt_engineer.prompt_helper.endpoint_found_methods = http_methods_dict
         prompt_engineer.prompt_helper.endpoint_methods = self.endpoint_methods
         prompt_engineer.prompt_helper.unsuccessful_paths = self.unsuccessful_paths
+        prompt_engineer.prompt_helper.unsuccessful_methods = self.unsuccessful_methods
         return prompt_engineer
 
     def document_response(self, result, response, result_str, prompt_history, prompt_engineer):

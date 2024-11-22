@@ -241,15 +241,12 @@ class SimpleWebAPITesting(Agent):
         response: Any
         completion: Any
         while self.purpose == self.prompt_engineer.purpose:
-            print(f'Self purpose: {self.purpose}')
-            print(f'prompt engineer purpose: {self.purpose}')
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore", log=self._log,
                                                           prompt_history=self._prompt_history,
                                                           llm_handler=self._llm_handler)
             response, completion = self._llm_handler.execute_prompt(prompt)
             self._handle_response(completion, response, self.prompt_engineer.purpose)
-        print(f'Self purpose: {self.purpose}')
-        print(f'prompt engineer purpose: {self.purpose}')
+
         self.purpose = self.prompt_engineer.purpose
         if self.purpose == PromptPurpose.LOGGING_MONITORING:
             self.pentesting_information.next_testing_endpoint()
@@ -281,10 +278,9 @@ class SimpleWebAPITesting(Agent):
                 tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
             analysis = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history)
-
-            self._test_handler.generate_and_save_test_cases(analysis=analysis, endpoint=response.action.path,
-                                                            method=response.action.method,
-                                                            prompt_history=self._prompt_history)
+            self._test_handler.generate_test_cases(analysis=analysis, endpoint=response.action.path,
+                                                   method=response.action.method,
+                                                   prompt_history=self._prompt_history)
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
 
         self.all_http_methods_found()

@@ -93,13 +93,12 @@ class TestHandler(object):
                "input": {{}},
                "expected_output": {{}}
            }}
+           
+           return a note
            """
         prompt_history.append({"role": "system", "content": prompt_text})
 
         response, completion = self._llm_handler.execute_prompt(prompt_history)
-        message = completion.choices[0].message
-        tool_call_id: str = message.tool_calls[0].id
-        command: str = pydantic_core.to_json(response).decode()
         result: Any = response.execute()
         test_case = self.parse_test_case(result)
         # Extract the structured test case if possible
@@ -179,7 +178,7 @@ class TestHandler(object):
 
         print(f"Pytest case written to {self.file}.py")
 
-    def generate_and_save_test_cases(self, analysis: str, endpoint: str, method: str, prompt_history) -> None:
+    def generate_test_cases(self, analysis: str, endpoint: str, method: str, prompt_history) -> None:
         """
         Generates test cases based on the analysis and saves them as pytest-compatible tests.
 

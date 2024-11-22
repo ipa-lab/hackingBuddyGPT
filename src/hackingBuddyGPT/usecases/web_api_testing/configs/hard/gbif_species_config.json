@@ -1,28 +1,28 @@
 {
-  "token": "your_api_token_here",
-  "host": "https://api.gbif.org",
-  "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - The GBIF Species API is a web service that provides access to species-related data from the Global Biodiversity Information Facility (GBIF) database.",
+  "token": "",
+  "host": "https://api.gbif.org/v1",
+  "description": "The GBIF Species API is a web service that provides access to species-related data from the Global Biodiversity Information Facility (GBIF) database.",
   "correct_endpoints": [
-    "/v1/species/search",
-    "/v1/species",
-    "/v1/species/suggest",
-    "/v1/species/match",
-    "/v1/species/{id}",
-    "/v1/species/lookup",
-    "/v1/species/{id}/children",
-    "/v1/species/{id}/synonyms",
-    "/v1/species/{id}/references",
-    "/v1/species/{id}/vernacularNames",
-    "/v1/species/{id}/media",
-    "/v1/species/{id}/descriptions",
-    "/v1/species/{id}/distributions",
-    "/v1/species/{id}/speciesProfiles",
-    "/v1/species/{id}/name",
-    "/v1/species/{id}/parents",
-    "/v1/species/{id}/related"
+    "/species/search",
+    "/species",
+    "/species/suggest",
+    "/species/match",
+    "/species/{id}",
+    "/species/lookup",
+    "/species/{id}/children",
+    "/species/{id}/synonyms",
+    "/species/{id}/references",
+    "/species/{id}/vernacularNames",
+    "/species/{id}/media",
+    "/species/{id}/descriptions",
+    "/species/{id}/distributions",
+    "/species/{id}/speciesProfiles",
+    "/species/{id}/name",
+    "/species/{id}/parents",
+    "/species/{id}/related"
   ],
   "query_params": {
-    "/v1/species/search": [
+    "/species/search": [
       "q",
       "limit",
       "rank",
@@ -46,12 +46,12 @@
       "genus",
       "highertaxon"
     ],
-    "/v1/species": [
+    "/species": [
       "q",
       "limit",
       "name"
     ],
-    "/v1/species/suggest": [
+    "/species/suggest": [
       "q",
       "limit",
       "strict",
@@ -69,7 +69,7 @@
       "taxonKey",
       "nameUsage"
     ],
-    "/v1/species/match": [
+    "/species/match": [
       "q",
       "limit",
       "offset",
@@ -86,7 +86,7 @@
       "family",
       "genus"
     ],
-    "/v1/species/{id}": [
+    "/species/{id}": [
       "q",
       "limit",
       "strict",
@@ -97,7 +97,7 @@
       "locale",
       "datasetKey"
     ],
-    "/v1/species/lookup": [
+    "/species/lookup": [
       "q",
       "strict",
       "limit",
@@ -105,7 +105,7 @@
       "year",
       "sort"
     ],
-    "/v1/species/{id}/children": [
+    "/species/{id}/children": [
       "sort",
       "limit",
       "offset",
@@ -125,7 +125,7 @@
       "strict",
       "fields"
     ],
-    "/v1/species/{id}/synonyms": [
+    "/species/{id}/synonyms": [
       "sort",
       "limit",
       "offset",
@@ -139,7 +139,7 @@
       "taxonKey",
       "nameUsageMatch"
     ],
-    "/v1/species/{id}/references": [
+    "/species/{id}/references": [
       "sort",
       "limit",
       "offset",
@@ -156,13 +156,13 @@
       "basis_of_record",
       "locale"
     ],
-    "/v1/species/{id}/vernacularNames": [
+    "/species/{id}/vernacularNames": [
       "sort",
       "limit",
       "nameUsageMatch",
       "year"
     ],
-    "/v1/species/{id}/media": [
+    "/species/{id}/media": [
       "sort",
       "limit",
       "offset",
@@ -186,7 +186,7 @@
       "publishing_country",
       "institution_code"
     ],
-    "/v1/species/{id}/descriptions": [
+    "/species/{id}/descriptions": [
       "sort",
       "language",
       "source",
@@ -199,7 +199,7 @@
       "locale",
       "nameUsageMatch"
     ],
-    "/v1/species/{id}/distributions": [
+    "/species/{id}/distributions": [
       "sort",
       "limit",
       "country",
@@ -219,7 +219,7 @@
       "status",
       "citationType"
     ],
-    "/v1/species/{id}/speciesProfiles": [
+    "/species/{id}/speciesProfiles": [
       "sort",
       "limit",
       "offset",
@@ -232,7 +232,7 @@
       "datasetKey",
       "nameUsageKey"
     ],
-    "/v1/species/{id}/name": [
+    "/species/{id}/name": [
       "sort",
       "limit",
       "rank",
@@ -245,12 +245,12 @@
       "mediaType",
       "class"
     ],
-    "/v1/species/{id}/parents": [
+    "/species/{id}/parents": [
       "sort",
       "limit",
       "rank"
     ],
-    "/v1/species/{id}/related": [
+    "/species/{id}/related": [
       "nameUsageMatch",
       "year"
     ]

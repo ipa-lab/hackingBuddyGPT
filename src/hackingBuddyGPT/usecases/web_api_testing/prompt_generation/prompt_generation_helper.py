@@ -18,7 +18,8 @@ class PromptGenerationHelper(object):
     """
 
     def __init__(self,
-                 host: str = ""):
+                 host: str = "",
+                 description: str=""):
         """
         Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
 
@@ -29,10 +30,12 @@ class PromptGenerationHelper(object):
         self.current_category = "root_level"
         self.correct_endpoint_but_some_error = {}
         self.hint_for_next_round = ""
+        self.description = description
         self.schemas = []
         self.endpoints = []
         self.found_endpoints = []
         self.endpoint_methods = {}
+        self.unsuccessful_methods = {}
         self.endpoint_found_methods = {}
         self.host = host
         self.unsuccessful_paths = ["/"]
@@ -98,7 +101,7 @@ class PromptGenerationHelper(object):
         # Step 1: Check for missing endpoints
         missing_endpoint = self.find_missing_endpoint(endpoints=self.found_endpoints)
 
-        if missing_endpoint and not missing_endpoint in self.unsuccessful_paths:
+        if missing_endpoint and not missing_endpoint in self.unsuccessful_paths and not 'GET' in self.unsuccessful_methods:
             formatted_endpoint = missing_endpoint.replace(":id", "1") if ":id" in missing_endpoint else missing_endpoint
             return [
                 f"{info}\n",
@@ -109,9 +112,16 @@ class PromptGenerationHelper(object):
         http_methods_set = {"GET", "POST", "PUT", "DELETE"}
         for endpoint, methods in self.endpoint_methods.items():
             missing_methods = http_methods_set - set(methods)
-            if missing_methods:
+            if missing_methods and not endpoint in self.unsuccessful_paths:
                 needed_method = next(iter(missing_methods))
+                if endpoint in self.unsuccessful_methods and needed_method in self.unsuccessful_methods[endpoint]:
+                    while needed_method not in self.unsuccessful_methods[endpoint]:
+                        needed_method = next(iter(missing_methods))
+                        if needed_method == None:
+                            break
+
                 formatted_endpoint = endpoint.replace(":id", "1") if ":id" in endpoint else endpoint
+
                 return [
                     f"{info}\n",
                     f"For endpoint {formatted_endpoint}, find this missing method: {needed_method}."
@@ -148,10 +158,14 @@ class PromptGenerationHelper(object):
         self.unsuccessful_paths = list(set(self.unsuccessful_paths))
         self.found_endpoints = list(set(self.found_endpoints))
         endpoints_missing_id_or_query = []
+        instance_level_found_endpoints = []
+        unsuccessful_paths = []
         hint = ""
 
         if self.current_step == 2:
 
+            instance_level_found_endpoints = [endpoint for endpoint in self.found_endpoints if "id" in endpoint]
+            unsuccessful_paths = [endpoint for endpoint in self.unsuccessful_paths if "id " in endpoint]
             if "Missing required field: ids" in self.correct_endpoint_but_some_error.keys():
                 endpoints_missing_id_or_query = list(
                     set(self.correct_endpoint_but_some_error['Missing required field: ids']))
@@ -178,12 +192,14 @@ class PromptGenerationHelper(object):
 
         # Documentation steps, emphasizing mandatory header inclusion with token if available
         documentation_steps = [
-            [f"Objective: Identify all accessible endpoints via GET requests for {self.host}. """],
+            [f"Objective: Identify all accessible endpoints via GET requests for {self.host}. {self.description}"""],
 
             [
-                "Query Endpoints of Type `/resource`",
-                "Identify all endpoints of type `/resource`: Begin by scanning through all available endpoints and select only those that match the format `/resource`.",
-                "Make GET requests to these `/resource` endpoints."
+                """Query root-level resource endpoints.
+                    Only send GET requests to root-level endpoints with a single path component after the root. 
+                    This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').            
+                    1. Send GET requests to new paths only, avoiding any in the lists above.
+                    2. Do not reuse previously tested paths."""
                 f"Exclude already found endpoints: {self.found_endpoints}."
                 f"Exclude already unsuccessful endpoints and do not try to add resources after it: {self.unsuccessful_paths}."
             ],
@@ -192,6 +208,9 @@ class PromptGenerationHelper(object):
                 f"Look for Instance-level resource endpoint : Identify endpoints of type `/resource/id` where id is the parameter for the id.",
                 "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
                 "Ids can be integers, longs or base62 (like 6rqhFgbbKwnb9MLmUQDhG6)."
+                f"Exclude already found endpoints: {instance_level_found_endpoints}."
+                f"Exclude already unsuccessful endpoints and do not try to add resources after it: {unsuccessful_paths}."
+
             ],
             [
                 "Query endpoints with query parameters",
@@ -240,8 +259,8 @@ class PromptGenerationHelper(object):
             ],
 
             [
-                f""" Step 1: Check root-level resource endpoints.
-Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').                    1. Send GET requests to new paths only, avoiding any in the lists above.
+                f""" Step 1: Query root-level resource endpoints.
+                    Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').                    1. Send GET requests to new paths only, avoiding any in the lists above.
                     2. Do not reuse previously tested paths."""
 
             ],

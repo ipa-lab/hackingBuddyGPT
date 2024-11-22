@@ -1,5 +1,6 @@
 import json
 import re
+from collections import Counter
 from itertools import cycle
 from typing import Any, Dict, Optional, Tuple
 
@@ -32,7 +33,7 @@ class ResponseHandler:
     """
 
     def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext, token: str,
-                 prompt_helper: PromptGenerationHelper, pentesting_information: PenTestingInformation=None) -> None:
+                 prompt_helper: PromptGenerationHelper, pentesting_information: PenTestingInformation = None) -> None:
         """
         Initializes the ResponseHandler with the specified LLM handler.
 
@@ -40,14 +41,17 @@ class ResponseHandler:
             llm_handler (LLMHandler): An instance of the LLM handler for interacting with the LLM.
         """
         self.llm_handler = llm_handler
+        self.no_action_counter = 0
         if prompt_context == PromptContext.PENTESTING:
             self.pentesting_information = pentesting_information
-            self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler, pentesting_info= pentesting_information)
+            self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler,
+                                                             pentesting_info=pentesting_information)
 
-        self.common_endpoints = cycle(
-            ['/api', '/auth', '/users', '/products', '/orders', '/cart', '/checkout', '/payments', '/transactions',
-             '/notifications', '/messages', '/files', '/admin', '/settings', '/status', '/health', '/healthcheck',
-             '/info', '/docs', '/swagger', '/openapi', '/metrics', '/logs', '/analytics', '/search', '/feedback',
+        self.common_endpoints = ['/api', '/auth', '/login', '/admin', '/register', '/users', '/photos', '/images', '/products', '/orders',
+             '/search', '/posts', '/todos', '1',
+             '/cart', '/checkout', '/payments', '/transactions', '/invoices', '/teams', ' /resources', '/comments', ' /categories', '/jobs',
+             '/notifications', '/messages', '/files', '/settings', '/status', '/health', '/healthcheck',
+             '/info', '/docs', '/swagger', '/openapi', '/metrics', '/logs', '/analytics', '/feedback',
              '/support', '/profile', '/account', '/reports', '/dashboard', '/activity', '/subscriptions', '/webhooks',
              '/events', '/upload', '/download', '/images', '/videos', '/user/login', '/api/v1', '/api/v2',
              '/auth/login', '/auth/logout', '/auth/register', '/auth/refresh', '/users/{id}', '/users/me',
@@ -59,13 +63,48 @@ class ResponseHandler:
              '/password/reset', '/password/change', '/account/delete', '/account/activate', '/account/deactivate',
              '/account/settings', '/account/preferences', '/reports/{id}', '/reports/download', '/dashboard/stats',
              '/activity/log', '/subscriptions/{id}', '/subscriptions/cancel', '/webhooks/{id}', '/events/{id}',
-             '/images/{id}', '/videos/{id}', '/files/download/{id}', '/support/tickets/{id}'])
+             '/images/{id}', '/videos/{id}', '/files/download/{id}', '/support/tickets/{id}']
+        self.common_endpoints_categorized = self.categorize_endpoints()
         self.query_counter = 0
         self.repeat_counter = 0
+        self.variants_of_found_endpoints = []
         self.token = token
         self.last_path = ""
         self.prompt_helper = prompt_helper
 
+    def categorize_endpoints(self):
+        root_level = []
+        single_parameter = []
+        subresource = []
+        related_resource = []
+        multi_level_resource = []
+
+        # Iterate through the cycle of endpoints
+        for endpoint in self.common_endpoints:
+            parts = [part for part in endpoint.split('/') if part]
+
+            if len(parts) == 1:
+                root_level.append(endpoint)
+            elif len(parts) == 2:
+                if "{id}" in parts[1]:
+                    single_parameter.append(endpoint)
+                else:
+                    subresource.append(endpoint)
+            elif len(parts) == 3:
+                if any("{id}" in part for part in parts):
+                    related_resource.append(endpoint)
+                else:
+                    multi_level_resource.append(endpoint)
+            else:
+                multi_level_resource.append(endpoint)
+
+        return {
+            1: cycle(root_level),
+            2: cycle(single_parameter),
+            3: cycle(subresource),
+            4: cycle(related_resource),
+            5: cycle(multi_level_resource),
+        }
     def get_response_for_prompt(self, prompt: str) -> object:
         """
         Sends a prompt to the LLM's API and retrieves the response.
@@ -323,9 +362,11 @@ class ResponseHandler:
         message = completion.choices[0].message
         tool_call_id = message.tool_calls[0].id
 
-        if self.repeat_counter == 5:
+        if self.repeat_counter == 3:
             self.repeat_counter = 0
             self.prompt_helper.hint_for_next_round = f'Try this endpoint in the next round {next(self.common_endpoints)}'
+            self.no_action_counter += 1
+            return False, prompt_history, None, None
 
         if response.__class__.__name__ == "RecordNote":
             prompt_history.append(tool_message(response, tool_call_id))
@@ -335,21 +376,64 @@ class ResponseHandler:
             return self.handle_http_response(response, prompt_history, log, completion, message, categorized_endpoints,
                                              tool_call_id)
 
+    def normalize_path(self, path):
+        # Use regex to strip trailing digits
+        return re.sub(r'\d+$', '', path)
+
+    def check_path_variants(self, path, paths):
+        # Normalize the paths
+        normalized_paths = [self.normalize_path(path) for path in paths]
+
+        # Count each normalized path
+        path_counts = Counter(normalized_paths)
+
+        # Extract paths that have more than one variant
+        variants = {path: count for path, count in path_counts.items() if count > 1}
+        if len(variants) != 0:
+            return True
+        return False
     def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any,
                              categorized_endpoints, tool_call_id) -> Any:
-        parts = parts = [part for part in response.action.path.split("/") if part]
-        if response.action.path == self.last_path or response.action.path in self.prompt_helper.unsuccessful_paths or response.action.path in self.prompt_helper.found_endpoints:
-            self.prompt_helper.hint_for_next_round = f"DO not try this path {self.last_path}. You already tried this before!"
-            self.repeat_counter += 1
-            return False, prompt_history, None, None
+        if not response.action.__class__.__name__ == "RecordNote":
+            path = response.action.path
+            if self.no_action_counter == 5:
+                response.action.path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
+                self.no_action_counter = 0
+            else:
+                print(f'PATH: {path}')
+                parts = parts = [part for part in path.split("/") if part]
+                if self.check_path_variants( path,self.prompt_helper.found_endpoints) or self.check_path_variants(path, self.prompt_helper.unsuccessful_paths):
+                    response.action.path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
 
-        if self.prompt_helper.current_step == "instance_level" and len(parts) != 2:
-            self.prompt_helper.hint_for_next_round = "Endpoint path has to consist of a resource + / + and id."
-            return False, prompt_history, None, None
+                    '''self.prompt_helper.hint_for_next_round = f"Make a GET request to this endpoint {next(self.common_endpoints)}'"
+                    self.repeat_counter += 1
+                    self.no_action_counter += 1
+                    return False, prompt_history, None, None'''
+                if path == self.last_path or path in self.prompt_helper.unsuccessful_paths or path in self.prompt_helper.found_endpoints:
+                    response.action.path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
+                    '''self.prompt_helper.hint_for_next_round = f"Make a GET request to this endpoint {}'"
+                    self.repeat_counter += 1
+                    self.no_action_counter += 1
+                    return False, prompt_history, None, None'''
 
-        # Add Authorization header if token is available
-        if self.token != "":
-            response.action.headers = {"Authorization": f"Bearer {self.token}"}
+                if self.prompt_helper.current_step == 1 and len(parts) != 1:
+                    if '/'+parts[0] in self.prompt_helper.found_endpoints or '/'+parts[0]  in self.prompt_helper.unsuccessful_paths:
+                        response.action.path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
+                    else:
+                        response.action.path = '/' + parts[0]
+                if self.prompt_helper.current_step == 2 and len(parts) != 2:
+                    if path in self.prompt_helper.found_endpoints:
+                        response.action.path = path + '/1'
+                    else:
+
+                        self.generate_variants_of_found_endpoints("id")
+                        response.action.path = next(cycle(self.variants_of_found_endpoints))
+                    print(f'PATH: {response.action.path}')
+
+
+            # Add Authorization header if token is available
+            if self.token != "":
+                response.action.headers = {"Authorization": f"Bearer {self.token}"}
 
         # Convert response to JSON and display it
         command = json.loads(pydantic_core.to_json(response).decode())
@@ -357,54 +441,61 @@ class ResponseHandler:
 
         # Execute the command and parse the result
         with log.console.status("[bold green]Executing command..."):
+            if response.__class__.__name__ == "RecordNote":
+                print("HHHHHHHH")
             result = response.execute()
             self.query_counter += 1
             result_dict = self.extract_json(result)
             log.console.print(Panel(result, title="tool"))
+        if not response.action.__class__.__name__ == "RecordNote":
 
-        # Parse HTTP status and request path
-        result_str = self.parse_http_status_line(result)
-        request_path = command.get("action", {}).get("path")
+            # Parse HTTP status and request path
+            result_str = self.parse_http_status_line(result)
+            request_path = response.action.path
 
-        # Check for missing action
-        if "action" not in command:
-            return False, prompt_history, response, completion
+            # Check for missing action
+            if "action" not in command:
+                return False, prompt_history, response, completion
 
-        # Determine if the response is successful
-        is_successful = result_str.startswith("200")
-        prompt_history.append(message)
-        self.last_path = request_path
+            # Determine if the response is successful
+            is_successful = result_str.startswith("200")
+            prompt_history.append(message)
+            self.last_path = request_path
 
-        # Determine if the request path is correct and set the status message
-        if is_successful:
-            # Update current step and add to found endpoints
-            self.prompt_helper.found_endpoints.append(request_path)
-            status_message = f"{request_path} is a correct endpoint"
-        else:
-            # Handle unsuccessful paths and error message
-
-            error_msg = result_dict.get("error", {}).get("message", "unknown error")
-            print(f'ERROR MSG: {error_msg}')
-
-            if result_str.startswith("400"):
-                status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"
-
-                if error_msg not in self.prompt_helper.correct_endpoint_but_some_error.keys():
-                    self.prompt_helper.correct_endpoint_but_some_error[error_msg] = []
-                self.prompt_helper.correct_endpoint_but_some_error[error_msg].append(request_path)
-                self.prompt_helper.hint_for_next_round = error_msg
-
+            # Determine if the request path is correct and set the status message
+            if is_successful:
+                # Update current step and add to found endpoints
+                self.prompt_helper.found_endpoints.append(request_path)
+                status_message = f"{request_path} is a correct endpoint"
             else:
-                self.prompt_helper.unsuccessful_paths.append(request_path)
-                status_message = f"{request_path} is not a correct endpoint; Reason: {error_msg}"
+                # Handle unsuccessful paths and error message
 
-        if self.query_counter > 30:
-            self.prompt_helper.current_step += 1
-            self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
-                                                                    categorized_endpoints)
-            self.query_counter = 0
+                error_msg = result_dict.get("error", {}).get("message", "unknown error")
+                print(f'ERROR MSG: {error_msg}')
 
-        prompt_history.append(tool_message(status_message, tool_call_id))
+                if result_str.startswith("400"):
+                    status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"
+
+                    if error_msg not in self.prompt_helper.correct_endpoint_but_some_error.keys():
+                        self.prompt_helper.correct_endpoint_but_some_error[error_msg] = []
+                    self.prompt_helper.correct_endpoint_but_some_error[error_msg].append(request_path)
+                    self.prompt_helper.hint_for_next_round = error_msg
+
+                else:
+                    self.prompt_helper.unsuccessful_paths.append(request_path)
+                    status_message = f"{request_path} is not a correct endpoint; Reason: {error_msg}"
+
+            if self.query_counter > 30:
+                self.prompt_helper.current_step += 1
+                self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
+                                                                        categorized_endpoints)
+                self.query_counter = 0
+
+            prompt_history.append(tool_message(status_message, tool_call_id))
+        else:
+            prompt_history.append(tool_message(result, tool_call_id))
+            is_successful = False
+            result_str = result[:20]
 
         return is_successful, prompt_history, result, result_str
 
@@ -428,3 +519,13 @@ class ResponseHandler:
         except (ValueError, json.JSONDecodeError) as e:
             print(f"Error extracting JSON: {e}")
             return {}
+
+    def generate_variants_of_found_endpoints(self, type_of_variant):
+        for endpoint in self.prompt_helper.found_endpoints:
+            if endpoint+"/1" in self.variants_of_found_endpoints:
+                self.variants_of_found_endpoints.remove(endpoint+"/1")
+            if "id" not in endpoint and endpoint+"/{id}" not in self.prompt_helper.found_endpoints and endpoint.endswith('s'):
+                self.variants_of_found_endpoints.append(endpoint+"/1")
+            if "/1" not in self.variants_of_found_endpoints:
+                self.variants_of_found_endpoints.append("/1")
+

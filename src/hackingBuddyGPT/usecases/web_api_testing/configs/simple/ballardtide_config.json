@@ -1,26 +1,26 @@
 {
-  "token": "your_api_token_here",
-  "host": "https://www.balldontlie.io/api",
-  "description": "**Disclaimer** - This *OpenAPI* specification is generated with the tool *RESTSpecIT*, which leverages *GPT* Large Language Models. Even though the tool verifies as much as possible the model responses, mistakes and/or inaccuracies may be found in the generated specification. Thus, data such as the license or the e-mail of the API should still be manually verified. Moreover, invalid API parameters are often ignored in *nearly* valid requests, as RESTful APIs tend to apply the **robustness principle**. This principle states that *programs receiving messages should accept non-conformant input as long as the meaning is clear*. As the validity of such parameters is complicated to verify, some described parameters may result in false positives. Query parameters that were found but did not specify a value have their type set to **x-null**.<br><br>**Be Reassured** - The tool *RESTSpecIT* has been thouroughly tested on various APIs, demonstrating an average route and parameter discovery rate of over x%. Additionally, the tool is capable of discovering undocumented features of APIs, which was verified with x of the tested APIs.<br><br>**API Description** - The Balldontlie API is a basketball statistics API that provides data on players, teams, games, and more.",
+  "token": "",
+  "host": "https://www.balldontlie.io/api/v1",
+  "description": "The Balldontlie API is a basketball statistics API that provides data on players, teams, games, and more.",
   "correct_endpoints": [
-    "/v1/players",
-    "/v1/players/{id}",
-    "/v1/teams",
-    "/v1/games",
-    "/v1/stats",
-    "/v1/season_averages",
-    "/v1/teams/{id}",
-    "/v1/games/{id}"
+    "/players",
+    "/players/{id}",
+    "/teams",
+    "/games",
+    "/stats",
+    "/season_averages",
+    "/teams/{id}",
+    "/games/{id}"
   ],
   "query_params": {
-    "/v1/players": [
+    "/players": [
       "search",
       "per_page",
       "sort",
       "team_ids[]",
       "team_ids"
     ],
-    "/v1/players/{id}": [
+    "/players/{id}": [
       "search",
       "per_page",
       "page",
@@ -29,7 +29,7 @@
       "sort",
       "fields[]"
     ],
-    "/v1/teams": [
+    "/teams": [
       "search",
       "per_page",
       "page",
@@ -45,7 +45,7 @@
       "team_ids[]",
       "team_ids"
     ],
-    "/v1/games": [
+    "/games": [
       "search",
       "team_ids[]",
       "seasons[]",
@@ -63,7 +63,7 @@
       "postseason",
       "venue"
     ],
-    "/v1/stats": [
+    "/stats": [
       "search",
       "sort",
       "seasons",
@@ -78,7 +78,7 @@
       "start_time",
       "team_ids[]"
     ],
-    "/v1/season_averages": [
+    "/season_averages": [
       "search",
       "per_page",
       "page",
@@ -92,11 +92,11 @@
       "post_season",
       "team_ids"
     ],
-    "/v1/teams/{id}": [
+    "/teams/{id}": [
       "search",
       "sort"
     ],
-    "/v1/games/{id}": [
+    "/games/{id}": [
       "search",
       "sort"
     ]

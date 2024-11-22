@@ -1,3 +1,5 @@
+from itertools import chain
+
 from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher import PatternMatcher
 
 
@@ -6,8 +8,8 @@ class Evaluator:
         self.pattern_matcher = PatternMatcher()
         self.documented_query_params = config.get("query_params")
         self.num_runs = num_runs
-        self.get_routes_documented = 20  # Example documented GET routes
-        self.query_params_documented = 12  # Example documented query parameters
+        self.documented_routes = config.get("correct_endpoints") #Example documented GET routes
+        self.query_params_documented = len(config.get("query_params"))  # Example documented query parameters
         self.results = {
             "routes_found": [],
             "query_params_found": [],
@@ -16,17 +18,18 @@ class Evaluator:
 
     def calculate_metrics(self):
         """
-        Calculate evaluation metrics based on the simulated runs.
+        Calculate evaluation metrics.
         """
         # Average percentages of documented routes and parameters found
-        routes_found = len(self.results["routes_found"])
-        query_params_found = len(self.results["query_params_found"])
 
-        percent_routes_found = (routes_found / self.get_routes_documented) * 100
-        percent_params_found = (query_params_found / self.query_params_documented) * 100
+
+
+        # Calculate percentages
+        percent_routes_found = self.get_percentage(self.results["routes_found"], self.documented_routes)
+        percent_params_found = self.get_percentage(self.results["query_params_found"], self.documented_query_params)
 
         # Average false positives
-        avg_false_positives = sum(self.results["false_positives"]) / self.num_runs
+        avg_false_positives = len(self.results["false_positives"]) / self.num_runs
 
         # Best and worst for routes and parameters
         r_best = max(self.results["routes_found"])
@@ -40,6 +43,8 @@ class Evaluator:
             "Average False Positives": avg_false_positives,
             "Routes Best/Worst": (r_best, r_worst),
             "Params Best/Worst": (p_best, p_worst),
+            "Additional_routes Found":  set(self.results["routes_found"]).difference(set(self.documented_routes)),
+            "Missing routes Found":  set(self.documented_routes).difference(set(self.results["routes_found"])),
         }
 
         return metrics
@@ -89,10 +94,14 @@ class Evaluator:
         # Example list of documented query parameters
 
         # Simulate response query parameters found (this would usually come from the response data)
-        response_query_params = self.pattern_matcher.extract_query_params(path).keys()
+        response_query_params = self.pattern_matcher.extract_query_params(path)
 
         # Count the valid query parameters found in the response
-        valid_query_params = [param for param in response_query_params if param in self.documented_query_params]
+        valid_query_params = []
+        if response_query_params:
+            for param, value in response_query_params.items():
+                if value in self.documented_query_params.values():
+                    valid_query_params.append(value)
 
         return len(valid_query_params)
 
@@ -109,14 +118,62 @@ class Evaluator:
         # Placeholder code: Replace this with actual extraction logic
         return self.pattern_matcher.extract_query_params(path).keys()
 
-    def evaluate_response(self, turn, response, routes_found):
+    def evaluate_response(self, response, routes_found):
+        query_params_found = 0
+        false_positives = 0
         # Use evaluator to record routes and parameters found
-        if response.__class__.__name__ != "RecordNote":
+        if response.action.__class__.__name__ != "RecordNote":
             path = response.action.path
-            query_params_found = self.all_query_params_found(path)  # This function should return the number found
-            false_positives = self.check_false_positives(path)  # Define this function to determine FP count
+            if path.__contains__('?'):
+                query_params_found = self.all_query_params_found(path)  # This function should return the number found
+                false_positives = self.check_false_positives(path)  # Define this function to determine FP count
 
             # Record these results in the evaluator
-            self.results["routes_found"].append(routes_found)
+            self.results["routes_found"] += routes_found
             self.results["query_params_found"].append(query_params_found)
             self.results["false_positives"].append(false_positives)
+
+    def get_percentage(self, param, documented_param):
+        found_set = set(param)
+        documented_set = set(documented_param)
+
+        common_items = documented_set.intersection(found_set)
+        common_count = len(common_items)
+        percentage = (common_count / len(documented_set)) * 100
+
+        return percentage
+
+    def finalize_documentation_metrics(self, file_path):
+        """Calculate and log the final effectiveness metrics after documentation process is complete."""
+        metrics = self.calculate_metrics()
+        # Specify the file path
+
+        print(f'Appending metrics to {file_path}')
+
+        # Appending the formatted data to a text file
+        with open(file_path, 'a') as file:  # 'a' is for append mode
+            file.write("\n\nDocumentation Effectiveness Metrics:\n")
+            file.write(f"Percent Routes Found: {metrics['Percent Routes Found']:.2f}%\n")
+            file.write(f"Percent Parameters Found: {metrics['Percent Parameters Found']:.2f}%\n")
+            file.write(f"Average False Positives: {metrics['Average False Positives']}\n")
+            file.write(
+                f"Routes Found - Best: {metrics['Routes Best/Worst'][0]}, Worst: {metrics['Routes Best/Worst'][1]}\n")
+            file.write(
+                f"Query Parameters Found - Best: {metrics['Params Best/Worst'][0]}, Worst: {metrics['Params Best/Worst'][1]}\n")
+            file.write(f"Additional Routes Found: {', '.join(map(str, metrics['Additional_routes Found']))}\n")
+            file.write(f"Missing Routes Found: {', '.join(map(str, metrics['Missing routes Found']))}\n")
+
+            # Adding a summary or additional information
+            total_documented_routes = len(self.documented_routes)
+            total_additional_routes = len(metrics['Additional_routes Found'])
+            total_missing_routes = len(metrics['Missing routes Found'])
+            file.write("\nSummary:\n")
+            file.write(f"Total Documented Routes: {total_documented_routes}\n")
+            file.write(f"Total Additional Routes Found: {total_additional_routes}\n")
+            file.write(f"Total Missing Routes: {total_missing_routes}\n")
+
+            # Optionally include a timestamp or other metadata
+            from datetime import datetime
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            file.write(f"Metrics generated on: {current_time}\n")
+

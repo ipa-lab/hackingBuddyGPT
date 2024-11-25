@@ -45,9 +45,7 @@ class LLMHandler:
 
         def call_model(adjusted_prompt: List[Dict[str, Any]]) -> Any:
             """Helper function to make the API call with the adjusted prompt."""
-            print(f'------------------------------------------------')
-            print(f'Prompt:{adjusted_prompt[len(adjusted_prompt)-1]}')
-            print(f'------------------------------------------------')
+
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,
                 messages=adjusted_prompt,

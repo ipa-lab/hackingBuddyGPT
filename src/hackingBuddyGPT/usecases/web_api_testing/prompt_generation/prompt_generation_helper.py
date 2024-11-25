@@ -33,6 +33,7 @@ class PromptGenerationHelper(object):
         self.description = description
         self.schemas = []
         self.endpoints = []
+        self.tried_endpoints = []
         self.found_endpoints = []
         self.endpoint_methods = {}
         self.unsuccessful_methods = {}
@@ -176,6 +177,11 @@ class PromptGenerationHelper(object):
                 if "base62" in self.hint_for_next_round:
                     hint = " ADD an id after endpoints!"
 
+            new_endpoint = self.get_instance_level_endpoints()
+            if  new_endpoint!= None:
+                hint += f"Create a GET request for this endpoint: {new_endpoint}"
+
+
         if self.current_step == 3:
             if "No search query" in self.correct_endpoint_but_some_error.keys():
                 endpoints_missing_id_or_query = list(set(self.correct_endpoint_but_some_error['No search query']))
@@ -185,6 +191,11 @@ class PromptGenerationHelper(object):
 
         if "Missing required field: ids" in self.hint_for_next_round and self.current_step > 1:
             hint += "ADD an id after endpoints"
+
+        if self.current_step ==6:
+            hint = f'Use this endpoint {self.get_endpoint_for_query_params()}'
+
+
 
         if self.hint_for_next_round != "":
             hint += self.hint_for_next_round
@@ -198,18 +209,13 @@ class PromptGenerationHelper(object):
                 """Query root-level resource endpoints.
                     Only send GET requests to root-level endpoints with a single path component after the root. 
                     This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').            
-                    1. Send GET requests to new paths only, avoiding any in the lists above.
-                    2. Do not reuse previously tested paths."""
-                f"Exclude already found endpoints: {self.found_endpoints}."
-                f"Exclude already unsuccessful endpoints and do not try to add resources after it: {self.unsuccessful_paths}."
+                    1. Send GET requests to new paths only, avoiding any in the lists above."""
             ],
             [
                 "Query Instance-level resource endpoint",
                 f"Look for Instance-level resource endpoint : Identify endpoints of type `/resource/id` where id is the parameter for the id.",
                 "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
                 "Ids can be integers, longs or base62 (like 6rqhFgbbKwnb9MLmUQDhG6)."
-                f"Exclude already found endpoints: {instance_level_found_endpoints}."
-                f"Exclude already unsuccessful endpoints and do not try to add resources after it: {unsuccessful_paths}."
 
             ],
             [
@@ -240,6 +246,7 @@ class PromptGenerationHelper(object):
 
             steps = chain_of_thought_steps[0] + chain_of_thought_steps[self.current_step] + [hint]
 
+
         return steps
 
     def generate_chain_of_thought_prompt(self, endpoints: list) -> list:
@@ -269,38 +276,32 @@ class PromptGenerationHelper(object):
                 "Look for Instance-level resource endpoint : Identify endpoints of type `/resource/id` where id is the parameter for the id.",
                 "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
                 "Ids can be integers, longs or base62."
-                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
 
             ],
             [
                 "Step 3: Query Subresource Endpoints",
                 "Identify subresource endpoints of the form `/resource/other_resource`.",
                 "Query these endpoints to check if they return data related to the main resource without requiring an `id` parameter."
-                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
-                f"Exclude already found endpoints: {self.found_endpoints}."
+
 
             ],
+
             [
-                "Step 4: Query endpoints with query parameters",
-                "Construct and make GET requests to these endpoints using common query parameters or based on documentation hints, testing until a valid request with query parameters is achieved."
-                "Limit the output to the first two entries."
-                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
-                f"Exclude already found endpoints: {self.found_endpoints}."
-            ],
-            [
-                "Step 5: Query for related resource endpoints",
+                "Step 4: Query for related resource endpoints",
                 "Identify related resource endpoints that match the format `/resource/id/other_resource`: "
                 f"First, scan for the follwoing endpoints where an `id` in the middle position and follow them by another resource identifier.",
                 "Second, look for other endpoints and query these endpoints with appropriate `id` values to determine their behavior and document responses or errors."
-                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
-                f"Exclude already found endpoints: {self.found_endpoints}."
             ],
             [
-                "Step 6: Query multi-level resource endpoints",
+                "Step 5: Query multi-level resource endpoints",
                 "Search for multi-level endpoints of type `/resource/other_resource/another_resource`: Identify any endpoints in the format with three resource identifiers.",
                 "Test requests to these endpoints, adjusting resource identifiers as needed, and analyze responses to understand any additional parameters or behaviors."
-                f"Exclude already unsuccessful endpoints: {self.unsuccessful_paths}."
-                f"Exclude already found endpoints: {self.found_endpoints}."
+            ],
+            [
+                "Step 6: Query endpoints with query parameters",
+                "Construct and make GET requests to these endpoints using common query parameters or based on documentation hints, testing until a valid request with query parameters is achieved."
+                "Limit the output to the first two entries."
+
             ]
         ]
 
@@ -350,3 +351,16 @@ class PromptGenerationHelper(object):
             return validate_prompt(potential_prompt)
 
         return validate_prompt(previous_prompt)
+
+    def get_endpoint_for_query_params(self):
+        for endpoint in self.found_endpoints:
+            if any(endpoint + "?" in element for element in self.found_endpoints):
+                return endpoint
+
+    def get_instance_level_endpoints(self):
+        for endpoint in self.found_endpoints:
+            if not endpoint + "/{id}" in self.found_endpoints:
+                return endpoint + "/1"
+
+        return None
+

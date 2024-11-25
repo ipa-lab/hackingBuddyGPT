@@ -181,12 +181,13 @@ class SimpleWebAPIDocumentation(Agent):
 
     def perform_round(self, turn: int) -> bool:
         """Executes a round of API documentation based on the turn number."""
-        if turn == 1:
+        if turn <=18:
             self._explore_mode(turn)
-        elif turn < 15:
-            self._single_exploit_run(turn)
-        else:
+        elif turn <= 19:
             self._exploit_until_no_help_needed(turn)
+        else:
+            self._explore_mode(turn)
+
         return self.all_http_methods_found(turn)
 
     def _explore_mode(self, turn: int) -> None:

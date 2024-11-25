@@ -48,13 +48,13 @@ class ResponseHandler:
                                                              pentesting_info=pentesting_information)
 
         self.common_endpoints = ['/api', '/auth', '/login', '/admin', '/register', '/users', '/photos', '/images', '/products', '/orders',
-             '/search', '/posts', '/todos', '1',
-             '/cart', '/checkout', '/payments', '/transactions', '/invoices', '/teams', ' /resources', '/comments', ' /categories', '/jobs',
+             '/search', '/posts', '/todos', '/1','/resources', '/categories',
+             '/cart', '/checkout', '/payments', '/transactions', '/invoices', '/teams', '/comments', '/jobs',
              '/notifications', '/messages', '/files', '/settings', '/status', '/health', '/healthcheck',
              '/info', '/docs', '/swagger', '/openapi', '/metrics', '/logs', '/analytics', '/feedback',
              '/support', '/profile', '/account', '/reports', '/dashboard', '/activity', '/subscriptions', '/webhooks',
              '/events', '/upload', '/download', '/images', '/videos', '/user/login', '/api/v1', '/api/v2',
-             '/auth/login', '/auth/logout', '/auth/register', '/auth/refresh', '/users/{id}', '/users/me',
+             '/auth/login', '/auth/logout', '/auth/register', '/auth/refresh', '/users/{id}', '/users/me', '/products/{id}'
              '/users/profile', '/users/settings', '/products/{id}', '/products/search', '/orders/{id}',
              '/orders/history', '/cart/items', '/cart/checkout', '/checkout/confirm', '/payments/{id}',
              '/payments/methods', '/transactions/{id}', '/transactions/history', '/notifications/{id}',
@@ -397,31 +397,23 @@ class ResponseHandler:
         if not response.action.__class__.__name__ == "RecordNote":
             path = response.action.path
             if self.no_action_counter == 5:
-                response.action.path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
+                response.action.path = self.get_next_path(response.action.path )
                 self.no_action_counter = 0
             else:
                 print(f'PATH: {path}')
                 parts = parts = [part for part in path.split("/") if part]
-                if self.check_path_variants( path,self.prompt_helper.found_endpoints) or self.check_path_variants(path, self.prompt_helper.unsuccessful_paths):
-                    response.action.path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
-
-                    '''self.prompt_helper.hint_for_next_round = f"Make a GET request to this endpoint {next(self.common_endpoints)}'"
-                    self.repeat_counter += 1
-                    self.no_action_counter += 1
-                    return False, prompt_history, None, None'''
+                if self.check_path_variants( path,self.prompt_helper.found_endpoints) or self.check_path_variants(path, self.prompt_helper.unsuccessful_paths) and self.prompt_helper.current_step != 6:
+                    response.action.path = self.get_next_path(response.action.path)
                 if path == self.last_path or path in self.prompt_helper.unsuccessful_paths or path in self.prompt_helper.found_endpoints:
-                    response.action.path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
-                    '''self.prompt_helper.hint_for_next_round = f"Make a GET request to this endpoint {}'"
-                    self.repeat_counter += 1
-                    self.no_action_counter += 1
-                    return False, prompt_history, None, None'''
+                    response.action.path = self.get_next_path(response.action.path)
 
-                if self.prompt_helper.current_step == 1 and len(parts) != 1:
-                    if '/'+parts[0] in self.prompt_helper.found_endpoints or '/'+parts[0]  in self.prompt_helper.unsuccessful_paths:
-                        response.action.path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
+                if len(parts) != 0 and self.prompt_helper.current_step == 1 and len(parts) != 1:
+                    print(f'parts:{parts}')
+                    if len(parts) != 0 and '/'+parts[0] in self.prompt_helper.found_endpoints or '/'+parts[0]  in self.prompt_helper.unsuccessful_paths:
+                        response.action.path = self.get_next_path(response.action.path)
                     else:
                         response.action.path = '/' + parts[0]
-                if self.prompt_helper.current_step == 2 and len(parts) != 2:
+                if len(parts) != 0 and self.prompt_helper.current_step == 2 and len(parts) != 2:
                     if path in self.prompt_helper.found_endpoints:
                         response.action.path = path + '/1'
                     else:
@@ -429,6 +421,9 @@ class ResponseHandler:
                         self.generate_variants_of_found_endpoints("id")
                         response.action.path = next(cycle(self.variants_of_found_endpoints))
                     print(f'PATH: {response.action.path}')
+
+                if "{id}" in path:
+                    response.action.path = path.replace("{id}", "1")
 
 
             # Add Authorization header if token is available
@@ -485,13 +480,19 @@ class ResponseHandler:
                     self.prompt_helper.unsuccessful_paths.append(request_path)
                     status_message = f"{request_path} is not a correct endpoint; Reason: {error_msg}"
 
-            if self.query_counter > 30:
+            if self.prompt_helper.current_step == 1 and self.query_counter > 110:
+                self.prompt_helper.current_step += 1
+                self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
+                                                                        categorized_endpoints)
+                self.query_counter = 0
+            if self.query_counter > 30 and self.prompt_helper.current_step > 1:
                 self.prompt_helper.current_step += 1
                 self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
                                                                         categorized_endpoints)
                 self.query_counter = 0
 
             prompt_history.append(tool_message(status_message, tool_call_id))
+            print(f'QUERY COUNT: {self.query_counter}')
         else:
             prompt_history.append(tool_message(result, tool_call_id))
             is_successful = False
@@ -529,3 +530,10 @@ class ResponseHandler:
             if "/1" not in self.variants_of_found_endpoints:
                 self.variants_of_found_endpoints.append("/1")
 
+    def get_next_path(self, path):
+        if self.prompt_helper.current_step == 7:
+            return path
+        try :
+            return next(self.common_endpoints_categorized[self.prompt_helper.current_step])
+        except StopIteration:
+            return path

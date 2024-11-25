@@ -25,7 +25,7 @@ class PatternMatcher:
         # Iterate over all patterns to apply replacements
         for pattern_name, pattern in self.patterns.items():
             if 'id' in pattern_name:  # Check for patterns that include IDs
-                path = pattern.sub(r"/{id}", path)
+                return pattern.sub(r"/{id}", path)
             if 'query_params' in pattern_name:  # Check for query parameter patterns
                 def replacement_logic(match):
                     # Extract the delimiter (? or &), parameter name, and value from the match

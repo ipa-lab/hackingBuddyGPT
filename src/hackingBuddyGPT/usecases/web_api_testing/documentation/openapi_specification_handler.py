@@ -71,7 +71,7 @@ class OpenAPISpecificationHandler(object):
     def is_partial_match(self, element, string_list):
         return any(element in string or string in element for string in string_list)
 
-    def update_openapi_spec(self, resp, result, result_str):
+    def update_openapi_spec(self, resp, result, result_str, found_endpoints):
         """
         Updates the OpenAPI specification based on the API response provided.
 
@@ -90,6 +90,9 @@ class OpenAPISpecificationHandler(object):
             path = request.path
             method = request.method
 
+            if path in found_endpoints:
+                list(self.openapi_spec["endpoints"].keys())
+
             if not path or not method or path == "/" or not path.startswith("/"):
                 return list(self.openapi_spec["endpoints"].keys())
 
@@ -104,7 +107,7 @@ class OpenAPISpecificationHandler(object):
             main_path = path if len(path_parts) > 1 else ""
 
             # Initialize the path if it's not present and is valid
-            if path not in endpoints and main_path and str(status_code).startswith("20"):
+            if path not in endpoints and main_path and str(status_code).startswith("20") :
                 endpoints[path] = {}
                 endpoint_methods[path] = []
 
@@ -206,7 +209,7 @@ class OpenAPISpecificationHandler(object):
         # yaml_file_assistant.run(description)
 
     def _update_documentation(self, response, result, result_str, prompt_engineer):
-        endpoints = self.update_openapi_spec(response, result, result_str)
+        endpoints = self.update_openapi_spec(response, result, result_str, self.response_handler.prompt_helper.found_endpoints)
         if prompt_engineer.prompt_helper.found_endpoints != endpoints and endpoints != []:
             prompt_engineer.prompt_helper.found_endpoints = list(
                 set(prompt_engineer.prompt_helper.found_endpoints + endpoints))

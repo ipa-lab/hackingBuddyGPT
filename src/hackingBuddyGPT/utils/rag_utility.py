@@ -16,7 +16,7 @@ def initiate_rag():
 
     embeddings = OpenAIEmbeddings(model=os.environ['rag_embedding'], api_key=os.environ['openai_api_key'])
 
-    markdown_splitter = MarkdownTextSplitter(chunk_size=2000, chunk_overlap=0)
+    markdown_splitter = MarkdownTextSplitter(chunk_size=1000, chunk_overlap=0)
 
     if not os.path.exists(persistent_directory):
         doc_manager_1 = DocumentManager(os.path.join(rag_storage_path, "GTFObinMarkdown"))

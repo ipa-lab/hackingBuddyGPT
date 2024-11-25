@@ -422,7 +422,8 @@ class ThesisPrivescPrototyp(Agent):
             ret = ret[1:]
 
         # combine keywords with their corresponding input
-        ret = [ret[i] + ret[i + 1] for i in range(0, len(ret) - 1, 2)]
+        if len(ret) > 1:
+            ret = [ret[i] + ret[i + 1] for i in range(0, len(ret) - 1, 2)]
         return ret
 
     def split_with_delimiters(self, input: str, delimiters):

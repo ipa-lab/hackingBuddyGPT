@@ -1,6 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
-from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
+from unittest.mock import MagicMock
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 
 

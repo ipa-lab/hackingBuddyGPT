@@ -14,4 +14,13 @@ dist/
 .coverage
 src/hackingBuddyGPT/usecases/web_api_testing/openapi_spec/
 src/hackingBuddyGPT/usecases/web_api_testing/converted_files/
-/src/hackingBuddyGPT/usecases/web_api_testing/utils/openapi_spec/
+/src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/
+/src/hackingBuddyGPT/usecases/web_api_testing/documentation/reports/
+codespaces_ansible.cfg
+codespaces_ansible_hosts.ini
+codespaces_ansible_id_rsa
+codespaces_ansible_id_rsa.pub
+mac_ansible.cfg
+mac_ansible_hosts.ini
+mac_ansible_id_rsa
+mac_ansible_id_rsa.pub

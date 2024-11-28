@@ -11,7 +11,7 @@ template_dir = pathlib.Path(__file__).parent
 template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))
 
 
-class MinimalLinuxPrivesc(Agent):
+class ExPrivEscLinux(Agent):
     conn: SSHConnection = None
 
     _sliding_history: SlidingCliHistory = None
@@ -46,5 +46,5 @@ class MinimalLinuxPrivesc(Agent):
 
 
 @use_case("Showcase Minimal Linux Priv-Escalation")
-class MinimalLinuxPrivescUseCase(AutonomousAgentUseCase[MinimalLinuxPrivesc]):
+class ExPrivEscLinuxUseCase(AutonomousAgentUseCase[ExPrivEscLinux]):
     pass

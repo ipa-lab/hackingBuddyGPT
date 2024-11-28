@@ -2,8 +2,14 @@ import os
 import yaml
 from datetime import datetime
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
+from collections import defaultdict
+import pydantic_core
+from rich.panel import Panel
 
-class OpenAPISpecificationManager:
+from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
+from hackingBuddyGPT.utils import tool_message
+class OpenAPISpecificationHandler(object):
     """
     Handles the generation and updating of an OpenAPI specification document based on dynamic API responses.
 
@@ -19,7 +25,7 @@ class OpenAPISpecificationManager:
         _capabilities (dict): A dictionary to store capabilities related to YAML file handling.
     """
 
-    def __init__(self, llm_handler, response_handler):
+    def __init__(self, llm_handler: LLMHandler, response_handler: ResponseHandler):
         """
         Initializes the handler with a template OpenAPI specification.
 
@@ -43,7 +49,6 @@ class OpenAPISpecificationManager:
             "components": {"schemas": {}}
         }
         self.llm_handler = llm_handler
-        #self.api_key = llm_handler.llm.api_key
         current_path = os.path.dirname(os.path.abspath(__file__))
         self.file_path = os.path.join(current_path, "openapi_spec")
         self.file = os.path.join(self.file_path, self.filename)
@@ -149,6 +154,49 @@ class OpenAPISpecificationManager:
             note (object): The note object containing the description of the API.
         """
         description = self.response_handler.extract_description(note)
-        from hackingBuddyGPT.usecases.web_api_testing.utils.yaml_assistant import YamlFileAssistant
+        from hackingBuddyGPT.usecases.web_api_testing.utils.documentation.parsing.yaml_assistant import YamlFileAssistant
         yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
         yaml_file_assistant.run(description)
+
+
+    def _update_documentation(self, response, result, prompt_engineer):
+        prompt_engineer.prompt_helper.found_endpoints = self.update_openapi_spec(response,
+                                                                                                            result)
+        self.write_openapi_to_yaml()
+        prompt_engineer.prompt_helper.schemas = self.schemas
+
+        http_methods_dict = defaultdict(list)
+        for endpoint, methods in self.endpoint_methods.items():
+            for method in methods:
+                http_methods_dict[method].append(endpoint)
+
+        prompt_engineer.prompt_helper.endpoint_found_methods = http_methods_dict
+        prompt_engineer.prompt_helper.endpoint_methods = self.endpoint_methods
+        return prompt_engineer
+
+    def document_response(self, completion, response, log, prompt_history, prompt_engineer):
+            message = completion.choices[0].message
+            tool_call_id = message.tool_calls[0].id
+            command = pydantic_core.to_json(response).decode()
+
+            log.console.print(Panel(command, title="assistant"))
+            prompt_history.append(message)
+
+            with log.console.status("[bold green]Executing that command..."):
+                result = response.execute()
+                log.console.print(Panel(result[:30], title="tool"))
+                result_str = self.response_handler.parse_http_status_line(result)
+                prompt_history.append(tool_message(result_str, tool_call_id))
+
+                invalid_flags = {"recorded", "Not a valid HTTP method", "404", "Client Error: Not Found"}
+                if not result_str in invalid_flags or any(flag in result_str for flag in invalid_flags):
+                    prompt_engineer = self._update_documentation(response, result, prompt_engineer)
+
+            return log, prompt_history, prompt_engineer
+
+    def found_all_endpoints(self):
+        if len(self.endpoint_methods.items())< 10:
+            return False
+        else:
+            return True
+

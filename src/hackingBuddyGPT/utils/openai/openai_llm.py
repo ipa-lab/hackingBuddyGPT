@@ -21,6 +21,7 @@ class OpenAIConnection(LLM):
     model: str = parameter(desc="OpenAI model name")
     context_size: int = parameter(desc="Maximum context size for the model, only used internally for things like trimming to the context size")
     api_url: str = parameter(desc="URL of the OpenAI API", default="https://api.openai.com")
+    api_path: str = parameter(desc="Path to the OpenAI API", default="/v1/chat/completions")
     api_timeout: int = parameter(desc="Timeout for the API request", default=240)
     api_backoff: int = parameter(desc="Backoff time in seconds when running into rate-limits", default=60)
     api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=3)
@@ -37,7 +38,7 @@ class OpenAIConnection(LLM):
 
         try:
             tic = time.perf_counter()
-            response = requests.post(f'{self.api_url}/v1/chat/completions', headers=headers, json=data, timeout=self.api_timeout)
+            response = requests.post(f'{self.api_url}{self.api_path}', headers=headers, json=data, timeout=self.api_timeout)
             if response.status_code == 429:
                 print(f"[RestAPI-Connector] running into rate-limits, waiting for {self.api_backoff} seconds")
                 time.sleep(self.api_backoff)
@@ -93,4 +94,32 @@ class GPT4(OpenAIConnection):
 @dataclass
 class GPT4Turbo(OpenAIConnection):
     model: str = "gpt-4-turbo-preview"
+    context_size: int = 128000
+
+
+@configurable("openai/gpt-4o", "OpenAI GPT-4o")
+@dataclass
+class GPT4oMini(OpenAIConnection):
+    model: str = "gpt-4o"
+    context_size: int = 128000
+
+
+@configurable("openai/gpt-4o-mini", "OpenAI GPT-4o-mini")
+@dataclass
+class GPT4oMini(OpenAIConnection):
+    model: str = "gpt-4o-mini"
+    context_size: int = 128000
+
+
+@configurable("openai/o1-preview", "OpenAI o1-preview")
+@dataclass
+class O1Preview(OpenAIConnection):
+    model: str = "o1-preview"
+    context_size: int = 128000
+
+
+@configurable("openai/o1-mini", "OpenAI o1-mini")
+@dataclass
+class O1Mini(OpenAIConnection):
+    model: str = "o1-mini"
     context_size: int = 128000

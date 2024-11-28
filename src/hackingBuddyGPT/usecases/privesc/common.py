@@ -15,7 +15,6 @@ template_dir = pathlib.Path(__file__).parent / "templates"
 template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
 template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_state = Template(filename=str(template_dir / "update_state.txt"))
-template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
 
 
 @dataclass

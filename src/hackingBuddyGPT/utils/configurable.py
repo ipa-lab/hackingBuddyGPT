@@ -3,7 +3,8 @@ import dataclasses
 import inspect
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, TypeVar, Set
+from types import NoneType
+from typing import Any, Dict, TypeVar, Set, Union
 
 from dotenv import load_dotenv
 
@@ -151,6 +152,11 @@ def get_parameters(fun, basename: str, fields: Dict[str, dataclasses.Field] = No
                 resolution_name = name
             resolution_basename = resolution_name
 
+        # check if type is an Optional, and then get the actual type
+        if hasattr(type, "__origin__") and type.__origin__ is Union and len(type.__args__) == 2 and type.__args__[1] is NoneType:
+            type = type.__args__[0]
+            default = None
+
         if hasattr(type, "__parameters__"):
             params[name] = ComplexParameterDefinition(resolution_name, type, default, description, get_class_parameters(type, resolution_basename), global_parameter=getattr(type, "__global__", False), transparent=getattr(type, "__transparent__", False))
         elif type in (str, int, float, bool):
@@ -194,9 +200,6 @@ T = TypeVar("T")
 
 
 def Global(subclass: T, global_name: str = None) -> T:
-    """
-
-    """
     class Cloned(subclass):
         __global__ = True
         __global_name__ = global_name
@@ -243,4 +246,3 @@ def next_name(basename: str, name: str, param: Any) -> str:
         return name
     else:
         return f"{basename}.{name}"
-

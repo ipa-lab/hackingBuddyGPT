@@ -24,7 +24,7 @@ class Capability(abc.ABC):
         """
         describe should return a string that describes the capability. This is used to generate the help text for the
         LLM.
- 
+
         This is a method and not just a simple property on purpose (though it could become a @property in the future, if
         we don't need the name parameter anymore), so that it can template in some of the capabilities parameters into
         the description.
@@ -38,7 +38,7 @@ class Capability(abc.ABC):
     def __call__(self, *args, **kwargs):
         """
         The actual execution of a capability, please make sure, that the parameters and return type of your
-        implementation are well typed, as this will make it easier to support full function calling soon.
+        implementation are well typed, as this is used to properly support function calling.
         """
         pass
 
@@ -195,4 +195,3 @@ def capabilities_to_tools(capabilities: Dict[str, Capability]) -> Iterable[opena
         ChatCompletionToolParam(type="function", function=Function(name=name, description=capability.describe(), parameters=capability.to_model().model_json_schema()))
         for name, capability in capabilities.items()
     ]
-

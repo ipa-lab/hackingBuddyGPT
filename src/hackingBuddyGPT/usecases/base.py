@@ -175,10 +175,8 @@ class MessageStreamLogger:
         else:
             finished_message = self._reconstructed_message
 
-        time.sleep(10)
         self.logger.log_db.add_log_message(self.logger.run_id, self.message_id, self.conversation, self.role, finished_message, tokens_query, tokens_response, duration)
         self.logger.log_db.remove_log_message_stream_parts(self.logger.run_id, self.message_id)
-        time.sleep(10)
 
         return self.message_id
 
@@ -246,13 +244,12 @@ class AutonomousUseCase(UseCase, abc.ABC):
         pass
 
     def run(self):
-
         self.before_run()
 
         turn = 1
         try:
             while turn <= self.max_turns and not self._got_root:
-                with self.log.section("round"):
+                with self.log.section(f"round {turn}"):
                     self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
 
                     self._got_root = self.perform_round(turn)

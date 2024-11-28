@@ -64,7 +64,7 @@ class HTTPRequest(Capability):
             url = self.host + ("" if path.startswith("/") else "/") + path + ("?{query}" if query else "")
             return f"Could not request '{url}': {e}"
 
-        headers = "\r\n".join(f"{k}: {v}" for k, v in resp.headers.items())
+        response_headers = "\r\n".join(f"{k}: {v}" for k, v in resp.headers.items())
 
         # turn the response into "plain text format" for responding to the prompt
-        return f"HTTP/1.1 {resp.status_code} {resp.reason}\r\n{headers}\r\n\r\n{resp.text}"""
+        return f"HTTP/1.1 {resp.status_code} {resp.reason}\r\n{response_headers}\r\n\r\n{resp.text}"""

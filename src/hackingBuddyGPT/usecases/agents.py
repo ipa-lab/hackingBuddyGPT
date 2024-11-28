@@ -47,11 +47,11 @@ class Agent(ABC):
         capability = self.get_capability(capability_name)
 
         tic = time.perf_counter()
-        result, got_root = capability.to_model().model_validate_json(arguments).execute()
+        result = capability.to_model().model_validate_json(arguments).execute()
         toc = time.perf_counter()
 
         self.log.add_log_tool_call(message_id, tool_call_id, capability_name, arguments, result, toc-tic)
-        return result, got_root
+        return result
 
     def run_capability_simple_text(self, message_id: int, cmd: str) -> tuple[str, str, str, bool]:
         _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities, default_capability=self._default_capability)
@@ -79,7 +79,7 @@ class AgentWorldview(ABC):
 
     @abstractmethod
     def to_template(self):
-        pass 
+        pass
 
     @abstractmethod
     def update(self, capability, cmd, result):
@@ -93,7 +93,7 @@ class TemplatedAgent(Agent):
 
     def init(self):
         super().init()
-    
+
     def set_initial_state(self, initial_state: AgentWorldview):
         self._state = initial_state
 

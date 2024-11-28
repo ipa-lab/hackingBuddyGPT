@@ -1,5 +1,5 @@
+import datetime
 import pathlib
-import time
 from dataclasses import dataclass, field
 from mako.template import Template
 from typing import Any, Dict, Optional
@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_handler
 from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.base import log_conversation, log_section
+from hackingBuddyGPT.utils.logging import log_section, log_conversation
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
@@ -98,16 +98,16 @@ class Privesc(Agent):
     @log_section("Executing that command...")
     def run_command(self, cmd, message_id) -> tuple[Optional[str], bool]:
         _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities, default_capability=self._default_capability)
-        start_time = time.monotonic()
+        start_time = datetime.datetime.now()
         success, *output = parser(cmd)
         if not success:
-            self.log.add_log_tool_call(message_id, tool_call_id=0, function_name="", arguments=cmd, result_text=output[0], duration=0)
+            self.log.add_tool_call(message_id, tool_call_id=0, function_name="", arguments=cmd, result_text=output[0], duration=0)
             return output[0], False
 
         assert len(output) == 1
         capability, cmd, (result, got_root) = output[0]
-        duration = time.monotonic() - start_time
-        self.log.add_log_tool_call(message_id, tool_call_id=0, function_name=capability, arguments=cmd, result_text=result, duration=duration)
+        duration = datetime.datetime.now() - start_time
+        self.log.add_tool_call(message_id, tool_call_id=0, function_name=capability, arguments=cmd, result_text=result, duration=duration)
 
         return result, got_root
 

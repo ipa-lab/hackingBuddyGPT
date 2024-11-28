@@ -3,7 +3,8 @@ from mako.template import Template
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.utils import SSHConnection, llm_util
-from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase, log_conversation, Logger
+from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
+from hackingBuddyGPT.utils.logging import log_conversation
 from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 

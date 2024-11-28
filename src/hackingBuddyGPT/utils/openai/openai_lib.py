@@ -1,15 +1,13 @@
-import instructor
+import datetime
 from typing import Dict, Union, Iterable, Optional
 
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from rich.console import Console
 from openai.types import CompletionUsage
-from openai.types.chat import ChatCompletionChunk, ChatCompletionMessage, ChatCompletionMessageParam, \
-    ChatCompletionMessageToolCall
+from openai.types.chat import ChatCompletionMessage, ChatCompletionMessageParam, ChatCompletionMessageToolCall
 from openai.types.chat.chat_completion_message_tool_call import Function
 import openai
 import tiktoken
-import time
 from dataclasses import dataclass
 
 from hackingBuddyGPT.utils import LLM, configurable, LLMResult
@@ -37,11 +35,7 @@ class OpenAILib(LLM):
     def client(self) -> openai.OpenAI:
         return self._client
 
-    @property
-    def instructor(self) -> instructor.Instructor:
-        return instructor.from_openai(self.client)
-
-    def get_response(self, prompt, *, capabilities: Dict[str, Capability]=None, **kwargs) -> LLMResult:
+    def get_response(self, prompt, *, capabilities: Optional[Dict[str, Capability]] = None, **kwargs) -> LLMResult:
         """  # TODO: re-enable compatibility layer
         if isinstance(prompt, str) or hasattr(prompt, "render"):
             prompt = {"role": "user", "content": prompt}
@@ -58,20 +52,20 @@ class OpenAILib(LLM):
         if capabilities:
             tools = capabilities_to_tools(capabilities)
 
-        tic = time.perf_counter()
+        tic = datetime.datetime.now()
         response = self._client.chat.completions.create(
             model=self.model,
             messages=prompt,
             tools=tools,
         )
-        toc = time.perf_counter()
+        duration = datetime.datetime.now() - tic
         message = response.choices[0].message
 
         return LLMResult(
             message,
             str(prompt),
             message.content,
-            toc-tic,
+            duration,
             response.usage.prompt_tokens,
             response.usage.completion_tokens,
         )
@@ -89,7 +83,7 @@ class OpenAILib(LLM):
         if capabilities:
             tools = capabilities_to_tools(capabilities)
 
-        tic = time.perf_counter()
+        tic = datetime.datetime.now()
         chunks = self._client.chat.completions.create(
             model=self.model,
             messages=prompt,
@@ -142,7 +136,6 @@ class OpenAILib(LLM):
             if outputs > 1:
                 print("WARNING: Got more than one output in the stream response")
 
-
         console.print()
         if usage is None:
             print("WARNING: Did not get usage information in the stream response")
@@ -151,7 +144,7 @@ class OpenAILib(LLM):
         if len(message.tool_calls) == 0:  # the openAI API does not like getting empty tool call lists
             message.tool_calls = None
 
-        toc = time.perf_counter()
+        toc = datetime.datetime.now()
         yield LLMResult(
             message,
             str(prompt),

@@ -1,187 +1,13 @@
 import abc
 import json
 import argparse
-import time
-from dataclasses import dataclass, field
-from functools import wraps
+from dataclasses import dataclass
 
-from rich.console import Group
-from rich.panel import Panel
-from typing import Dict, Type, Optional, TypeVar, Generic
+from hackingBuddyGPT.utils.logging import GlobalLogger
+from typing import Dict, Type, TypeVar, Generic
 
-from hackingBuddyGPT.utils import LLMResult
 from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters, \
-    Transparent, configurable, Global, ParserState
-from hackingBuddyGPT.utils.console.console import Console
-from hackingBuddyGPT.utils.db_storage.db_storage import DbStorage
-
-
-def log_section(name: str, logger_field_name: str = "log"):
-    def outer(fun):
-        @wraps(fun)
-        def inner(self, *args, **kwargs):
-            logger = getattr(self, logger_field_name)
-            with logger.section(name):
-                return fun(self, *args, **kwargs)
-        return inner
-    return outer
-
-
-def log_conversation(conversation: str, start_section: bool = False, logger_field_name: str = "log"):
-    def outer(fun):
-        @wraps(fun)
-        def inner(self, *args, **kwargs):
-            logger = getattr(self, logger_field_name)
-            with logger.conversation(conversation, start_section):
-                return fun(self, *args, **kwargs)
-        return inner
-    return outer
-
-
-@configurable("logger", "Logger")
-@dataclass
-class Logger:
-    log_db: DbStorage
-    console: Console
-    tag: str = ""
-
-    run_id: int = field(init=False, default=None)
-    last_order_id: int = 0
-
-    _last_message_id: int = 0
-    _current_conversation: Optional[str] = None
-
-    def start_run(self, name: str, configuration: str):
-        if self.run_id is not None:
-            raise ValueError("Run already started")
-        self.run_id = self.log_db.create_new_run(name, self.tag, configuration)
-
-    def add_log_query(self, turn: int, command: str, result: str, answer: LLMResult):
-        self.log_db.add_log_query(self.run_id, turn, command, result, answer)
-
-    def section(self, name: str) -> "LogSectionContext":
-        return LogSectionContext(self, name, self._last_message_id)
-
-    def log_section(self, name: str, from_message: int, to_message: int, duration: float):
-        return self.log_db.add_log_section(self.run_id, name, from_message, to_message, duration)
-
-    def conversation(self, conversation: str, start_section: bool = False) -> "LogConversationContext":
-        return LogConversationContext(self, start_section, conversation, self._current_conversation)
-
-    def add_log_message(self, role: str, content: str, tokens_query: int, tokens_response: int, duration: float) -> int:
-        message_id = self._last_message_id
-        self._last_message_id += 1
-
-        self.log_db.add_log_message(self.run_id, message_id, self._current_conversation, role, content, tokens_query, tokens_response, duration)
-        self.console.print(Panel(content, title=(("" if self._current_conversation is None else f"{self._current_conversation} - ") + role)))
-
-        return self._last_message_id
-
-    def add_log_tool_call(self, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration: float):
-        self.console.print(Panel(
-            Group(
-                Panel(arguments, title="arguments"),
-                Panel(result_text, title="result"),
-            ),
-            title=f"Tool Call: {function_name}"))
-        self.log_db.add_log_tool_call(self.run_id, message_id, tool_call_id, function_name, arguments, result_text, duration)
-
-    def run_was_success(self):
-        self.status_message("Run finished successfully")
-        self.log_db.run_was_success(self.run_id)
-
-    def run_was_failure(self, reason: str):
-        self.status_message(f"Run failed: {reason}")
-        self.log_db.run_was_failure(self.run_id, reason)
-
-    def status_message(self, message: str):
-        self.add_log_message("status", message, 0, 0, 0)
-
-    def system_message(self, message: str):
-        self.add_log_message("system", message, 0, 0, 0)
-
-    def call_response(self, llm_result: LLMResult) -> int:
-        self.system_message(llm_result.prompt)
-        return self.add_log_message("assistant", llm_result.answer, llm_result.tokens_query, llm_result.tokens_response, llm_result.duration)
-
-    def stream_message(self, role: str):
-        message_id = self._last_message_id
-        self._last_message_id += 1
-
-        return MessageStreamLogger(self, message_id, self._current_conversation, role)
-
-
-@dataclass
-class LogSectionContext:
-    logger: Logger
-    name: str
-    from_message: int
-
-    def __enter__(self):
-        self._start = time.monotonic()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        duration = time.monotonic() - self._start
-        self.logger.log_section(self.name, self.from_message, self.logger._last_message_id, duration)
-
-
-@dataclass
-class LogConversationContext:
-    logger: Logger
-    with_section: bool
-    conversation: str
-    previous_conversation: str
-
-    _section: Optional[LogSectionContext] = None
-
-    def __enter__(self):
-        if self.with_section:
-            self._section = LogSectionContext(self.logger, self.conversation, self.logger._last_message_id)
-            self._section.__enter__()
-        self.logger._current_conversation = self.conversation
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._section is not None:
-            self._section.__exit__(exc_type, exc_val, exc_tb)
-            del self._section
-        self.logger._current_conversation = self.previous_conversation
-
-
-@dataclass
-class MessageStreamLogger:
-    logger: Logger
-    message_id: int
-    conversation: str
-    role: str
-
-    _completed: bool = False
-    _reconstructed_message: str = ""
-
-    def __del__(self):
-        if not self._completed:
-            print(f"streamed message was not finalized ({self.logger.run_id}, {self.message_id}), please make sure to call finalize() on MessageStreamLogger objects")
-            self.finalize(0, 0, 0)
-
-    def append(self, content: str):
-        self._reconstructed_message += content
-        self.logger.log_db.add_log_message_stream_part(self.logger.run_id, self.message_id, "append", content)
-
-    def finalize(self, tokens_query: int, tokens_response: int, duration, overwrite_finished_message: str = None):
-        self._completed = True
-        if overwrite_finished_message is not None:
-            finished_message = overwrite_finished_message
-        else:
-            finished_message = self._reconstructed_message
-
-        self.logger.log_db.add_log_message(self.logger.run_id, self.message_id, self.conversation, self.role, finished_message, tokens_query, tokens_response, duration)
-        self.logger.log_db.remove_log_message_stream_parts(self.logger.run_id, self.message_id)
-
-        return self.message_id
-
-
-GlobalLogger = Global(Transparent(Logger))
+    Transparent, ParserState
 
 
 @dataclass
@@ -204,6 +30,7 @@ class UseCase(abc.ABC):
         perform any dynamic setup that is needed before the run method is called. One of the most common use cases is
         setting up the llm capabilities from the tools that were injected.
         """
+        self.configuration = configuration
         self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
 
     def serialize_configuration(self, configuration) -> str:
@@ -265,8 +92,9 @@ class AutonomousUseCase(UseCase, abc.ABC):
                 self.log.run_was_failure("maximum turn number reached")
 
             return self._got_root
-        except Exception as e:
-            self.log.run_was_failure(f"exception occurred: {e}")
+        except Exception:
+            import traceback
+            self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
             raise
 
 

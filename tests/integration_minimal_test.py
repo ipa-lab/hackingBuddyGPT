@@ -1,7 +1,7 @@
 
 from typing import Tuple
 
-from hackingBuddyGPT.usecases.base import Logger
+from hackingBuddyGPT.utils.logging import Logger
 from hackingBuddyGPT.usecases.examples.agent import ExPrivEscLinux, ExPrivEscLinuxUseCase
 from hackingBuddyGPT.usecases.examples.agent_with_state import ExPrivEscLinuxTemplated, ExPrivEscLinuxTemplatedUseCase
 from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc, LinuxPrivescUseCase

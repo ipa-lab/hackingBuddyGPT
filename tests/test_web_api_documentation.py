@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from hackingBuddyGPT.usecases.base import Logger
+from hackingBuddyGPT.utils.logging import Logger
 from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import SimpleWebAPIDocumentationUseCase, \
     SimpleWebAPIDocumentation
 from hackingBuddyGPT.utils import DbStorage, Console

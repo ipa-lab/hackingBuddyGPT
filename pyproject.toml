@@ -24,19 +24,24 @@ classifiers = [
 	"Development Status :: 4 - Beta",
 ]
 dependencies = [
-	'fabric == 3.2.2',
-	'Mako == 1.3.2',
-	'requests == 2.32.0',
-	'rich == 13.7.1',
-	'tiktoken == 0.8.0',
-	'instructor == 1.3.5',
-	'PyYAML == 6.0.1',
-	'python-dotenv == 1.0.1',
-	'pypsexec == 0.3.0',
-	'pydantic == 2.8.2',
-	'openai == 1.28.0',
-	'BeautifulSoup4',
-	'nltk'
+    'fabric == 3.2.2',
+    'Mako == 1.3.2',
+    'requests == 2.32.0',
+    'rich == 13.7.1',
+    'tiktoken == 0.8.0',
+    'PyYAML == 6.0.1',
+    'python-dotenv == 1.0.1',
+    'pypsexec == 0.3.0',
+    'pydantic == 2.8.2',
+    'openai == 1.28.0',
+    'BeautifulSoup4',
+    'nltk',
+    'fastapi == 0.114.0',
+    'fastapi-utils == 0.7.0',
+    'jinja2 == 3.1.4',
+    'uvicorn[standard] == 0.30.6',
+    'dataclasses_json == 0.6.7',
+    'websockets == 13.1',
 ]
 
 [project.urls]
@@ -66,3 +71,4 @@ testing = [
 [project.scripts]
 wintermute = "hackingBuddyGPT.cli.wintermute:main"
 hackingBuddyGPT = "hackingBuddyGPT.cli.wintermute:main"
+wintermuteViewer = "hackingBuddyGPT.cli.viewer:main"

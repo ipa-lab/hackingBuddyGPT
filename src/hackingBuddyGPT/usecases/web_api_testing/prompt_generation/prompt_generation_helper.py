@@ -7,26 +7,33 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information impo
 
 class PromptGenerationHelper(object):
     """
-    A helper class for managing and generating prompts, tracking endpoints, and ensuring consistency in HTTP actions.
+        Assists in generating prompts for web API testing by managing endpoint data,
+        tracking interactions, and providing utilities for analyzing and responding to API behavior.
 
-    Attributes:
-        response_handler (object): Handles responses for prompts.
-        found_endpoints (list): A list of discovered endpoints.
-        endpoint_methods (dict): A dictionary mapping endpoints to their HTTP methods.
-        endpoint_found_methods (dict): A dictionary mapping HTTP methods to endpoints.
-        schemas (dict): A dictionary of schemas used for constructing HTTP requests.
-    """
+        Attributes:
+            host (str): Base URL for the API.
+            description (str): Description of the API's purpose or functionality.
+            found_endpoints (list): Endpoints that have been successfully interacted with.
+            tried_endpoints (list): Endpoints that have been tested, regardless of the outcome.
+            unsuccessful_paths (list): Endpoints that failed during testing.
+            current_step (int): Current step in the testing or documentation process.
+            document_steps (int): Total number of documentation steps processed.
+            endpoint_methods (dict): Maps endpoints to the HTTP methods successfully used with them.
+            unsuccessful_methods (dict): Maps endpoints to the HTTP methods that failed.
+            endpoint_found_methods (dict): Maps HTTP methods to the endpoints where they were found successful.
+            schemas (list): Definitions of data schemas used for constructing requests and validating responses.
+        """
 
     def __init__(self,
                  host: str = "",
                  description: str=""):
         """
-        Initializes the PromptAssistant with a response handler and downloads necessary NLTK models.
+          Initializes the PromptGenerationHelper with an optional host and description.
 
-        Args:
-            response_handler (object): The response handler used for managing responses.
-            schemas(tuple):  Schemas used
-        """
+          Args:
+              host (str): The base URL of the API.
+              description (str): A brief description of what the API offers or its testing scope.
+          """
         self.current_category = "root_level"
         self.correct_endpoint_but_some_error = {}
         self.hint_for_next_round = ""
@@ -42,13 +49,21 @@ class PromptGenerationHelper(object):
         self.unsuccessful_paths = ["/"]
         self.current_step = 1
         self.document_steps = 0
+        self.tried_methods_by_enpoint = {}
 
     def setup_prompt_information(self, schemas, endpoints):
+        """
+        Sets up essential data for prompt generation based on provided schemas and endpoints.
+
+        Args:
+            schemas (list): Data schemas for the API.
+            endpoints (list): Initial list of API endpoints to test.
+        """
         self.schemas = schemas
         self.endpoints = endpoints
         self.current_endpoint = endpoints[0]
 
-    def find_missing_endpoint(self, endpoints: dict) -> str:
+    def find_missing_endpoint(self, endpoints: list) -> str:
         """
         Identifies and returns the first missing endpoint path found.
 
@@ -65,7 +80,7 @@ class PromptGenerationHelper(object):
         # Extract resource names and categorize them using regex
         for endpoint in endpoints:
             # Match both general and parameterized patterns and categorize them
-            match = re.match(r'^/([^/]+)(/|/:id)?$', endpoint)
+            match = re.match(r'^/([^/]+)(/|/{id})?$', endpoint)
             if match:
                 resource = match.group(1)
                 if match.group(2) == '/' or match.group(2) is None:
@@ -79,31 +94,35 @@ class PromptGenerationHelper(object):
                 return f'/{resource}'
         for resource in general_endpoints:
             if resource not in parameterized_endpoints:
-                if f'/{resource}/:id' in self.unsuccessful_paths:
+                if f'/{resource}/'+ '{id}' in self.unsuccessful_paths:
                     continue
-                return f'/{resource}/:id'
+                return f'/{resource}/'+ '{id}'
 
         # Return an empty string if no missing endpoints are found
         return ""
 
     def get_endpoints_needing_help(self, info=""):
         """
-        Identifies missing endpoints first, then checks for endpoints needing additional HTTP methods,
-        returning guidance accordingly.
+        Determines which endpoints need further testing or have missing methods.
 
         Args:
-            info (str): Additional information to include in the response.
+            info (str): Additional information to enhance the guidance.
 
         Returns:
-            list: A list containing guidance for the first missing endpoint or the first missing method
-                  of an endpoint that needs help.
+            list: Guidance for missing endpoints or methods.
         """
 
         # Step 1: Check for missing endpoints
         missing_endpoint = self.find_missing_endpoint(endpoints=self.found_endpoints)
 
-        if missing_endpoint and not missing_endpoint in self.unsuccessful_paths and not 'GET' in self.unsuccessful_methods:
-            formatted_endpoint = missing_endpoint.replace(":id", "1") if ":id" in missing_endpoint else missing_endpoint
+        if (missing_endpoint and not missing_endpoint in self.unsuccessful_paths
+                and not 'GET' in self.unsuccessful_methods
+                and missing_endpoint in self.tried_methods_by_enpoint.keys()
+                and not 'GET' in self.tried_methods_by_enpoint[missing_endpoint]):
+            formatted_endpoint = missing_endpoint.replace("{id}", "1") if "{id}" in missing_endpoint else missing_endpoint
+            if missing_endpoint not in self.tried_methods_by_enpoint:
+                self.tried_methods_by_enpoint[missing_endpoint] = []
+            self.tried_methods_by_enpoint[missing_endpoint].append('GET')
             return [
                 f"{info}\n",
                 f"For endpoint {formatted_endpoint}, find this missing method: GET."
@@ -115,13 +134,17 @@ class PromptGenerationHelper(object):
             missing_methods = http_methods_set - set(methods)
             if missing_methods and not endpoint in self.unsuccessful_paths:
                 needed_method = next(iter(missing_methods))
-                if endpoint in self.unsuccessful_methods and needed_method in self.unsuccessful_methods[endpoint]:
+                if (endpoint in self.unsuccessful_methods and needed_method in self.unsuccessful_methods[endpoint]
+                        and not needed_method in self.tried_methods_by_enpoint[missing_endpoint]):
                     while needed_method not in self.unsuccessful_methods[endpoint]:
                         needed_method = next(iter(missing_methods))
                         if needed_method == None:
                             break
 
-                formatted_endpoint = endpoint.replace(":id", "1") if ":id" in endpoint else endpoint
+                formatted_endpoint = endpoint.replace("{id}", "1") if "{id}" in endpoint else endpoint
+                if formatted_endpoint not in self.tried_methods_by_enpoint:
+                    self.tried_methods_by_enpoint[formatted_endpoint] = []
+                self.tried_methods_by_enpoint[formatted_endpoint].append(needed_method)
 
                 return [
                     f"{info}\n",
@@ -133,193 +156,53 @@ class PromptGenerationHelper(object):
 
     def get_http_action_template(self, method):
         """
-        Constructs a consistent HTTP action description based on the provided method.
+                Provides a template for HTTP actions based on the method specified.
 
-        Args:
-            method (str): The HTTP method to construct the action description for.
+                Args:
+                    method (str): The HTTP method for the action.
 
-        Returns:
-            str: The constructed HTTP action description.
+                Returns:
+                    str: A template describing the HTTP action to take.
         """
         if method in ["POST", "PUT"]:
             return f"Create HTTPRequests of type {method} considering the found schemas: {self.schemas} and understand the responses. Ensure that they are correct requests."
         else:
             return f"Create HTTPRequests of type {method} considering only the object with id=1 for the endpoint and understand the responses. Ensure that they are correct requests."
 
-    def _get_initial_documentation_steps(self, common_steps, strategy):
+    def _get_initial_documentation_steps(self, common_steps, strategy, strategy_steps):
         """
-        Provides the initial steps for identifying available endpoints and documenting their details.
+        Constructs a series of documentation steps to guide the testing and documentation of API endpoints.
+        These steps are formulated based on the strategy specified and integrate common steps that are essential
+        across different strategies. The function also sets the number of documentation steps and determines specific
+        steps based on the current testing phase.
 
         Args:
-            common_steps (list): A list of common steps to be included.
+            common_steps (list): A list of common documentation steps that should be included in every strategy.
+            strategy (PromptStrategy): The strategy to be used, which affects the specific steps included in the documentation.
 
         Returns:
-            list: A list of initial steps combined with common steps.
+            list: A comprehensive list of documentation steps tailored to the provided strategy, enhanced with common steps and hints for further actions.
+
+        Detailed Steps:
+            - Updates the list of unsuccessful paths and found endpoints to ensure uniqueness.
+            - Depending on the strategy, it includes specific steps tailored to either in-context learning, tree of thought, or other strategies.
+            - Each step is designed to methodically explore different types of endpoints (root-level, instance-level, etc.),
+              focusing on various aspects such as parameter inclusion, method testing, and handling of special cases like IDs.
+            - The steps are formulated to progressively document and test the API, ensuring comprehensive coverage.
         """
+        # Ensure uniqueness of paths and endpoints
         self.unsuccessful_paths = list(set(self.unsuccessful_paths))
         self.found_endpoints = list(set(self.found_endpoints))
-        endpoints_missing_id_or_query = []
-        instance_level_found_endpoints = []
-        unsuccessful_paths = []
-        hint = ""
+        hint = self.get_hint()
 
-        if self.current_step == 2:
+        # Combine common steps with strategy-specific steps
 
-            instance_level_found_endpoints = [endpoint for endpoint in self.found_endpoints if "id" in endpoint]
-            unsuccessful_paths = [endpoint for endpoint in self.unsuccessful_paths if "id " in endpoint]
-            if "Missing required field: ids" in self.correct_endpoint_but_some_error.keys():
-                endpoints_missing_id_or_query = list(
-                    set(self.correct_endpoint_but_some_error['Missing required field: ids']))
-                hint = f"ADD an id after these endpoints: {endpoints_missing_id_or_query}" + f' avoid getting this error again : {self.hint_for_next_round}'
-                if "base62" in self.hint_for_next_round:
-                    hint += "Try a id like 6rqhFgbbKwnb9MLmUQDhG6"
-            else:
-                if "base62" in self.hint_for_next_round:
-                    hint = " ADD an id after endpoints!"
-
-            new_endpoint = self.get_instance_level_endpoints()
-            if  new_endpoint!= None:
-                hint += f"Create a GET request for this endpoint: {new_endpoint}"
-
-
-        if self.current_step == 3:
-            if "No search query" in self.correct_endpoint_but_some_error.keys():
-                endpoints_missing_id_or_query = list(set(self.correct_endpoint_but_some_error['No search query']))
-                hint = f"First, try out these endpoints: {endpoints_missing_id_or_query}"
-            if self.current_step == 4:
-                endpoints_missing_id_or_query = [endpoint for endpoint in self.found_endpoints if "id" in endpoint]
-
-        if "Missing required field: ids" in self.hint_for_next_round and self.current_step > 1:
-            hint += "ADD an id after endpoints"
-
-        if self.current_step ==6:
-            hint = f'Use this endpoint {self.get_endpoint_for_query_params()}'
-
-
-
-        if self.hint_for_next_round != "":
-            hint += self.hint_for_next_round
-        endpoints = list(set([endpoint.replace(":id", "1") for endpoint in self.found_endpoints] + ['/']))
-
-        # Documentation steps, emphasizing mandatory header inclusion with token if available
-        documentation_steps = [
-            [f"Objective: Identify all accessible endpoints via GET requests for {self.host}. {self.description}"""],
-
-            [
-                """Query root-level resource endpoints.
-                    Only send GET requests to root-level endpoints with a single path component after the root. 
-                    This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').            
-                    1. Send GET requests to new paths only, avoiding any in the lists above."""
-            ],
-            [
-                "Query Instance-level resource endpoint",
-                f"Look for Instance-level resource endpoint : Identify endpoints of type `/resource/id` where id is the parameter for the id.",
-                "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
-                "Ids can be integers, longs or base62 (like 6rqhFgbbKwnb9MLmUQDhG6)."
-
-            ],
-            [
-                "Query endpoints with query parameters",
-                "Construct and make GET requests to these endpoints using common query parameters or based on documentation hints, testing until a valid request with query parameters is achieved."
-            ],
-            [
-                "Query for related resource endpoints",
-                "Identify related resource endpoints that match the format `/resource/id/other_resource`: "
-                f"First, scan for the follwoing endpoints where an `id` in the middle position and follow them by another resource identifier.",
-                "Second, look for other endpoints and query these endpoints with appropriate `id` values to determine their behavior and document responses or errors."
-            ],
-            [
-                "Query multi-level resource endpoints",
-                "Search for multi-level endpoints of type `/resource/other_resource/another_resource`: Identify any endpoints in the format with three resource identifiers.",
-                "Test requests to these endpoints, adjusting resource identifiers as needed, and analyze responses to understand any additional parameters or behaviors."
-            ]
-        ]
-
-        # Strategy check with token emphasis in steps
-        if strategy in {PromptStrategy.IN_CONTEXT, PromptStrategy.TREE_OF_THOUGHT}:
-            self.document_steps = len(documentation_steps)
-
-            steps = documentation_steps[0] + documentation_steps[self.current_step] + [hint]
-        else:
-            chain_of_thought_steps = self.generate_chain_of_thought_prompt(endpoints)
-            self.document_steps = len(chain_of_thought_steps)
-
-            steps = chain_of_thought_steps[0] + chain_of_thought_steps[self.current_step] + [hint]
-
+        self.document_steps = len(strategy_steps)
+        steps = strategy_steps[0] + strategy_steps[self.current_step] + [hint]
 
         return steps
 
-    def generate_chain_of_thought_prompt(self, endpoints: list) -> list:
-        """
-        Creates a chain of thought prompt to guide the model through the API documentation process.
 
-        Args:
-            use_token (str): A string indicating whether authentication is required.
-            endpoints (list): A list of endpoints to exclude from testing.
-
-        Returns:
-            str: A structured chain of thought prompt for documentation.
-        """
-        return [
-            [
-                f"        Objective: Find accessible endpoints via GET requests for API documentation of {self.host}. """
-            ],
-
-            [
-                f""" Step 1: Query root-level resource endpoints.
-                    Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').                    1. Send GET requests to new paths only, avoiding any in the lists above.
-                    2. Do not reuse previously tested paths."""
-
-            ],
-            [
-                "Step 2: Query Instance-level resource endpoint with id",
-                "Look for Instance-level resource endpoint : Identify endpoints of type `/resource/id` where id is the parameter for the id.",
-                "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
-                "Ids can be integers, longs or base62."
-
-            ],
-            [
-                "Step 3: Query Subresource Endpoints",
-                "Identify subresource endpoints of the form `/resource/other_resource`.",
-                "Query these endpoints to check if they return data related to the main resource without requiring an `id` parameter."
-
-
-            ],
-
-            [
-                "Step 4: Query for related resource endpoints",
-                "Identify related resource endpoints that match the format `/resource/id/other_resource`: "
-                f"First, scan for the follwoing endpoints where an `id` in the middle position and follow them by another resource identifier.",
-                "Second, look for other endpoints and query these endpoints with appropriate `id` values to determine their behavior and document responses or errors."
-            ],
-            [
-                "Step 5: Query multi-level resource endpoints",
-                "Search for multi-level endpoints of type `/resource/other_resource/another_resource`: Identify any endpoints in the format with three resource identifiers.",
-                "Test requests to these endpoints, adjusting resource identifiers as needed, and analyze responses to understand any additional parameters or behaviors."
-            ],
-            [
-                "Step 6: Query endpoints with query parameters",
-                "Construct and make GET requests to these endpoints using common query parameters or based on documentation hints, testing until a valid request with query parameters is achieved."
-                "Limit the output to the first two entries."
-
-            ]
-        ]
-
-    def token_count(self, text):
-        """
-        Counts the number of word tokens in the provided text using NLTK's tokenizer.
-
-        Args:
-            text (str): The input text to tokenize and count.
-
-        Returns:
-            int: The number of tokens in the input text.
-        """
-        if not isinstance(text, str):
-            text = str(text)
-        tokens = re.findall(r"\b\w+\b", text)
-        words = [token.strip("'") for token in tokens if token.strip("'").isalnum()]
-        return len(words)
 
     def check_prompt(self, previous_prompt: list, steps: str, max_tokens: int = 900) -> str:
         """
@@ -353,14 +236,87 @@ class PromptGenerationHelper(object):
         return validate_prompt(previous_prompt)
 
     def get_endpoint_for_query_params(self):
+        """
+        Searches for an endpoint in the found endpoints list that has query parameters.
+
+        Returns:
+            str: The first endpoint that includes a query parameter, or None if no such endpoint exists.
+        """
         for endpoint in self.found_endpoints:
             if any(endpoint + "?" in element for element in self.found_endpoints):
                 return endpoint
-
-    def get_instance_level_endpoints(self):
-        for endpoint in self.found_endpoints:
-            if not endpoint + "/{id}" in self.found_endpoints:
-                return endpoint + "/1"
-
         return None
 
+    def get_instance_level_endpoint(self):
+        """
+        Retrieves an instance level endpoint that has not been tested or found unsuccessful.
+
+        Returns:
+            str: A templated instance level endpoint ready to be tested, or None if no such endpoint is available.
+        """
+        for endpoint in self.get_instance_level_endpoints():
+            templated_endpoint = endpoint.replace("1", "{id}")
+            if templated_endpoint not in self.found_endpoints and endpoint not in self.unsuccessful_paths:
+                return endpoint
+        return None
+
+    def get_instance_level_endpoints(self):
+        """
+        Generates a list of instance-level endpoints from the root-level endpoints by appending '/1'.
+
+        Returns:
+            list: A list of potentially testable instance-level endpoints derived from root-level endpoints.
+        """
+        instance_level_endpoints = []
+        for endpoint in self.get_root_level_endpoints():
+            if not endpoint + "/{id}" in self.found_endpoints or \
+                    not endpoint + "/1" in self.unsuccessful_paths:
+                instance_level_endpoints.append(endpoint + "/1")
+        print(f'instance_level_endpoints: {instance_level_endpoints}')
+        return instance_level_endpoints
+
+    def get_hint(self):
+        """
+        Generates a hint based on the current step in the testing process, incorporating specific checks and conditions.
+
+        Returns:
+            str: A tailored hint that provides guidance based on the current testing phase and identified needs.
+        """
+        hint = ""
+        if self.current_step == 2:
+            instance_level_found_endpoints = [ep for ep in self.found_endpoints if "id" in ep]
+            if "Missing required field: ids" in self.correct_endpoint_but_some_error:
+                endpoints_missing_id_or_query = list(
+                    set(self.correct_endpoint_but_some_error["Missing required field: ids"]))
+                hint = f"ADD an id after these endpoints: {endpoints_missing_id_or_query} avoid getting this error again: {self.hint_for_next_round}"
+            if "base62" in self.hint_for_next_round and "Missing required field: ids" not in self.correct_endpoint_but_some_error:
+                hint += " Try an id like 6rqhFgbbKwnb9MLmUQDhG6"
+            new_endpoint = self.get_instance_level_endpoint()
+            if new_endpoint:
+                hint += f" Create a GET request for this endpoint: {new_endpoint}"
+
+        elif self.current_step == 3 and "No search query" in self.correct_endpoint_but_some_error:
+            endpoints_missing_query = list(set(self.correct_endpoint_but_some_error['No search query']))
+            hint = f"First, try out these endpoints: {endpoints_missing_query}"
+
+        if self.current_step == 6:
+            hint = f'Use this endpoint: {self.get_endpoint_for_query_params()}'
+
+        if self.hint_for_next_round:
+            hint += self.hint_for_next_round
+
+        return hint
+
+    def get_root_level_endpoints(self):
+        """
+        Retrieves all root-level endpoints which consist of only one path component.
+
+        Returns:
+            list: A list of root-level endpoints.
+        """
+        root_level_endpoints = []
+        for endpoint in self.found_endpoints:
+            parts = [part for part in endpoint.split("/") if part]
+            if len(parts) == 1 and not endpoint+ "/{id}" in self.found_endpoints :
+                root_level_endpoints.append(endpoint)
+        return root_level_endpoints

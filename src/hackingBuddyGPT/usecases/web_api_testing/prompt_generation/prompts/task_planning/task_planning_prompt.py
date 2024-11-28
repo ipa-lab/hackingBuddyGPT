@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PlanningType,
     PromptContext,
@@ -55,7 +57,10 @@ class TaskPlanningPrompt(BasicPrompt):
             List[str]: A list of steps for the chain-of-thought strategy in the documentation context.
         """
         if move_type == "explore":
-            return self.prompt_helper._get_initial_documentation_steps(common_steps, strategy=self.strategy)
+            doc_steps = self.generate_documentation_steps(self.get_documentation_steps())
+            return self.prompt_helper._get_initial_documentation_steps(common_steps=common_steps,
+                                                                       strategy=self.strategy,
+                                                                       strategy_steps= doc_steps)
         else:
             return self.prompt_helper.get_endpoints_needing_help()
 
@@ -107,3 +112,7 @@ class TaskPlanningPrompt(BasicPrompt):
 
         else:
             raise TypeError(f"There exists no PromptStrategy of the type {self.strategy}")
+
+    @abstractmethod
+    def generate_documentation_steps(self, steps: List[str]) -> List[str] :
+        pass

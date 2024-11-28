@@ -226,6 +226,7 @@ class SimpleWebAPIDocumentation(Agent):
     def run_documentation(self, turn: int, move_type: str) -> None:
         """Runs the documentation process for the given turn and move type."""
         is_good = False
+        counter = 0
         while not is_good:
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type=move_type, log=self._log,
                                                           prompt_history=self._prompt_history,
@@ -235,16 +236,20 @@ class SimpleWebAPIDocumentation(Agent):
                                                                                                       completion,
                                                                                                       self._prompt_history,
                                                                                                       self._log,
-                                                                                                      self.categorized_endpoints)
+                                                                                                      self.categorized_endpoints,
+                                                                                                      move_type)
             if result == None:
                 continue
             self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
                 result, response, result_str, self._prompt_history, self.prompt_engineer
             )
 
-            if self.prompt_engineer.prompt_helper.current_step == self.prompt_engineer.prompt_helper.document_steps - 1:
+            if self.prompt_engineer.prompt_helper.current_step == 7 and move_type == "explore":
                 is_good = True
                 self.all_steps_done = True
+            if counter == 30 and move_type == "exploit" and len(self.prompt_helper.get_instance_level_endpoints()) == 0:
+                is_good = True
+            counter = counter + 1
 
             self.evaluator.evaluate_response(response, self.prompt_engineer.prompt_helper.found_endpoints)
 

@@ -62,6 +62,8 @@ class InContextLearningPrompt(StatePlanningPrompt):
         """
         if self.context == PromptContext.DOCUMENTATION:
             steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt)
+        else:
+            steps = self._get_pentesting_steps(move_type=move_type, common_step=previous_prompt)
 
         return self.prompt_helper.check_prompt(previous_prompt=previous_prompt, steps=steps)
 
@@ -99,7 +101,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
         if move_type == "explore":
             return self.prompt_helper._get_initial_documentation_steps(
                 [f"Based on this information :\n{icl_prompt}\n Do the following: "],
-                strategy=self.strategy)
+                strategy=self.strategy, strategy_steps=self.get_documentation_steps())
         else:
             return self.prompt_helper.get_endpoints_needing_help(
                 info=f"Based on this information :\n{icl_prompt}\n Do the following: ")
@@ -115,10 +117,12 @@ class InContextLearningPrompt(StatePlanningPrompt):
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
+
+        explore_steps = self.pentesting_information.explore_steps()
         if move_type == "explore" and hasattr(self,
-                                              'pentesting_information') and self.pentesting_information.explore_steps:
-            purpose = next(iter(self.pentesting_information.explore_steps))
-            steps = self.pentesting_information.explore_steps.get(purpose, [])
+                                              'pentesting_information') and explore_steps:
+            purpose = next(iter(explore_steps))
+            steps = explore_steps.get(purpose, [])
 
             # Transform and generate ICL format
             transformed_steps = self.transform_to_icl_with_previous_examples({purpose: [steps]})
@@ -139,11 +143,11 @@ class InContextLearningPrompt(StatePlanningPrompt):
                         step = f"{common_step} {step}"
 
                     # Clean up explore steps once processed
-                    if purpose in self.pentesting_information.explore_steps and \
-                            self.pentesting_information.explore_steps[purpose]:
-                        self.pentesting_information.explore_steps[purpose].pop(0)
-                    if not self.pentesting_information.explore_steps[purpose]:
-                        del self.pentesting_information.explore_steps[purpose]
+                    if purpose in explore_steps and \
+                            explore_steps[purpose]:
+                        explore_steps[purpose].pop(0)
+                    if not explore_steps[purpose]:
+                        del explore_steps[purpose]
 
                     print(f'Prompt: {step}')
                     return [step]

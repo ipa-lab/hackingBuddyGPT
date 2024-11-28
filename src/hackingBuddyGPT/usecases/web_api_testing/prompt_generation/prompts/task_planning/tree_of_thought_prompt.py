@@ -113,17 +113,17 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         and conditional steps for flexible, iterative problem-solving as per Tree of Thoughts methodology.
         Explanation and Justification
 
-This implementation aligns closely with the Tree of Thought (ToT) principles outlined by Xie et al. (2023):
+        This implementation aligns closely with the Tree of Thought (ToT) principles outlined by Xie et al. (2023):
 
-    Iterative Evaluation: Each step incorporates assessment points to check if the outcome meets expectations, partially succeeds, or fails, facilitating iterative refinement.
+        Iterative Evaluation: Each step incorporates assessment points to check if the outcome meets expectations, partially succeeds, or fails, facilitating iterative refinement.
 
-    Dynamic Branching: Conditional branches allow for the creation of alternative paths ("sub-branches") based on intermediate outcomes. This enables the prompt to pivot when initial strategies don’t fully succeed.
+        Dynamic Branching: Conditional branches allow for the creation of alternative paths ("sub-branches") based on intermediate outcomes. This enables the prompt to pivot when initial strategies don’t fully succeed.
 
-    Decision Nodes: Decision nodes evaluate whether to proceed, retry, or backtrack, supporting a flexible problem-solving strategy. This approach mirrors the tree-based structure proposed in ToT, where decisions at each node guide the overall trajectory.
+        Decision Nodes: Decision nodes evaluate whether to proceed, retry, or backtrack, supporting a flexible problem-solving strategy. This approach mirrors the tree-based structure proposed in ToT, where decisions at each node guide the overall trajectory.
 
-    Progress Checkpoints: Regular checkpoints ensure that each level’s insights are documented and assessed for readiness to proceed. This helps manage complex tasks by breaking down the process into comprehensible phases, similar to how ToT manages complexity in problem-solving.
+        Progress Checkpoints: Regular checkpoints ensure that each level’s insights are documented and assessed for readiness to proceed. This helps manage complex tasks by breaking down the process into comprehensible phases, similar to how ToT manages complexity in problem-solving.
 
-    Hierarchical Structure: Each level in the hierarchy deepens the model's understanding, allowing for more detailed exploration at higher levels, a core concept in ToT’s approach to handling multi-step tasks.
+        Hierarchical Structure: Each level in the hierarchy deepens the model's understanding, allowing for more detailed exploration at higher levels, a core concept in ToT’s approach to handling multi-step tasks.
 
         Args:
             prompts (Dict[str, List[List[str]]]): Dictionary of initial steps for various purposes.
@@ -178,3 +178,37 @@ This implementation aligns closely with the Tree of Thought (ToT) principles out
             tot_prompts[purpose] = tree_steps
 
         return tot_prompts
+
+    def generate_documentation_steps(self, steps):
+       return [ steps[0],
+            [
+                "Start by querying root-level resource endpoints.",
+                "Focus on sending GET requests only to those endpoints that consist of a single path component directly following the root.",
+                "For instance, paths should look like '/users' or '/products', with each representing a distinct resource type.",
+                "Ensure to explore new paths that haven't been previously tested to maximize coverage."
+            ],
+            [
+                "Next, move to instance-level resource endpoints.",
+                "Identify and list endpoints formatted as `/resource/id`, where 'id' represents a dynamic parameter.",
+                "Attempt to query these endpoints to validate whether the 'id' parameter correctly retrieves individual resource instances.",
+                "Consider testing with various ID formats, such as integers, longs, or base62 encodings like '6rqhFgbbKwnb9MLmUQDhG6'."
+            ],
+            [
+                "Proceed to analyze related resource endpoints.",
+                "Identify patterns where a resource is associated with another through an 'id', formatted as `/resource/id/other_resource`.",
+                "Start by cataloging endpoints that fit this pattern, particularly noting the position of 'id' between two resource identifiers.",
+                "Then, methodically test these endpoints, using appropriate 'id' values, to explore their responses and document any anomalies or significant behaviors."
+            ],
+            [
+                "Explore multi-level resource endpoints next.",
+                "Look for endpoints that connect multiple resources in a sequence, such as `/resource/other_resource/another_resource`.",
+                "Catalog each discovered endpoint that follows this structure, focusing on their hierarchical relationship.",
+                "Systematically test these endpoints by adjusting identifiers as necessary, analyzing the response details to decode complex relationships or additional parameters."
+            ],
+            [
+                "Finally, assess endpoints that utilize query parameters.",
+                "Construct GET requests for endpoints by incorporating commonly used query parameters or those suggested in documentation.",
+                "Persistently test these configurations to confirm that each query parameter effectively modifies the response, aiming to finalize the functionality of query parameters."
+            ]
+        ]
+

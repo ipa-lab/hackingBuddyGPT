@@ -34,7 +34,6 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
 
-
     def generate_prompt(
             self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
     ) -> str:
@@ -99,25 +98,25 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
     def transform_to_hierarchical_conditional_cot(self, prompts):
         """
         Transforms prompts into a hybrid of Hierarchical and Conditional Chain-of-Thought.
-### Explanation and Justification
+        ### Explanation and Justification
 
-This **Hierarchical and Conditional Chain-of-Thought (CoT)** design improves reasoning by combining structured phases with adaptable steps.
+        This **Hierarchical and Conditional Chain-of-Thought (CoT)** design improves reasoning by combining structured phases with adaptable steps.
 
-1. **Hierarchical Phases**:
-   - **Explanation**: Each phase breaks down the problem into focused tasks.
-   - **Justification**: Wei et al. (2022) show that phased structures improve model comprehension and accuracy.
+        1. **Hierarchical Phases**:
+           - **Explanation**: Each phase breaks down the problem into focused tasks.
+           - **Justification**: Wei et al. (2022) show that phased structures improve model comprehension and accuracy.
 
-2. **Conditional Steps**:
-   - **Explanation**: Steps include conditional paths to adjust based on outcomes (proceed, retry, refine).
-   - **Justification**: Zhou et al. (2022) found conditional prompts enhance problem-solving, especially for complex tasks.
+        2. **Conditional Steps**:
+           - **Explanation**: Steps include conditional paths to adjust based on outcomes (proceed, retry, refine).
+           - **Justification**: Zhou et al. (2022) found conditional prompts enhance problem-solving, especially for complex tasks.
 
-3. **Dynamic Branching and Assessments**:
-   - **Explanation**: Outcome-based branching and checkpoints ensure readiness to move forward.
-   - **Justification**: Xie et al. (2023) support this approach in their Tree of Thought (ToT) framework, showing it boosts adaptive problem-solving.
+        3. **Dynamic Branching and Assessments**:
+           - **Explanation**: Outcome-based branching and checkpoints ensure readiness to move forward.
+           - **Justification**: Xie et al. (2023) support this approach in their Tree of Thought (ToT) framework, showing it boosts adaptive problem-solving.
 
-### Summary
+        ### Summary
 
-This method uses **Hierarchical and Conditional CoT** to enhance structured, adaptive reasoning, aligning with research supporting phased goals, dynamic paths, and iterative adjustments for complex tasks.
+        This method uses **Hierarchical and Conditional CoT** to enhance structured, adaptive reasoning, aligning with research supporting phased goals, dynamic paths, and iterative adjustments for complex tasks.
 
         Args:
             prompts (Dict[PromptPurpose, List[List[str]]]): Dictionary of prompts organized by purpose and steps.
@@ -163,3 +162,26 @@ This method uses **Hierarchical and Conditional CoT** to enhance structured, ada
             cot_prompts[purpose] = phase_prompts
 
         return cot_prompts
+
+
+    def generate_documentation_steps(self, steps) -> list:
+        """
+        Creates a chain of thought prompt to guide the model through the API documentation process.
+
+        Args:
+            use_token (str): A string indicating whether authentication is required.
+            endpoints (list): A list of endpoints to exclude from testing.
+
+        Returns:
+            str: A structured chain of thought prompt for documentation.
+        """
+
+        transformed_steps = [steps[0]]
+
+        for index, steps in enumerate(steps[1:], start=1):
+            step_header = f"Step {index}: {steps[0]}"
+            detailed_steps = steps[1:]
+            transformed_step = [step_header] + detailed_steps
+            transformed_steps.append(transformed_step)
+
+        return transformed_steps

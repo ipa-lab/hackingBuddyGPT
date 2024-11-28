@@ -1,10 +1,4 @@
-import ast
-import json
 from itertools import cycle
-
-import pydantic_core
-from instructor.retry import InstructorRetryException
-from rich.panel import Panel
 
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PromptContext,
@@ -25,7 +19,33 @@ from hackingBuddyGPT.utils import tool_message
 
 
 class PromptEngineer:
-    """Prompt engineer that creates prompts of different types."""
+    """
+               A class responsible for engineering prompts based on different strategies for web API testing.
+
+               Attributes:
+                   correct_endpoints (cycle): An infinite cycle iterator over the correct API endpoints.
+                   current_endpoint (str): The current endpoint being targeted.
+                   token (str): Authentication token for API access.
+                   strategy (PromptStrategy): Strategy pattern object determining the type of prompt generation.
+                   open_api_spec (dict): Specifications from the OpenAPI documentation used in prompt creation.
+                   llm_handler (object): Handles interaction with a language model for generating prompts.
+                   response_handler (object): Handles responses from the API or simulation environment.
+                   prompt_helper (PromptGenerationHelper): Utility class to assist in prompt generation.
+                   context (PromptContext): Information about the current context of prompt generation.
+                   turn (int): Counter to track the number of turns or interactions.
+                   _prompt_history (list): History of prompts used during the session.
+                   previous_prompt (str): The last generated prompt.
+                   strategies (dict): A dictionary mapping strategies to their corresponding objects.
+                   purpose (PromptPurpose): The purpose or intention behind the current set of prompts.
+                   prompt_func (callable): The current function used to generate prompts based on strategy.
+
+               Methods:
+                   __init__: Initializes the PromptEngineer with necessary settings and handlers.
+                   generate_prompt: Generates a prompt based on the current strategy and updates history.
+                   get_purpose: Returns the current purpose of the prompt strategy.
+                   process_step: Processes a single step using the current strategy and updates the prompt history.
+                   set_pentesting_information: Sets pentesting specific information for prompt modifications.
+               """
 
     def __init__(
             self,
@@ -38,18 +58,18 @@ class PromptEngineer:
             rest_api_info: tuple = None,
     ):
         """
-        Initializes the PromptEngineer with a specific strategy and handlers for LLM and responses.
+        Initializes the PromptEngineer with specified strategy, history, handlers, and context.
 
         Args:
-            strategy (PromptStrategy): The prompt engineering strategy to use.
-            history (dict, optional): The history of chats. Defaults to None.
-            handlers (tuple): The LLM handler and response handler.
-            context (PromptContext): The context for which prompts are generated.
-            open_api_spec (list): OpenAPI spec definitions.
-            schemas (dict, optional): Schemas relevant for the context.
-            endpoints (dict, optional): Endpoints relevant for the context.
-            description (str, optional): The description of the context.
+            strategy (PromptStrategy): The strategy for prompt generation.
+            history (list): A history of previously used prompts.
+            handlers (tuple): A tuple containing the language model handler and the response handler.
+            context (PromptContext): The current context in which the prompts are being generated.
+            open_api_spec (dict): The OpenAPI specifications used for generating prompts.
+            prompt_helper (PromptGenerationHelper): A helper utility for generating prompts.
+            rest_api_info (tuple): A tuple containing the token, host, correct endpoints, and categorized endpoints information.
         """
+
         token, host, correct_endpoints, categorized_endpoints = rest_api_info
         self.correct_endpoints = cycle(correct_endpoints)  # Creates an infinite cycle of endpoints
         self.current_endpoint = next(self.correct_endpoints)
@@ -85,15 +105,18 @@ class PromptEngineer:
 
     def generate_prompt(self, turn: int, move_type="explore", log=None, prompt_history=None, llm_handler=None, hint=""):
         """
-        Generates a prompt based on the specified strategy and gets a response.
+        Generates a prompt for a given turn and move type, then processes the response.
 
         Args:
-            turn (int): The current round or step in the process.
-            move_type (str, optional): The type of move for the strategy. Defaults to "explore".
-            hint (str, optional): An optional hint to guide the prompt generation. Defaults to "".
+            turn (int): The current interaction number in the sequence.
+            move_type (str, optional): The type of interaction, defaults to "explore".
+            log (logging.Logger, optional): Logger for debug information, defaults to None.
+            prompt_history (list, optional): History of prompts for tracking, defaults to None.
+            llm_handler (object, optional): Language model handler if different from initialized, defaults to None.
+            hint (str, optional): Optional hint to influence prompt generation, defaults to empty string.
 
         Returns:
-            list: Updated prompt history after generating the prompt and receiving a response.
+            list: Updated prompt history with the new prompt and response included.
 
         Raises:
             ValueError: If an invalid prompt strategy is specified.
@@ -120,19 +143,24 @@ class PromptEngineer:
         return prompt_history
 
     def get_purpose(self):
-        """Returns the purpose of the current prompt strategy."""
+        """
+        Retrieves the current purpose or objective of the prompt generation strategy.
+
+        Returns:
+            PromptPurpose: The purpose associated with the current strategy.
+        """
         return self.purpose
 
     def process_step(self, step: str, prompt_history: list) -> tuple[list, str]:
         """
-        Helper function to process each analysis step with the LLM.
-
+        Processes a given step by interacting with the language model and updating the history.
+f
         Args:
-            step (str): The current step to process.
-            prompt_history (list): The history of prompts and responses.
+            step (str): The step or command to process.
+            prompt_history (list): History of prompts and responses to update.
 
         Returns:
-            tuple: Updated prompt history and the result of the step processing.
+            tuple: A tuple containing the updated prompt history and the result of processing the step.
         """
         print(f"Processing step: {step}")
         prompt_history.append({"role": "system", "content": step})
@@ -153,5 +181,11 @@ class PromptEngineer:
         return prompt_history, result
 
     def set_pentesting_information(self, pentesting_information):
+        """
+               Sets pentesting-specific information to adjust the prompt generation accordingly.
+
+               Args:
+                   pentesting_information (dict): Information specific to penetration testing scenarios.
+        """
         self.pentesting_information = pentesting_information
         self.prompt_func.set_pentesting_information(pentesting_information)

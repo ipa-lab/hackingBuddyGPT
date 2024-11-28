@@ -45,9 +45,8 @@ class OpenAPISpecificationHandler(object):
         self.response_handler = response_handler
         self.schemas = {}
         self.query_params = {}
-        print(f'Name:{name}')
         self.endpoint_methods = {}
-        self.filename = f"{name.lower()}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
+        self.filename = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
         self.openapi_spec = {
             "openapi": "3.0.0",
             "info": {
@@ -61,8 +60,10 @@ class OpenAPISpecificationHandler(object):
         }
         self.llm_handler = llm_handler
         current_path = os.path.dirname(os.path.abspath(__file__))
-        self.file_path = os.path.join(current_path, "openapi_spec", str(strategy).split(".")[1].lower())
+        self.file_path = os.path.join(current_path, "openapi_spec", str(strategy).split(".")[1].lower(), name.lower())
+        os.makedirs(self.file_path, exist_ok=True)
         self.file = os.path.join(self.file_path, self.filename)
+
         self._capabilities = {"yaml": YAMLFile()}
         self.unsuccessful_paths = []
 
@@ -71,7 +72,7 @@ class OpenAPISpecificationHandler(object):
     def is_partial_match(self, element, string_list):
         return any(element in string or string in element for string in string_list)
 
-    def update_openapi_spec(self, resp, result, result_str, found_endpoints):
+    def update_openapi_spec(self, resp, result, result_str):
         """
         Updates the OpenAPI specification based on the API response provided.
 
@@ -89,15 +90,16 @@ class OpenAPISpecificationHandler(object):
         if request.__class__.__name__ == "HTTPRequest":
             path = request.path
             method = request.method
-
-            if path in found_endpoints:
-                list(self.openapi_spec["endpoints"].keys())
-
             if not path or not method or path == "/" or not path.startswith("/"):
                 return list(self.openapi_spec["endpoints"].keys())
 
             # replace specific values with generic values for doc
             path = self.pattern_matcher.replace_according_to_pattern(path)
+            print(f'Path:{path}')
+
+            if path in self.unsuccessful_paths:
+                return list(self.openapi_spec["endpoints"].keys())
+
 
             endpoint_methods = self.endpoint_methods
             endpoints = self.openapi_spec["endpoints"]
@@ -124,29 +126,39 @@ class OpenAPISpecificationHandler(object):
             )
             self.schemas = self.openapi_spec["components"]["schemas"]
 
-            # Add example and reference to the method's responses if available
-            if example or reference or status_message == "No Content":
-                if path in endpoints.keys() and method.lower() not in endpoints[path].values():
-                    endpoints[path][method.lower()] = {
-                        "summary": f"{method} operation on {path}",
-                        "responses": {
-                            f"{status_code}": {
-                                "description": status_message,
-                                "content": {
-                                    "application/json": {
-                                        "schema": {"$ref": reference},
-                                        "examples": example
-                                    }
-                                }
-                            }
+            # Check if the path exists in the dictionary and the method is not already defined for this path
+            if path in endpoints and method.lower() not in endpoints[path]:
+                # Create a new dictionary for this method if it doesn't exist
+                endpoints[path][method.lower()] = {
+                    "summary": f"{method} operation on {path}",
+                    "responses": {
+                        f"{status_code}": {
+                            "description": status_message,
+                            "content": {}
                         }
                     }
+                }
 
-                    # Update endpoint methods for the path
-                    endpoint_methods[path].append(method)
+                # Update endpoint methods for the path
+                endpoint_methods[path].append(method)
 
-                    # Ensure uniqueness of methods for each path
-                    endpoint_methods[path] = list(set(endpoint_methods[path]))
+                # Ensure uniqueness of methods for each path
+                endpoint_methods[path] = list(set(endpoint_methods[path]))
+
+            # Check if there's a need to add or update the 'content' based on the conditions provided
+            if example or reference or status_message == "No Content":
+                # Ensure the path and method exists and has the 'responses' structure
+                if path in endpoints and method.lower() in endpoints[path] and \
+                        f"{status_code}" in endpoints[path][method.lower()]["responses"]:
+                    # Get the response content dictionary
+                    response_content = endpoints[path][method.lower()]["responses"][f"{status_code}"]["content"]
+
+                    # Assign a new structure to 'content' under the specific status code
+                    response_content["application/json"] = {
+                        "schema": {"$ref": reference},
+                        "examples": example
+                    }
+
 
             # Add query parameters to the OpenAPI path item object
             if path.__contains__('?'):
@@ -209,7 +221,7 @@ class OpenAPISpecificationHandler(object):
         # yaml_file_assistant.run(description)
 
     def _update_documentation(self, response, result, result_str, prompt_engineer):
-        endpoints = self.update_openapi_spec(response, result, result_str, self.response_handler.prompt_helper.found_endpoints)
+        endpoints = self.update_openapi_spec(response, result, result_str)
         if prompt_engineer.prompt_helper.found_endpoints != endpoints and endpoints != []:
             prompt_engineer.prompt_helper.found_endpoints = list(
                 set(prompt_engineer.prompt_helper.found_endpoints + endpoints))

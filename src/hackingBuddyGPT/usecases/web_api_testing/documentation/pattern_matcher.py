@@ -52,6 +52,9 @@ class PatternMatcher:
     def replace_according_to_pattern(self, path):
         if self.matches_any_pattern(path):
             return self.replace_parameters(path)
+
+        if "/1" in path:
+            path = path.replace("/1", "/{id}")
         return path
 
     def extract_query_params(self, path):

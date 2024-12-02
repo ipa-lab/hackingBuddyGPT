@@ -1,8 +1,14 @@
 #!/bin/bash
 
+# Check Bash version (adjust version as needed)
+if [[ ! $(bash --version | head -n1 | awk '{print $3}' | cut -d'.' -f1-2) =~ ^5\. ]]; then
+  echo "Error: Requires Bash version 5 or higher." >&2
+  exit 1
+fi
+
 # Purpose: In GitHub Codespaces, automates the setup of Docker containers,
 # preparation of Ansible inventory, and modification of tasks for testing.
-# Usage: ./codespaces_create_and_start_containers.sh
+# Usage: ./scripts/codespaces_create_and_start_containers.sh
 
 # Enable strict error handling for better script robustness
 set -e  # Exit immediately if a command exits with a non-zero status

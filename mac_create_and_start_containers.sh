@@ -1,7 +1,13 @@
-#!/opt/homebrew/bin/bash
+#!/bin/bash
+
+# Check Bash version (adjust version as needed)
+if [[ ! $(bash --version | head -n1 | awk '{print $3}' | cut -d'.' -f1-2) =~ ^5\. ]]; then
+  echo "Error: Requires Bash version 5 or higher." >&2
+  exit 1
+fi
 
 # Purpose: Automates the setup of docker containers for local testing on Mac.
-# Usage: ./mac_create_and_start_containers.sh
+# Usage: ./scripts/mac_create_and_start_containers.sh
 
 # Enable strict error handling
 set -e
@@ -20,9 +26,6 @@ if [ ! -f tasks.yaml ]; then
     echo "tasks.yaml not found! Please ensure your Ansible playbook file exists."
     exit 1
 fi
-
-# Default value for base port
-# BASE_PORT=${BASE_PORT:-49152}
 
 # Default values for network and base port, can be overridden by environment variables
 DOCKER_NETWORK_NAME=${DOCKER_NETWORK_NAME:-192_168_65_0_24}
@@ -251,6 +254,6 @@ docker --debug run --restart=unless-stopped -it -d -p 8080:8080 --name gemini-op
 
 # Step 14: Ready to run hackingBuddyGPT
 
-echo "You can now run ./mac_start_hackingbuddygpt_against_a_container.sh"
+echo "You can now run ./scripts/mac_start_hackingbuddygpt_against_a_container.sh"
 
 exit 0

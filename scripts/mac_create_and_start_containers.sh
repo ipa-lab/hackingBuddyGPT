@@ -1,10 +1,13 @@
 #!/opt/homebrew/bin/bash
 
-# Enable strict error handling
-set -e
-set -u
-set -o pipefail
-set -x
+# Purpose: Automates the setup of docker containers for local testing on Mac
+# Usage: ./scripts/mac_create_and_start_containers.sh
+
+# Enable strict error handling for better script robustness
+set -e  # Exit immediately if a command exits with a non-zero status
+set -u  # Treat unset variables as an error and exit immediately
+set -o pipefail  # Return the exit status of the last command in a pipeline that failed
+set -x  # Print each command before executing it (useful for debugging)
 
 cd $(dirname $0)
 
@@ -14,9 +17,6 @@ if (( bash_version < 4 )); then
   echo 'Error: Requires Bash version 4 or higher.'
   exit 1
 fi
-
-# Purpose: Automates the setup of docker containers for local testing on Mac.
-# Usage: ./scripts/mac_create_and_start_containers.sh
 
 # Step 1: Initialization
 

@@ -12,9 +12,10 @@ set -x  # Print each command before executing it (useful for debugging)
 
 cd $(dirname $0)
 
-# Check Bash version (adjust version as needed)
-if [[ ! $(bash --version | head -n1 | awk '{print $4}' | cut -d'.' -f1-2) =~ ^5\. ]]; then
-  echo "Error: Requires Bash version 5 or higher." >&2
+bash_version=$(/bin/bash --version | head -n 1 | awk '{print $4}' | cut -d. -f1,2)
+
+if (( bash_version < 5 )); then
+  echo 'Error: Requires Bash version 5 or higher.'
   exit 1
 fi
 

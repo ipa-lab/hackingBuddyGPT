@@ -14,8 +14,8 @@ cd $(dirname $0)
 
 bash_version=$(/bin/bash --version | head -n 1 | awk '{print $4}' | cut -d. -f1)
 
-if (( bash_version < 5 )); then
-  echo 'Error: Requires Bash version 5 or higher.'
+if (( bash_version < 4 )); then
+  echo 'Error: Requires Bash version 4 or higher.'
   exit 1
 fi
 

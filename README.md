@@ -300,6 +300,12 @@ $ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...C
 $ pip install '.[testing]'
 ```
 
+## Use Cases
+
+Mac, Docker Desktop and Gemini-OpenAI-Proxy:
+
+* See https://github.com/ipa-lab/hackingBuddyGPT/blob/main/MAC.md
+
 ## Publications about hackingBuddyGPT
 
 Given our background in academia, we have authored papers that lay the groundwork and report on our efforts:

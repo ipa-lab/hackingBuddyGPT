@@ -132,24 +132,24 @@ class PromptGenerationHelper(object):
         http_methods_set = {"GET", "POST", "PUT", "DELETE"}
         for endpoint, methods in self.endpoint_methods.items():
             missing_methods = http_methods_set - set(methods)
-            if missing_methods and not endpoint in self.unsuccessful_paths:
-                needed_method = next(iter(missing_methods))
-                if (endpoint in self.unsuccessful_methods and needed_method in self.unsuccessful_methods[endpoint]
-                        and not needed_method in self.tried_methods_by_enpoint[missing_endpoint]):
-                    while needed_method not in self.unsuccessful_methods[endpoint]:
-                        needed_method = next(iter(missing_methods))
-                        if needed_method == None:
-                            break
+            if missing_methods and endpoint not in self.unsuccessful_paths:
+                for needed_method in missing_methods:  # Iterate directly over missing methods
+                    if endpoint not in self.tried_methods_by_enpoint:
+                        self.tried_methods_by_enpoint[endpoint] = []
 
-                formatted_endpoint = endpoint.replace("{id}", "1") if "{id}" in endpoint else endpoint
-                if formatted_endpoint not in self.tried_methods_by_enpoint:
-                    self.tried_methods_by_enpoint[formatted_endpoint] = []
-                self.tried_methods_by_enpoint[formatted_endpoint].append(needed_method)
+                    # Avoid retrying methods that were already unsuccessful
+                    if (needed_method in self.unsuccessful_methods.get(endpoint, [])
+                            or needed_method in self.tried_methods_by_enpoint[endpoint]):
+                        continue
 
-                return [
-                    f"{info}\n",
-                    f"For endpoint {formatted_endpoint}, find this missing method: {needed_method}."
-                ]
+                    # Format the endpoint and append the method as tried
+                    formatted_endpoint = endpoint.replace("{id}", "1") if "{id}" in endpoint else endpoint
+                    self.tried_methods_by_enpoint[endpoint].append(needed_method)
+
+                    return [
+                        f"{info}\n",
+                        f"For endpoint {formatted_endpoint}, find this missing method: {needed_method}."
+                    ]
 
         return [
             f"Look for any endpoint that might be missing, exclude endpoints from this list :{self.unsuccessful_paths}"]

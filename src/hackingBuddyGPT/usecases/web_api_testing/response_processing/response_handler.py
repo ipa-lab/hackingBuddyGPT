@@ -34,7 +34,7 @@ class ResponseHandler:
         response_analyzer (ResponseAnalyzerWithLLM): An instance for analyzing responses with the LLM.
     """
 
-    def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext, token: str,
+    def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext, config: Any,
                  prompt_helper: PromptGenerationHelper, pentesting_information: PenTestingInformation = None) -> None:
         """
         Initializes the ResponseHandler with the specified LLM handler.
@@ -85,7 +85,8 @@ class ResponseHandler:
         self.query_counter = 0
         self.repeat_counter = 0
         self.variants_of_found_endpoints = []
-        self.token = token
+        self.name= config.get("name")
+        self.token = config.get("token")
         self.last_path = ""
         self.prompt_helper = prompt_helper
         self.pattern_matcher = PatternMatcher()
@@ -429,10 +430,10 @@ class ResponseHandler:
             # Add Authorization header if token is available
             if self.token != "":
                 response.action.headers = {"Authorization": f"Bearer {self.token}"}
-
         # Convert response to JSON and display it
         command = json.loads(pydantic_core.to_json(response).decode())
         log.console.print(Panel(json.dumps(command, indent=2), title="assistant"))
+
 
         # Execute the command and parse the result
         with log.console.status("[bold green]Executing command..."):
@@ -448,6 +449,7 @@ class ResponseHandler:
 
             # Parse HTTP status and request path
             result_str = self.parse_http_status_line(result)
+
             request_path = response.action.path
 
             # Check for missing action
@@ -461,8 +463,9 @@ class ResponseHandler:
 
             # Determine if the request path is correct and set the status message
             if is_successful:
-                # Update current step and add to found endpoints
-                self.prompt_helper.found_endpoints.append(request_path)
+                if request_path.split("?")[0] not in self.prompt_helper.found_endpoints:
+                    # Update current step and add to found endpoints
+                    self.prompt_helper.found_endpoints.append(request_path.split("?")[0])
                 status_message = f"{request_path} is a correct endpoint"
             else:
                 # Handle unsuccessful paths and error message
@@ -543,7 +546,6 @@ class ResponseHandler:
 
     def adjust_path_if_necessary(self, path):
         # Initial processing and checks
-        print(f'PATH: {path}')
         parts = [part for part in path.split("/") if part]
         pattern_replaced_path = self.pattern_matcher.replace_according_to_pattern(path)
 
@@ -554,36 +556,26 @@ class ResponseHandler:
             path = self.get_next_path(path)
             self.no_action_counter = 0
         else:
-            # Check if the path is already handled or matches known patterns
-            if (path == self.last_path or
-                    path in self.prompt_helper.unsuccessful_paths or
-                    path in self.prompt_helper.found_endpoints or
-                    self.check_path_variants(path, self.prompt_helper.found_endpoints) or
-                    self.check_path_variants(path,
-                                             self.prompt_helper.unsuccessful_paths) and self.prompt_helper.current_step != 6 or
-                    pattern_replaced_path in self.prompt_helper.found_endpoints or
-                    pattern_replaced_path in self.prompt_helper.unsuccessful_paths
-                    and self.prompt_helper.current_step != 2):
-
-                path = self.get_saved_endpoint()
-                if path == None:
-                    path = self.get_next_path(path)
 
             # Specific logic based on current_step and the structure of parts
             if parts:
                 root_path = '/' + parts[0]
                 if self.prompt_helper.current_step == 1:
                     if len(parts) != 1:
-                        if (
-                                root_path not in self.prompt_helper.found_endpoints and root_path not in self.prompt_helper.unsuccessful_paths):
+                        if (root_path not in self.prompt_helper.found_endpoints and root_path not in self.prompt_helper.unsuccessful_paths):
                             self.save_endpoint(path)
-
                             path = root_path
                         else:
                             self.save_endpoint(path)
                             path = self.get_next_path(path)
 
-                if self.prompt_helper.current_step == 2 and len(parts) != 2:
+
+                    else:
+                            self.save_endpoint(path)
+                            if path in self.prompt_helper.found_endpoints or path in self.prompt_helper.unsuccessful_paths or path == self.last_path:
+                                path = self.get_next_path(path)
+
+                elif self.prompt_helper.current_step == 2 and len(parts) != 2:
                     if path in self.prompt_helper.unsuccessful_paths:
                         path = self.prompt_helper.get_instance_level_endpoint()
                     elif path in self.prompt_helper.found_endpoints and len(parts) == 1:
@@ -592,12 +584,30 @@ class ResponseHandler:
                         path = self.prompt_helper.get_instance_level_endpoint()
 
                     print(f'PATH: {path}')
-                if self.prompt_helper.current_step == 6 and not "?" in path:
-                    path = path + "?" + self.create_common_query_for_endpoint(path)
+                elif self.prompt_helper.current_step == 6 and not "?" in path:
+                    path = self.create_common_query_for_endpoint(path)
+
+                # Check if the path is already handled or matches known patterns
+                elif (path == self.last_path or
+                    path in self.prompt_helper.unsuccessful_paths or
+                    path in self.prompt_helper.found_endpoints and self.prompt_helper.current_step != 6 or
+                    pattern_replaced_path in self.prompt_helper.found_endpoints or
+                    pattern_replaced_path in self.prompt_helper.unsuccessful_paths
+                    and self.prompt_helper.current_step != 2):
+
+                    path = self.get_saved_endpoint()
+        if path == None:
+            path = self.get_next_path(path)
 
             # Replacement logic for dynamic paths containing placeholders
-            if "{id}" in path:
-                path = path.replace("{id}", "1")
+
+        if "{id}" in path:
+            path = path.replace("{id}", "1")
+
+        print(f'PATH: {path}')
+
+        if self.name.__contains__("OWASP API"):
+            return path.capitalize()
 
         return path
 
@@ -635,7 +645,7 @@ class ResponseHandler:
             self.query_counter = 0
 
         # Check for step-specific conditions or query count thresholds
-        if ( self.prompt_helper.current_step == 1 and self.query_counter > 130):
+        if ( self.prompt_helper.current_step == 1 and self.query_counter > 150):
             update_step_and_category()
         elif self.prompt_helper.current_step == 2 and not self.prompt_helper.get_instance_level_endpoints():
             update_step_and_category()

@@ -109,7 +109,7 @@ class OpenAPISpecificationHandler(object):
             main_path = path if len(path_parts) > 1 else ""
 
             # Initialize the path if it's not present and is valid
-            if path not in endpoints and main_path and str(status_code).startswith("20") :
+            if path not in endpoints and main_path and str(status_code).startswith("20")  and not path.__contains__("?"):
                 endpoints[path] = {}
                 endpoint_methods[path] = []
 

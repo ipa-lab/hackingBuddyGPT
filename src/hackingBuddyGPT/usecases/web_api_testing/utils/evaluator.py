@@ -26,7 +26,10 @@ class Evaluator:
 
         # Calculate percentages
         percent_routes_found = self.get_percentage(self.results["routes_found"], self.documented_routes)
-        percent_params_found = self.get_percentage(self.results["query_params_found"], self.documented_query_params)
+        if len(self.documented_query_params) > 0:
+            percent_params_found = self.get_percentage(self.results["query_params_found"], self.documented_query_params)
+        else:
+            percent_params_found = 0
 
         # Average false positives
         avg_false_positives = len(self.results["false_positives"]) / self.num_runs
@@ -95,12 +98,12 @@ class Evaluator:
 
         # Simulate response query parameters found (this would usually come from the response data)
         response_query_params = self.pattern_matcher.extract_query_params(path)
-
+        x = self.documented_query_params.values()
         # Count the valid query parameters found in the response
         valid_query_params = []
         if response_query_params:
             for param, value in response_query_params.items():
-                if value in self.documented_query_params.values():
+                if value in x:
                     valid_query_params.append(value)
 
         return len(valid_query_params)

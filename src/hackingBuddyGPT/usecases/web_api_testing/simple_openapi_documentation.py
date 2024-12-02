@@ -93,10 +93,10 @@ class SimpleWebAPIDocumentation(Agent):
             if self.config_path != "":
                 current_file_path = os.path.dirname(os.path.abspath(__file__))
                 self.config_path = os.path.join(current_file_path, "configs", self.config_path)
-        config = self._load_config(self.config_path)
+        self.config = self._load_config(self.config_path)
         self.token, self.host, self.description, self.correct_endpoints, self.query_params = (
-            config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"),
-            config.get("query_params")
+            self.config.get("token"), self.config.get("host"), self.config.get("description"), self.config.get("correct_endpoints"),
+            self.config.get("query_params")
         )
 
         self.all_steps_done = False
@@ -104,9 +104,9 @@ class SimpleWebAPIDocumentation(Agent):
         self.categorized_endpoints = self.categorize_endpoints(self.correct_endpoints, self.query_params)
 
         if "spotify" in self.config_path:
-            os.environ['SPOTIPY_CLIENT_ID'] = config['client_id']
-            os.environ['SPOTIPY_CLIENT_SECRET'] = config['client_secret']
-            os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
+            os.environ['SPOTIPY_CLIENT_ID'] = self.config['client_id']
+            os.environ['SPOTIPY_CLIENT_SECRET'] = self.config['client_secret']
+            os.environ['SPOTIPY_REDIRECT_URI'] = self.config['redirect_uri']
         print(f'Host:{self.host}')
         self._setup_capabilities()
         if self.strategy == "cot":
@@ -118,7 +118,7 @@ class SimpleWebAPIDocumentation(Agent):
 
         self.prompt_context = PromptContext.DOCUMENTATION
         self.llm_handler = LLMHandler(self.llm, self._capabilities)
-        self.evaluator = Evaluator(config=config)
+        self.evaluator = Evaluator(config=self.config)
 
         self._setup_initial_prompt()
 
@@ -154,7 +154,7 @@ class SimpleWebAPIDocumentation(Agent):
         self.prompt_helper = PromptGenerationHelper(
             host=self.host, description=self.description)
         self.response_handler = ResponseHandler(llm_handler=self.llm_handler, prompt_context=self.prompt_context,
-                                                prompt_helper=self.prompt_helper, token=self.token )
+                                                prompt_helper=self.prompt_helper, config = self.config )
         self.documentation_handler = OpenAPISpecificationHandler(
             self.llm_handler, self.response_handler, self.strategy, self.host, self.description, name
         )

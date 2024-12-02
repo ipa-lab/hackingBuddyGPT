@@ -76,8 +76,8 @@ class SimpleWebAPITesting(Agent):
     def init(self):
         super().init()
         self._setup_config_path()
-        config = self._load_config()
-        self._extract_config_values(config)
+        self.config = self._load_config()
+        self._extract_config_values(self.config)
         self._set_strategy()
         self._load_openapi_specification()
         self._setup_environment()
@@ -127,7 +127,7 @@ class SimpleWebAPITesting(Agent):
         self.pentesting_information = PenTestingInformation(self._openapi_specification_parser)
         self._response_handler = ResponseHandler(
             llm_handler=self._llm_handler, prompt_context=self.prompt_context, prompt_helper=self.prompt_helper,
-            token=self.token, pentesting_information = self.pentesting_information)
+            config=self.config, pentesting_information = self.pentesting_information)
         self._report_handler = ReportHandler()
         self._test_handler = TestHandler(self._llm_handler)
 

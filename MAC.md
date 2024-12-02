@@ -49,8 +49,7 @@ Whereas Mac provides Bash version 3 via license GPLv2
 **Create and start containers:**
 
 ```zsh
-cd scripts
-./mac_create_and_start_containers.sh
+./scripts/mac_create_and_start_containers.sh
 ```
 
 **Start hackingBuddyGPT against a container:**
@@ -60,8 +59,7 @@ export GEMINI_API_KEY=
 ```
 
 ```zsh
-cd scripts
-./mac_start_hackingbuddygpt_against_a_container.sh
+./scripts/mac_start_hackingbuddygpt_against_a_container.sh
 ```
 
 **Troubleshooting:**

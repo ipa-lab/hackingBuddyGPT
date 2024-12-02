@@ -21,6 +21,7 @@ fi
 # Step 1: Install prerequisites
 
 # setup virtual python environment
+cd ..
 python -m venv venv
 source ./venv/bin/activate
 

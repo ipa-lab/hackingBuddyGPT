@@ -23,3 +23,4 @@ mac_ansible.cfg
 mac_ansible_hosts.ini
 mac_ansible_id_rsa
 mac_ansible_id_rsa.pub
+.aider*

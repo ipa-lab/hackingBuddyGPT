@@ -40,7 +40,7 @@ The above example is consolidated into shell scripts with prerequisites as follo
 brew install bash
 ```
 
-Bash version 4 or higher is needed for `mac_create_and_start_containers.sh`
+Bash version 4 or higher is needed for `scripts/mac_create_and_start_containers.sh`
 
 Homebrew provides GNU Bash version 5 via license GPLv3+
 
@@ -49,6 +49,7 @@ Whereas Mac provides Bash version 3 via license GPLv2
 **Create and start containers:**
 
 ```zsh
+cd scripts
 ./mac_create_and_start_containers.sh
 ```
 
@@ -59,6 +60,7 @@ export GEMINI_API_KEY=
 ```
 
 ```zsh
+cd scripts
 ./mac_start_hackingbuddygpt_against_a_container.sh
 ```
 

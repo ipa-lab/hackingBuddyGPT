@@ -1,3 +1,3 @@
 {
-	"onCreateCommand": "bash ./scripts/codespaces_create_and_start_containers.sh"
+	"onCreateCommand": "./scripts/codespaces_create_and_start_containers.sh"
 }

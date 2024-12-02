@@ -1,7 +1,13 @@
 #!/bin/bash
 
+# Check Bash version (adjust version as needed)
+if [[ ! $(bash --version | head -n1 | awk '{print $3}' | cut -d'.' -f1-2) =~ ^5\. ]]; then
+  echo "Error: Requires Bash version 5 or higher." >&2
+  exit 1
+fi
+
 # Purpose: On a Mac, start hackingBuddyGPT against a container
-# Usage: ./mac_start_hackingbuddygpt_against_a_container.sh
+# Usage: ./scripts/mac_start_hackingbuddygpt_against_a_container.sh
 
 # Enable strict error handling for better script robustness
 set -e  # Exit immediately if a command exits with a non-zero status

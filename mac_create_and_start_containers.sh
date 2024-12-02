@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/opt/homebrew/bin/bash
 
 # Check Bash version (adjust version as needed)
 if [[ ! $(bash --version | head -n1 | awk '{print $3}' | cut -d'.' -f1-2) =~ ^5\. ]]; then

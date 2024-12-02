@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Check Bash version (adjust version as needed)
-if [[ ! $(bash --version | head -n1 | awk '{print $3}' | cut -d'.' -f1-2) =~ ^5\. ]]; then
-  echo "Error: Requires Bash version 5 or higher." >&2
+if [[ ! $(bash --version | head -n1 | awk '{print $3}' | cut -d'.' -f1-2) =~ ^3\. ]]; then
+  echo "Error: Requires Bash version 3 or higher." >&2
   exit 1
 fi
 

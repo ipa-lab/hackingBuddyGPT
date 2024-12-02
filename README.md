@@ -231,7 +231,7 @@ In the Command Palette, type `>` and `Terminal: Create New Terminal` and press t
 
 Type the following to manually run:
 ```bash
-./codespaces_start_hackingbuddygpt_against_a_container.sh
+./scripts/codespaces_start_hackingbuddygpt_against_a_container.sh
 ```
 7. Eventually, you should see:
 

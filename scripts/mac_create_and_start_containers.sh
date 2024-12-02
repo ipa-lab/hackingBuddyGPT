@@ -1,19 +1,21 @@
 #!/opt/homebrew/bin/bash
 
+# Enable strict error handling
+set -e
+set -u
+set -o pipefail
+set -x
+
+cd $(dirname $0)
+
 # Check Bash version (adjust version as needed)
-if [[ ! $(/opt/homebrew/bin/bash --version | head -n1 | awk '{print $3}' | cut -d'.' -f1-2) =~ ^5\. ]]; then
+if [[ ! $(/opt/homebrew/bin/bash --version | head -n1 | awk '{print $4}' | cut -d'.' -f1-2) =~ ^5\. ]]; then
   echo "Error: Requires Bash version 5 or higher." >&2
   exit 1
 fi
 
 # Purpose: Automates the setup of docker containers for local testing on Mac.
 # Usage: ./scripts/mac_create_and_start_containers.sh
-
-# Enable strict error handling
-set -e
-set -u
-set -o pipefail
-set -x
 
 # Step 1: Initialization
 

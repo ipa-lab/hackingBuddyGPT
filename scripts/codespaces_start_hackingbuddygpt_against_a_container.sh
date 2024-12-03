@@ -45,3 +45,19 @@ echo "Starting hackingBuddyGPT against a container..."
 echo
 
 wintermute LinuxPrivesc --llm.api_key=$OPENAI_API_KEY --llm.model=gpt-4-turbo --llm.context_size=8192 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
+
+# Alternatively, the following comments demonstrate using gemini-openai-proxy and Gemini
+
+# http://localhost:8080 is gemini-openai-proxy
+
+# gpt-4 maps to gemini-1.5-flash-latest
+
+# Hence use gpt-4 below in --llm.model=gpt-4
+
+# Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day
+
+# Hence --max_turns 999999999 will exceed the daily limit
+
+# docker run --restart=unless-stopped -it -d -p 8080:8080 --name gemini zhu327/gemini-openai-proxy:latest
+
+# wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gpt-4 --llm.context_size=1000000 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1 --llm.api_url=http://localhost:8080 --llm.api_backoff=60 --max_turns 999999999

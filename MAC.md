@@ -14,9 +14,15 @@ There are bugs in Docker Desktop on Mac that prevent creation of a custom Docker
 
 Therefore, localhost TCP port 49152 (or higher) dynamic port number is used for an ansible-ready-ubuntu container
 
-http://localhost:8080 is genmini-openai-proxy
+http://localhost:8080 is gemini-openai-proxy
 
 gpt-4 maps to gemini-1.5-flash-latest
+
+Hence use gpt-4 below in --llm.model=gpt-4
+
+Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day
+
+Hence --max_turns 999999999 will exceed the daily limit
 
 For example:
 

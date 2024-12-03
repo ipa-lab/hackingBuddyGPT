@@ -11,7 +11,7 @@ authors = [
 ]
 maintainers = [
 	{ name = "Andreas Happe", email = "andreas@offensive.one" },
-	{ name = "Juergen Cito", email = "juergen.cito@tuwien.ac.at" },
+	{ name = "Juergen Cito", email = "juergen.cito@tuwien.ac.at" }
 ]
 description = "Helping Ethical Hackers use LLMs in 50 lines of code"
 readme = "README.md"

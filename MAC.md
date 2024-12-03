@@ -16,6 +16,8 @@ Therefore, localhost TCP port 49152 (or higher) dynamic port number is used for 
 
 http://localhost:8080 is genmini-openai-proxy
 
+gpt-4 maps to gemini-1.5-flash-latest
+
 For example:
 
 ```zsh
@@ -23,7 +25,7 @@ export GEMINI_API_KEY=
 
 export PORT=49152
 
-wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gemini-1.5-flash-latest --llm.context_size=1000000 --conn.host=localhost --conn.port $PORT --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1 --llm.api_url=http://localhost:8080 --llm.api_backoff=60 --max_turns 999999999
+wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gpt-4 --llm.context_size=1000000 --conn.host=localhost --conn.port $PORT --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1 --llm.api_url=http://localhost:8080 --llm.api_backoff=60 --max_turns 999999999
 ```
 
 The above example is consolidated into shell scripts with prerequisites as follows:

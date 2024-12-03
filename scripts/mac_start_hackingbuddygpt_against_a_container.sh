@@ -54,7 +54,7 @@ echo
 
 PORT=$(docker ps | grep ansible-ready-ubuntu | cut -d ':' -f2 | cut -d '-' -f1)
 
-# http://localhost:8080 is genmini-openai-proxy
+# http://localhost:8080 is gemini-openai-proxy
 
 # gpt-4 maps to gemini-1.5-flash-latest
 

@@ -4,12 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hackingBuddyGPT"
-authors = [
-	{ name = "Andreas Happe", email = "andreas@offensive.one" }
-]
+authors = [{ name = "Andreas Happe", email = "andreas@offensive.one" }]
 maintainers = [
-	{ name = "Andreas Happe", email = "andreas@offensive.one" },
-	{ name = "Juergen Cito", email = "juergen.cito@tuwiena.c.at" }
+    { name = "Andreas Happe", email = "andreas@offensive.one" },
+    { name = "Juergen Cito", email = "juergen.cito@tuwiena.c.at" },
 ]
 description = "Helping Ethical Hackers use LLMs in 50 lines of code"
 readme = "README.md"
@@ -21,7 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-	"Development Status :: 4 - Beta",
+    "Development Status :: 4 - Beta",
 ]
 dependencies = [
     'fabric == 3.2.2',
@@ -29,6 +27,7 @@ dependencies = [
     'requests == 2.32.0',
     'rich == 13.7.1',
     'tiktoken == 0.8.0',
+    'instructor == 1.3.5',
     'PyYAML == 6.0.1',
     'python-dotenv == 1.0.1',
     'pypsexec == 0.3.0',
@@ -59,14 +58,9 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = "src"
-addopts = [
-	"--import-mode=importlib",
-]
+addopts = ["--import-mode=importlib"]
 [project.optional-dependencies]
-testing = [
-    'pytest',
-    'pytest-mock'
-]
+testing = ['pytest', 'pytest-mock']
 
 [project.scripts]
 wintermute = "hackingBuddyGPT.cli.wintermute:main"

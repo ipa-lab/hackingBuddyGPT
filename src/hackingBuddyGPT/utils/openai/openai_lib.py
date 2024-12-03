@@ -1,3 +1,4 @@
+import instructor
 import datetime
 from typing import Dict, Union, Iterable, Optional
 
@@ -34,6 +35,10 @@ class OpenAILib(LLM):
     @property
     def client(self) -> openai.OpenAI:
         return self._client
+
+    @property
+    def instructor(self) -> instructor.Instructor:
+        return instructor.from_openai(self.client)
 
     def get_response(self, prompt, *, capabilities: Optional[Dict[str, Capability]] = None, **kwargs) -> LLMResult:
         """  # TODO: re-enable compatibility layer

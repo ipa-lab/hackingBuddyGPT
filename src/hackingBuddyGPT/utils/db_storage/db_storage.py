@@ -101,7 +101,7 @@ class RawDbStorage:
         self.setup_db()
 
     def connect(self):
-        self.db = sqlite3.connect(self.connection_string, autocommit=True)
+        self.db = sqlite3.connect(self.connection_string, isolation_level=None)
         self.db.row_factory = sqlite3.Row
         self.cursor = self.db.cursor()
 

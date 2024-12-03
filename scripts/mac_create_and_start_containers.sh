@@ -1,13 +1,22 @@
 #!/opt/homebrew/bin/bash
 
-# Purpose: Automates the setup of docker containers for local testing on Mac.
-# Usage: ./mac_create_and_start_containers.sh
+# Purpose: Automates the setup of docker containers for local testing on Mac
+# Usage: ./scripts/mac_create_and_start_containers.sh
 
-# Enable strict error handling
-set -e
-set -u
-set -o pipefail
-set -x
+# Enable strict error handling for better script robustness
+set -e  # Exit immediately if a command exits with a non-zero status
+set -u  # Treat unset variables as an error and exit immediately
+set -o pipefail  # Return the exit status of the last command in a pipeline that failed
+set -x  # Print each command before executing it (useful for debugging)
+
+cd $(dirname $0)
+
+bash_version=$(/opt/homebrew/bin/bash --version | head -n 1 | awk '{print $4}' | cut -d. -f1)
+
+if (( bash_version < 4 )); then
+  echo 'Error: Requires Bash version 4 or higher.'
+  exit 1
+fi
 
 # Step 1: Initialization
 
@@ -20,9 +29,6 @@ if [ ! -f tasks.yaml ]; then
     echo "tasks.yaml not found! Please ensure your Ansible playbook file exists."
     exit 1
 fi
-
-# Default value for base port
-# BASE_PORT=${BASE_PORT:-49152}
 
 # Default values for network and base port, can be overridden by environment variables
 DOCKER_NETWORK_NAME=${DOCKER_NETWORK_NAME:-192_168_65_0_24}
@@ -251,6 +257,6 @@ docker --debug run --restart=unless-stopped -it -d -p 8080:8080 --name gemini-op
 
 # Step 14: Ready to run hackingBuddyGPT
 
-echo "You can now run ./mac_start_hackingbuddygpt_against_a_container.sh"
+echo "You can now run ./scripts/mac_start_hackingbuddygpt_against_a_container.sh"
 
 exit 0

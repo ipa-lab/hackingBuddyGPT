@@ -2,13 +2,22 @@
 
 # Purpose: In GitHub Codespaces, automates the setup of Docker containers,
 # preparation of Ansible inventory, and modification of tasks for testing.
-# Usage: ./codespaces_create_and_start_containers.sh
+# Usage: ./scripts/codespaces_create_and_start_containers.sh
 
 # Enable strict error handling for better script robustness
 set -e  # Exit immediately if a command exits with a non-zero status
 set -u  # Treat unset variables as an error and exit immediately
 set -o pipefail  # Return the exit status of the last command in a pipeline that failed
 set -x  # Print each command before executing it (useful for debugging)
+
+cd $(dirname $0)
+
+bash_version=$(/bin/bash --version | head -n 1 | awk '{print $4}' | cut -d. -f1)
+
+if (( bash_version < 4 )); then
+  echo 'Error: Requires Bash version 4 or higher.'
+  exit 1
+fi
 
 # Step 1: Initialization
 

@@ -128,70 +128,65 @@ class OpenAPISpecificationParser:
             'sensitive_action_endpoint': [],
             'protected_endpoint': [],
             'refresh_endpoint': [],
-            'login_endpoint': [],  # Added for login specific endpoints
-            'authentication_endpoint': [] , # Added for broader authentication endpoints
+            'login_endpoint': [],
+            'authentication_endpoint': [],
             'unclassified_endpoint': []
         }
-
 
         for path, path_item in self.api_data['paths'].items():
             for method, operation in path_item.items():
                 classified = False
                 description = operation.get('description', '').lower()
+                responses = operation.get("responses", {})
+                unauthorized_description = responses.get("401", {}).get("description", "").lower()
 
-                # Identify public endpoints (assuming no security means public)
-                if 'security' not in operation:
-                    classified = True
-
+                # Public endpoint: No '401 Unauthorized' response or description doesn't mention 'unauthorized'
+                if 'unauthorized' not in unauthorized_description and not any(
+                        keyword in path.lower() for keyword in ["user", "admin"]):
                     classifications['public_endpoint'].append((method.upper(), path))
+                    classified = True
                 else:
-                    # Any endpoint with security could be considered protected
-                    classified = True
-
                     classifications['protected_endpoint'].append((method.upper(), path))
+                    classified = True
 
-                # Identify secure actions and role access based on security requirements
-                if 'security' in operation:
-                    classifications['secure_action_endpoint'].append((method.upper(), path))
-                    for sec_req in operation['security']:
-                        if any(role in sec_req for role in ['admin', 'write', 'edit']):
-                            classified = True
+                # Secure action endpoints: Identified by roles or protected access
+                if any(keyword in path.lower() for keyword in ["user", "admin"]):
+                    classifications['role_access_endpoint'].append((method.upper(), path))
+                    classified = True
 
-                            classifications['role_access_endpoint'].append((method.upper(), path))
-
-                # Check descriptions for sensitive data or actions
+                # Sensitive data or action endpoints: Based on description
                 if any(word in description for word in ['sensitive', 'confidential']):
-                    classified = True
-
                     classifications['sensitive_data_endpoint'].append((method.upper(), path))
+                    classified = True
+
+                if any(word in description for word in ['delete', 'modify', 'change']):
                     classifications['sensitive_action_endpoint'].append((method.upper(), path))
+                    classified = True
 
-                # Identify resource-intensive operations from descriptions
+                # Resource-intensive endpoints
                 if any(word in description for word in ['upload', 'batch', 'heavy', 'intensive']):
-                    classified = True
-
                     classifications['resource_intensive_endpoint'].append((method.upper(), path))
+                    classified = True
 
-                # Refresh endpoints typically involve token operations
+                # Refresh endpoints
                 if 'refresh' in path.lower() or 'refresh' in description:
-                    classified = True
-
                     classifications['refresh_endpoint'].append((method.upper(), path))
-
-                # Login endpoints specifically for authentication using login keywords
-                if any(keyword in path.lower() for keyword in ['login', 'signin', 'sign-in']):
                     classified = True
 
+                # Login endpoints
+                if any(keyword in path.lower() for keyword in ['login', 'signin', 'sign-in']):
                     classifications['login_endpoint'].append((method.upper(), path))
+                    classified = True
 
-                # General authentication endpoints can include token issuance or any auth mechanism
+                # Authentication-related endpoints
                 if any(keyword in path.lower() or keyword in description for keyword in
                        ['auth', 'authenticate', 'token', 'register']):
+                    classifications['authentication_endpoint'].append((method.upper(), path))
                     classified = True
 
-                    classifications['authentication_endpoint'].append((method.upper(), path))
-            if classified == False:
-                classifications['unclassified_endpoint'].append((method.upper(), path))
+                # Unclassified endpoints
+                if not classified:
+                    classifications['unclassified_endpoint'].append((method.upper(), path))
 
         return classifications
 
@@ -203,4 +198,3 @@ if __name__ == "__main__":  # Usage
     endpoint_classes = parser.classify_endpoints()
     for category, endpoints in endpoint_classes.items():
         print(f"{category}: {endpoints}")
-

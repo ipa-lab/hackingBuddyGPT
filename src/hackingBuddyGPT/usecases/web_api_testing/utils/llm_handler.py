@@ -2,6 +2,7 @@ import re
 from typing import Any, Dict, List
 
 import openai
+from instructor.exceptions import IncompleteOutputException
 
 from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 
@@ -45,12 +46,76 @@ class LLMHandler:
 
         def call_model(adjusted_prompt: List[Dict[str, Any]]) -> Any:
             """Helper function to make the API call with the adjusted prompt."""
+            print(f'prompt: {prompt}')
 
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,
                 messages=adjusted_prompt,
                 response_model=capabilities_to_action_model(self._capabilities),
-                max_tokens=200 # adjust as needed
+                max_tokens=200  # adjust as needed
+            )
+
+        # Helper to adjust the prompt based on its length.
+
+        try:
+            if isinstance(prompt, list) and len(prompt) >= 10:
+                prompt = prompt[-10:]
+            if isinstance(prompt, str):
+                prompt = [prompt]
+            return call_model(prompt)
+
+        except openai.BadRequestError as e:
+            print(f"Error: {str(e)} - Adjusting prompt size and retrying.")
+
+            try:
+                # First adjustment attempt based on prompt length
+                self.adjusting_counter = 1
+                if isinstance(prompt, list) and len(prompt) >= 5:
+                    adjusted_prompt = self.adjust_prompt(prompt, num_prompts=1)
+                    adjusted_prompt = self.ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+                if isinstance(prompt, str):
+                    adjusted_prompt = [prompt]
+
+                print(f'1-Adjusted_prompt: {adjusted_prompt}')
+
+                return call_model(adjusted_prompt)
+
+            except (openai.BadRequestError, IncompleteOutputException) as e:
+                print(f"Error: {str(e)} - Further adjusting and retrying.")
+                # Second adjustment based on token size if the first attempt fails
+                adjusted_prompt = self.adjust_prompt(prompt)
+                if isinstance(adjusted_prompt, str):
+                    adjusted_prompt = [adjusted_prompt]
+                if adjusted_prompt == [] or adjusted_prompt == None:
+                    adjusted_prompt = prompt[-1:]
+                if isinstance(adjusted_prompt, list):
+                    if isinstance(adjusted_prompt[0], list):
+                        adjusted_prompt = adjusted_prompt[0]
+                adjusted_prompt = self.ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+                print(f' Adjusted_prompt: {adjusted_prompt}')
+                self.adjusting_counter = 2
+                return call_model(adjusted_prompt)
+
+    def execute_prompt_with_specific_capability(self, prompt: List[Dict[str, Any]], capability: Any) -> Any:
+        """
+        Calls the LLM with the specified prompt and retrieves the response.
+
+        Args:
+            prompt (List[Dict[str, Any]]): The prompt messages to send to the LLM.
+
+        Returns:
+            Any: The response from the LLM.
+        """
+        print(f"Initial prompt length: {len(prompt)}")
+
+        def call_model(adjusted_prompt: List[Dict[str, Any]], capability: Any) -> Any:
+            """Helper function to make the API call with the adjusted prompt."""
+            print(f'prompt: {prompt}, capability: {capability}')
+            return self.llm.instructor.chat.completions.create_with_completion(
+                model=self.llm.model,
+                messages=adjusted_prompt,
+                response_model=capabilities_to_action_model(capability),
+                max_tokens=500  # adjust as needed
             )
 
         # Helper to adjust the prompt based on its length.
@@ -60,49 +125,77 @@ class LLMHandler:
                 num_prompts = 10
                 self.adjusting_counter = 0
             else:
-                num_prompts = int(len(prompt) - 0.5*len(prompt) if len(prompt) >= 20 else len(prompt) - 0.3*len(prompt))
+                num_prompts = int(
+                    len(prompt) - 0.5 * len(prompt) if len(prompt) >= 20 else len(prompt) - 0.3 * len(prompt))
             return self.adjust_prompt(prompt, num_prompts=num_prompts)
 
         try:
             # First adjustment attempt based on prompt length
-            #adjusted_prompt = adjust_prompt_based_on_length(prompt)
-            self.adjusting_counter = 1
-            if len(prompt) >= 30:
-                prompt = adjust_prompt_based_on_length(prompt)
-            return call_model(prompt)
+            if len(prompt) >= 10:
+                prompt = prompt[-10:]
+            return call_model(prompt, capability)
 
         except openai.BadRequestError as e:
             print(f"Error: {str(e)} - Adjusting prompt size and retrying.")
 
             try:
                 # Second adjustment based on token size if the first attempt fails
-                adjusted_prompt = adjust_prompt_based_on_length(prompt)
+                adjusted_prompt = self.adjust_prompt(prompt)
+                adjusted_prompt = self.ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+
                 self.adjusting_counter = 2
-                return call_model(adjusted_prompt)
+                return call_model(adjusted_prompt, capability)
 
             except openai.BadRequestError as e:
                 print(f"Error: {str(e)} - Further adjusting and retrying.")
 
                 # Final fallback with the smallest prompt size
-                shortened_prompt =  adjust_prompt_based_on_length(prompt)
-                #print(f"New prompt length: {len(shortened_prompt)}")
-                return call_model(shortened_prompt)
+                shortened_prompt = self.adjust_prompt(prompt)
+                shortened_prompt = self.ensure_that_tool_messages_are_correct(shortened_prompt, prompt)
+                return call_model(shortened_prompt, capability)
 
     def adjust_prompt(self, prompt: List[Dict[str, Any]], num_prompts: int = 5) -> List[Dict[str, Any]]:
-        # Limit to last `num_prompts` items, ensuring an even number if necessary
-        adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2): len(prompt)]
+        """
+    Adjusts the prompt list to contain exactly `num_prompts` items.
+
+    Args:
+        prompt (List[Dict[str, Any]]): The list of prompts to adjust.
+        num_prompts (int): The desired number of prompts. Defaults to 5.
+
+    Returns:
+        List[Dict[str, Any]]: The adjusted list containing exactly `num_prompts` items.
+    """
+        # Ensure the number of prompts does not exceed the total available
+        if len(prompt) < num_prompts:
+            return prompt  # Return all available if there are fewer prompts than requested
+
+        # Limit to the last `num_prompts` items
+        # Ensure not to exceed the available prompts
+        adjusted_prompt = prompt[-num_prompts:]
+        adjusted_prompt = adjusted_prompt[:len(adjusted_prompt) - len(adjusted_prompt) % 2]
+        if adjusted_prompt == []:
+            return prompt
 
         # Ensure adjusted_prompt starts with a dict item
-        if not isinstance(adjusted_prompt[0], dict):
-            adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) - 1: len(prompt)]
+
+        if not isinstance(adjusted_prompt, str):
+            if not isinstance(adjusted_prompt[0], dict):
+                adjusted_prompt = prompt[len(prompt) - num_prompts - (len(prompt) % 2) - 1: len(prompt)]
 
         # If adjusted_prompt is None, fallback to the full prompt
         if not adjusted_prompt:
             adjusted_prompt = prompt
 
         # Ensure adjusted_prompt items are valid dicts and follow `tool` message constraints
+        validated_prompt = self.ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+
+        return validated_prompt
+
+    def ensure_that_tool_messages_are_correct(self, adjusted_prompt, prompt):
+        # Ensure adjusted_prompt items are valid dicts and follow `tool` message constraints
         validated_prompt = []
         last_item = None
+        adjusted_prompt.reverse()
 
         for item in adjusted_prompt:
             if isinstance(item, dict):
@@ -115,9 +208,12 @@ class LLMHandler:
                 last_item = item
 
         # Reverse back if `prompt` is not a string (just in case)
-        if not isinstance(prompt, str):
+        if not isinstance(validated_prompt, str):
             validated_prompt.reverse()
-
+        if validated_prompt == []:
+            validated_prompt = [prompt[-1]]
+        if isinstance(validated_prompt, object):
+            validated_prompt = [validated_prompt]
         return validated_prompt
 
     def add_created_object(self, created_object: Any, object_type: str) -> None:
@@ -159,7 +255,7 @@ class LLMHandler:
                 else:
                     prompt.remove(item)
                 last_action = "remove"
-                removed_item = removed_item +1
+                removed_item = removed_item + 1
             else:
 
                 if last_action == "remove":
@@ -180,7 +276,7 @@ class LLMHandler:
             counter = 5
             for item in prompt:
                 prompt.remove(item)
-                counter = counter +1
+                counter = counter + 1
         if not isinstance(prompt, str):
             prompt.reverse()
         return prompt

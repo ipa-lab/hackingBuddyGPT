@@ -83,14 +83,24 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             # Process steps one by one, with memory of explored steps and conditional handling
             for step in cot_steps:
                 if step not in self.explored_steps:
-                    self.explored_steps.append(step)
+                    if isinstance(step, list):
+                        for substep in step:
+                            self.explored_steps.append(substep)
+                            if common_step:
+                                step = common_step + substep
 
-                    # Apply common steps if provided
-                    if common_step:
-                        step = common_step + step
+                            print(f'Prompt: {substep}')
+                            return substep
 
-                    print(f'Prompt: {step}')
-                    return step
+                    else:
+                        self.explored_steps.append(step)
+
+                        # Apply common steps if provided
+                        if common_step:
+                            step = common_step + step
+
+                        print(f'Prompt: {step}')
+                        return step
 
         else:
             return ["Look for exploits."]
@@ -134,19 +144,20 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             # Phase division: Each set of steps_list corresponds to a phase in the hierarchical structure
             for steps in steps_list:
                 # Start a new phase
-                phase_prompts.append(f"Phase {phase_count}: Task Breakdown")
 
                 step_count = 1
                 for step in steps:
-                    # Add hierarchical structure for each step
-                    phase_prompts.append(f"    Step {step_count}: {step}")
+                    step_list = []
+                    step_str = f"Phase {phase_count}: Task Breakdown"
+                    step_str += f"    Step {step_count}: {step}\n"
 
                     # Integrate conditional CoT checks based on potential outcomes
-                    phase_prompts.append(f"        If successful: Proceed to Step {step_count + 1}.")
-                    phase_prompts.append(
-                        f"        If unsuccessful: Adjust previous step or clarify, then repeat Step {step_count}.")
+                    step_str += f"        If successful: Proceed to Step {step_count + 1}.\n"
+                    step_str +=f"        If unsuccessful: Adjust previous step or clarify, then repeat Step {step_count}.\n"
 
                     # Increment step count for the next step in the current phase
+                    step_list.append(step_str)
+                    phase_prompts.append(step_list)
                     step_count += 1
 
                 # Assessment point at the end of each phase

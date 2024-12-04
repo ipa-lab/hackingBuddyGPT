@@ -9,6 +9,7 @@ from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from hackingBuddyGPT.capabilities.pased_information import ParsedInformation
 from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
@@ -21,6 +22,8 @@ from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenA
 from hackingBuddyGPT.usecases.web_api_testing.documentation.report_handler import ReportHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
+from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import \
+    ResponseAnalyzerWithLLM
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.testing.test_handler import TestHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
@@ -69,7 +72,7 @@ class SimpleWebAPITesting(Agent):
     )
 
     _prompt_history: Prompt = field(default_factory=list)
-    _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list})
+    _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list(), "parsed":list()})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_http_methods_found: bool = False
 
@@ -128,8 +131,12 @@ class SimpleWebAPITesting(Agent):
         self._response_handler = ResponseHandler(
             llm_handler=self._llm_handler, prompt_context=self.prompt_context, prompt_helper=self.prompt_helper,
             config=self.config, pentesting_information = self.pentesting_information)
+        self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=self._llm_handler,
+                                                         pentesting_info=self.pentesting_information,
+                                                         capacity=self.parse_capacity)
+        self._response_handler.response_analyzer = self.response_analyzer
         self._report_handler = ReportHandler()
-        self._test_handler = TestHandler(self._llm_handler)
+        self._test_handler = TestHandler(self._llm_handler, self.python_test_case_capability)
 
     def categorize_endpoints(self, endpoints, query: dict):
         root_level = []
@@ -217,13 +224,16 @@ class SimpleWebAPITesting(Agent):
             self.http_method_template.format(method=method) for method in self.http_methods.split(",")
         }
         notes: List[str] = self._context["notes"]
+        parsed: List[str] = self._context["parsed"]
         test_cases = self._context["test_cases"]
+        self.python_test_case_capability = {"python_test_case": PythonTestCase(test_cases)}
+        self.parse_capacity = {"parse": ParsedInformation(test_cases)}
         self._capabilities = {
-            "submit_http_method": HTTPRequest(self.host),
             "http_request": HTTPRequest(self.host),
-            "record_note": RecordNote(notes),
-            "test_cases": PythonTestCase(test_cases)
+            "record_note": RecordNote(notes)
         }
+        self.http_capability = {            "http_request": HTTPRequest(self.host),
+}
 
     def perform_round(self, turn: int) -> None:
         """
@@ -244,7 +254,7 @@ class SimpleWebAPITesting(Agent):
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore", log=self._log,
                                                           prompt_history=self._prompt_history,
                                                           llm_handler=self._llm_handler)
-            response, completion = self._llm_handler.execute_prompt(prompt)
+            response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,self.http_capability )
             self._handle_response(completion, response, self.prompt_engineer.purpose)
 
         self.purpose = self.prompt_engineer.purpose
@@ -277,10 +287,10 @@ class SimpleWebAPITesting(Agent):
             self._prompt_history.append(
                 tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
-            analysis = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history)
-            self._test_handler.generate_test_cases(analysis=analysis, endpoint=response.action.path,
+            analysis, status_code = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history)
+            self._prompt_history = self._test_handler.generate_test_cases(analysis=analysis, endpoint=response.action.path,
                                                    method=response.action.method,
-                                                   prompt_history=self._prompt_history)
+                                                   prompt_history=self._prompt_history, status_code=status_code)
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
 
         self.all_http_methods_found()

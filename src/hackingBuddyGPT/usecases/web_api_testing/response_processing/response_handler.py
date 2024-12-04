@@ -46,8 +46,7 @@ class ResponseHandler:
         self.no_action_counter = 0
         if prompt_context == PromptContext.PENTESTING:
             self.pentesting_information = pentesting_information
-            self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=llm_handler,
-                                                             pentesting_info=pentesting_information)
+
 
         self.common_endpoints = ['/api', '/auth', '/login', '/admin', '/register', '/users', '/photos', '/images',
                                  '/products', '/orders',
@@ -359,8 +358,8 @@ class ResponseHandler:
         Returns:
             Any: The evaluation result from the LLM response analyzer.
         """
-        llm_responses = self.response_analyzer.analyze_response(result, prompt_history)
-        return llm_responses
+        llm_responses, status_code = self.response_analyzer.analyze_response(result, prompt_history)
+        return llm_responses, status_code
 
     def extract_key_elements_of_response(self, raw_response: Any) -> str:
         status_code, headers, body = self.response_analyzer.parse_http_response(raw_response)

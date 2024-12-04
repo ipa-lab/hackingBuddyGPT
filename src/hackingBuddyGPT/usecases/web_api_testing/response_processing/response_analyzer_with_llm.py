@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Tuple, List
 from unittest.mock import MagicMock
 
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
@@ -23,7 +23,7 @@ class ResponseAnalyzerWithLLM:
         purpose (PromptPurpose): The specific purpose for analyzing the HTTP response.
     """
 
-    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None, pentesting_info: PenTestingInformation = None):
+    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None, pentesting_info: PenTestingInformation = None, capacity: Any=None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
 
@@ -35,6 +35,7 @@ class ResponseAnalyzerWithLLM:
         self.purpose = purpose
         self.llm_handler = llm_handler
         self.pentesting_information = pentesting_info
+        self.capacity = capacity
 
     def set_purpose(self, purpose: PromptPurpose):
         """
@@ -57,7 +58,7 @@ class ResponseAnalyzerWithLLM:
             print(f"Response: {response}")
             print("-" * 50)
 
-    def analyze_response(self, raw_response: str, prompt_history: list) -> tuple[dict[str, Any], list]:
+    def analyze_response(self, raw_response: str, prompt_history: list) -> tuple[list[str], Any]:
         """
         Parses the HTTP response, generates prompts for an LLM, and processes each step with the LLM.
 
@@ -80,7 +81,7 @@ class ResponseAnalyzerWithLLM:
                 llm_responses.append(response)
                 # print(f'Response:{response}')
 
-        return llm_responses
+        return llm_responses, status_code
 
     def parse_http_response(self, raw_response: str):
         """
@@ -106,7 +107,7 @@ class ResponseAnalyzerWithLLM:
             body = body
         else:
             # print(f'Body:{body}')
-            if body != '' or body != "":
+            if  body.__contains__("{") and (body != '' or body != ""):
                 body = json.loads(body)
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
@@ -127,7 +128,7 @@ class ResponseAnalyzerWithLLM:
         """
         # Log current step
         # print(f'Processing step: {step}')
-        prompt_history.append({"role": "system", "content": step})
+        prompt_history.append({"role": "system", "content": step + "Stay within the output limit."})
 
         # Call the LLM and handle the response
         response, completion = self.llm_handler.execute_prompt(prompt_history)

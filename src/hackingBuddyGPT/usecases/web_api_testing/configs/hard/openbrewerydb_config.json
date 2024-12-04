@@ -1,4 +1,5 @@
 {
+    "name": "",
   "token": "your_api_token_here",
   "host": "https://api.openbrewerydb.org",
   "description": "The Open Brewery DB API is an open-source database that provides information about breweries worldwide.",

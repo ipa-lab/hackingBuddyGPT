@@ -1,4 +1,5 @@
 {
+  "name": "",
   "token": "",
   "host": "https://api.coincap.io/v2",
   "description": "CoinCap API is a cryptocurrency data service that provides real-time market data and historical information for various digital assets.",

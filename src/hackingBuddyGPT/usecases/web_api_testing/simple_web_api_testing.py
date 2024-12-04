@@ -287,7 +287,7 @@ class SimpleWebAPITesting(Agent):
             self._prompt_history.append(
                 tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
-            analysis, status_code = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history)
+            analysis, status_code = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history, analysis_context= self.prompt_helper.purpose)
             self._prompt_history = self._test_handler.generate_test_cases(analysis=analysis, endpoint=response.action.path,
                                                    method=response.action.method,
                                                    prompt_history=self._prompt_history, status_code=status_code)

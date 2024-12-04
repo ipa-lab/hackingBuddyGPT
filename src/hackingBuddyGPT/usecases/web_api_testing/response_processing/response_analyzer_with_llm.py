@@ -58,7 +58,7 @@ class ResponseAnalyzerWithLLM:
             print(f"Response: {response}")
             print("-" * 50)
 
-    def analyze_response(self, raw_response: str, prompt_history: list) -> tuple[list[str], Any]:
+    def analyze_response(self, raw_response: str, prompt_history: list, analysis_context:Any) -> tuple[list[str], Any]:
         """
         Parses the HTTP response, generates prompts for an LLM, and processes each step with the LLM.
 
@@ -74,6 +74,12 @@ class ResponseAnalyzerWithLLM:
         # Start processing the analysis steps through the LLM
         llm_responses = []
         steps_dict = self.pentesting_information.analyse_steps(full_response)
+        expected_responses = analysis_context.get("expected_responses")
+        security = analysis_context.get("security")
+        additional_analysis_context = f"Analyse this response: {full_response}\n Ensure that one of the following expected responses: '{expected_responses}\n Also ensure that the following security requirements have been met: {security}"
+        prompt_history, response = self.process_step(additional_analysis_context, prompt_history)
+        llm_responses.append(response)
+
         for purpose, steps in steps_dict.items():
             response = full_response  # Reset to the full response for each purpose
             for step in steps:

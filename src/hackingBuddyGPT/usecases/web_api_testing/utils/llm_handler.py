@@ -44,13 +44,16 @@ class LLMHandler:
         """
         print(f"Initial prompt length: {len(prompt)}")
 
-        def call_model(adjusted_prompt: List[Dict[str, Any]]) -> Any:
+        def call_model(prompt: List[Dict[str, Any]]) -> Any:
             """Helper function to make the API call with the adjusted prompt."""
+            if isinstance(prompt, list):
+                if isinstance(prompt[0], list):
+                    prompt = prompt[0]
             print(f'prompt: {prompt}')
 
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,
-                messages=adjusted_prompt,
+                messages=prompt,
                 response_model=capabilities_to_action_model(self._capabilities),
                 max_tokens=200  # adjust as needed
             )
@@ -64,7 +67,7 @@ class LLMHandler:
                 prompt = [prompt]
             return call_model(prompt)
 
-        except openai.BadRequestError as e:
+        except (openai.BadRequestError, IncompleteOutputException) as e:
             print(f"Error: {str(e)} - Adjusting prompt size and retrying.")
 
             try:
@@ -111,6 +114,7 @@ class LLMHandler:
         def call_model(adjusted_prompt: List[Dict[str, Any]], capability: Any) -> Any:
             """Helper function to make the API call with the adjusted prompt."""
             print(f'prompt: {prompt}, capability: {capability}')
+
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,
                 messages=adjusted_prompt,
@@ -135,7 +139,7 @@ class LLMHandler:
                 prompt = prompt[-10:]
             return call_model(prompt, capability)
 
-        except openai.BadRequestError as e:
+        except (openai.BadRequestError, IncompleteOutputException) as e:
             print(f"Error: {str(e)} - Adjusting prompt size and retrying.")
 
             try:
@@ -146,12 +150,15 @@ class LLMHandler:
                 self.adjusting_counter = 2
                 return call_model(adjusted_prompt, capability)
 
-            except openai.BadRequestError as e:
+            except (openai.BadRequestError, IncompleteOutputException) as e:
                 print(f"Error: {str(e)} - Further adjusting and retrying.")
 
                 # Final fallback with the smallest prompt size
                 shortened_prompt = self.adjust_prompt(prompt)
                 shortened_prompt = self.ensure_that_tool_messages_are_correct(shortened_prompt, prompt)
+                if isinstance(shortened_prompt, list):
+                    if isinstance(shortened_prompt[0], list):
+                        shortened_prompt = shortened_prompt[0]
                 return call_model(shortened_prompt, capability)
 
     def adjust_prompt(self, prompt: List[Dict[str, Any]], num_prompts: int = 5) -> List[Dict[str, Any]]:

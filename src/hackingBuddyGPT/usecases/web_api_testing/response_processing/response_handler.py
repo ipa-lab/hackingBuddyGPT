@@ -347,7 +347,7 @@ class ResponseHandler:
 
         return properties_dict
 
-    def evaluate_result(self, result: Any, prompt_history: Prompt) -> Any:
+    def evaluate_result(self, result: Any, prompt_history: Prompt, analysis_context: Any) -> Any:
         """
         Evaluates the result using the LLM-based response analyzer.
 
@@ -358,7 +358,7 @@ class ResponseHandler:
         Returns:
             Any: The evaluation result from the LLM response analyzer.
         """
-        llm_responses, status_code = self.response_analyzer.analyze_response(result, prompt_history)
+        llm_responses, status_code = self.response_analyzer.analyze_response(result, prompt_history, analysis_context)
         return llm_responses, status_code
 
     def extract_key_elements_of_response(self, raw_response: Any) -> str:

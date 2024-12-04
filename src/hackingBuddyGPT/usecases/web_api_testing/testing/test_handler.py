@@ -194,13 +194,14 @@ class TestHandler(object):
         :return: The extracted Python function as a string, or None if no function is found.
         """
         # Define the function start keyword
-        func_start_keyword = "def "
+        func_start_keyword = "import "
 
         # Find the start of any Python function definition
         start_idx = text.find(func_start_keyword)
         if start_idx == -1:
-            print("No Python function definition found.")
-            return None
+            start_idx = text.find("def ")
+            if start_idx == -1:
+                return None
 
         # Assume the function ends at the next 'def ' or at the end of the text
         end_idx = text.find(func_start_keyword, start_idx + 1)
@@ -208,7 +209,7 @@ class TestHandler(object):
             end_idx = len(text)
 
         # Extract the function
-        function_block = text[start_idx:end_idx].strip()
+        function_block = text[start_idx:end_idx]
         return function_block
 
     def generate_test_cases(self, analysis: str, endpoint: str, method: str, status_code: Any, prompt_history) -> Any:

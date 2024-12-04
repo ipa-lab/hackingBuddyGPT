@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple, Any
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PromptContext,
     PromptPurpose,
@@ -33,6 +33,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
+        self.phase = None
 
     def generate_prompt(
             self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
@@ -53,13 +54,14 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             self.purpose = PromptPurpose.DOCUMENTATION
             chain_of_thought_steps = self._get_documentation_steps(common_steps, move_type)
         else:
-            chain_of_thought_steps = self._get_pentesting_steps(move_type)
+            chain_of_thought_steps, phase = self._get_pentesting_steps(move_type)
+            self.phase = phase
         if hint:
             chain_of_thought_steps.append(hint)
 
         return self.prompt_helper.check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)
 
-    def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> List[str]:
+    def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> Any:
         """
         Provides the steps for the chain-of-thought strategy when the context is pentesting.
 
@@ -70,9 +72,11 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
+        purpose = self.purpose
+        phase = self.pentesting_information.get_steps_of_phase(purpose)
         if move_type == "explore":
-            purpose = self.purpose
-            steps = self.pentesting_information.get_steps_of_phase(purpose)
+
+            steps = phase.get("steps")
 
             # Transform steps into hierarchical conditional CoT
             transformed_steps = self.transform_to_hierarchical_conditional_cot({purpose: [steps]})
@@ -85,12 +89,14 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 if step not in self.explored_steps:
                     if isinstance(step, list):
                         for substep in step:
+                            if substep in self.explored_steps:
+                                continue
                             self.explored_steps.append(substep)
                             if common_step:
                                 step = common_step + substep
 
                             print(f'Prompt: {substep}')
-                            return substep
+                            return substep, phase
 
                     else:
                         self.explored_steps.append(step)
@@ -100,10 +106,10 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                             step = common_step + step
 
                         print(f'Prompt: {step}')
-                        return step
+                        return step, phase
 
         else:
-            return ["Look for exploits."]
+            return ["Look for exploits."], phase
 
     def transform_to_hierarchical_conditional_cot(self, prompts):
         """
@@ -148,23 +154,31 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 step_count = 1
                 for step in steps:
                     step_list = []
-                    step_str = f"Phase {phase_count}: Task Breakdown"
-                    step_str += f"    Step {step_count}: {step}\n"
+                    step_str = f"Phase {phase_count}: Task Breakdown\n"
+                    step_str += f"    Step {step_count}:\n"
+                    if isinstance(step, list):
+                        for substep in step:
+                            if isinstance(substep, str):
+                                step_str += f"    {substep}\n"
+                            if isinstance(substep, list):
+                                for subsubstep in substep:
+                                    step_str += f"    {subsubstep}\n"
+                                    # Integrate conditional CoT checks based on potential outcomes
+                                    step_str += f"        If successful: Proceed to Step {step_count + 1}.\n"
+                                    step_str += f"        If unsuccessful: Adjust previous step or clarify, then repeat Step {step_count}.\n"
 
-                    # Integrate conditional CoT checks based on potential outcomes
-                    step_str += f"        If successful: Proceed to Step {step_count + 1}.\n"
-                    step_str +=f"        If unsuccessful: Adjust previous step or clarify, then repeat Step {step_count}.\n"
+
 
                     # Increment step count for the next step in the current phase
                     step_list.append(step_str)
                     phase_prompts.append(step_list)
                     step_count += 1
 
-                # Assessment point at the end of each phase
+                ''''# Assessment point at the end of each phase
                 phase_prompts.append("    Assess: Review outcomes of all steps in this phase.")
                 phase_prompts.append("    If phase objectives are met, proceed to the next phase.")
                 phase_prompts.append("    If phase objectives are not met, re-evaluate and repeat necessary steps.")
-
+                '''
                 # Move to the next phase
                 phase_count += 1
 

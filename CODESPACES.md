@@ -1,4 +1,4 @@
-# GitHub Codespaces support
+# Use Case: GitHub Codespaces
 
 **Backstory**
 
@@ -81,10 +81,92 @@ Type the following to manually run:
 >
 > Exception: Error from OpenAI Gateway (401
 
-**References**
+12. Alternatively, use Google Gemini instead of OpenAI
+
+**Preqrequisites:**
+
+```bash
+python -m venv venv
+```
+
+```bash
+source ./venv/bin/activate
+```
+
+```bash
+pip install -e .
+```
+
+**Use gemini-openai-proxy and Gemini:**
+
+http://localhost:8080 is gemini-openai-proxy
+
+gpt-4 maps to gemini-1.5-flash-latest
+
+Hence use gpt-4 below in `--llm.model=gpt-4`
+
+Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day
+
+Hence `--max_turns 999999999` will exceed the daily limit
+
+```bash
+docker run --restart=unless-stopped -it -d -p 8080:8080 --name gemini zhu327/gemini-openai-proxy:latest
+```
+
+export GEMINI_API_KEY=
+
+```bash
+wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gpt-4 --llm.context_size=1000000 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1 --llm.api_url=http://localhost:8080 --llm.api_backoff=60 --max_turns 999999999
+```
+
+
+**Google AI Studio: Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day:**
+
+https://ai.google.dev/pricing#1_5flash
+
+> Gemini 1.5 Flash
+>
+> The Gemini API “free tier” is offered through the API service with lower rate limits for testing purposes. Google AI Studio usage is completely free in all available countries.
+>
+> Rate Limits
+>
+> 15 RPM (requests per minute)
+>
+> 1 million TPM (tokens per minute)
+>
+> 1,500 RPD (requests per day)
+>
+> Used to improve Google's products
+>
+> Yes
+
+https://ai.google.dev/gemini-api/terms#data-use-unpaid
+
+> How Google Uses Your Data
+>
+> When you use Unpaid Services, including, for example, Google AI Studio and the unpaid quota on Gemini API, Google uses the content you submit to the Services and any generated responses to provide, improve, and develop Google products and services and machine learning technologies, including Google's enterprise features, products, and services, consistent with our Privacy Policy https://policies.google.com/privacy
+>
+> To help with quality and improve our products, human reviewers may read, annotate, and process your API input and output. Google takes steps to protect your privacy as part of this process. This includes disconnecting this data from your Google Account, API key, and Cloud project before reviewers see or annotate it. **Do not submit sensitive, confidential, or personal information to the Unpaid Services.**
+
+**README.md and Disclaimers:**
+
+https://github.com/ipa-lab/hackingBuddyGPT/blob/main/README.md
+
+**Please refer to [README.md](https://github.com/ipa-lab/hackingBuddyGPT/blob/main/README.md) for all disclaimers.**
+
+Please note and accept all of them.
+
+**References:**
 * https://docs.github.com/en/codespaces
 * https://docs.github.com/en/codespaces/getting-started/quickstart
 * https://docs.github.com/en/codespaces/reference/using-the-vs-code-command-palette-in-codespaces
 * https://openai.com/api/pricing/
 * https://platform.openai.com/docs/quickstart
 * https://platform.openai.com/api-keys
+* https://ai.google.dev/gemini-api/docs/ai-studio-quickstart
+* https://aistudio.google.com/
+* https://aistudio.google.com/app/apikey
+* https://ai.google.dev/
+* https://ai.google.dev/gemini-api/docs/api-key
+* https://github.com/zhu327/gemini-openai-proxy
+* https://hub.docker.com/r/zhu327/gemini-openai-proxy

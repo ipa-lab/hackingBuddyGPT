@@ -84,7 +84,8 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                     if purpose not in self.transformed_steps.keys():
                         self.transformed_steps[purpose] = []
                     # Transform steps into hierarchical conditional CoT based on purpose
-                    self.transformed_steps[purpose].append(self.transform_to_hierarchical_conditional_cot(test_case, purpose))
+                    self.transformed_steps[purpose].append(
+                        self.transform_to_hierarchical_conditional_cot(test_case, purpose))
 
             # Extract the CoT for the current purpose
             cot_steps = self.transformed_steps[purpose]
@@ -92,12 +93,22 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             # Process steps one by one, with memory of explored steps and conditional handling
             for step in cot_steps:
                 if step not in self.explored_steps:
-                        self.explored_steps.append(step)
-                        print(f'Prompt: {step}')
-                        self.current_step = step
-                        step = self.transform_test_case_to_string(step, "steps")
+                    self.explored_steps.append(step)
+                    print(f'Prompt: {step}')
+                    self.current_step = step
+                    # Process the step and return its result
+                    last_item = cot_steps[-1]
+                    if step == last_item:
+                        # If it's the last step, remove the purpose and update self.purpose
+                        if purpose in self.pentesting_information.pentesting_step_list:
+                            self.pentesting_information.pentesting_step_list.remove(purpose)
+                        if self.pentesting_information.pentesting_step_list:
+                            self.purpose = self.pentesting_information.pentesting_step_list[0]
+                    step = self.transform_test_case_to_string(step, "steps")
 
-                        return [step]
+                    return [step]
+
+
 
         else:
             return ["Look for exploits."]
@@ -204,7 +215,6 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             for idx, step_details in enumerate(test_case["steps"], start=1):
                 result.append(f"  Step {idx}:\n")
                 result.append(f"    {step_details['step']}\n")
-
 
         # Add phase assessments
         if character == "assessments":

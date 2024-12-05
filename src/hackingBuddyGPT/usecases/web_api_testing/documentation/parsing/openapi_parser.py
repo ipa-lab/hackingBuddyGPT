@@ -145,7 +145,8 @@ class OpenAPISpecificationParser:
                         keyword in path.lower() for keyword in ["user", "admin"]):
                     classifications['public_endpoint'].append((method.upper(), path))
                     classified = True
-                else:
+
+                if any(keyword in path.lower() for keyword in ["user", "admin"]) and not any(keyword in path.lower() for keyword in ["api"]) :
                     classifications['protected_endpoint'].append((method.upper(), path))
                     classified = True
 

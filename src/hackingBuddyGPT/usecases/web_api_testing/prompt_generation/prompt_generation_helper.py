@@ -227,7 +227,7 @@ class PromptGenerationHelper(object):
             #   return shortened_prompt
             # return "Prompt is still too long after summarization."
 
-        if not all(step in previous_prompt for step in steps):
+        if steps != None and not all(step in previous_prompt for step in steps):
             if isinstance(steps, list):
                 potential_prompt = "\n".join(str(element) for element in steps)
             else:

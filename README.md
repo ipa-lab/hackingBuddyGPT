@@ -192,13 +192,13 @@ We are using vulnerable Linux systems running in Virtual Machines for this. Neve
 
 ## Use Cases
 
-Mac, Docker Desktop and Gemini-OpenAI-Proxy:
-
-* See [MAC.md](MAC.md)
-
 GitHub Codespaces:
 
 * See [CODESPACES.md](CODESPACES.md)
+
+Mac, Docker Desktop and Gemini-OpenAI-Proxy:
+
+* See [MAC.md](MAC.md)
 
 ## Run the Hacking Agent
 

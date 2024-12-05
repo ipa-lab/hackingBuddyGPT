@@ -101,24 +101,31 @@ pip install -e .
 
 http://localhost:8080 is gemini-openai-proxy
 
-gpt-4 maps to gemini-1.5-flash-latest
+`gpt-4` maps to `gemini-1.5-flash-latest`
 
-Hence use gpt-4 below in `--llm.model=gpt-4`
+Hence use `gpt-4` below in `--llm.model=gpt-4`
 
 Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day
 
 Hence `--max_turns 999999999` will exceed the daily limit
 
+**Run gemini-openai-proxy**
+
 ```bash
 docker run --restart=unless-stopped -it -d -p 8080:8080 --name gemini zhu327/gemini-openai-proxy:latest
 ```
 
+**Manually enter your GEMINI_API_KEY value based on** https://aistudio.google.com/app/apikey
+
+```bash
 export GEMINI_API_KEY=
+```
+
+**Starting hackingBuddyGPT against a container...**
 
 ```bash
 wintermute LinuxPrivesc --llm.api_key=$GEMINI_API_KEY --llm.model=gpt-4 --llm.context_size=1000000 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1 --llm.api_url=http://localhost:8080 --llm.api_backoff=60 --max_turns 999999999
 ```
-
 
 **Google AI Studio: Gemini free tier has a limit of 15 requests per minute, and 1500 requests per day:**
 

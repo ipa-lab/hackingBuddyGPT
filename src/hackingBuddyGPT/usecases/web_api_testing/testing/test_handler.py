@@ -179,11 +179,12 @@ class TestHandler(object):
 
 
         # Write the generated test function to a Python file.
-        with open(self.test_file, "a") as f:
+        if test_function != None:
+            with open(self.test_file, "a") as f:
+            
+                f.write(test_function)
 
-            f.write(test_function)
-
-        print(f"Pytest case written to {self.file}.py")
+            print(f"Pytest case written to {self.file}.py")
         return prompt_history
 
     def extract_pytest_from_string(self, text):

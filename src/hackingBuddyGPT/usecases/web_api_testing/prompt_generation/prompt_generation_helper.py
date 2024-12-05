@@ -34,6 +34,7 @@ class PromptGenerationHelper(object):
               host (str): The base URL of the API.
               description (str): A brief description of what the API offers or its testing scope.
           """
+        self.current_test_step = None
         self.current_category = "root_level"
         self.correct_endpoint_but_some_error = {}
         self.hint_for_next_round = ""

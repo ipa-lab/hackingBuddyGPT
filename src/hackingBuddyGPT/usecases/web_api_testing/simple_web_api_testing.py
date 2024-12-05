@@ -127,7 +127,13 @@ class SimpleWebAPITesting(Agent):
     def _setup_handlers(self):
         self._llm_handler = LLMHandler(self.llm, self._capabilities)
         self.prompt_helper = PromptGenerationHelper(host=self.host)
-        self.pentesting_information = PenTestingInformation(self._openapi_specification_parser)
+        if "username" in self.config.keys() and "password" in self.config.keys():
+            username = self.config.get("username")
+            password = self.config.get("password")
+        else:
+            username = "test"
+            password = "<PASSWORD>"
+        self.pentesting_information = PenTestingInformation(self._openapi_specification_parser, username, password)
         self._response_handler = ResponseHandler(
             llm_handler=self._llm_handler, prompt_context=self.prompt_context, prompt_helper=self.prompt_helper,
             config=self.config, pentesting_information = self.pentesting_information)
@@ -204,7 +210,7 @@ class SimpleWebAPITesting(Agent):
             prompt_helper=self.prompt_helper
         )
         self.prompt_engineer.set_pentesting_information(self.pentesting_information)
-        self.purpose = PromptPurpose.AUTHENTICATION
+        self.purpose = self.pentesting_information.pentesting_step_list[0]
 
     def all_http_methods_found(self) -> None:
         """
@@ -287,10 +293,16 @@ class SimpleWebAPITesting(Agent):
             self._prompt_history.append(
                 tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
-            analysis, status_code = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history, analysis_context= self.prompt_helper.purpose)
-            self._prompt_history = self._test_handler.generate_test_cases(analysis=analysis, endpoint=response.action.path,
-                                                   method=response.action.method,
-                                                   prompt_history=self._prompt_history, status_code=status_code)
+
+            analysis, status_code = self._response_handler.evaluate_result(
+                result=result,
+                prompt_history=self._prompt_history,
+                analysis_context= self.prompt_engineer.prompt_helper.current_test_step)
+            self._prompt_history = self._test_handler.generate_test_cases(
+                analysis=analysis,
+                endpoint=response.action.path,
+                method=response.action.method,
+                prompt_history=self._prompt_history, status_code=status_code)
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
 
         self.all_http_methods_found()

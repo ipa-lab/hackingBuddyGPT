@@ -23,7 +23,8 @@ class ResponseAnalyzerWithLLM:
         purpose (PromptPurpose): The specific purpose for analyzing the HTTP response.
     """
 
-    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None, pentesting_info: PenTestingInformation = None, capacity: Any=None):
+    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None,
+                 pentesting_info: PenTestingInformation = None, capacity: Any = None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
 
@@ -58,7 +59,7 @@ class ResponseAnalyzerWithLLM:
             print(f"Response: {response}")
             print("-" * 50)
 
-    def analyze_response(self, raw_response: str, prompt_history: list, analysis_context:Any) -> tuple[list[str], Any]:
+    def analyze_response(self, raw_response: str, prompt_history: list, analysis_context: Any) -> tuple[list[str], Any]:
         """
         Parses the HTTP response, generates prompts for an LLM, and processes each step with the LLM.
 
@@ -68,24 +69,18 @@ class ResponseAnalyzerWithLLM:
         Returns:
             dict: A dictionary with the final results after processing all steps through the LLM.
         """
-        status_code, headers, body = self.parse_http_response(raw_response)
-        full_response = f"Status Code: {status_code}\nHeaders: {json.dumps(headers, indent=4)}\nBody: {body}"
 
         # Start processing the analysis steps through the LLM
         llm_responses = []
-        steps_dict = self.pentesting_information.analyse_steps(full_response)
-        expected_responses = analysis_context.get("expected_responses")
-        security = analysis_context.get("security")
-        additional_analysis_context = f"Analyse this response: {full_response}\n Ensure that one of the following expected responses: '{expected_responses}\n Also ensure that the following security requirements have been met: {security}"
-        prompt_history, response = self.process_step(additional_analysis_context, prompt_history)
-        llm_responses.append(response)
 
-        for purpose, steps in steps_dict.items():
-            response = full_response  # Reset to the full response for each purpose
-            for step in steps:
-                prompt_history, response = self.process_step(step, prompt_history)
-                llm_responses.append(response)
-                # print(f'Response:{response}')
+
+        steps = analysis_context.get("steps")
+        if len(steps) > 1:  # multisptep test case
+            for step in steps[1:]:
+                test_case_responses, status_code = self.analyse_response(raw_response, step, prompt_history)
+                llm_responses = llm_responses + test_case_responses
+        else:
+            llm_responses, status_code = self.analyse_response(raw_response, steps[0], prompt_history)
 
         return llm_responses, status_code
 
@@ -113,7 +108,7 @@ class ResponseAnalyzerWithLLM:
             body = body
         else:
             # print(f'Body:{body}')
-            if  body.__contains__("{") and (body != '' or body != ""):
+            if body.__contains__("{") and (body != '' or body != ""):
                 body = json.loads(body)
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
@@ -150,6 +145,55 @@ class ResponseAnalyzerWithLLM:
         prompt_history.append(tool_message(str(result), tool_call_id))
 
         return prompt_history, result
+
+    def analyse_response(self, raw_response, step, prompt_history):
+        llm_responses = []
+
+        status_code, additional_analysis_context, full_response= self.get_addition_context(raw_response, step)
+        expected_responses = step.get("expected_response_code")
+
+
+        if step.get("purpose") == PromptPurpose.SETUP:
+            status_code, additional_analysis_context, full_response = self.do_setup(status_code, step,  additional_analysis_context, full_response, prompt_history)
+
+        if not any(str(status_code) in response for response in expected_responses):
+            additional_analysis_context += step.get("conditions").get("if_unsuccessful")
+        else:
+            additional_analysis_context += step.get("conditions").get("if_successful")
+
+        for purpose in self.pentesting_information.analysis_step_list:
+            analysis_step = self.pentesting_information.get_analysis_step(purpose, full_response,
+                                                                          additional_analysis_context)
+            prompt_history, response = self.process_step(analysis_step, prompt_history)
+            llm_responses.append(response)
+            full_response = response  # make it iterative
+
+        return llm_responses, status_code
+
+    def get_addition_context(self, raw_response: str, step: dict) :
+        # Parse response
+        status_code, headers, body = self.parse_http_response(raw_response)
+        full_response = f"Status Code: {status_code}\nHeaders: {json.dumps(headers, indent=4)}\nBody: {body}"
+        expected_responses = step.get("expected_response_code")
+        security = step.get("security")
+        additional_analysis_context = f"\n Ensure that one of the following expected responses: '{expected_responses}\n Also ensure that the following security requirements have been met: {security}"
+        return   status_code, additional_analysis_context, full_response
+
+    def do_setup(self, status_code, step, additional_analysis_context, full_response, prompt_history):
+
+        add_info = ""
+        if not any(str(status_code) in response for response in step.get("expected_response_code")):
+            add_info = "Unsuccessful. Try a different endpoint."
+            while not any(str(status_code) in response for response in step.get("expected_response_code")):
+                prompt_history, response = self.process_step(step.get("step") + add_info, prompt_history)
+                status_code, additional_analysis_context, full_response = self.get_addition_context(response, step)
+
+        return status_code, additional_analysis_context, full_response
+
+
+
+
+
 
 
 if __name__ == "__main__":

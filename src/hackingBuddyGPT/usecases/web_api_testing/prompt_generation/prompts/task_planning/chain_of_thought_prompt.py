@@ -21,7 +21,6 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         context (PromptContext): The context in which prompts are generated.
         prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         explored_steps (List[str]): A list of steps that have already been explored in the chain-of-thought strategy.
-        purpose (Optional[PromptPurpose]): The purpose of the current prompt.
     """
 
     def __init__(self, context: PromptContext, prompt_helper):
@@ -34,6 +33,8 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
         self.phase = None
+        self.transformed_steps = {}
+        self.pentest_steps = None
 
     def generate_prompt(
             self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
@@ -54,8 +55,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             self.purpose = PromptPurpose.DOCUMENTATION
             chain_of_thought_steps = self._get_documentation_steps(common_steps, move_type)
         else:
-            chain_of_thought_steps, phase = self._get_pentesting_steps(move_type)
-            self.phase = phase
+            chain_of_thought_steps = self._get_pentesting_steps(move_type)
         if hint:
             chain_of_thought_steps.append(hint)
 
@@ -72,122 +72,93 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
+        if self.pentest_steps == None:
+            self.pentest_steps = self.pentesting_information.explore_steps()
+
         purpose = self.purpose
-        phase = self.pentesting_information.get_steps_of_phase(purpose)
+        test_cases = self.pentesting_information.get_steps_of_phase(purpose, self.pentest_steps)
         if move_type == "explore":
 
-            steps = phase.get("steps")
-
-            # Transform steps into hierarchical conditional CoT
-            transformed_steps = self.transform_to_hierarchical_conditional_cot({purpose: [steps]})
+            if purpose not in self.transformed_steps.keys():
+                for test_case in test_cases:
+                    if purpose not in self.transformed_steps.keys():
+                        self.transformed_steps[purpose] = []
+                    # Transform steps into hierarchical conditional CoT based on purpose
+                    self.transformed_steps[purpose].append(self.transform_to_hierarchical_conditional_cot(test_case, purpose))
 
             # Extract the CoT for the current purpose
-            cot_steps = transformed_steps[purpose]
+            cot_steps = self.transformed_steps[purpose]
 
             # Process steps one by one, with memory of explored steps and conditional handling
             for step in cot_steps:
                 if step not in self.explored_steps:
-                    if isinstance(step, list):
-                        for substep in step:
-                            if substep in self.explored_steps:
-                                continue
-                            self.explored_steps.append(substep)
-                            if common_step:
-                                step = common_step + substep
-
-                            print(f'Prompt: {substep}')
-                            return substep, phase
-
-                    else:
                         self.explored_steps.append(step)
-
-                        # Apply common steps if provided
-                        if common_step:
-                            step = common_step + step
-
                         print(f'Prompt: {step}')
-                        return step, phase
+                        self.current_step = step
+                        step = self.transform_test_case_to_string(step, "steps")
+
+                        return [step]
 
         else:
-            return ["Look for exploits."], phase
+            return ["Look for exploits."]
 
-    def transform_to_hierarchical_conditional_cot(self, prompts):
+    def transform_to_hierarchical_conditional_cot(self, test_case, purpose):
         """
-        Transforms prompts into a hybrid of Hierarchical and Conditional Chain-of-Thought.
-        ### Explanation and Justification
+            Transforms a single test case into a Hierarchical-Conditional Hybrid Chain-of-Prompt structure.
 
-        This **Hierarchical and Conditional Chain-of-Thought (CoT)** design improves reasoning by combining structured phases with adaptable steps.
+            The transformation emphasizes breaking tasks into hierarchical phases and embedding conditional logic
+            to adaptively handle outcomes, inspired by strategies in recent research on structured reasoning.
 
-        1. **Hierarchical Phases**:
-           - **Explanation**: Each phase breaks down the problem into focused tasks.
-           - **Justification**: Wei et al. (2022) show that phased structures improve model comprehension and accuracy.
+            Args:
+                test_case (dict): A dictionary representing a single test case with fields like 'objective', 'steps', and 'security'.
 
-        2. **Conditional Steps**:
-           - **Explanation**: Steps include conditional paths to adjust based on outcomes (proceed, retry, refine).
-           - **Justification**: Zhou et al. (2022) found conditional prompts enhance problem-solving, especially for complex tasks.
-
-        3. **Dynamic Branching and Assessments**:
-           - **Explanation**: Outcome-based branching and checkpoints ensure readiness to move forward.
-           - **Justification**: Xie et al. (2023) support this approach in their Tree of Thought (ToT) framework, showing it boosts adaptive problem-solving.
-
-        ### Summary
-
-        This method uses **Hierarchical and Conditional CoT** to enhance structured, adaptive reasoning, aligning with research supporting phased goals, dynamic paths, and iterative adjustments for complex tasks.
-
-        Args:
-            prompts (Dict[PromptPurpose, List[List[str]]]): Dictionary of prompts organized by purpose and steps.
-
-        Returns:
-            Dict[PromptPurpose, List[str]]: A dictionary with each key as a PromptPurpose and each value as a list of
-                                            chain-of-thought prompts structured in hierarchical and conditional phases.
+            Returns:
+                dict: A transformed test case structured hierarchically and conditionally.
         """
-        cot_prompts = {}
 
-        for purpose, steps_list in prompts.items():
-            phase_prompts = []
-            phase_count = 1
+        # Initialize the transformed test case
 
-            # Phase division: Each set of steps_list corresponds to a phase in the hierarchical structure
-            for steps in steps_list:
-                # Start a new phase
+        transformed_case = {
+            "phase_title": f"Phase: {test_case['objective']}",
+            "steps": [],
+            "assessments": []
+        }
 
-                step_count = 1
-                for step in steps:
-                    step_list = []
-                    step_str = f"Phase {phase_count}: Task Breakdown\n"
-                    step_str += f"    Step {step_count}:\n"
-                    if isinstance(step, list):
-                        for substep in step:
-                            if isinstance(substep, str):
-                                step_str += f"    {substep}\n"
-                            if isinstance(substep, list):
-                                for subsubstep in substep:
-                                    step_str += f"    {subsubstep}\n"
-                                    # Integrate conditional CoT checks based on potential outcomes
-                                    step_str += f"        If successful: Proceed to Step {step_count + 1}.\n"
-                                    step_str += f"        If unsuccessful: Adjust previous step or clarify, then repeat Step {step_count}.\n"
+        # Process steps in the test case
+        counter = 0
+        for step in test_case["steps"]:
+            if len(test_case["security"]) > 1:
+                security = test_case["security"][counter]
+            else:
+                security = test_case["security"][0]
 
+            if len(test_case["steps"]) > 1:
+                expected_response_code = test_case["expected_response_code"][counter]
+            else:
+                expected_response_code = test_case["expected_response_code"]
 
+            step_details = {
+                "purpose": purpose,
+                "step": step,
+                "expected_response_code": expected_response_code,
+                "security": security,
+                "conditions": {
+                    "if_successful": "No Vulnerability found.",
+                    "if_unsuccessful": "Vulnerability found."
+                }
+            }
+            counter += 1
+            transformed_case["steps"].append(step_details)
 
-                    # Increment step count for the next step in the current phase
-                    step_list.append(step_str)
-                    phase_prompts.append(step_list)
-                    step_count += 1
+        # Add an assessment at the end of the phase
+        transformed_case["assessments"].append(
+            "Review all outcomes in this phase. If objectives are not met, revisit the necessary steps."
+        )
 
-                ''''# Assessment point at the end of each phase
-                phase_prompts.append("    Assess: Review outcomes of all steps in this phase.")
-                phase_prompts.append("    If phase objectives are met, proceed to the next phase.")
-                phase_prompts.append("    If phase objectives are not met, re-evaluate and repeat necessary steps.")
-                '''
-                # Move to the next phase
-                phase_count += 1
+        # Add a final assessment if applicable
+        transformed_case["final_assessment"] = "Confirm that all objectives for this test case have been met."
 
-            # Final assessment
-            phase_prompts.append("Final Assessment: Review all phases to confirm the primary objective is fully met.")
-            cot_prompts[purpose] = phase_prompts
-
-        return cot_prompts
-
+        return transformed_case
 
     def generate_documentation_steps(self, steps) -> list:
         """
@@ -210,3 +181,40 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             transformed_steps.append(transformed_step)
 
         return transformed_steps
+
+    def transform_test_case_to_string(self, test_case, character):
+        """
+        Transforms a single test case into a formatted string representation.
+
+        Args:
+            test_case (dict): A dictionary representing a single test case transformed into a hierarchical structure.
+
+        Returns:
+            str: A formatted string representation of the test case.
+        """
+        # Initialize the result string
+        result = []
+
+        # Add the phase title
+        result.append(f"{test_case['phase_title']}\n")
+
+        # Add each step with conditions
+        if character == "steps":
+            result.append("Steps:\n")
+            for idx, step_details in enumerate(test_case["steps"], start=1):
+                result.append(f"  Step {idx}:\n")
+                result.append(f"    {step_details['step']}\n")
+
+
+        # Add phase assessments
+        if character == "assessments":
+            result.append("\nAssessments:\n")
+            for assessment in test_case["assessments"]:
+                result.append(f"  - {assessment}\n")
+
+        # Add the final assessment if applicable
+        if character == "final_assessment":
+            if "final_assessment" in test_case:
+                result.append(f"\nFinal Assessment:\n  {test_case['final_assessment']}\n")
+
+        return ''.join(result)

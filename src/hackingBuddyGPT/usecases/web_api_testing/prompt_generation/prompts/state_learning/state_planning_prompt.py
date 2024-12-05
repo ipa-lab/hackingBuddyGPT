@@ -1,3 +1,4 @@
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PlanningType,
     PromptContext,
@@ -37,3 +38,7 @@ class StatePlanningPrompt(BasicPrompt):
             prompt_helper=prompt_helper,
             strategy=strategy,
         )
+    def set_pentesting_information(self, pentesting_information: PenTestingInformation):
+        self.pentesting_information = pentesting_information
+        self.purpose = self.pentesting_information.pentesting_step_list[0]
+        self.pentesting_information.next_testing_endpoint()

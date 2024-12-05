@@ -175,8 +175,9 @@ class OpenAPISpecificationParser:
 
                 # Login endpoints
                 if any(keyword in path.lower() for keyword in ['login', 'signin', 'sign-in']):
-                    classifications['login_endpoint'].append((method.upper(), path))
-                    classified = True
+                    if method.upper() == "POST":
+                        classifications['login_endpoint'].append((method.upper(), path))
+                        classified = True
 
                 # Authentication-related endpoints
                 if any(keyword in path.lower() or keyword in description for keyword in

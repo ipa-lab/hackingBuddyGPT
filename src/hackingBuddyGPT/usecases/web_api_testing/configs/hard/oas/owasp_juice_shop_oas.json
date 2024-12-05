@@ -354,7 +354,7 @@
         }
       }
     },
-    "/rest/2fa/verify": {
+    "/2fa/verify": {
       "post": {
         "description": "",
         "responses": {
@@ -364,7 +364,7 @@
         }
       }
     },
-    "/rest/2fa/status": {
+    "/2fa/status": {
       "get": {
         "description": "",
         "responses": {
@@ -374,7 +374,7 @@
         }
       }
     },
-    "/rest/2fa/setup": {
+    "/2fa/setup": {
       "post": {
         "description": "",
         "responses": {
@@ -384,7 +384,7 @@
         }
       }
     },
-    "/rest/2fa/disable": {
+    "/2fa/disable": {
       "post": {
         "description": "",
         "responses": {
@@ -394,7 +394,7 @@
         }
       }
     },
-    "/rest/user/login": {
+    "/user/login": {
       "post": {
         "description": "",
         "responses": {
@@ -404,7 +404,7 @@
         }
       }
     },
-    "/rest/user/change-password": {
+    "/user/change-password": {
       "get": {
         "description": "",
         "responses": {
@@ -414,7 +414,7 @@
         }
       }
     },
-    "/rest/user/reset-password": {
+    "/user/reset-password": {
       "post": {
         "description": "",
         "responses": {
@@ -424,7 +424,7 @@
         }
       }
     },
-    "/rest/user/security-question": {
+    "/user/security-question": {
       "get": {
         "description": "",
         "responses": {
@@ -434,7 +434,7 @@
         }
       }
     },
-    "/rest/user/whoami": {
+    "/user/whoami": {
       "get": {
         "description": "",
         "responses": {
@@ -444,7 +444,7 @@
         }
       }
     },
-    "/rest/user/authentication-details": {
+    "/user/authentication-details": {
       "get": {
         "description": "",
         "responses": {
@@ -454,7 +454,7 @@
         }
       }
     },
-    "/rest/products/search": {
+    "/products/search": {
       "get": {
         "description": "",
         "responses": {
@@ -464,7 +464,7 @@
         }
       }
     },
-    "/rest/basket/{id}": {
+    "/basket/{id}": {
       "get": {
         "description": "",
         "parameters": [
@@ -484,7 +484,7 @@
         }
       }
     },
-    "/rest/basket/{id}/checkout": {
+    "/basket/{id}/checkout": {
       "post": {
         "description": "",
         "parameters": [
@@ -504,7 +504,7 @@
         }
       }
     },
-    "/rest/basket/{id}/coupon/{coupon}": {
+    "/basket/{id}/coupon/{coupon}": {
       "put": {
         "description": "",
         "parameters": [
@@ -532,7 +532,7 @@
         }
       }
     },
-    "/rest/admin/application-version": {
+    "/admin/application-version": {
       "get": {
         "description": "",
         "responses": {
@@ -542,7 +542,7 @@
         }
       }
     },
-    "/rest/admin/application-configuration": {
+    "/admin/application-configuration": {
       "get": {
         "description": "",
         "responses": {
@@ -552,7 +552,7 @@
         }
       }
     },
-    "/rest/repeat-notification": {
+    "/repeat-notification": {
       "get": {
         "description": "",
         "responses": {
@@ -562,7 +562,7 @@
         }
       }
     },
-    "/rest/continue-code": {
+    "/continue-code": {
       "get": {
         "description": "",
         "responses": {
@@ -572,7 +572,7 @@
         }
       }
     },
-    "/rest/continue-code-findIt": {
+    "/continue-code-findIt": {
       "get": {
         "description": "",
         "responses": {
@@ -582,7 +582,7 @@
         }
       }
     },
-    "/rest/continue-code-fixIt": {
+    "/continue-code-fixIt": {
       "get": {
         "description": "",
         "responses": {
@@ -592,7 +592,7 @@
         }
       }
     },
-    "/rest/continue-code-findIt/apply/{continueCode}": {
+    "/continue-code-findIt/apply/{continueCode}": {
       "put": {
         "description": "",
         "parameters": [
@@ -612,7 +612,7 @@
         }
       }
     },
-    "/rest/continue-code-fixIt/apply/{continueCode}": {
+    "/continue-code-fixIt/apply/{continueCode}": {
       "put": {
         "description": "",
         "parameters": [
@@ -632,7 +632,7 @@
         }
       }
     },
-    "/rest/continue-code/apply/{continueCode}": {
+    "/continue-code/apply/{continueCode}": {
       "put": {
         "description": "",
         "parameters": [
@@ -652,7 +652,7 @@
         }
       }
     },
-    "/rest/captcha": {
+    "/captcha": {
       "get": {
         "description": "",
         "responses": {
@@ -662,7 +662,7 @@
         }
       }
     },
-    "/rest/image-captcha": {
+    "/image-captcha": {
       "get": {
         "description": "",
         "responses": {
@@ -672,7 +672,7 @@
         }
       }
     },
-    "/rest/track-order/{id}": {
+    "/track-order/{id}": {
       "get": {
         "description": "",
         "parameters": [
@@ -692,7 +692,7 @@
         }
       }
     },
-    "/rest/country-mapping": {
+    "/country-mapping": {
       "get": {
         "description": "",
         "responses": {
@@ -702,7 +702,7 @@
         }
       }
     },
-    "/rest/saveLoginIp": {
+    "/saveLoginIp": {
       "get": {
         "description": "",
         "responses": {
@@ -712,7 +712,7 @@
         }
       }
     },
-    "/rest/user/data-export": {
+    "/user/data-export": {
       "post": {
         "description": "",
         "responses": {
@@ -722,7 +722,7 @@
         }
       }
     },
-    "/rest/languages": {
+    "/languages": {
       "get": {
         "description": "",
         "responses": {
@@ -732,7 +732,7 @@
         }
       }
     },
-    "/rest/order-history": {
+    "/order-history": {
       "get": {
         "description": "",
         "responses": {
@@ -742,7 +742,7 @@
         }
       }
     },
-    "/rest/order-history/orders": {
+    "/order-history/orders": {
       "get": {
         "description": "",
         "responses": {
@@ -752,7 +752,7 @@
         }
       }
     },
-    "/rest/order-history/{id}/delivery-status": {
+    "/order-history/{id}/delivery-status": {
       "put": {
         "description": "",
         "parameters": [
@@ -772,7 +772,7 @@
         }
       }
     },
-    "/rest/wallet/balance": {
+    "/wallet/balance": {
       "get": {
         "description": "",
         "responses": {
@@ -790,7 +790,7 @@
         }
       }
     },
-    "/rest/deluxe-membership": {
+    "/deluxe-membership": {
       "get": {
         "description": "",
         "responses": {
@@ -808,7 +808,7 @@
         }
       }
     },
-    "/rest/memories": {
+    "/memories": {
       "get": {
         "description": "",
         "responses": {
@@ -818,7 +818,7 @@
         }
       }
     },
-    "/rest/chatbot/status": {
+    "/chatbot/status": {
       "get": {
         "description": "",
         "responses": {
@@ -828,7 +828,7 @@
         }
       }
     },
-    "/rest/chatbot/respond": {
+    "/chatbot/respond": {
       "post": {
         "description": "",
         "responses": {
@@ -838,7 +838,7 @@
         }
       }
     },
-    "/rest/products/{id}/reviews": {
+    "/products/{id}/reviews": {
       "get": {
         "description": "",
         "parameters": [
@@ -876,7 +876,7 @@
         }
       }
     },
-    "/rest/products/reviews": {
+    "/products/reviews": {
       "patch": {
         "description": "",
         "responses": {
@@ -894,7 +894,7 @@
         }
       }
     },
-    "/rest/web3/submitKey": {
+    "/web3/submitKey": {
       "post": {
         "description": "",
         "responses": {
@@ -904,7 +904,7 @@
         }
       }
     },
-    "/rest/web3/nftUnlocked": {
+    "/web3/nftUnlocked": {
       "get": {
         "description": "",
         "responses": {
@@ -914,7 +914,7 @@
         }
       }
     },
-    "/rest/web3/nftMintListen": {
+    "/web3/nftMintListen": {
       "get": {
         "description": "",
         "responses": {
@@ -924,7 +924,7 @@
         }
       }
     },
-    "/rest/web3/walletNFTVerify": {
+    "/web3/walletNFTVerify": {
       "post": {
         "description": "",
         "responses": {
@@ -934,7 +934,7 @@
         }
       }
     },
-    "/rest/web3/walletExploitAddress": {
+    "/web3/walletExploitAddress": {
       "post": {
         "description": "",
         "responses": {

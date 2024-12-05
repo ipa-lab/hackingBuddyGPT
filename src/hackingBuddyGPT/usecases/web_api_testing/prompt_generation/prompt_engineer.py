@@ -78,6 +78,8 @@ class PromptEngineer:
         self.open_api_spec = open_api_spec
         self.llm_handler, self.response_handler = handlers
         self.prompt_helper = prompt_helper
+        self.prompt_helper.current_test_step = None
+
 
         self.context = context
         self.turn = 0
@@ -99,7 +101,7 @@ class PromptEngineer:
             ),
         }
 
-        self.purpose = PromptPurpose.AUTHENTICATION
+
 
         self.prompt_func = self.strategies.get(self.strategy)
 
@@ -133,6 +135,9 @@ class PromptEngineer:
         )
         self.purpose = self.prompt_func.purpose
         # is_good, prompt_history = self.evaluate_response(prompt, log, prompt_history, llm_handler)
+
+        if self.context == PromptContext.PENTESTING:
+            self.prompt_helper.current_test_step = self.prompt_func.current_step
 
         if self.purpose == PromptPurpose.LOGGING_MONITORING:
             self.prompt_helper.current_endpoint = next(self.correct_endpoints)
@@ -189,3 +194,4 @@ f
         """
         self.pentesting_information = pentesting_information
         self.prompt_func.set_pentesting_information(pentesting_information)
+        self.purpose = self.pentesting_information.pentesting_step_list[0]

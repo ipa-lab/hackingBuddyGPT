@@ -47,10 +47,11 @@ class BasicPrompt(ABC):
         self.planning_type = planning_type
         self.prompt_helper = prompt_helper
         self.strategy = strategy
+        self.current_step = None
 
     def set_pentesting_information(self, pentesting_information: PenTestingInformation):
         self.pentesting_information = pentesting_information
-        self.purpose = PromptPurpose.AUTHENTICATION
+        self.purpose = self.pentesting_information.pentesting_step_list[0]
         self.pentesting_information.next_testing_endpoint()
 
     @abstractmethod

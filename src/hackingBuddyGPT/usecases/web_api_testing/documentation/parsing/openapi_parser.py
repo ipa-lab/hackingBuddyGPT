@@ -130,7 +130,8 @@ class OpenAPISpecificationParser:
             'refresh_endpoint': [],
             'login_endpoint': [],
             'authentication_endpoint': [],
-            'unclassified_endpoint': []
+            'unclassified_endpoint': [],
+            'account_creation':[]
         }
 
         for path, path_item in self.api_data['paths'].items():
@@ -173,7 +174,11 @@ class OpenAPISpecificationParser:
                 if 'refresh' in path.lower() or 'refresh' in description:
                     classifications['refresh_endpoint'].append((method.upper(), path))
                     classified = True
-
+                # User creation endpoint
+                if any(keyword in path.lower() for keyword in ['user', 'users']) and not "login" in path:
+                    if method.upper() == "POST":
+                        classifications["account_creation"].append((method.upper(), path))
+                    classified = True
                 # Login endpoints
                 if any(keyword in path.lower() for keyword in ['login', 'signin', 'sign-in']):
                     if method.upper() == "POST":

@@ -179,6 +179,68 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
 
         return tot_prompts
 
+    def transform_to_tree_of_thought(test_case, purpose):
+        """
+        Transforms a single test case into a Tree-of-Thought reasoning structure.
+
+        The transformation breaks tasks into a hierarchical tree with branches representing different outcomes, inspired by the Tree-of-Thoughts model
+        (e.g., Wei et al., "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models," NeurIPS 2022, and related works).
+
+        Args:
+            test_case (dict): A dictionary representing a single test case with fields like 'objective', 'steps', and 'security'.
+            purpose (str): A string representing the purpose of this transformation.
+
+        Returns:
+            dict: A transformed test case structured as a Tree-of-Thought with hierarchical and conditional logic.
+        """
+
+        # Initialize the root of the tree with the test case objective
+        tree_of_thought = {
+            "root": {
+                "title": f"Objective: {test_case['objective']}",
+                "purpose": purpose,
+                "branches": []
+            }
+        }
+
+        # Build the branches for each step
+        for index, step in enumerate(test_case["steps"]):
+            # Determine security and response codes for the step
+            security = test_case["security"][index] if len(test_case["security"]) > 1 else test_case["security"][0]
+            expected_response_code = (
+                test_case["expected_response_code"][index]
+                if len(test_case["expected_response_code"]) > 1
+                else test_case["expected_response_code"]
+            )
+
+            # Construct the branch for the step
+            branch = {
+                "step": step,
+                "security": security,
+                "expected_response_code": expected_response_code,
+                "conditions": {
+                    "if_successful": {
+                        "action": "Proceed to next step",
+                        "evaluation": "No vulnerability found."
+                    },
+                    "if_unsuccessful": {
+                        "action": "Pause and reassess",
+                        "evaluation": "Vulnerability identified. Revisit configurations."
+                    }
+                }
+            }
+
+            # Append the branch to the tree
+            tree_of_thought["root"]["branches"].append(branch)
+
+        # Add final assessments to the tree
+        tree_of_thought["root"]["assessment"] = {
+            "intermediate": "Evaluate the outcomes of each branch. Adjust as necessary based on success or failure conditions.",
+            "final": "Verify all branches lead to the fulfillment of the objective."
+        }
+
+        return tree_of_thought
+
     def generate_documentation_steps(self, steps):
        return [ steps[0],
             [

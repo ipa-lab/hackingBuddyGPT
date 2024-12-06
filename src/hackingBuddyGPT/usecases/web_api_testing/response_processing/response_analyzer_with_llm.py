@@ -76,7 +76,9 @@ class ResponseAnalyzerWithLLM:
 
         steps = analysis_context.get("steps")
         if len(steps) > 1:  # multisptep test case
-            for step in steps[1:]:
+            for step in steps:
+                if step != steps[0]:
+                    prompt_history, raw_response = self.process_step(step,prompt_history, "http_request")
                 test_case_responses, status_code = self.analyse_response(raw_response, step, prompt_history)
                 llm_responses = llm_responses + test_case_responses
         else:
@@ -121,9 +123,10 @@ class ResponseAnalyzerWithLLM:
         match = re.match(r"HTTP/1\.1 (\d{3}) (.*)", status_line)
         status_code = int(match.group(1)) if match else None
 
+
         return status_code, headers, body
 
-    def process_step(self, step: str, prompt_history: list) -> tuple[list, str]:
+    def process_step(self, step: str, prompt_history: list, capability:str) -> tuple[list, str]:
         """
         Helper function to process each analysis step with the LLM.
         """
@@ -132,7 +135,7 @@ class ResponseAnalyzerWithLLM:
         prompt_history.append({"role": "system", "content": step + "Stay within the output limit."})
 
         # Call the LLM and handle the response
-        response, completion = self.llm_handler.execute_prompt(prompt_history)
+        response, completion = self.llm_handler.execute_prompt_with_specific_capability(prompt_history, capability)
         message = completion.choices[0].message
         prompt_history.append(message)
         tool_call_id = message.tool_calls[0].id
@@ -161,10 +164,12 @@ class ResponseAnalyzerWithLLM:
         else:
             additional_analysis_context += step.get("conditions").get("if_successful")
 
+        llm_responses.append(full_response)
+
         for purpose in self.pentesting_information.analysis_step_list:
             analysis_step = self.pentesting_information.get_analysis_step(purpose, full_response,
                                                                           additional_analysis_context)
-            prompt_history, response = self.process_step(analysis_step, prompt_history)
+            prompt_history, response = self.process_step(analysis_step, prompt_history, "record_note")
             llm_responses.append(response)
             full_response = response  # make it iterative
 
@@ -176,7 +181,7 @@ class ResponseAnalyzerWithLLM:
         full_response = f"Status Code: {status_code}\nHeaders: {json.dumps(headers, indent=4)}\nBody: {body}"
         expected_responses = step.get("expected_response_code")
         security = step.get("security")
-        additional_analysis_context = f"\n Ensure that one of the following expected responses: '{expected_responses}\n Also ensure that the following security requirements have been met: {security}"
+        additional_analysis_context = f"\n Ensure that the status code is one of the expected responses: '{expected_responses}\n Also ensure that the following security requirements have been met: {security}"
         return   status_code, additional_analysis_context, full_response
 
     def do_setup(self, status_code, step, additional_analysis_context, full_response, prompt_history):
@@ -185,8 +190,10 @@ class ResponseAnalyzerWithLLM:
         if not any(str(status_code) in response for response in step.get("expected_response_code")):
             add_info = "Unsuccessful. Try a different endpoint."
             while not any(str(status_code) in response for response in step.get("expected_response_code")):
-                prompt_history, response = self.process_step(step.get("step") + add_info, prompt_history)
+                prompt_history, response = self.process_step(step.get("step") + add_info, prompt_history, "http_request")
                 status_code, additional_analysis_context, full_response = self.get_addition_context(response, step)
+
+
 
         return status_code, additional_analysis_context, full_response
 

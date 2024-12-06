@@ -125,7 +125,7 @@ class SimpleWebAPITesting(Agent):
         self.prompt_context = PromptContext.PENTESTING
 
     def _setup_handlers(self):
-        self._llm_handler = LLMHandler(self.llm, self._capabilities)
+        self._llm_handler = LLMHandler(self.llm, self._capabilities, all_possible_capabilities=self.all_capabilities)
         self.prompt_helper = PromptGenerationHelper(host=self.host)
         if "username" in self.config.keys() and "password" in self.config.keys():
             username = self.config.get("username")
@@ -136,13 +136,13 @@ class SimpleWebAPITesting(Agent):
         self.pentesting_information = PenTestingInformation(self._openapi_specification_parser, username, password)
         self._response_handler = ResponseHandler(
             llm_handler=self._llm_handler, prompt_context=self.prompt_context, prompt_helper=self.prompt_helper,
-            config=self.config, pentesting_information = self.pentesting_information)
+            config=self.config, pentesting_information = self.pentesting_information )
         self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=self._llm_handler,
                                                          pentesting_info=self.pentesting_information,
                                                          capacity=self.parse_capacity)
         self._response_handler.response_analyzer = self.response_analyzer
         self._report_handler = ReportHandler()
-        self._test_handler = TestHandler(self._llm_handler, self.python_test_case_capability)
+        self._test_handler = TestHandler(self._llm_handler)
 
     def categorize_endpoints(self, endpoints, query: dict):
         root_level = []
@@ -235,9 +235,9 @@ class SimpleWebAPITesting(Agent):
         self.python_test_case_capability = {"python_test_case": PythonTestCase(test_cases)}
         self.parse_capacity = {"parse": ParsedInformation(test_cases)}
         self._capabilities = {
-            "http_request": HTTPRequest(self.host),
-            "record_note": RecordNote(notes)
-        }
+            "http_request": HTTPRequest(self.host)        }
+        self.all_capabilities = {"python_test_case": PythonTestCase(test_cases), "parse": ParsedInformation(test_cases),"http_request": HTTPRequest(self.host),
+            "record_note": RecordNote(notes)}
         self.http_capability = {            "http_request": HTTPRequest(self.host),
 }
 
@@ -260,7 +260,7 @@ class SimpleWebAPITesting(Agent):
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore", log=self._log,
                                                           prompt_history=self._prompt_history,
                                                           llm_handler=self._llm_handler)
-            response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,self.http_capability )
+            response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
             self._handle_response(completion, response, self.prompt_engineer.purpose)
 
         self.purpose = self.prompt_engineer.purpose
@@ -293,6 +293,11 @@ class SimpleWebAPITesting(Agent):
             self._prompt_history.append(
                 tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
+            if "token" in result and self.token == "your_api_token_here":
+                self.token = self.extract_token_from_http_response(result)
+                self.pentesting_information.set_valid_token(self.token)
+
+
 
             analysis, status_code = self._response_handler.evaluate_result(
                 result=result,
@@ -306,6 +311,32 @@ class SimpleWebAPITesting(Agent):
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
 
         self.all_http_methods_found()
+
+    def extract_token_from_http_response(self, http_response):
+            """
+            Extracts the token from an HTTP response body.
+
+            Args:
+                http_response (str): The raw HTTP response as a string.
+
+            Returns:
+                str: The extracted token if found, otherwise None.
+            """
+            # Split the HTTP headers from the body
+            try:
+                headers, body = http_response.split("\r\n\r\n", 1)
+            except ValueError:
+                # If no double CRLF is found, return None
+                return None
+
+            try:
+                # Parse the body as JSON
+                body_json = json.loads(body)
+                # Extract the token
+                return body_json.get("authentication", {}).get("token", None)
+            except json.JSONDecodeError:
+                # If the body is not valid JSON, return None
+                return None
 
 
 

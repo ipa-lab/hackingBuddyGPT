@@ -18,7 +18,7 @@ class LLMHandler:
         created_objects (Dict[str, List[Any]]): A dictionary to keep track of created objects by their type.
     """
 
-    def __init__(self, llm: Any, capabilities: Dict[str, Any]) -> None:
+    def __init__(self, llm: Any, capabilities: Dict[str, Any], all_possible_capabilities= None) -> None:
         """
         Initializes the LLMHandler with the specified LLM and capabilities.
 
@@ -31,6 +31,11 @@ class LLMHandler:
         self.created_objects: Dict[str, List[Any]] = {}
         self._re_word_boundaries = re.compile(r"\b")
         self.adjusting_counter = 0
+        self.all_possible_capabilities = all_possible_capabilities
+
+
+    def get_specific_capability(self, capability_name: str) -> Any:
+        return {f"{capability_name}": self.all_possible_capabilities[capability_name]}
 
     def execute_prompt(self, prompt: List[Dict[str, Any]]) -> Any:
         """
@@ -114,6 +119,7 @@ class LLMHandler:
         def call_model(adjusted_prompt: List[Dict[str, Any]], capability: Any) -> Any:
             """Helper function to make the API call with the adjusted prompt."""
             print(f'prompt: {prompt}, capability: {capability}')
+            capability = self.get_specific_capability(capability)
 
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,

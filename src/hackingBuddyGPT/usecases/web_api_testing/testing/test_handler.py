@@ -7,11 +7,10 @@ from typing import Any, Dict, Tuple
 
 class TestHandler(object):
 
-    def __init__(self, llm_handler, python_test_case_capability):
+    def __init__(self, llm_handler):
         self._llm_handler = llm_handler
         current_path = os.path.dirname(os.path.abspath(__file__))
         self.test_path = os.path.join(current_path, "tests", f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
-        self.python_test_case_capability = python_test_case_capability
         os.makedirs(self.test_path, exist_ok=True)
 
         self.file = os.path.join(self.test_path, "test_cases.txt")
@@ -98,7 +97,7 @@ class TestHandler(object):
            """
         prompt_history.append({"role": "system", "content": prompt_text})
         response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt_history,
-                                                                                         capability=self.python_test_case_capability)
+                                                                                         capability="python_test_case")
         test_case: Any = response.execute()
         print(f'RESULT: {test_case}')
         test_case["method"] = method
@@ -170,7 +169,7 @@ class TestHandler(object):
         prompt_history.append({"role": "system", "content": prompt})
 
         # Call the LLM to generate the test function.
-        response, completion = self._llm_handler.execute_prompt(prompt_history)
+        response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt_history, "record_note")
         result = response.execute()
         print(f'RESULT: {result}')
 

@@ -78,7 +78,9 @@ class ResponseAnalyzerWithLLM:
         if len(steps) > 1:  # multisptep test case
             for step in steps:
                 if step != steps[0]:
-                    prompt_history, raw_response = self.process_step(step,prompt_history, "http_request")
+                    print(f'Step:{step}')
+                    print(f'Step:{type(step)}')
+                    prompt_history, raw_response = self.process_step(step.get("step"),prompt_history, "http_request")
                 test_case_responses, status_code = self.analyse_response(raw_response, step, prompt_history)
                 llm_responses = llm_responses + test_case_responses
         else:

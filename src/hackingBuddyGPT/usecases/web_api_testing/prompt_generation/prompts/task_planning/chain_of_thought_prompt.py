@@ -32,9 +32,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
-        self.phase = None
-        self.transformed_steps = {}
-        self.pentest_steps = None
+
 
     def generate_prompt(
             self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
@@ -171,6 +169,43 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
 
         return transformed_case
 
+
+    def transform_test_case_to_string(self, test_case, character):
+        """
+        Transforms a single test case into a formatted string representation.
+
+        Args:
+            test_case (dict): A dictionary representing a single test case transformed into a hierarchical structure.
+
+        Returns:
+            str: A formatted string representation of the test case.
+        """
+        # Initialize the result string
+        result = []
+
+        # Add the phase title
+        result.append(f"{test_case['phase_title']}\n")
+
+        # Add each step with conditions
+        if character == "steps":
+            result.append("Let's think step by step.")
+            result.append("Steps:\n")
+            for idx, step_details in enumerate(test_case["steps"], start=1):
+                result.append(f"  Step {idx}:\n")
+                result.append(f"    {step_details['step']}\n")
+
+        # Add phase assessments
+        if character == "assessments":
+            result.append("\nAssessments:\n")
+            for assessment in test_case["assessments"]:
+                result.append(f"  - {assessment}\n")
+
+        # Add the final assessment if applicable
+        if character == "final_assessment":
+            if "final_assessment" in test_case:
+                result.append(f"\nFinal Assessment:\n  {test_case['final_assessment']}\n")
+
+        return ''.join(result)
     def generate_documentation_steps(self, steps) -> list:
         """
         Creates a chain of thought prompt to guide the model through the API documentation process.
@@ -192,39 +227,3 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             transformed_steps.append(transformed_step)
 
         return transformed_steps
-
-    def transform_test_case_to_string(self, test_case, character):
-        """
-        Transforms a single test case into a formatted string representation.
-
-        Args:
-            test_case (dict): A dictionary representing a single test case transformed into a hierarchical structure.
-
-        Returns:
-            str: A formatted string representation of the test case.
-        """
-        # Initialize the result string
-        result = []
-
-        # Add the phase title
-        result.append(f"{test_case['phase_title']}\n")
-
-        # Add each step with conditions
-        if character == "steps":
-            result.append("Steps:\n")
-            for idx, step_details in enumerate(test_case["steps"], start=1):
-                result.append(f"  Step {idx}:\n")
-                result.append(f"    {step_details['step']}\n")
-
-        # Add phase assessments
-        if character == "assessments":
-            result.append("\nAssessments:\n")
-            for assessment in test_case["assessments"]:
-                result.append(f"  - {assessment}\n")
-
-        # Add the final assessment if applicable
-        if character == "final_assessment":
-            if "final_assessment" in test_case:
-                result.append(f"\nFinal Assessment:\n  {test_case['final_assessment']}\n")
-
-        return ''.join(result)

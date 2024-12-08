@@ -62,52 +62,189 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
 
         return self.prompt_helper.check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)
 
-    def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> List[str]:
+    def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> Any:
         """
-        Provides the steps for the tree-of-thought strategy when the context is pentesting.
+        Provides the steps for the Tree-of-Thought strategy in the pentesting context.
 
         Args:
-            move_type (str): The type of move to generate.
+            move_type (str): The type of move to generate, e.g., "explore".
             common_step (Optional[str]): A list of common steps for generating prompts.
 
         Returns:
-            List[str]: A list of steps for the tree-of-thought strategy in the pentesting context.
+            List[str]: A list of steps for the Tree-of-Thought strategy in the pentesting context.
         """
-        if move_type == "explore" and self.pentesting_information.explore_steps:
-            purpose = list(self.pentesting_information.explore_steps.keys())[0]
-            steps = self.pentesting_information.explore_steps[purpose]
+        if self.pentest_steps is None:
+            self.pentest_steps = self.pentesting_information.explore_steps()
 
-            # Transform steps into tree-of-thought prompts
-            transformed_steps = self.transform_to_tree_of_thought({purpose: [steps]})
+        purpose = self.purpose
+        test_cases = self.pentesting_information.get_steps_of_phase(purpose, self.pentest_steps)
 
-            # Extract tree branches for the current purpose
-            branches = transformed_steps[purpose]
+        if move_type == "explore":
+            # Check if the purpose has already been transformed into Tree-of-Thought structure
+            if purpose not in self.transformed_steps.keys():
+                for test_case in test_cases:
+                    if purpose not in self.transformed_steps.keys():
+                        self.transformed_steps[purpose] = []
+                    # Transform test cases into Tree-of-Thought structure based on purpose
+                    self.transformed_steps[purpose].append(
+                        self.transform_to_tree_of_thought(test_case, purpose)
+                    )
 
-            # Process steps and branch based on intermediate outcomes
-            for branch in branches:
-                for step in branch:
-                    if step not in self.explored_steps:
-                        self.explored_steps.append(step)
+            # Extract the ToT structure for the current purpose
+            tot_steps = self.transformed_steps[purpose]
 
-                        # Apply common steps if provided
-                        if common_step:
-                            step = common_step + step
+            # Process steps branch by branch, with memory of explored steps and conditional handling
+            for step in tot_steps:
+                if step not in self.explored_steps:
+                    self.explored_steps.append(step)
+                    print(f"Processing Branch: {step}")
+                    self.current_step = step
+                    # Process the step and return its formatted representation
+                    formatted_step = self.transform_tree_of_thought_to_string(step, "steps")
+                    last_item = tot_steps[-1]
 
-                        # Remove the processed step from explore_steps
-                        if len(self.pentesting_information.explore_steps[purpose]) > 0:
-                            del self.pentesting_information.explore_steps[purpose][0]
-                        else:
-                            del self.pentesting_information.explore_steps[
-                                purpose]  # Clean up if all steps are processed
+                    if step == last_item:
+                        # If it's the last step, remove the purpose and update self.purpose
+                        if purpose in self.pentesting_information.pentesting_step_list:
+                            self.pentesting_information.pentesting_step_list.remove(purpose)
+                        if self.pentesting_information.pentesting_step_list:
+                            self.purpose = self.pentesting_information.pentesting_step_list[0]
 
-                        # Print the prompt for each branch and return the current step
-                        print(f'Branch step: {step}')
-                        return step
+                    return [formatted_step]
 
         else:
             return ["Look for exploits."]
 
-    def transform_to_tree_of_thought(self, prompts: Dict[str, List[List[str]]]) -> Dict[str, List[str]]:
+    def transform_to_tree_of_thought(self, test_case, purpose):
+        """
+        Transforms a single test case into a Tree-of-Thought structure.
+
+        The transformation incorporates branching reasoning paths, self-evaluation at decision points,
+        and backtracking to enable deliberate problem-solving.
+
+        Args:
+            test_case (dict): A dictionary representing a single test case with fields like 'objective', 'steps',
+                              'security', and 'expected_response_code'.
+            purpose (str): The overarching purpose of the test case.
+
+        Returns:
+            dict: A transformed test case structured as a Tree-of-Thought process.
+        """
+
+        # Initialize the root of the tree
+        transformed_case = {
+            "root": f"Objective: {test_case['objective']}",
+            "branches": [],
+            "assessments": []
+        }
+
+        # Process steps in the test case as potential branches
+        for i, step in enumerate(test_case["steps"]):
+            # Handle security and expected response codes conditionally
+            security = (
+                test_case["security"][i]
+                if len(test_case["security"]) > 1
+                else test_case["security"][0]
+            )
+            expected_response_code = (
+                test_case["expected_response_code"][i]
+                if isinstance(test_case["expected_response_code"], list) and len(
+                    test_case["expected_response_code"]) > 1
+                else test_case["expected_response_code"]
+            )
+
+            # Define a branch representing a single reasoning path
+            branch = {
+                "step": step,
+                "security": security,
+                "expected_response_code": expected_response_code,
+                "thoughts": [
+                    {
+                        "action": f"Execute: {step}",
+                        "conditions": {
+                            "if_successful": {
+                                "outcome": "No Vulnerability found.",
+                                "next_action": "Proceed to the next step."
+                            },
+                            "if_unsuccessful": {
+                                "outcome": "Vulnerability found.",
+                                "next_action": "Reevaluate this step or explore alternative actions."
+                            }
+                        }
+                    }
+                ]
+            }
+            # Add branch to the tree
+            transformed_case["branches"].append(branch)
+
+        # Add an assessment mechanism for self-evaluation
+        transformed_case["assessments"].append(
+            {
+                "phase_review": "Review outcomes of all branches. If any branch fails to meet objectives, backtrack and revise steps."
+            }
+        )
+
+        # Add a final assessment for the entire tree
+        transformed_case["final_assessment"] = {
+            "criteria": "Confirm all objectives are met across all branches.",
+            "next_action": "If objectives are not met, revisit unresolved branches."
+        }
+
+        return transformed_case
+
+
+    def transform_tree_of_thought_to_string(self, tree_of_thought, character):
+        """
+        Transforms a Tree-of-Thought structured test case into a formatted string representation.
+
+        Args:
+            tree_of_thought (dict): The output from the `transform_to_tree_of_thought` function, representing
+                                    a tree-structured test case.
+            character (str): The focus of the transformation, which could be 'steps', 'assessments', or 'final_assessment'.
+
+        Returns:
+            str: A formatted string representation of the Tree-of-Thought structure.
+        """
+        # Initialize the result string
+        result = []
+
+        # Add the root objective
+        result.append(f"Root Objective: {tree_of_thought['root']}\n\n")
+
+        # Handle branches
+        if character == "steps":
+            result.append("Branches (Step-by-Step Thinking):\n")
+            for idx, branch in enumerate(tree_of_thought["branches"], start=1):
+                result.append(f"  Branch {idx}:\n")
+                result.append(f"    Step: {branch['step']}\n")
+                result.append(f"    Security: {branch['security']}\n")
+                result.append(f"    Expected Response Code: {branch['expected_response_code']}\n")
+                result.append("    Thoughts:\n")
+                for thought in branch["thoughts"]:
+                    result.append(f"      Action: {thought['action']}\n")
+                    result.append("      Conditions:\n")
+                    for condition, outcome in thought["conditions"].items():
+                        result.append(f"        {condition.capitalize()}: {outcome['outcome']}\n")
+                        result.append(f"          Next Action: {outcome['next_action']}\n")
+                result.append("\n")
+
+        # Handle assessments
+        if character == "assessments":
+            result.append("\nAssessments:\n")
+            for assessment in tree_of_thought["assessments"]:
+                result.append(f"  - {assessment['phase_review']}\n")
+
+        # Handle final assessment
+        if character == "final_assessment":
+            if "final_assessment" in tree_of_thought:
+                final_assessment = tree_of_thought["final_assessment"]
+                result.append(f"\nFinal Assessment:\n")
+                result.append(f"  Criteria: {final_assessment['criteria']}\n")
+                result.append(f"  Next Action: {final_assessment['next_action']}\n")
+
+        return ''.join(result)
+
+    def transform_to_tree_of_thoughtx(self, prompts: Dict[str, List[List[str]]]) -> Dict[str, List[str]]:
         """
         Transforms prompts into a "Tree of Thought" (ToT) format with branching paths, checkpoints,
         and conditional steps for flexible, iterative problem-solving as per Tree of Thoughts methodology.
@@ -179,67 +316,6 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
 
         return tot_prompts
 
-    def transform_to_tree_of_thought(test_case, purpose):
-        """
-        Transforms a single test case into a Tree-of-Thought reasoning structure.
-
-        The transformation breaks tasks into a hierarchical tree with branches representing different outcomes, inspired by the Tree-of-Thoughts model
-        (e.g., Wei et al., "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models," NeurIPS 2022, and related works).
-
-        Args:
-            test_case (dict): A dictionary representing a single test case with fields like 'objective', 'steps', and 'security'.
-            purpose (str): A string representing the purpose of this transformation.
-
-        Returns:
-            dict: A transformed test case structured as a Tree-of-Thought with hierarchical and conditional logic.
-        """
-
-        # Initialize the root of the tree with the test case objective
-        tree_of_thought = {
-            "root": {
-                "title": f"Objective: {test_case['objective']}",
-                "purpose": purpose,
-                "branches": []
-            }
-        }
-
-        # Build the branches for each step
-        for index, step in enumerate(test_case["steps"]):
-            # Determine security and response codes for the step
-            security = test_case["security"][index] if len(test_case["security"]) > 1 else test_case["security"][0]
-            expected_response_code = (
-                test_case["expected_response_code"][index]
-                if len(test_case["expected_response_code"]) > 1
-                else test_case["expected_response_code"]
-            )
-
-            # Construct the branch for the step
-            branch = {
-                "step": step,
-                "security": security,
-                "expected_response_code": expected_response_code,
-                "conditions": {
-                    "if_successful": {
-                        "action": "Proceed to next step",
-                        "evaluation": "No vulnerability found."
-                    },
-                    "if_unsuccessful": {
-                        "action": "Pause and reassess",
-                        "evaluation": "Vulnerability identified. Revisit configurations."
-                    }
-                }
-            }
-
-            # Append the branch to the tree
-            tree_of_thought["root"]["branches"].append(branch)
-
-        # Add final assessments to the tree
-        tree_of_thought["root"]["assessment"] = {
-            "intermediate": "Evaluate the outcomes of each branch. Adjust as necessary based on success or failure conditions.",
-            "final": "Verify all branches lead to the fulfillment of the objective."
-        }
-
-        return tree_of_thought
 
     def generate_documentation_steps(self, steps):
        return [ steps[0],

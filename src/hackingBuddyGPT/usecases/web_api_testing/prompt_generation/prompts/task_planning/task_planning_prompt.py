@@ -44,6 +44,9 @@ class TaskPlanningPrompt(BasicPrompt):
         )
         self.explored_steps: List[str] = []
         self.purpose: Optional[PromptPurpose] = None
+        self.phase = None
+        self.transformed_steps = {}
+        self.pentest_steps = None
 
     def _get_documentation_steps(self, common_steps: List[str], move_type: str) -> List[str]:
         """

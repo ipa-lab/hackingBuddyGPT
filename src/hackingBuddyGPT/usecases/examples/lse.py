@@ -1,12 +1,12 @@
 import pathlib
+
 from mako.template import Template
 
 from hackingBuddyGPT.capabilities import SSHRunCommand
-from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
-from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivescUseCase, LinuxPrivesc
-from hackingBuddyGPT.utils import SSHConnection
 from hackingBuddyGPT.usecases.base import UseCase, use_case
-
+from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc, LinuxPrivescUseCase
+from hackingBuddyGPT.utils import SSHConnection
+from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 template_dir = pathlib.Path(__file__).parent
 template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
@@ -38,11 +38,11 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
         cmd = self.llm.get_response(template_lse, lse_output=result, number=3)
         self.log.console.print("[yellow]got the cmd: " + cmd.result)
 
-        return [x for x in cmd.result.splitlines() if x.strip()] 
+        return [x for x in cmd.result.splitlines() if x.strip()]
 
     def get_name(self) -> str:
         return self.__class__.__name__
-    
+
     def run(self):
         # get the hints through running LSE on the target system
         hints = self.call_lse_against_host()
@@ -50,7 +50,6 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
 
         # now try to escalate privileges using the hints
         for hint in hints:
-
             if self.use_use_case:
                 self.log.console.print("[yellow]Calling a use-case to perform the privilege escalation")
                 result = self.run_using_usecases(hint, turns_per_hint)
@@ -65,30 +64,29 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
     def run_using_usecases(self, hint, turns_per_hint):
         # TODO: init usecase
         linux_privesc = LinuxPrivescUseCase(
-            agent = LinuxPrivesc(
-                conn = self.conn,
-                enable_explanation = self.enable_explanation,
-                enable_update_state = self.enable_update_state,
-                disable_history = self.disable_history,
-                llm = self.llm,
-                hint = hint
+            agent=LinuxPrivesc(
+                conn=self.conn,
+                enable_explanation=self.enable_explanation,
+                enable_update_state=self.enable_update_state,
+                disable_history=self.disable_history,
+                llm=self.llm,
+                hint=hint,
             ),
-            max_turns = turns_per_hint,
-            log_db = self.log_db,
-            log = self.log,
+            max_turns=turns_per_hint,
+            log=self.log,
         )
         linux_privesc.init(self.configuration)
         return linux_privesc.run()
-    
+
     def run_using_agent(self, hint, turns_per_hint):
         # init agent
         agent = LinuxPrivesc(
-            conn = self.conn,
-            llm = self.llm,
-            hint = hint,
-            enable_explanation = self.enable_explanation,
-            enable_update_state = self.enable_update_state,
-            disable_history = self.disable_history
+            conn=self.conn,
+            llm=self.llm,
+            hint=hint,
+            enable_explanation=self.enable_explanation,
+            enable_update_state=self.enable_update_state,
+            disable_history=self.disable_history,
         )
         agent.log = self.log
         agent.init()
@@ -103,7 +101,7 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
             if agent.perform_round(turn) is True:
                 got_root = True
             turn += 1
-        
+
         # cleanup and finish
         agent.after_run()
         return got_root

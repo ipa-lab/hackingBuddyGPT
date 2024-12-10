@@ -231,7 +231,7 @@ In the Command Palette, type `>` and `Terminal: Create New Terminal` and press t
 
 Type the following to manually run:
 ```bash
-./codespaces_start_hackingbuddygpt_against_a_container.sh
+./scripts/codespaces_start_hackingbuddygpt_against_a_container.sh
 ```
 7. Eventually, you should see:
 
@@ -299,6 +299,12 @@ $ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...C
 # install dependencies for testing if you want to run the tests
 $ pip install '.[testing]'
 ```
+
+## Use Cases
+
+Mac, Docker Desktop and Gemini-OpenAI-Proxy:
+
+* See https://github.com/ipa-lab/hackingBuddyGPT/blob/main/MAC.md
 
 ## Publications about hackingBuddyGPT
 

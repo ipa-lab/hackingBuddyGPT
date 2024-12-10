@@ -104,6 +104,7 @@ class _WrappedUseCase:
     A WrappedUseCase should not be used directly and is an internal tool used for initialization and dependency injection
     of the actual UseCases.
     """
+
     name: str
     description: str
     use_case: Type[UseCase]
@@ -170,6 +171,7 @@ def use_case(description):
             raise IndexError(f"Use case with name {name} already exists")
         use_cases[name] = _WrappedUseCase(name, description, cls, get_class_parameters(cls))
         return cls
+
     return inner
 
 

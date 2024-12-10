@@ -5,8 +5,11 @@ from mako.template import Template
 from typing import Dict
 
 from hackingBuddyGPT.utils.logging import log_conversation, GlobalLogger
+from hackingBuddyGPT.capabilities.capability import (
+    Capability,
+    capabilities_to_simple_text_handler,
+)
 from hackingBuddyGPT.utils import llm_util
-from hackingBuddyGPT.capabilities.capability import Capability, capabilities_to_simple_text_handler
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 
@@ -19,13 +22,13 @@ class Agent(ABC):
 
     llm: OpenAIConnection = None
 
-    def init(self):
+    def init(self):  # noqa: B027
         pass
 
-    def before_run(self):
+    def before_run(self):  # noqa: B027
         pass
 
-    def after_run(self):
+    def after_run(self):  # noqa: B027
         pass
 
     # callback
@@ -83,7 +86,6 @@ class Agent(ABC):
 
 @dataclass
 class AgentWorldview(ABC):
-
     @abstractmethod
     def to_template(self):
         pass

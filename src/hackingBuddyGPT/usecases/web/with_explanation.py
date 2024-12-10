@@ -1,4 +1,3 @@
-import time
 from dataclasses import field
 from typing import List, Any, Union, Dict, Iterable, Optional
 
@@ -14,7 +13,6 @@ from hackingBuddyGPT.utils import LLMResult, tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
-
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
@@ -22,9 +20,18 @@ Context = Any
 class WebTestingWithExplanation(Agent):
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="http://localhost")
-    flag_format_description: str = parameter(desc="Description of the flag provided to the LLM", default="a string starting with 'FLAG.' and ending with '.GALF'")
-    flag_template: str = parameter(desc="The template of the flags, whereby {flag} is replaced with the flags", default="FLAG.{flag}.GALF")
-    flags: str = parameter(desc="A comma (,) separated list of flags to find", default="hostname,dir,username,rootfile,secretfile,adminpass")
+    flag_format_description: str = parameter(
+        desc="Description of the flag provided to the LLM",
+        default="a string starting with 'FLAG.' and ending with '.GALF'",
+    )
+    flag_template: str = parameter(
+        desc="The template of the flags, whereby {flag} is replaced with the flags",
+        default="FLAG.{flag}.GALF",
+    )
+    flags: str = parameter(
+        desc="A comma (,) separated list of flags to find",
+        default="hostname,dir,username,rootfile,secretfile,adminpass",
+    )
 
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})

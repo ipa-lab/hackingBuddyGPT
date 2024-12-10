@@ -1,7 +1,8 @@
-import invoke
 from dataclasses import dataclass
-from fabric import Connection
 from typing import Optional, Tuple
+
+import invoke
+from fabric import Connection
 
 from hackingBuddyGPT.utils.configurable import configurable
 

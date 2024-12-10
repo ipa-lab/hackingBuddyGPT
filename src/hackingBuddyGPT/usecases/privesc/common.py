@@ -19,7 +19,7 @@ template_state = Template(filename=str(template_dir / "update_state.txt"))
 
 @dataclass
 class Privesc(Agent):
-    system: str = ''
+    system: str = ""
     enable_explanation: bool = False
     enable_update_state: bool = False
     disable_history: bool = False
@@ -39,12 +39,12 @@ class Privesc(Agent):
             self._sliding_history = SlidingCliHistory(self.llm)
 
         self._template_params = {
-            'capabilities': self.get_capability_block(),
-            'system': self.system,
-            'hint': self.hint,
-            'conn': self.conn,
-            'update_state': self.enable_update_state,
-            'target_user': 'root'
+            "capabilities": self.get_capability_block(),
+            "system": self.system,
+            "hint": self.hint,
+            "conn": self.conn,
+            "update_state": self.enable_update_state,
+            "target_user": "root",
         }
 
         template_size = self.llm.count_tokens(template_next_cmd.source)
@@ -81,14 +81,11 @@ class Privesc(Agent):
 
     @log_conversation("Asking LLM for a new command...", start_section=True)
     def get_next_command(self) -> tuple[str, int]:
-        history = ''
+        history = ""
         if not self.disable_history:
             history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
 
-        self._template_params.update({
-            'history': history,
-            'state': self._state
-        })
+        self._template_params.update({"history": history, "state": self._state})
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)
         message_id = self.log.call_response(cmd)

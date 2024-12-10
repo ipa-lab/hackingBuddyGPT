@@ -93,7 +93,9 @@ LogTypes = Union[Run, Section, Message, MessageStreamPart, ToolCall, ToolCallStr
 
 @configurable("db_storage", "Stores the results of the experiments in a SQLite database")
 class RawDbStorage:
-    def __init__(self, connection_string: str = parameter(desc="sqlite3 database connection string for logs", default="wintermute.sqlite3")):
+    def __init__(
+        self, connection_string: str = parameter(desc="sqlite3 database connection string for logs", default="wintermute.sqlite3")
+    ):
         self.connection_string = connection_string
 
     def init(self):
@@ -107,51 +109,59 @@ class RawDbStorage:
 
     def setup_db(self):
         # create tables
-        self.cursor.execute("""CREATE TABLE IF NOT EXISTS runs (
-            id INTEGER PRIMARY KEY,
-            model text,
-            state TEXT,
-            tag TEXT,
-            started_at text,
-            stopped_at text,
-            configuration TEXT
-        )""")
-        self.cursor.execute("""CREATE TABLE IF NOT EXISTS sections (
-            run_id INTEGER,
-            id INTEGER,
-            name TEXT,
-            from_message INTEGER,
-            to_message INTEGER,
-            duration REAL,
-            PRIMARY KEY (run_id, id),
-            FOREIGN KEY (run_id) REFERENCES runs (id)
-        )""")
-        self.cursor.execute("""CREATE TABLE IF NOT EXISTS messages (
-            run_id INTEGER,
-            conversation TEXT,
-            id INTEGER,
-            version INTEGER DEFAULT 0,
-            role TEXT,
-            content TEXT,
-            duration REAL,
-            tokens_query INTEGER,
-            tokens_response INTEGER,
-            PRIMARY KEY (run_id, id),
-            FOREIGN KEY (run_id) REFERENCES runs (id)
-        )""")
-        self.cursor.execute("""CREATE TABLE IF NOT EXISTS tool_calls (
-            run_id INTEGER,
-            message_id INTEGER,
-            id TEXT,
-            version INTEGER DEFAULT 0,
-            function_name TEXT,
-            arguments TEXT,
-            state TEXT,
-            result_text TEXT,
-            duration REAL,
-            PRIMARY KEY (run_id, message_id, id),
-            FOREIGN KEY (run_id, message_id) REFERENCES messages (run_id, id)
-        )""")
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS runs (
+                id INTEGER PRIMARY KEY,
+                model text,
+                state TEXT,
+                tag TEXT,
+                started_at text,
+                stopped_at text,
+                configuration TEXT
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sections (
+                run_id INTEGER,
+                id INTEGER,
+                name TEXT,
+                from_message INTEGER,
+                to_message INTEGER,
+                duration REAL,
+                PRIMARY KEY (run_id, id),
+                FOREIGN KEY (run_id) REFERENCES runs (id)
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                run_id INTEGER,
+                conversation TEXT,
+                id INTEGER,
+                version INTEGER DEFAULT 0,
+                role TEXT,
+                content TEXT,
+                duration REAL,
+                tokens_query INTEGER,
+                tokens_response INTEGER,
+                PRIMARY KEY (run_id, id),
+                FOREIGN KEY (run_id) REFERENCES runs (id)
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tool_calls (
+                run_id INTEGER,
+                message_id INTEGER,
+                id TEXT,
+                version INTEGER DEFAULT 0,
+                function_name TEXT,
+                arguments TEXT,
+                state TEXT,
+                result_text TEXT,
+                duration REAL,
+                PRIMARY KEY (run_id, message_id, id),
+                FOREIGN KEY (run_id, message_id) REFERENCES messages (run_id, id)
+            )
+        """)
 
     def get_runs(self) -> list[Run]:
         def deserialize(row):

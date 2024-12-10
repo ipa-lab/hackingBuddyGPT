@@ -4,28 +4,44 @@ import inspect
 import os
 from dataclasses import dataclass
 from types import NoneType
-from typing import Any, Dict, TypeVar, Set, Union
+from typing import Any, Dict, Type, TypeVar, Set, Union
 
 from dotenv import load_dotenv
-
-from typing import Type
-
 
 load_dotenv()
 
 
-def parameter(*, desc: str, default=dataclasses.MISSING, init: bool = True, repr: bool = True, hash=None,
-              compare: bool = True, metadata: Dict = None, kw_only: bool = dataclasses.MISSING):
+def parameter(
+    *,
+    desc: str,
+    default=dataclasses.MISSING,
+    init: bool = True,
+    repr: bool = True,
+    hash=None,
+    compare: bool = True,
+    metadata: Dict = None,
+    kw_only: bool = dataclasses.MISSING,
+):
     if metadata is None:
         metadata = dict()
     metadata["desc"] = desc
 
-    return dataclasses.field(default=default, default_factory=dataclasses.MISSING, init=init, repr=repr, hash=hash,
-                             compare=compare, metadata=metadata, kw_only=kw_only)
+    return dataclasses.field(
+        default=default,
+        default_factory=dataclasses.MISSING,
+        init=init,
+        repr=repr,
+        hash=hash,
+        compare=compare,
+        metadata=metadata,
+        kw_only=kw_only,
+    )
 
 
 def get_default(key, default):
-    return os.getenv(key, os.getenv(key.upper(), os.getenv(key.replace(".", "_"), os.getenv(key.replace(".", "_").upper(), default))))
+    return os.getenv(
+        key, os.getenv(key.upper(), os.getenv(key.replace(".", "_"), os.getenv(key.replace(".", "_").upper(), default)))
+    )
 
 
 @dataclass
@@ -39,6 +55,7 @@ class ParameterDefinition:
     """
     A ParameterDefinition is used for any parameter that is just a simple type, which can be handled by argparse directly.
     """
+
     name: str
     type: Type
     default: Any
@@ -47,8 +64,9 @@ class ParameterDefinition:
     def parser(self, name: str, parser: argparse.ArgumentParser, parser_state: ParserState):
         default = get_default(name, self.default)
 
-        parser.add_argument(f"--{name}", type=self.type, default=default, required=default is None,
-                            help=self.description)
+        parser.add_argument(
+            f"--{name}", type=self.type, default=default, required=default is None, help=self.description
+        )
 
     def get(self, name: str, args: argparse.Namespace, parser_state: ParserState):
         return getattr(args, name)
@@ -65,6 +83,7 @@ class ComplexParameterDefinition(ParameterDefinition):
     It is important to note, that at some point, the parameter must be a simple type, so that argparse (and we) can handle
     it. So if you have recursive type definitions that you try to make configurable, this will not work.
     """
+
     parameters: ParameterDefinitions
     global_parameter: bool
     transparent: bool = False
@@ -94,6 +113,7 @@ class ComplexParameterDefinition(ParameterDefinition):
                 return instance
 
             return create()
+
         if not self.global_parameter:
             return make(name, args)
 
@@ -104,6 +124,7 @@ class ComplexParameterDefinition(ParameterDefinition):
         if self.type not in parser_state.global_configurations:
             parser_state.global_configurations[self.type] = dict()
         parser_state.global_configurations[self.type][self.name] = instance
+
         return instance
 
 
@@ -158,11 +179,21 @@ def get_parameters(fun, basename: str, fields: Dict[str, dataclasses.Field] = No
             default = None
 
         if hasattr(type, "__parameters__"):
-            params[name] = ComplexParameterDefinition(resolution_name, type, default, description, get_class_parameters(type, resolution_basename), global_parameter=getattr(type, "__global__", False), transparent=getattr(type, "__transparent__", False))
+            params[name] = ComplexParameterDefinition(
+                resolution_name,
+                type,
+                default,
+                description,
+                get_class_parameters(type, resolution_basename),
+                global_parameter=getattr(type, "__global__", False),
+                transparent=getattr(type, "__transparent__", False),
+            )
         elif type in (str, int, float, bool):
             params[name] = ParameterDefinition(resolution_name, type, default, description)
         else:
-            raise ValueError(f"Parameter {name} of {basename} must have str, int, bool, or a __parameters__ class as type, not {type}")
+            raise ValueError(
+                f"Parameter {name} of {basename} must have str, int, bool, or a __parameters__ class as type, not {type}"
+            )
 
     return params
 
@@ -185,6 +216,7 @@ def configurable(service_name: str, service_desc: str):
     which can then be used with build_parser and get_arguments to recursively prepare the argparse parser and extract the
     initialization parameters. These can then be used to initialize the class with the correct parameters.
     """
+
     def inner(cls) -> Configurable:
         cls.name = service_name
         cls.description = service_desc
@@ -231,8 +263,10 @@ def Transparent(subclass: T) -> T:
     A transparent attribute will also not have its init function called automatically, so you will need to do that on your own, as seen in the Outer init.
     The function is upper case on purpose, as it is supposed to be used in a Type context
     """
+
     class Cloned(subclass):
         __transparent__ = True
+
     Cloned.__name__ = subclass.__name__
     Cloned.__qualname__ = subclass.__qualname__
     Cloned.__module__ = subclass.__module__

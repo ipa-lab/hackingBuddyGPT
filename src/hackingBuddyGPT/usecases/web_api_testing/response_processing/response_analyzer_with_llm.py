@@ -1,12 +1,16 @@
 import json
 import re
-from typing import Dict,Any
+from typing import Any, Dict
 from unittest.mock import MagicMock
-from hackingBuddyGPT.capabilities.http_request import HTTPRequest
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
-from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 
+from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import (
+    PenTestingInformation,
+)
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+    PromptPurpose,
+)
+from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.utils import tool_message
 
 
@@ -19,7 +23,7 @@ class ResponseAnalyzerWithLLM:
         purpose (PromptPurpose): The specific purpose for analyzing the HTTP response.
     """
 
-    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler=None):
+    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
 
@@ -53,9 +57,6 @@ class ResponseAnalyzerWithLLM:
             print(f"Response: {response}")
             print("-" * 50)
 
-
-
-
     def analyze_response(self, raw_response: str, prompt_history: list) -> tuple[dict[str, Any], list]:
         """
         Parses the HTTP response, generates prompts for an LLM, and processes each step with the LLM.
@@ -72,12 +73,12 @@ class ResponseAnalyzerWithLLM:
         # Start processing the analysis steps through the LLM
         llm_responses = []
         steps_dict = self.pentesting_information.analyse_steps(full_response)
-        for purpose, steps in steps_dict.items():
+        for steps in steps_dict.values():
             response = full_response  # Reset to the full response for each purpose
             for step in steps:
                 prompt_history, response = self.process_step(step, prompt_history)
                 llm_responses.append(response)
-                print(f'Response:{response}')
+                print(f"Response:{response}")
 
         return llm_responses
 
@@ -104,14 +105,16 @@ class ResponseAnalyzerWithLLM:
         elif status_code in [500, 400, 404, 422]:
             body = body
         else:
-            print(f'Body:{body}')
-            if body != '' or body != "":
+            print(f"Body:{body}")
+            if body != "" or body != "":
                 body = json.loads(body)
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
 
-        headers = {key.strip(): value.strip() for key, value in
-                   (line.split(":", 1) for line in header_lines[1:] if ':' in line)}
+        headers = {
+            key.strip(): value.strip()
+            for key, value in (line.split(":", 1) for line in header_lines[1:] if ":" in line)
+        }
 
         match = re.match(r"HTTP/1\.1 (\d{3}) (.*)", status_line)
         status_code = int(match.group(1)) if match else None
@@ -123,7 +126,7 @@ class ResponseAnalyzerWithLLM:
         Helper function to process each analysis step with the LLM.
         """
         # Log current step
-        #print(f'Processing step: {step}')
+        # print(f'Processing step: {step}')
         prompt_history.append({"role": "system", "content": step})
 
         # Call the LLM and handle the response
@@ -141,7 +144,8 @@ class ResponseAnalyzerWithLLM:
 
         return prompt_history, result
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Example HTTP response to parse
     raw_http_response = """HTTP/1.1 404 Not Found
     Date: Fri, 16 Aug 2024 10:01:19 GMT
@@ -172,12 +176,14 @@ if __name__ == '__main__':
     {}"""
     llm_mock = MagicMock()
     capabilities = {
-        "submit_http_method": HTTPRequest('https://jsonplaceholder.typicode.com'),
-        "http_request": HTTPRequest('https://jsonplaceholder.typicode.com'),
+        "submit_http_method": HTTPRequest("https://jsonplaceholder.typicode.com"),
+        "http_request": HTTPRequest("https://jsonplaceholder.typicode.com"),
     }
 
     # Initialize the ResponseAnalyzer with a specific purpose and an LLM instance
-    response_analyzer = ResponseAnalyzerWithLLM(PromptPurpose.PARSING, llm_handler=LLMHandler(llm=llm_mock, capabilities=capabilities))
+    response_analyzer = ResponseAnalyzerWithLLM(
+        PromptPurpose.PARSING, llm_handler=LLMHandler(llm=llm_mock, capabilities=capabilities)
+    )
 
     # Generate and process LLM prompts based on the HTTP response
     results = response_analyzer.analyze_response(raw_http_response)

@@ -1,5 +1,7 @@
-import yaml
 from typing import Dict, List, Union
+
+import yaml
+
 
 class OpenAPISpecificationParser:
     """
@@ -27,7 +29,7 @@ class OpenAPISpecificationParser:
         Returns:
             Dict[str, Union[Dict, List]]: The parsed data from the YAML file.
         """
-        with open(self.filepath, 'r') as file:
+        with open(self.filepath, "r") as file:
             return yaml.safe_load(file)
 
     def _get_servers(self) -> List[str]:
@@ -37,7 +39,7 @@ class OpenAPISpecificationParser:
         Returns:
             List[str]: A list of server URLs.
         """
-        return [server['url'] for server in self.api_data.get('servers', [])]
+        return [server["url"] for server in self.api_data.get("servers", [])]
 
     def get_paths(self) -> Dict[str, Dict[str, Dict]]:
         """
@@ -47,7 +49,7 @@ class OpenAPISpecificationParser:
             Dict[str, Dict[str, Dict]]: A dictionary with API paths as keys and methods as values.
         """
         paths_info: Dict[str, Dict[str, Dict]] = {}
-        paths: Dict[str, Dict[str, Dict]] = self.api_data.get('paths', {})
+        paths: Dict[str, Dict[str, Dict]] = self.api_data.get("paths", {})
         for path, methods in paths.items():
             paths_info[path] = {method: details for method, details in methods.items()}
         return paths_info
@@ -62,15 +64,15 @@ class OpenAPISpecificationParser:
         Returns:
             Dict[str, Dict]: A dictionary with methods as keys and operation details as values.
         """
-        return self.api_data['paths'].get(path, {})
+        return self.api_data["paths"].get(path, {})
 
     def _print_api_details(self) -> None:
         """
         Prints details of the API extracted from the OpenAPI document, including title, version, servers,
         paths, and operations.
         """
-        print("API Title:", self.api_data['info']['title'])
-        print("API Version:", self.api_data['info']['version'])
+        print("API Title:", self.api_data["info"]["title"])
+        print("API Version:", self.api_data["info"]["version"])
         print("Servers:", self._get_servers())
         print("\nAvailable Paths and Operations:")
         for path, operations in self.get_paths().items():

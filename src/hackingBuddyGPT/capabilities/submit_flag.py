@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Tuple, List, Set, Callable
+from typing import Callable, Set
 
 from . import Capability
 

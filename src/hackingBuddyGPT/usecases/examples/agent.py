@@ -1,11 +1,12 @@
 import pathlib
+
 from mako.template import Template
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
-from hackingBuddyGPT.utils import SSHConnection, llm_util
-from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
 from hackingBuddyGPT.utils.logging import log_conversation
 from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
+from hackingBuddyGPT.utils import SSHConnection, llm_util
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent

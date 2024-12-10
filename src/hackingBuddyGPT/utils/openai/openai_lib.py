@@ -1,20 +1,26 @@
-import instructor
 import datetime
-from typing import Dict, Union, Iterable, Optional
+from dataclasses import dataclass
+from typing import Dict, Iterable, Optional, Union
 
-from openai.types.chat.chat_completion_chunk import ChoiceDelta
-from rich.console import Console
-from openai.types import CompletionUsage
-from openai.types.chat import ChatCompletionMessage, ChatCompletionMessageParam, ChatCompletionMessageToolCall
-from openai.types.chat.chat_completion_message_tool_call import Function
+import instructor
 import openai
 import tiktoken
 from dataclasses import dataclass
+from openai.types import CompletionUsage
+from openai.types.chat import (
+    ChatCompletionChunk,
+    ChatCompletionMessage,
+    ChatCompletionMessageParam,
+    ChatCompletionMessageToolCall,
+)
+from openai.types.chat.chat_completion_chunk import ChoiceDelta
+from openai.types.chat.chat_completion_message_tool_call import Function
+from rich.console import Console
 
-from hackingBuddyGPT.utils import LLM, configurable, LLMResult
-from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_tools
+from hackingBuddyGPT.utils import LLM, LLMResult, configurable
+from hackingBuddyGPT.utils.configurable import parameter
 
 
 @configurable("openai-lib", "OpenAI Library based connection")
@@ -30,7 +36,12 @@ class OpenAILib(LLM):
     _client: openai.OpenAI = None
 
     def init(self):
-        self._client = openai.OpenAI(api_key=self.api_key, base_url=self.api_url, timeout=self.api_timeout, max_retries=self.api_retries)
+        self._client = openai.OpenAI(
+            api_key=self.api_key,
+            base_url=self.api_url,
+            timeout=self.api_timeout,
+            max_retries=self.api_retries,
+        )
 
     @property
     def client(self) -> openai.OpenAI:
@@ -40,7 +51,7 @@ class OpenAILib(LLM):
     def instructor(self) -> instructor.Instructor:
         return instructor.from_openai(self.client)
 
-    def get_response(self, prompt, *, capabilities: Optional[Dict[str, Capability]] = None, **kwargs) -> LLMResult:
+    def get_response(self, prompt, *, capabilities: Optional[Dict[str, Capability] ] = None, **kwargs) -> LLMResult:
         """  # TODO: re-enable compatibility layer
         if isinstance(prompt, str) or hasattr(prompt, "render"):
             prompt = {"role": "user", "content": prompt}
@@ -125,10 +136,20 @@ class OpenAILib(LLM):
                     for tool_call in delta.tool_calls:
                         if len(message.tool_calls) <= tool_call.index:
                             if len(message.tool_calls) != tool_call.index:
-                                print(f"WARNING: Got a tool call with index {tool_call.index} but expected {len(message.tool_calls)}")
+                                print(
+                                    f"WARNING: Got a tool call with index {tool_call.index} but expected {len(message.tool_calls)}"
+                                )
                                 return
                             console.print(f"\n\n[bold red]TOOL CALL - {tool_call.function.name}:[/bold red]")
-                            message.tool_calls.append(ChatCompletionMessageToolCall(id=tool_call.id, function=Function(name=tool_call.function.name, arguments=tool_call.function.arguments), type="function"))
+                            message.tool_calls.append(
+                                ChatCompletionMessageToolCall(
+                                    id=tool_call.id,
+                                    function=Function(
+                                        name=tool_call.function.name, arguments=tool_call.function.arguments
+                                    ),
+                                    type="function",
+                                )
+                            )
                         console.print(tool_call.function.arguments, end="")
                         message.tool_calls[tool_call.index].function.arguments += tool_call.function.arguments
                         outputs += 1
@@ -154,10 +175,10 @@ class OpenAILib(LLM):
             message,
             str(prompt),
             message.content,
-            toc-tic,
+            toc - tic,
             usage.prompt_tokens,
             usage.completion_tokens,
-            )
+        )
 
     def encode(self, query) -> list[int]:
         return tiktoken.encoding_for_model(self.model).encode(query)

@@ -1,26 +1,25 @@
 import os.path
 from dataclasses import field
-from typing import List, Any, Dict
-import pydantic_core
+from typing import Any, Dict, List
 
+import pydantic_core
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt, Context
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
 from hackingBuddyGPT.usecases.web_api_testing.documentation.report_handler import ReportHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
+from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
-
 
 # OpenAPI specification file path
 openapi_spec_filename = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/utils/openapi_spec/openapi_spec_2024-08-16_14-14-07.yaml"
@@ -46,15 +45,15 @@ class SimpleWebAPITesting(Agent):
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     http_method_description: str = parameter(
         desc="Pattern description for expected HTTP methods in the API response",
-        default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.)."
+        default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).",
     )
     http_method_template: str = parameter(
         desc="Template used to format HTTP methods in API requests. The {method} placeholder will be replaced by actual HTTP method names.",
-        default="{method}"
+        default="{method}",
     )
     http_methods: str = parameter(
         desc="Comma-separated list of HTTP methods expected to be used in the API response.",
-        default="GET,POST,PUT,DELETE"
+        default="GET,POST,PUT,DELETE",
     )
 
     _prompt_history: Prompt = field(default_factory=list)
@@ -90,19 +89,20 @@ class SimpleWebAPITesting(Agent):
                 f"and then devise and execute potential exploits. Be diligent in documenting your findings as you navigate through the APIs. "
                 f"Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves. "
                 f"Remember, if you encounter an HTTP method ({self.http_method_description}), promptly submit it as it is of utmost importance."
-            )
+            ),
         }
         self._prompt_history.append(initial_prompt)
         handlers = (self._llm_handler, self._response_handler)
-        schemas: Dict[str, Any] = self._openapi_specification["components"]["schemas"] if os.path.exists(
-            openapi_spec_filename) else {}
+        schemas: Dict[str, Any] = (
+            self._openapi_specification["components"]["schemas"] if os.path.exists(openapi_spec_filename) else {}
+        )
         self.prompt_engineer: PromptEngineer = PromptEngineer(
             strategy=PromptStrategy.CHAIN_OF_THOUGHT,
             history=self._prompt_history,
             handlers=handlers,
             context=PromptContext.PENTESTING,
             rest_api=self.host,
-            schemas=schemas
+            schemas=schemas,
         )
 
     def all_http_methods_found(self) -> None:
@@ -110,7 +110,7 @@ class SimpleWebAPITesting(Agent):
         Handles the event when all HTTP methods are found. Displays a congratulatory message
         and sets the _all_http_methods_found flag to True.
         """
-        self._log.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
+        self.log.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
         self._all_http_methods_found = True
 
     def _setup_capabilities(self) -> None:
@@ -119,13 +119,14 @@ class SimpleWebAPITesting(Agent):
         note recording capabilities, and HTTP method submission capabilities based on the provided
         configuration.
         """
-        methods_set: set[str] = {self.http_method_template.format(method=method) for method in
-                                 self.http_methods.split(",")}
+        methods_set: set[str] = {
+            self.http_method_template.format(method=method) for method in self.http_methods.split(",")
+        }
         notes: List[str] = self._context["notes"]
         self._capabilities = {
             "submit_http_method": HTTPRequest(self.host),
             "http_request": HTTPRequest(self.host),
-            "record_note": RecordNote(notes)
+            "record_note": RecordNote(notes),
         }
 
     def perform_round(self, turn: int) -> None:
@@ -155,18 +156,18 @@ class SimpleWebAPITesting(Agent):
         message = completion.choices[0].message
         tool_call_id: str = message.tool_calls[0].id
         command: str = pydantic_core.to_json(response).decode()
-        self._log.console.print(Panel(command, title="assistant"))
+        self.log.console.print(Panel(command, title="assistant"))
         self._prompt_history.append(message)
 
-        with self._log.console.status("[bold green]Executing that command..."):
+        with self.log.console.status("[bold green]Executing that command..."):
             result: Any = response.execute()
-            self._log.console.print(Panel(result[:30], title="tool"))
+            self.log.console.print(Panel(result[:30], title="tool"))
             if not isinstance(result, str):
-                endpoint: str = str(response.action.path).split('/')[1]
+                endpoint: str = str(response.action.path).split("/")[1]
                 self._report_handler.write_endpoint_to_report(endpoint)
             self._prompt_history.append(tool_message(str(result), tool_call_id))
 
-            analysis = self._response_handler.evaluate_result(result=result, prompt_history= self._prompt_history)
+            analysis = self._response_handler.evaluate_result(result=result, prompt_history=self._prompt_history)
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
             # self._prompt_history.append(tool_message(str(analysis), tool_call_id))
 
@@ -179,4 +180,5 @@ class SimpleWebAPITestingUseCase(AutonomousAgentUseCase[SimpleWebAPITesting]):
     A use case for the SimpleWebAPITesting agent, encapsulating the setup and execution
     of the web API testing scenario.
     """
+
     pass

@@ -1,14 +1,15 @@
 import json
 
+from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc
-from hackingBuddyGPT.usecases.base import use_case, AutonomousAgentUseCase
+
 
 @use_case("Linux Privilege Escalation using hints from a hint file initial guidance")
 class ExPrivEscLinuxHintFileUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
     hints: str = None
 
-    def init(self):
-        super().init()
+    def init(self, configuration):
+        super().init(configuration)
         self.agent.hint = self.read_hint()
 
     # simple helper that reads the hints file and returns the hint
@@ -20,7 +21,7 @@ class ExPrivEscLinuxHintFileUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
                 if self.agent.conn.hostname in hints:
                     return hints[self.agent.conn.hostname]
         except FileNotFoundError:
-            self._log.console.print("[yellow]Hint file not found")
+            self.log.console.print("[yellow]Hint file not found")
         except Exception as e:
-            self._log.console.print("[yellow]Hint file could not loaded:", str(e))
+            self.log.console.print("[yellow]Hint file could not loaded:", str(e))
         return ""

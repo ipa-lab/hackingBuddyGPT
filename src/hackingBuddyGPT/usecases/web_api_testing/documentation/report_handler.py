@@ -1,8 +1,9 @@
 import os
-from datetime import datetime
 import uuid
-from typing import List
+from datetime import datetime
 from enum import Enum
+from typing import List
+
 
 class ReportHandler:
     """
@@ -25,13 +26,17 @@ class ReportHandler:
         if not os.path.exists(self.file_path):
             os.mkdir(self.file_path)
 
-        self.report_name: str = os.path.join(self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt")
+        self.report_name: str = os.path.join(
+            self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
+        )
         try:
             self.report = open(self.report_name, "x")
         except FileExistsError:
             # Retry with a different name using a UUID to ensure uniqueness
-            self.report_name = os.path.join(self.file_path,
-                                            f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{uuid.uuid4().hex}.txt")
+            self.report_name = os.path.join(
+                self.file_path,
+                f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{uuid.uuid4().hex}.txt",
+            )
             self.report = open(self.report_name, "x")
 
     def write_endpoint_to_report(self, endpoint: str) -> None:
@@ -41,8 +46,8 @@ class ReportHandler:
         Args:
             endpoint (str): The endpoint information to be recorded in the report.
         """
-        with open(self.report_name, 'a') as report:
-            report.write(f'{endpoint}\n')
+        with open(self.report_name, "a") as report:
+            report.write(f"{endpoint}\n")
 
     def write_analysis_to_report(self, analysis: List[str], purpose: Enum) -> None:
         """
@@ -52,8 +57,8 @@ class ReportHandler:
             analysis (List[str]): The analysis data to be recorded.
             purpose (Enum): An enumeration that describes the purpose of the analysis.
         """
-        with open(self.report_name, 'a') as report:
-            report.write(f'{purpose.name}:\n')
+        with open(self.report_name, "a") as report:
+            report.write(f"{purpose.name}:\n")
             for item in analysis:
                 for line in item.split("\n"):
                     if "note recorded" in line:

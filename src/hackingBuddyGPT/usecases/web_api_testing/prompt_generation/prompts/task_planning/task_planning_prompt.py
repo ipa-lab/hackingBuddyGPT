@@ -1,10 +1,11 @@
-from abc import ABC, abstractmethod
-from typing import Optional
-
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, \
-    PromptContext, PlanningType
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts import BasicPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+    PlanningType,
+    PromptContext,
+    PromptStrategy,
+)
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts import (
+    BasicPrompt,
+)
 
 
 class TaskPlanningPrompt(BasicPrompt):
@@ -30,7 +31,9 @@ class TaskPlanningPrompt(BasicPrompt):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
             strategy (PromptStrategy): The task planning strategy used for prompt generation.
         """
-        super().__init__(context=context, planning_type=PlanningType.TASK_PLANNING, prompt_helper=prompt_helper,
-                         strategy=strategy)
-
-
+        super().__init__(
+            context=context,
+            planning_type=PlanningType.TASK_PLANNING,
+            prompt_helper=prompt_helper,
+            strategy=strategy,
+        )

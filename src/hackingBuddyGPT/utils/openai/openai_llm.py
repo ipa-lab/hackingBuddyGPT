@@ -1,11 +1,13 @@
-import requests
-import tiktoken
 import time
-
+import datetime
 from dataclasses import dataclass
 
+import requests
+import tiktoken
+
 from hackingBuddyGPT.utils.configurable import configurable, parameter
-from hackingBuddyGPT.utils.llm_util import LLMResult, LLM
+from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
+
 
 @configurable("openai-compatible-llm-api", "OpenAI-compatible LLM API")
 @dataclass
@@ -17,9 +19,12 @@ class OpenAIConnection(LLM):
     If you really must use it, you can import it directly from the utils.openai.openai_llm module, which will later on
     show you, that you did not specialize yet.
     """
+
     api_key: str = parameter(desc="OpenAI API Key")
     model: str = parameter(desc="OpenAI model name")
-    context_size: int = parameter(desc="Maximum context size for the model, only used internally for things like trimming to the context size")
+    context_size: int = parameter(
+        desc="Maximum context size for the model, only used internally for things like trimming to the context size"
+    )
     api_url: str = parameter(desc="URL of the OpenAI API", default="https://api.openai.com")
     api_path: str = parameter(desc="Path to the OpenAI API", default="/v1/chat/completions")
     api_timeout: int = parameter(desc="Timeout for the API request", default=240)
@@ -34,15 +39,16 @@ class OpenAIConnection(LLM):
             prompt = prompt.render(**kwargs)
 
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        data = {'model': self.model, 'messages': [{'role': 'user', 'content': prompt}]}
+        data = {"model": self.model, "messages": [{"role": "user", "content": prompt}]}
 
         try:
-            tic = time.perf_counter()
+            tic = datetime.datetime.now()
             response = requests.post(f'{self.api_url}{self.api_path}', headers=headers, json=data, timeout=self.api_timeout)
+
             if response.status_code == 429:
                 print(f"[RestAPI-Connector] running into rate-limits, waiting for {self.api_backoff} seconds")
                 time.sleep(self.api_backoff)
-                return self.get_response(prompt, retry=retry+1)
+                return self.get_response(prompt, retry=retry + 1)
 
             if response.status_code != 200:
                 raise Exception(f"Error from OpenAI Gateway ({response.status_code}")
@@ -50,26 +56,26 @@ class OpenAIConnection(LLM):
         except requests.exceptions.ConnectionError:
             print("Connection error! Retrying in 5 seconds..")
             time.sleep(5)
-            return self.get_response(prompt, retry=retry+1)
+            return self.get_response(prompt, retry=retry + 1)
 
         except requests.exceptions.Timeout:
             print("Timeout while contacting LLM REST endpoint")
-            return self.get_response(prompt, retry=retry+1)
+            return self.get_response(prompt, retry=retry + 1)
 
         # now extract the JSON status message
         # TODO: error handling..
-        toc = time.perf_counter()
         response = response.json()
-        result = response['choices'][0]['message']['content']
-        tok_query = response['usage']['prompt_tokens']
-        tok_res = response['usage']['completion_tokens']
+        result = response["choices"][0]["message"]["content"]
+        tok_query = response["usage"]["prompt_tokens"]
+        tok_res = response["usage"]["completion_tokens"]
+        duration = datetime.datetime.now() - tic
 
-        return LLMResult(result, prompt, result, toc - tic, tok_query, tok_res)
+        return LLMResult(result, prompt, result, duration, tok_query, tok_res)
 
     def encode(self, query) -> list[int]:
         # I know this is crappy for all non-openAI models but sadly this
         # has to be good enough for now
-        if self.model.startswith("gpt-"):
+        if self.model.startswith("gpt-") and not self.model.startswith("gpt-4o"):
             encoding = tiktoken.encoding_for_model(self.model)
         else:
             encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")

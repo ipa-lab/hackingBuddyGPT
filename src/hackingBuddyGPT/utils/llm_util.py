@@ -1,19 +1,27 @@
 import abc
+import datetime
 import re
 import typing
 from dataclasses import dataclass
 
-from openai.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam, ChatCompletionToolMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionFunctionMessageParam
+from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionFunctionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionToolMessageParam,
+    ChatCompletionUserMessageParam,
+)
 
 SAFETY_MARGIN = 128
 STEP_CUT_TOKENS = 128
+
 
 @dataclass
 class LLMResult:
     result: typing.Any
     prompt: str
     answer: str
-    duration: float = 0
+    duration: datetime.timedelta = datetime.timedelta(0)
     tokens_query: int = 0
     tokens_response: int = 0
 
@@ -92,6 +100,7 @@ def cmd_output_fixer(cmd: str) -> str:
 
     return cmd
 
+
 # this is ugly, but basically we only have an approximation how many tokens
 # we are currently using. So we cannot just cut down to the desired size
 # what we're doing is:
@@ -109,7 +118,7 @@ def trim_result_front(model: LLM, target_size: int, result: str) -> str:
     TARGET_SIZE_FACTOR = 3
     if cur_size > TARGET_SIZE_FACTOR * target_size:
         print(f"big step trim-down from {cur_size} to {2 * target_size}")
-        result = result[:TARGET_SIZE_FACTOR * target_size]
+        result = result[: TARGET_SIZE_FACTOR * target_size]
         cur_size = model.count_tokens(result)
 
     while cur_size > target_size:

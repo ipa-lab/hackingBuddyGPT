@@ -1,5 +1,4 @@
 import abc
-import enum
 import inspect
 from typing import Any, Callable, Dict, Iterable, Type, Union
 

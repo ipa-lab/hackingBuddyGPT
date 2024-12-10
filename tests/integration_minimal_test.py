@@ -1,5 +1,6 @@
 from typing import Tuple
 
+from hackingBuddyGPT.utils.logging import Logger
 from hackingBuddyGPT.usecases.examples.agent import (
     ExPrivEscLinux,
     ExPrivEscLinuxUseCase,
@@ -80,6 +81,11 @@ def test_linuxprivesc():
 
     log_db.init()
 
+    log = Logger(
+        log_db=log_db,
+        console=console,
+        tag="integration_test_linuxprivesc",
+    )
     priv_esc = LinuxPrivescUseCase(
         agent=LinuxPrivesc(
             conn=conn,
@@ -87,14 +93,13 @@ def test_linuxprivesc():
             disable_history=False,
             hint="",
             llm=llm,
+            log=log,
         ),
-        log_db=log_db,
-        console=console,
-        tag="integration_test_linuxprivesc",
+        log=log,
         max_turns=len(llm.responses),
     )
 
-    priv_esc.init()
+    priv_esc.init({})
     result = priv_esc.run()
     assert result is True
 
@@ -107,15 +112,18 @@ def test_minimal_agent():
 
     log_db.init()
 
-    priv_esc = ExPrivEscLinuxUseCase(
-        agent=ExPrivEscLinux(conn=conn, llm=llm),
+    log = Logger(
         log_db=log_db,
         console=console,
         tag="integration_test_minimallinuxprivesc",
-        max_turns=len(llm.responses),
+    )
+    priv_esc = ExPrivEscLinuxUseCase(
+        agent=ExPrivEscLinux(conn=conn, llm=llm, log=log),
+        log=log,
+        max_turns=len(llm.responses)
     )
 
-    priv_esc.init()
+    priv_esc.init({})
     result = priv_esc.run()
     assert result is True
 
@@ -128,14 +136,17 @@ def test_minimal_agent_state():
 
     log_db.init()
 
-    priv_esc = ExPrivEscLinuxTemplatedUseCase(
-        agent=ExPrivEscLinuxTemplated(conn=conn, llm=llm),
+    log = Logger(
         log_db=log_db,
         console=console,
         tag="integration_test_linuxprivesc",
-        max_turns=len(llm.responses),
+    )
+    priv_esc = ExPrivEscLinuxTemplatedUseCase(
+        agent=ExPrivEscLinuxTemplated(conn=conn, llm=llm, log=log),
+        log=log,
+        max_turns=len(llm.responses)
     )
 
-    priv_esc.init()
+    priv_esc.init({})
     result = priv_esc.run()
     assert result is True

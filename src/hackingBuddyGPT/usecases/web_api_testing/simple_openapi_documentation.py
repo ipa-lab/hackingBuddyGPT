@@ -163,8 +163,8 @@ class SimpleWebAPIDocumentation(Agent):
         """
         prompt = self.prompt_engineer.generate_prompt(turn, move_type)
         response, completion = self.llm_handler.call_llm(prompt)
-        self._log, self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
-            completion, response, self._log, self._prompt_history, self.prompt_engineer
+        self.log, self._prompt_history, self.prompt_engineer = self.documentation_handler.document_response(
+            completion, response, self.log, self._prompt_history, self.prompt_engineer
         )
 
 

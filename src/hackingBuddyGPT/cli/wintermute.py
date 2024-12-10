@@ -11,8 +11,9 @@ def main():
         use_case.build_parser(subparser.add_parser(name=name, help=use_case.description))
 
     parsed = parser.parse_args(sys.argv[1:])
+    configuration = {k: v for k, v in vars(parsed).items() if k not in ("use_case", "parser_state")}
     instance = parsed.use_case(parsed)
-    instance.init()
+    instance.init(configuration=configuration)
     instance.run()
 
 

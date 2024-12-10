@@ -12,7 +12,7 @@ If you want to use hackingBuddyGPT and need help selecting the best LLM for your
 
 ## hackingBuddyGPT in the News
 
-- **upcoming** 2024-11-20: [Manuel Reinsperger](https://www.github.com/neverbolt) will present hackingBuddyGPT at the [European Symposium on Security and Artificial Intelligence (ESSAI)](https://essai-conference.eu/) 
+- 2024-11-20: [Manuel Reinsperger](https://www.github.com/neverbolt) presented hackingBuddyGPT at the [European Symposium on Security and Artificial Intelligence (ESSAI)](https://essai-conference.eu/) 
 - 2024-07-26: The [GitHub Accelerator Showcase](https://github.blog/open-source/maintainers/github-accelerator-showcase-celebrating-our-second-cohort-and-whats-next/) features hackingBuddyGPT
 - 2024-07-24: [Juergen](https://github.com/citostyle) speaks at [Open Source + mezcal night @ GitHub HQ](https://lu.ma/bx120myg)
 - 2024-05-23: hackingBuddyGPT is part of [GitHub Accelerator 2024](https://github.blog/news-insights/company-news/2024-github-accelerator-meet-the-11-projects-shaping-open-source-ai/)
@@ -82,38 +82,38 @@ template_next_cmd = Template(filename=str(template_dir / "next_cmd.txt"))
 
 
 class MinimalLinuxPrivesc(Agent):
-
     conn: SSHConnection = None
+
     _sliding_history: SlidingCliHistory = None
+    _max_history_size: int = 0
 
     def init(self):
         super().init()
+
         self._sliding_history = SlidingCliHistory(self.llm)
+        self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(template_next_cmd.source)
+
         self.add_capability(SSHRunCommand(conn=self.conn), default=True)
         self.add_capability(SSHTestCredential(conn=self.conn))
-        self._template_size = self.llm.count_tokens(template_next_cmd.source)
 
-    def perform_round(self, turn: int) -> bool:
-        got_root: bool = False
+    @log_conversation("Asking LLM for a new command...")
+    def perform_round(self, turn: int, log: Logger) -> bool:
+        # get as much history as fits into the target context size
+        history = self._sliding_history.get_history(self._max_history_size)
 
-        with self._log.console.status("[bold green]Asking LLM for a new command..."):
-            # get as much history as fits into the target context size
-            history = self._sliding_history.get_history(self.llm.context_size - llm_util.SAFETY_MARGIN - self._template_size)
+        # get the next command from the LLM
+        answer = self.llm.get_response(template_next_cmd, capabilities=self.get_capability_block(), history=history, conn=self.conn)
+        message_id = log.call_response(answer)
 
-            # get the next command from the LLM
-            answer = self.llm.get_response(template_next_cmd, capabilities=self.get_capability_block(), history=history, conn=self.conn)
-            cmd = llm_util.cmd_output_fixer(answer.result)
+        # clean the command, load and execute it
+        cmd = llm_util.cmd_output_fixer(answer.result)
+        capability, arguments = cmd.split(" ", 1)
+        result, got_root = self.run_capability(message_id, "0", capability, arguments, calling_mode=CapabilityCallingMode.Direct, log=log)
 
-        with self._log.console.status("[bold green]Executing that command..."):
-            self._log.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-            result, got_root = self.get_capability(cmd.split(" ", 1)[0])(cmd)
-
-        # log and output the command and its result
-        self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
+        # store the results in our local history
         self._sliding_history.add_command(cmd, result)
-        self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
 
-        # if we got root, we can stop the loop
+        # signal if we were successful in our task
         return got_root
 
 
@@ -305,6 +305,22 @@ $ pip install '.[testing]'
 Mac, Docker Desktop and Gemini-OpenAI-Proxy:
 
 * See https://github.com/ipa-lab/hackingBuddyGPT/blob/main/MAC.md
+
+## Beta Features
+
+### Viewer
+
+The viewer is a simple web-based tool to view the results of hackingBuddyGPT runs. It is currently in beta and can be started with:
+
+```bash
+$ hackingBuddyGPT Viewer
+```
+
+This will start a webserver on `http://localhost:4444` that can be accessed with a web browser.
+
+To log to this central viewer, you currently need to change the `GlobalLogger` definition in [./src/hackingBuddyGPT/utils/logging.py](src/hackingBuddyGPT/utils/logging.py) to `GlobalRemoteLogger`.
+
+This feature is not fully tested yet and therefore is not recommended to be exposed to the internet!
 
 ## Publications about hackingBuddyGPT
 

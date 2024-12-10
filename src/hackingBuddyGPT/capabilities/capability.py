@@ -38,14 +38,14 @@ class Capability(abc.ABC):
     def __call__(self, *args, **kwargs):
         """
         The actual execution of a capability, please make sure, that the parameters and return type of your
-        implementation are well typed, as this will make it easier to support full function calling soon.
+        implementation are well typed, as this is used to properly support function calling.
         """
         pass
 
     def to_model(self) -> BaseModel:
         """
         Converts the parameters of the `__call__` function of the capability to a pydantic model, that can be used to
-        interface with an LLM using eg instructor or the openAI function calling API.
+        interface with an LLM using eg the openAI function calling API.
         The model will have the same name as the capability class and will have the same fields as the `__call__`,
         the `__call__` method can then be accessed by calling the `execute` method of the model.
         """

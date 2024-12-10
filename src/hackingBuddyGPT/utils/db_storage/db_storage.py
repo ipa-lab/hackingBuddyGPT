@@ -1,12 +1,100 @@
+from dataclasses import dataclass, field
+from dataclasses_json import config, dataclass_json
+import datetime
 import sqlite3
+from typing import Literal, Optional, Union
 
-from hackingBuddyGPT.utils.configurable import configurable, parameter
+from hackingBuddyGPT.utils.configurable import Global, configurable, parameter
+
+
+timedelta_metadata = config(encoder=lambda td: td.total_seconds(), decoder=lambda seconds: datetime.timedelta(seconds=seconds))
+datetime_metadata = config(encoder=lambda dt: dt.isoformat(), decoder=lambda iso: datetime.datetime.fromisoformat(iso))
+optional_datetime_metadata = config(encoder=lambda dt: dt.isoformat() if dt else None, decoder=lambda iso: datetime.datetime.fromisoformat(iso) if iso else None)
+
+
+StreamAction = Literal["append"]
+
+
+@dataclass_json
+@dataclass
+class Run:
+    id: int
+    model: str
+    state: str
+    tag: str
+    started_at: datetime.datetime = field(metadata=datetime_metadata)
+    stopped_at: Optional[datetime.datetime] = field(metadata=optional_datetime_metadata)
+    configuration: str
+
+
+@dataclass_json
+@dataclass
+class Section:
+    run_id: int
+    id: int
+    name: str
+    from_message: int
+    to_message: int
+    duration: datetime.timedelta = field(metadata=timedelta_metadata)
+
+
+@dataclass_json
+@dataclass
+class Message:
+    run_id: int
+    id: int
+    version: int
+    conversation: str
+    role: str
+    content: str
+    duration: datetime.timedelta = field(metadata=timedelta_metadata)
+    tokens_query: int
+    tokens_response: int
+
+
+@dataclass_json
+@dataclass
+class MessageStreamPart:
+    id: int
+    run_id: int
+    message_id: int
+    action: StreamAction
+    content: str
+
+
+@dataclass_json
+@dataclass
+class ToolCall:
+    run_id: int
+    message_id: int
+    id: str
+    version: int
+    function_name: str
+    arguments: str
+    state: str
+    result_text: str
+    duration: datetime.timedelta = field(metadata=timedelta_metadata)
+
+
+@dataclass_json
+@dataclass
+class ToolCallStreamPart:
+    id: int
+    run_id: int
+    message_id: int
+    tool_call_id: str
+    field: Literal["arguments", "result"]
+    action: StreamAction
+    content: str
+
+
+LogTypes = Union[Run, Section, Message, MessageStreamPart, ToolCall, ToolCallStreamPart]
 
 
 @configurable("db_storage", "Stores the results of the experiments in a SQLite database")
-class DbStorage:
+class RawDbStorage:
     def __init__(
-        self, connection_string: str = parameter(desc="sqlite3 database connection string for logs", default=":memory:")
+        self, connection_string: str = parameter(desc="sqlite3 database connection string for logs", default="wintermute.sqlite3")
     ):
         self.connection_string = connection_string
 
@@ -15,20 +103,9 @@ class DbStorage:
         self.setup_db()
 
     def connect(self):
-        self.db = sqlite3.connect(self.connection_string)
+        self.db = sqlite3.connect(self.connection_string, isolation_level=None)
+        self.db.row_factory = sqlite3.Row
         self.cursor = self.db.cursor()
-
-    def insert_or_select_cmd(self, name: str) -> int:
-        results = self.cursor.execute("SELECT id, name FROM commands WHERE name = ?", (name,)).fetchall()
-
-        if len(results) == 0:
-            self.cursor.execute("INSERT INTO commands (name) VALUES (?)", (name,))
-            return self.cursor.lastrowid
-        elif len(results) == 1:
-            return results[0][0]
-        else:
-            print("this should not be happening: " + str(results))
-            return -1
 
     def setup_db(self):
         # create tables
@@ -40,228 +117,175 @@ class DbStorage:
                 tag TEXT,
                 started_at text,
                 stopped_at text,
-                rounds INTEGER,
                 configuration TEXT
             )
         """)
         self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS commands (
-                id INTEGER PRIMARY KEY,
-                name string unique
-            )
-        """)
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS queries (
+            CREATE TABLE IF NOT EXISTS sections (
                 run_id INTEGER,
-                round INTEGER,
-                cmd_id INTEGER,
-                query TEXT,
-                response TEXT,
+                id INTEGER,
+                name TEXT,
+                from_message INTEGER,
+                to_message INTEGER,
                 duration REAL,
-                tokens_query INTEGER,
-                tokens_response INTEGER,
-                prompt TEXT,
-                answer TEXT
+                PRIMARY KEY (run_id, id),
+                FOREIGN KEY (run_id) REFERENCES runs (id)
             )
         """)
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 run_id INTEGER,
-                message_id INTEGER,
+                conversation TEXT,
+                id INTEGER,
+                version INTEGER DEFAULT 0,
                 role TEXT,
                 content TEXT,
                 duration REAL,
                 tokens_query INTEGER,
-                tokens_response INTEGER
+                tokens_response INTEGER,
+                PRIMARY KEY (run_id, id),
+                FOREIGN KEY (run_id) REFERENCES runs (id)
             )
         """)
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS tool_calls (
                 run_id INTEGER,
                 message_id INTEGER,
-                tool_call_id INTEGER,
+                id TEXT,
+                version INTEGER DEFAULT 0,
                 function_name TEXT,
                 arguments TEXT,
+                state TEXT,
                 result_text TEXT,
-                duration REAL
+                duration REAL,
+                PRIMARY KEY (run_id, message_id, id),
+                FOREIGN KEY (run_id, message_id) REFERENCES messages (run_id, id)
             )
         """)
 
-        # insert commands
-        self.query_cmd_id = self.insert_or_select_cmd("query_cmd")
-        self.analyze_response_id = self.insert_or_select_cmd("analyze_response")
-        self.state_update_id = self.insert_or_select_cmd("update_state")
+    def get_runs(self) -> list[Run]:
+        def deserialize(row):
+            row = dict(row)
+            row["started_at"] = datetime.datetime.fromisoformat(row["started_at"])
+            row["stopped_at"] = datetime.datetime.fromisoformat(row["stopped_at"]) if row["stopped_at"] else None
+            return row
 
-    def create_new_run(self, model, tag):
+        self.cursor.execute("SELECT * FROM runs")
+        return [Run(**deserialize(row)) for row in self.cursor.fetchall()]
+
+    def get_sections_by_run(self, run_id: int) -> list[Section]:
+        def deserialize(row):
+            row = dict(row)
+            row["duration"] = datetime.timedelta(seconds=row["duration"])
+            return row
+
+        self.cursor.execute("SELECT * FROM sections WHERE run_id = ?", (run_id,))
+        return [Section(**deserialize(row)) for row in self.cursor.fetchall()]
+
+    def get_messages_by_run(self, run_id: int) -> list[Message]:
+        def deserialize(row):
+            row = dict(row)
+            row["duration"] = datetime.timedelta(seconds=row["duration"])
+            return row
+
+        self.cursor.execute("SELECT * FROM messages WHERE run_id = ?", (run_id,))
+        return [Message(**deserialize(row)) for row in self.cursor.fetchall()]
+
+    def get_tool_calls_by_run(self, run_id: int) -> list[ToolCall]:
+        def deserialize(row):
+            row = dict(row)
+            row["duration"] = datetime.timedelta(seconds=row["duration"])
+            return row
+
+        self.cursor.execute("SELECT * FROM tool_calls WHERE run_id = ?", (run_id,))
+        return [ToolCall(**deserialize(row)) for row in self.cursor.fetchall()]
+
+    def create_run(self, model: str, tag: str, started_at: datetime.datetime, configuration: str) -> int:
         self.cursor.execute(
-            "INSERT INTO runs (model, state, tag, started_at) VALUES (?,  ?, ?, datetime('now'))",
-            (model, "in progress", tag),
+            "INSERT INTO runs (model, state, tag, started_at, configuration) VALUES (?, ?, ?, ?, ?)",
+            (model, "in progress", tag, started_at, configuration),
         )
         return self.cursor.lastrowid
 
-    def add_log_query(self, run_id, round, cmd, result, answer):
+    def add_message(self, run_id: int, message_id: int, conversation: Optional[str], role: str, content: str, tokens_query: int, tokens_response: int, duration: datetime.timedelta):
         self.cursor.execute(
-            "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                run_id,
-                round,
-                self.query_cmd_id,
-                cmd,
-                result,
-                answer.duration,
-                answer.tokens_query,
-                answer.tokens_response,
-                answer.prompt,
-                answer.answer,
-            ),
+            "INSERT INTO messages (run_id, conversation, id, role, content, tokens_query, tokens_response, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (run_id, conversation, message_id, role, content, tokens_query, tokens_response, duration.total_seconds())
         )
 
-    def add_log_analyze_response(self, run_id, round, cmd, result, answer):
+    def add_or_update_message(self, run_id: int, message_id: int, conversation: Optional[str], role: str, content: str, tokens_query: int, tokens_response: int, duration: datetime.timedelta):
         self.cursor.execute(
-            "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                run_id,
-                round,
-                self.analyze_response_id,
-                cmd,
-                result,
-                answer.duration,
-                answer.tokens_query,
-                answer.tokens_response,
-                answer.prompt,
-                answer.answer,
-            ),
+            "SELECT COUNT(*) FROM messages WHERE run_id = ? AND id = ?",
+            (run_id, message_id),
         )
-
-    def add_log_update_state(self, run_id, round, cmd, result, answer):
-        if answer is not None:
+        if self.cursor.fetchone()[0] == 0:
             self.cursor.execute(
-                "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    run_id,
-                    round,
-                    self.state_update_id,
-                    cmd,
-                    result,
-                    answer.duration,
-                    answer.tokens_query,
-                    answer.tokens_response,
-                    answer.prompt,
-                    answer.answer,
-                ),
+                "INSERT INTO messages (run_id, conversation, id, role, content, tokens_query, tokens_response, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (run_id, conversation, message_id, role, content, tokens_query, tokens_response, duration.total_seconds()),
+            )
+        else:
+            if len(content) > 0:
+                self.cursor.execute(
+                    "UPDATE messages SET conversation = ?, role = ?, content = ?, tokens_query = ?, tokens_response = ?, duration = ? WHERE run_id = ? AND id = ?",
+                    (conversation, role, content, tokens_query, tokens_response, duration.total_seconds(), run_id, message_id),
+                )
+            else:
+                self.cursor.execute(
+                    "UPDATE messages SET conversation = ?, role = ?, tokens_query = ?, tokens_response = ?, duration = ? WHERE run_id = ? AND id = ?",
+                    (conversation, role, tokens_query, tokens_response, duration.total_seconds(), run_id, message_id),
+                )
+
+    def add_section(self, run_id: int, section_id: int, name: str, from_message: int, to_message: int, duration: datetime.timedelta):
+        self.cursor.execute(
+            "INSERT OR REPLACE INTO sections (run_id, id, name, from_message, to_message, duration) VALUES (?, ?, ?, ?, ?, ?)",
+            (run_id, section_id, name, from_message, to_message, duration.total_seconds())
+        )
+
+    def add_tool_call(self, run_id: int, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration: datetime.timedelta):
+        self.cursor.execute(
+            "INSERT INTO tool_calls (run_id, message_id, id, function_name, arguments, result_text, duration) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration.total_seconds()),
+        )
+
+    def handle_message_update(self, run_id: int, message_id: int, action: StreamAction, content: str):
+        if action != "append":
+            raise ValueError("unsupported action" + action)
+        self.cursor.execute(
+            "UPDATE messages SET content = content || ?, version = version + 1 WHERE run_id = ? AND id = ?",
+            (content, run_id, message_id),
+        )
+
+    def finalize_message(self, run_id: int, message_id: int, tokens_query: int, tokens_response: int, duration: datetime.timedelta, overwrite_finished_message: Optional[str] = None):
+        if overwrite_finished_message:
+            self.cursor.execute(
+                "UPDATE messages SET content = ?, tokens_query = ?, tokens_response = ?, duration = ? WHERE run_id = ? AND id = ?",
+                (overwrite_finished_message, tokens_query, tokens_response, duration.total_seconds(), run_id, message_id),
             )
         else:
             self.cursor.execute(
-                "INSERT INTO queries (run_id, round, cmd_id, query, response, duration, tokens_query, tokens_response, prompt, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (run_id, round, self.state_update_id, cmd, result, 0, 0, 0, "", ""),
+                "UPDATE messages SET tokens_query = ?, tokens_response = ?, duration = ? WHERE run_id = ? AND id = ?",
+                (tokens_query, tokens_response, duration.total_seconds(), run_id, message_id),
             )
 
-    def add_log_message(self, run_id: int, role: str, content: str, tokens_query: int, tokens_response: int, duration):
+    def update_run(self, run_id: int, model: str, state: str, tag: str, started_at: datetime.datetime, stopped_at: datetime.datetime, configuration: str):
         self.cursor.execute(
-            "INSERT INTO messages (run_id, message_id, role, content, tokens_query, tokens_response, duration) VALUES (?, (SELECT COALESCE(MAX(message_id), 0) + 1 FROM messages WHERE run_id = ?), ?, ?, ?, ?, ?)",
-            (run_id, run_id, role, content, tokens_query, tokens_response, duration),
-        )
-        self.cursor.execute("SELECT MAX(message_id) FROM messages WHERE run_id = ?", (run_id,))
-        return self.cursor.fetchone()[0]
-
-    def add_log_tool_call(
-        self,
-        run_id: int,
-        message_id: int,
-        tool_call_id: str,
-        function_name: str,
-        arguments: str,
-        result_text: str,
-        duration,
-    ):
-        self.cursor.execute(
-            "INSERT INTO tool_calls (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration),
+            "UPDATE runs SET model = ?, state = ?, tag = ?, started_at = ?, stopped_at = ?, configuration = ? WHERE id = ?",
+            (model, state, tag, started_at, stopped_at, configuration, run_id),
         )
 
-    def get_round_data(self, run_id, round, explanation, status_update):
-        rows = self.cursor.execute(
-            "select cmd_id, query, response, duration, tokens_query, tokens_response from queries where run_id = ? and round = ?",
-            (run_id, round),
-        ).fetchall()
-        if len(rows) == 0:
-            return []
-
-        for row in rows:
-            if row[0] == self.query_cmd_id:
-                cmd = row[1]
-                size_resp = str(len(row[2]))
-                duration = f"{row[3]:.4f}"
-                tokens = f"{row[4]}/{row[5]}"
-            if row[0] == self.analyze_response_id and explanation:
-                reason = row[2]
-                analyze_time = f"{row[3]:.4f}"
-                analyze_token = f"{row[4]}/{row[5]}"
-            if row[0] == self.state_update_id and status_update:
-                state_time = f"{row[3]:.4f}"
-                state_token = f"{row[4]}/{row[5]}"
-
-        result = [duration, tokens, cmd, size_resp]
-        if explanation:
-            result += [analyze_time, analyze_token, reason]
-        if status_update:
-            result += [state_time, state_token]
-        return result
-
-    def get_max_round_for(self, run_id):
-        run = self.cursor.execute("select max(round) from queries where run_id = ?", (run_id,)).fetchone()
-        if run is not None:
-            return run[0]
-        else:
-            return None
-
-    def get_run_data(self, run_id):
-        run = self.cursor.execute("select * from runs where id = ?", (run_id,)).fetchone()
-        if run is not None:
-            return run[1], run[2], run[4], run[3], run[7], run[8]
-        else:
-            return None
-
-    def get_log_overview(self):
-        result = {}
-
-        max_rounds = self.cursor.execute("select run_id, max(round) from queries group by run_id").fetchall()
-        for row in max_rounds:
-            state = self.cursor.execute("select state from runs where id = ?", (row[0],)).fetchone()
-            last_cmd = self.cursor.execute(
-                "select query from queries where run_id = ? and round = ?", (row[0], row[1])
-            ).fetchone()
-
-            result[row[0]] = {"max_round": int(row[1]) + 1, "state": state[0], "last_cmd": last_cmd[0]}
-
-        return result
-
-    def get_cmd_history(self, run_id):
-        rows = self.cursor.execute(
-            "select query, response from queries where run_id = ? and cmd_id = ? order by round asc",
-            (run_id, self.query_cmd_id),
-        ).fetchall()
-
-        result = []
-
-        for row in rows:
-            result.append([row[0], row[1]])
-
-        return result
-
-    def run_was_success(self, run_id, round):
+    def run_was_success(self, run_id):
         self.cursor.execute(
-            "update runs set state=?,stopped_at=datetime('now'), rounds=? where id = ?",
-            ("got root", round, run_id),
+            "update runs set state=?,stopped_at=datetime('now') where id = ?",
+            ("got root", run_id),
         )
         self.db.commit()
 
-    def run_was_failure(self, run_id, round):
+    def run_was_failure(self, run_id: int, reason: str):
         self.cursor.execute(
-            "update runs set state=?, stopped_at=datetime('now'), rounds=? where id = ?",
-            ("reached max runs", round, run_id),
+            "update runs set state=?, stopped_at=datetime('now') where id = ?",
+            (reason, run_id),
         )
         self.db.commit()
 
-    def commit(self):
-        self.db.commit()
+
+DbStorage = Global(RawDbStorage)

@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from hackingBuddyGPT.usecases import SimpleWebAPITesting
+from hackingBuddyGPT.utils.logging import Logger
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
     SimpleWebAPITestingUseCase,
 )
@@ -17,16 +18,19 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         console = Console()
 
         log_db.init()
-        self.agent = SimpleWebAPITesting(llm=self.mock_llm)
-        self.agent.init()
-        self.simple_api_testing = SimpleWebAPITestingUseCase(
-            agent=self.agent,
+        log = Logger(
             log_db=log_db,
             console=console,
             tag="integration_test_linuxprivesc",
+        )
+        self.agent = SimpleWebAPITesting(llm=self.mock_llm, log=log)
+        self.agent.init()
+        self.simple_api_testing = SimpleWebAPITestingUseCase(
+            agent=self.agent,
+            log=log,
             max_turns=len(self.mock_llm.responses),
         )
-        self.simple_api_testing.init()
+        self.simple_api_testing.init({})
 
     def test_initial_prompt(self):
         # Test if the initial prompt is set correctly

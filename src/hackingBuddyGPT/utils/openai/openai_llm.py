@@ -1,4 +1,5 @@
 import time
+import datetime
 from dataclasses import dataclass
 
 import requests
@@ -41,7 +42,7 @@ class OpenAIConnection(LLM):
         data = {"model": self.model, "messages": [{"role": "user", "content": prompt}]}
 
         try:
-            tic = time.perf_counter()
+            tic = datetime.datetime.now()
             response = requests.post(f'{self.api_url}{self.api_path}', headers=headers, json=data, timeout=self.api_timeout)
 
             if response.status_code == 429:
@@ -63,18 +64,18 @@ class OpenAIConnection(LLM):
 
         # now extract the JSON status message
         # TODO: error handling..
-        toc = time.perf_counter()
         response = response.json()
         result = response["choices"][0]["message"]["content"]
         tok_query = response["usage"]["prompt_tokens"]
         tok_res = response["usage"]["completion_tokens"]
+        duration = datetime.datetime.now() - tic
 
-        return LLMResult(result, prompt, result, toc - tic, tok_query, tok_res)
+        return LLMResult(result, prompt, result, duration, tok_query, tok_res)
 
     def encode(self, query) -> list[int]:
         # I know this is crappy for all non-openAI models but sadly this
         # has to be good enough for now
-        if self.model.startswith("gpt-"):
+        if self.model.startswith("gpt-") and not self.model.startswith("gpt-4o"):
             encoding = tiktoken.encoding_for_model(self.model)
         else:
             encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")

@@ -72,7 +72,6 @@ dev = [
 [project.scripts]
 wintermute = "hackingBuddyGPT.cli.wintermute:main"
 hackingBuddyGPT = "hackingBuddyGPT.cli.wintermute:main"
-wintermuteViewer = "hackingBuddyGPT.cli.viewer:main"
 
 [tool.ruff]
 line-length = 120

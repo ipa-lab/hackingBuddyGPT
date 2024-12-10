@@ -306,6 +306,22 @@ Mac, Docker Desktop and Gemini-OpenAI-Proxy:
 
 * See https://github.com/ipa-lab/hackingBuddyGPT/blob/main/MAC.md
 
+## Beta Features
+
+### Viewer
+
+The viewer is a simple web-based tool to view the results of hackingBuddyGPT runs. It is currently in beta and can be started with:
+
+```bash
+$ hackingBuddyGPT Viewer
+```
+
+This will start a webserver on `http://localhost:4444` that can be accessed with a web browser.
+
+To log to this central viewer, you currently need to change the `GlobalLogger` definition in [./src/hackingBuddyGPT/utils/logging.py](src/hackingBuddyGPT/utils/logging.py) to `GlobalRemoteLogger`.
+
+This feature is not fully tested yet and therefore is not recommended to be exposed to the internet!
+
 ## Publications about hackingBuddyGPT
 
 Given our background in academia, we have authored papers that lay the groundwork and report on our efforts:

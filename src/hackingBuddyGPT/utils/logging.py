@@ -168,7 +168,7 @@ class Logger:
 @dataclass
 class RemoteLogger:
     console: Console
-    log_server_address: str
+    log_server_address: str = "localhost:4444"
 
     tag: str = ""
     run: Run = field(init=False, default=None)
@@ -378,4 +378,4 @@ class MessageStreamLogger:
 
 GlobalLocalLogger = Global(Transparent(Logger))
 GlobalRemoteLogger = Global(Transparent(RemoteLogger))
-GlobalLogger = GlobalLocalLogger
+GlobalLogger = GlobalRemoteLogger

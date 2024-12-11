@@ -138,7 +138,7 @@ class OpenAPISpecificationParser:
             for method, operation in path_item.items():
                 classified = False
                 description = operation.get('description', '').lower()
-                security = operation.get('security', '').lower()
+                security = operation.get('security',{})
                 responses = operation.get("responses", {})
                 unauthorized_description = responses.get("401", {}).get("description", "").lower()
                 forbidden_description = responses.get("403", {}).get("description", "").lower()
@@ -175,6 +175,11 @@ class OpenAPISpecificationParser:
 
                 # Resource-intensive endpoints
                 if any(word in description for word in ['upload', 'batch', 'heavy', 'intensive']):
+                    classifications['resource_intensive_endpoint'].append((method.upper(), path))
+                    classified = True
+
+                # Rate-limited endpoints
+                if '429' in responses and 'too many requests' in responses['429'].get('description', '').lower():
                     classifications['resource_intensive_endpoint'].append((method.upper(), path))
                     classified = True
 

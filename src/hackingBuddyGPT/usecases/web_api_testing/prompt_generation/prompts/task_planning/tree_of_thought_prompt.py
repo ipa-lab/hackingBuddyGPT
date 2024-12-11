@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PromptContext,

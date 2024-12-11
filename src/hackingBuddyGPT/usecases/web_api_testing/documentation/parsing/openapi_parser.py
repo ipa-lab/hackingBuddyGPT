@@ -138,16 +138,24 @@ class OpenAPISpecificationParser:
             for method, operation in path_item.items():
                 classified = False
                 description = operation.get('description', '').lower()
+                security = operation.get('security', '').lower()
                 responses = operation.get("responses", {})
                 unauthorized_description = responses.get("401", {}).get("description", "").lower()
+                forbidden_description = responses.get("403", {}).get("description", "").lower()
+                too_many_requests_description = responses.get("429", {}).get("description", "").lower()
 
                 # Public endpoint: No '401 Unauthorized' response or description doesn't mention 'unauthorized'
-                if 'unauthorized' not in unauthorized_description and not any(
-                        keyword in path.lower() for keyword in ["user", "admin"]):
+                if ('Unauthorized' not in unauthorized_description
+                        or "forbidden" in forbidden_description
+                        or "too many requests" in too_many_requests_description
+                        and not security):
                     classifications['public_endpoint'].append((method.upper(), path))
                     classified = True
 
-                if any(keyword in path.lower() for keyword in ["user", "admin"]) and not any(keyword in path.lower() for keyword in ["api"]) :
+                # Protected endpoints: Paths mentioning "user" or "admin" explicitly
+                if (any(keyword in path.lower() for keyword in ["user", "admin"])
+                        and not any(keyword in path.lower() for keyword in ["api"])) \
+                    and security:
                     classifications['protected_endpoint'].append((method.upper(), path))
                     classified = True
 

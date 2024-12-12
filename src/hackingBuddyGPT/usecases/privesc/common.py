@@ -259,7 +259,7 @@ class ThesisPrivescPrototyp(Agent):
             result = result.rstrip()
 
             # TODO remove and ask andreas how to fix this problem
-            cmd = cmd.replace("exec_command", "")
+            # cmd = cmd.replace("exec_command", "")
 
         # log and output the command and its result
         self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
@@ -277,7 +277,7 @@ class ThesisPrivescPrototyp(Agent):
                 query = self.get_alt_rag_query(cmd, result)
                 relevant_documents = self._rag_document_retriever.invoke(query.result)
                 relevant_information = "".join([d.page_content + "\n" for d in relevant_documents])
-                self._rag_alt_text = llm_util.trim_result_front(self.llm, 1000, relevant_information)
+                self._rag_alt_text = llm_util.trim_result_front(self.llm, 1200, relevant_information)
                 self._log.log_db.add_log_rag_response(self._log.run_id, turn, cmd, query.result, query)
 
         # retrieving additional information
@@ -366,7 +366,7 @@ class ThesisPrivescPrototyp(Agent):
         })
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)
-        cmd.result = llm_util.cmd_output_fixer(cmd.result)
+        # cmd.result = llm_util.cmd_output_fixer(cmd.result)
 
         if self.disable_duplicates:
             count = 0

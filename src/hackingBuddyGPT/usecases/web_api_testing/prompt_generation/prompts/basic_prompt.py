@@ -52,7 +52,8 @@ class BasicPrompt(ABC):
     def set_pentesting_information(self, pentesting_information: PenTestingInformation):
         self.pentesting_information = pentesting_information
         self.purpose = self.pentesting_information.pentesting_step_list[0]
-        self.pentesting_information.next_testing_endpoint()
+        self.previous_purpose = PromptPurpose.SETUP
+        self.test_cases = self.pentesting_information.explore_steps(self.previous_purpose)
 
     @abstractmethod
     def generate_prompt(

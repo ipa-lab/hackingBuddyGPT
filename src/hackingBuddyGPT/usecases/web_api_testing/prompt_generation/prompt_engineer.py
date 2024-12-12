@@ -128,7 +128,6 @@ class PromptEngineer:
         if not self.prompt_func:
             raise ValueError("Invalid prompt strategy")
 
-        is_good = False
         self.turn = turn
         prompt = self.prompt_func.generate_prompt(
             move_type=move_type, hint=hint, previous_prompt=self._prompt_history, turn=0

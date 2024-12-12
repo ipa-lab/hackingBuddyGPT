@@ -115,12 +115,17 @@ class ResponseAnalyzerWithLLM:
             # print(f'Body:{body}')
             if body.__contains__("{") and (body != '' or body != ""):
                 body = json.loads(body)
-                if self.prompt_helper.current_user in body:
+                if any (value in body.values() for value in self.prompt_helper.current_user.get("example").values()):
                     self.prompt_helper.current_user["id"] = body["id"]
+                    if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+                        self.prompt_helper.accounts.append(self.prompt_helper.current_user)
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
                 if self.prompt_helper.current_user in body:
                     self.prompt_helper.current_user["id"] = self.get_id_from_user(body)
+                    if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+                        self.prompt_helper.accounts.append(self.prompt_helper.current_user)
+
 
         headers = {
             key.strip(): value.strip()

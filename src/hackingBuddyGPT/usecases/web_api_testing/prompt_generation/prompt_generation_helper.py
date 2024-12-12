@@ -52,6 +52,7 @@ class PromptGenerationHelper(object):
         self.current_step = 1
         self.document_steps = 0
         self.tried_methods_by_enpoint = {}
+        self.accounts = []
 
         self.current_user = None
 

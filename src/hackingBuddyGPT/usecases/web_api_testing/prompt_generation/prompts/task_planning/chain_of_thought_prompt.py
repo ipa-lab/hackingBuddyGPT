@@ -34,6 +34,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
 
 
+
     def generate_prompt(
             self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
     ) -> str:
@@ -70,14 +71,18 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
-        if self.pentest_steps == None:
-            self.pentest_steps = self.pentesting_information.explore_steps()
-            self.prompt_helper.accounts = self.pentesting_information.accounts
+        if self.previous_purpose != self.purpose:
+            self.previous_purpose = self.purpose
+            self.test_cases = self.pentesting_information.explore_steps(self.purpose)
+            if self.purpose != PromptPurpose.SETUP:
+                self.pentesting_information.accounts = self.prompt_helper.accounts
+
 
         purpose = self.purpose
-        test_cases = self.pentesting_information.get_steps_of_phase(purpose, self.pentest_steps)
+
+
         if move_type == "explore":
-            test_cases = self.get_test_cases(test_cases)
+            test_cases = self.get_test_cases(self.test_cases)
             if purpose not in self.transformed_steps.keys():
                 for test_case in test_cases:
                     if purpose not in self.transformed_steps.keys():

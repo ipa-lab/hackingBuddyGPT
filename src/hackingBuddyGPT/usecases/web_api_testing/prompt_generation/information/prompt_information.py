@@ -49,6 +49,7 @@ class PromptPurpose(Enum):
     """
 
     # Documentation related purposes
+    VERIY_SETUP = 17
     SETUP = 16
     SPECIAL_AUTHENTICATION = 0
     DOCUMENTATION = 1

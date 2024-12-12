@@ -90,6 +90,10 @@ class ResponseHandler:
         self.prompt_helper = prompt_helper
         self.pattern_matcher = PatternMatcher()
         self.saved_endpoints = {}
+        self.response_analyzer = None
+
+    def set_response_analyzer(self, response_analyzer: ResponseAnalyzerWithLLM) -> None:
+        self.response_analyzer = response_analyzer
 
     def categorize_endpoints(self):
         root_level = []
@@ -358,6 +362,7 @@ class ResponseHandler:
         Returns:
             Any: The evaluation result from the LLM response analyzer.
         """
+        self.response_analyzer.prompt_helper = self.prompt_helper
         llm_responses, status_code = self.response_analyzer.analyze_response(result, prompt_history, analysis_context)
         return llm_responses, status_code
 

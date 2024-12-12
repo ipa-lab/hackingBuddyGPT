@@ -72,11 +72,12 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         """
         if self.pentest_steps == None:
             self.pentest_steps = self.pentesting_information.explore_steps()
+            self.prompt_helper.accounts = self.pentesting_information.accounts
 
         purpose = self.purpose
         test_cases = self.pentesting_information.get_steps_of_phase(purpose, self.pentest_steps)
         if move_type == "explore":
-
+            test_cases = self.get_test_cases(test_cases)
             if purpose not in self.transformed_steps.keys():
                 for test_case in test_cases:
                     if purpose not in self.transformed_steps.keys():
@@ -94,6 +95,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                     self.explored_steps.append(step)
                     print(f'Prompt: {step}')
                     self.current_step = step
+                    self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(step)
                     # Process the step and return its result
                     last_item = cot_steps[-1]
                     if step == last_item:
@@ -227,3 +229,15 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             transformed_steps.append(transformed_step)
 
         return transformed_steps
+
+    def get_test_cases(self, test_cases):
+        while len(test_cases) == 0:
+            for purpose in self.pentesting_information.pentesting_step_list:
+                if purpose in self.transformed_steps.keys():
+                    continue
+                else:
+                    test_cases = self.pentesting_information.get_steps_of_phase(purpose, self.pentest_steps)
+                    if test_cases != None :
+                        if len(test_cases) != 0 :
+                            return test_cases
+        return test_cases

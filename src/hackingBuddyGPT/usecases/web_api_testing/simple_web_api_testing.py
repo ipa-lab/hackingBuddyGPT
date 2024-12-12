@@ -139,8 +139,9 @@ class SimpleWebAPITesting(Agent):
             config=self.config, pentesting_information = self.pentesting_information )
         self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=self._llm_handler,
                                                          pentesting_info=self.pentesting_information,
-                                                         capacity=self.parse_capacity)
-        self._response_handler.response_analyzer = self.response_analyzer
+                                                         capacity=self.parse_capacity,
+                                                         prompt_helper = self.prompt_helper)
+        self._response_handler.set_response_analyzer(self.response_analyzer)
         self._report_handler = ReportHandler()
         self._test_handler = TestHandler(self._llm_handler)
 

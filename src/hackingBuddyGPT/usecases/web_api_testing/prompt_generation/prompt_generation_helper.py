@@ -1,3 +1,4 @@
+import json
 import re
 
 import nltk
@@ -52,6 +53,8 @@ class PromptGenerationHelper(object):
         self.document_steps = 0
         self.tried_methods_by_enpoint = {}
 
+        self.current_user = None
+
     def setup_prompt_information(self, schemas, endpoints):
         """
         Sets up essential data for prompt generation based on provided schemas and endpoints.
@@ -63,6 +66,31 @@ class PromptGenerationHelper(object):
         self.schemas = schemas
         self.endpoints = endpoints
         self.current_endpoint = endpoints[0]
+
+    def get_user_from_prompt(self,prompts):
+        """
+            Extracts the user information after 'user:' from the given prompts.
+
+            Args:
+                prompts (list): A list of dictionaries representing prompts.
+
+            Returns:
+                list: A list of extracted user information.
+            """
+        user_info = {}
+        for steps in prompts.get("steps", []):
+            step = steps.get("step", "")
+            # Search for the substring containing 'user:'
+            if "user:" in step:
+                # Extract the part after 'user:' and add it to the user_info list
+                data_string = step.split("user:")[1].split(".\n")[0]
+                # Replace single quotes with double quotes for JSON compatibility
+                data_string_json = data_string.replace("'", '"')
+
+                # Parse the string into a dictionary
+                user_info = json.loads(data_string_json)
+
+        return user_info
 
     def find_missing_endpoint(self, endpoints: list) -> str:
         """

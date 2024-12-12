@@ -24,7 +24,7 @@ class ResponseAnalyzerWithLLM:
     """
 
     def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None,
-                 pentesting_info: PenTestingInformation = None, capacity: Any = None):
+                 pentesting_info: PenTestingInformation = None, capacity: Any = None, prompt_helper: Any = None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
 
@@ -37,6 +37,7 @@ class ResponseAnalyzerWithLLM:
         self.llm_handler = llm_handler
         self.pentesting_information = pentesting_info
         self.capacity = capacity
+        self.prompt_helper = prompt_helper
 
     def set_purpose(self, purpose: PromptPurpose):
         """
@@ -114,8 +115,12 @@ class ResponseAnalyzerWithLLM:
             # print(f'Body:{body}')
             if body.__contains__("{") and (body != '' or body != ""):
                 body = json.loads(body)
+                if self.prompt_helper.current_user in body:
+                    self.prompt_helper.current_user["id"] = body["id"]
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
+                if self.prompt_helper.current_user in body:
+                    self.prompt_helper.current_user["id"] = self.get_id_from_user(body)
 
         headers = {
             key.strip(): value.strip()
@@ -127,6 +132,11 @@ class ResponseAnalyzerWithLLM:
 
 
         return status_code, headers, body
+
+    def get_id_from_user(self, body) -> str:
+        id = body.split("id")[1].split(",")[0]
+        return id
+
 
     def process_step(self, step: str, prompt_history: list, capability:str) -> tuple[list, str]:
         """
@@ -155,6 +165,7 @@ class ResponseAnalyzerWithLLM:
         llm_responses = []
 
         status_code, additional_analysis_context, full_response= self.get_addition_context(raw_response, step)
+
         expected_responses = step.get("expected_response_code")
 
 
@@ -180,6 +191,7 @@ class ResponseAnalyzerWithLLM:
     def get_addition_context(self, raw_response: str, step: dict) :
         # Parse response
         status_code, headers, body = self.parse_http_response(raw_response)
+
         full_response = f"Status Code: {status_code}\nHeaders: {json.dumps(headers, indent=4)}\nBody: {body}"
         expected_responses = step.get("expected_response_code")
         security = step.get("security")
@@ -187,20 +199,21 @@ class ResponseAnalyzerWithLLM:
         return   status_code, additional_analysis_context, full_response
 
     def do_setup(self, status_code, step, additional_analysis_context, full_response, prompt_history):
-
-        add_info = ""
+        counter = 0
         if not any(str(status_code) in response for response in step.get("expected_response_code")):
-            add_info = "Unsuccessful. Try a different endpoint."
+            add_info = "Unsuccessful. Try a different input for the schema."
             while not any(str(status_code) in response for response in step.get("expected_response_code")):
                 prompt_history, response = self.process_step(step.get("step") + add_info, prompt_history, "http_request")
                 status_code, additional_analysis_context, full_response = self.get_addition_context(response, step)
+                counter += 1
+
+                if counter == 5:
+                    full_response += "Unsuccessful:" + step.get("conditions").get("if_unsuccessful")
+                    break
 
 
 
         return status_code, additional_analysis_context, full_response
-
-
-
 
 
 

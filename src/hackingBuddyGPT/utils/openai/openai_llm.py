@@ -22,7 +22,7 @@ class OpenAIConnection(LLM):
     context_size: int = parameter(desc="Maximum context size for the model, only used internally for things like trimming to the context size")
     api_url: str = parameter(desc="URL of the OpenAI API", default="https://api.openai.com")
     api_path: str = parameter(desc="Path to the OpenAI API", default="/v1/chat/completions")
-    api_timeout: int = parameter(desc="Timeout for the API request", default=240)
+    api_timeout: int = parameter(desc="Timeout for the API request", default=840)
     api_backoff: int = parameter(desc="Backoff time in seconds when running into rate-limits", default=60)
     api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=3)
 

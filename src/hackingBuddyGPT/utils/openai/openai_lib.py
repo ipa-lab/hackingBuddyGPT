@@ -24,7 +24,7 @@ class OpenAILib(LLM):
     model: str = parameter(desc="OpenAI model name")
     context_size: int = parameter(desc="OpenAI model context size")
     api_url: str = parameter(desc="URL of the OpenAI API", default="https://api.openai.com/v1")
-    api_timeout: int = parameter(desc="Timeout for the API request", default=60)
+    api_timeout: int = parameter(desc="Timeout for the API request", default=120)
     api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=3)
 
     _client: openai.OpenAI = None

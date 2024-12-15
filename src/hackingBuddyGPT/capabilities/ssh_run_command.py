@@ -23,7 +23,10 @@ class SSHRunCommand(Capability):
     def __call__(self, command: str) -> Tuple[str, bool]:
         if command.startswith(self.get_name()):
             cmd_parts = command.split(" ", 1)
-            command = cmd_parts[1]
+            if len(cmd_parts) == 1:
+                command = ""
+            else:
+                command = cmd_parts[1]
 
         # TODO remove this and ask andreas how to fix this problem
         command = command.replace("exec_command", "")

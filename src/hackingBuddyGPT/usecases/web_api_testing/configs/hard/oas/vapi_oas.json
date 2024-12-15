@@ -59,6 +59,7 @@
                     {
                         "name": "Authorization-Token",
                         "in": "header",
+                        "description": "base64 encoded values of 'username:password'",
                         "schema": {
                             "type": "string"
                         },
@@ -99,6 +100,8 @@
                     {
                         "name": "Authorization-Token",
                         "in": "header",
+                        "description": "base64 encoded values of 'username:password'",
+
                         "schema": {
                             "type": "string"
                         },
@@ -185,6 +188,7 @@
                     {
                         "name": "Authorization-Token",
                         "in": "header",
+                        "description": "base64 encoded values of 'username:password'",
                         "schema": {
                             "type": "string"
                         },
@@ -316,6 +320,7 @@
                     {
                         "name": "Authorization-Token",
                         "in": "header",
+                        "description": "base64 encoded values of 'username:password'",
                         "schema": {
                             "type": "string"
                         },
@@ -385,6 +390,8 @@
                     {
                         "name": "Authorization-Token",
                         "in": "header",
+                        "description": "base64 encoded values of 'username:password'",
+
                         "schema": {
                             "type": "string"
                         },
@@ -454,6 +461,7 @@
                     {
                         "name": "Authorization-Token",
                         "in": "header",
+                        "description": "base64 encoded values of 'username:password'",
                         "schema": {
                             "type": "string"
                         },
@@ -515,6 +523,7 @@
                     {
                         "name": "Authorization-Token",
                         "in": "header",
+                        "description": "base64 encoded values of 'username:password'",
                         "schema": {
                             "type": "string"
                         },
@@ -635,6 +644,7 @@
                 "parameters": [
                     {
                         "name": "Authorization-Token",
+                        "description": "base64 encoded values of 'username:password'",
                         "in": "header",
                         "schema": {
                             "type": "string"

@@ -262,13 +262,13 @@ class SimpleWebAPITesting(Agent):
                                                           prompt_history=self._prompt_history,
                                                           llm_handler=self._llm_handler)
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
-            self._handle_response(completion, response, self.prompt_engineer.purpose)
+            self._handle_response(completion, response, prompt)
 
         self.purpose = self.prompt_engineer.purpose
         if self.purpose == PromptPurpose.LOGGING_MONITORING:
             self.pentesting_information.next_testing_endpoint()
 
-    def _handle_response(self, completion: Any, response: Any, purpose: str) -> None:
+    def _handle_response(self, completion: Any, response: Any, prompt) -> None:
         """
         Handles the response from the LLM. Parses the response, executes the necessary actions,
         and updates the prompt history.
@@ -278,13 +278,24 @@ class SimpleWebAPITesting(Agent):
             response (Any): The response object from the LLM.
             purpose (str): The purpose or intent behind the response handling.
         """
-        message = completion.choices[0].message
-        tool_call_id: str = message.tool_calls[0].id
-        command: str = pydantic_core.to_json(response).decode()
-        self._log.console.print(Panel(command, title="assistant"))
-        self._prompt_history.append(message)
+
+
 
         with self._log.console.status("[bold green]Executing that command..."):
+
+            if self.prompt_helper.current_user != {} and "id" in self.prompt_helper.current_user.get("example").keys():
+                id = self.prompt_helper.current_user.get("example").get("id")
+                test_step =  self.prompt_helper.current_test_step.get("steps")
+                for step in test_step:
+                    if step.get("step").__contains__("Authorization-Token"):
+                        token = self.pentesting_information.tokens[id]
+                        response.action.headers =  {"Authorization-Token": f"{token}"}
+
+            message = completion.choices[0].message
+            tool_call_id: str = message.tool_calls[0].id
+            command: str = pydantic_core.to_json(response).decode()
+            self._log.console.print(Panel(command, title="assistant"))
+            self._prompt_history.append(message)
             result: Any = response.execute()
             self._log.console.print(Panel(result[:30], title="tool"))
             if not isinstance(result, str):

@@ -73,9 +73,10 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         """
         if self.previous_purpose != self.purpose:
             self.previous_purpose = self.purpose
-            self.test_cases = self.pentesting_information.explore_steps(self.purpose)
             if self.purpose != PromptPurpose.SETUP:
                 self.pentesting_information.accounts = self.prompt_helper.accounts
+            self.test_cases = self.pentesting_information.explore_steps(self.purpose)
+
 
 
         purpose = self.purpose

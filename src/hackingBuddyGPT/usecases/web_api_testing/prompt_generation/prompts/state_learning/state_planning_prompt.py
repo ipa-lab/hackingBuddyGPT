@@ -38,7 +38,20 @@ class StatePlanningPrompt(BasicPrompt):
             prompt_helper=prompt_helper,
             strategy=strategy,
         )
+        self.transformed_steps ={}
     def set_pentesting_information(self, pentesting_information: PenTestingInformation):
         self.pentesting_information = pentesting_information
         self.purpose = self.pentesting_information.pentesting_step_list[0]
         self.pentesting_information.next_testing_endpoint()
+
+    def get_test_cases(self, test_cases):
+        while len(test_cases) == 0:
+            for purpose in self.pentesting_information.pentesting_step_list:
+                if purpose in self.transformed_steps.keys():
+                    continue
+                else:
+                    test_cases = self.pentesting_information.get_steps_of_phase(purpose)
+                    if test_cases != None :
+                        if len(test_cases) != 0 :
+                            return test_cases
+        return test_cases

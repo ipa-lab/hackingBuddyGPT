@@ -118,39 +118,44 @@ class InContextLearningPrompt(StatePlanningPrompt):
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
 
-        explore_steps = self.pentesting_information.explore_steps()
-        if move_type == "explore" and hasattr(self,
-                                              'pentesting_information') and explore_steps:
-            purpose = next(iter(explore_steps))
-            steps = explore_steps.get(purpose, [])
+        if self.previous_purpose != self.purpose:
+            self.previous_purpose = self.purpose
+            if self.purpose != PromptPurpose.SETUP:
+                self.pentesting_information.accounts = self.prompt_helper.accounts
+            self.test_cases = self.pentesting_information.explore_steps(self.purpose)
 
-            # Transform and generate ICL format
-            transformed_steps = self.transform_to_icl_with_previous_examples({purpose: [steps]})
-            cot_steps = transformed_steps.get(purpose, [])
+        purpose = self.purpose
 
-            # Process each step while maintaining conditional CoT
-            for step in cot_steps:
-                if step not in getattr(self, 'explored_steps', []):
-                    self.explored_steps.append(step)
+        if move_type == "explore":
+            test_cases = self.get_test_cases(self.test_cases)
+            for test_case in test_cases:
+                if purpose not in self.transformed_steps.keys():
+                    self.transformed_steps[purpose] = []
+                # Transform steps into icl based on purpose
+                self.transformed_steps[purpose].append(
+                    self.transform_to_icl_with_previous_examples(test_case, purpose))
 
-                    if purpose not in self.response_history.keys():
-                        self.response_history[purpose] = {"step": "", "response": ""}
+                # Extract the CoT for the current purpose
+                cot_steps = self.transformed_steps[purpose]
 
-                    self.response_history.get(purpose).get(step).update({purpose: step})
+                # Process steps one by one, with memory of explored steps and conditional handling
+                for step in cot_steps:
+                    if step not in self.explored_steps:
+                        self.explored_steps.append(step)
+                        print(f'Prompt: {step}')
+                        self.current_step = step
+                        self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(step)
+                        # Process the step and return its result
+                        last_item = cot_steps[-1]
+                        if step == last_item:
+                            # If it's the last step, remove the purpose and update self.purpose
+                            if purpose in self.pentesting_information.pentesting_step_list:
+                                self.pentesting_information.pentesting_step_list.remove(purpose)
+                            if self.pentesting_information.pentesting_step_list:
+                                self.purpose = self.pentesting_information.pentesting_step_list[0]
+                        step = self.transform_test_case_to_string(step, "steps")
 
-                    # Apply any common steps
-                    if common_step:
-                        step = f"{common_step} {step}"
-
-                    # Clean up explore steps once processed
-                    if purpose in explore_steps and \
-                            explore_steps[purpose]:
-                        explore_steps[purpose].pop(0)
-                    if not explore_steps[purpose]:
-                        del explore_steps[purpose]
-
-                    print(f'Prompt: {step}')
-                    return [step]
+                        return [step]
 
         # Default steps if none match
         return ["Look for exploits."]
@@ -221,49 +226,99 @@ class InContextLearningPrompt(StatePlanningPrompt):
             sorted_list.append(previous_prompt[i])
         return sorted_list
 
-    def transform_to_icl_with_previous_examples(self, init_steps: Dict) -> Dict:
+    def transform_to_icl_with_previous_examples(self, test_case, purpose):
         """
-        Transforms penetration testing steps into in-context learning (ICL) prompts with previous example references.
+            Transforms a single test case into a Hierarchical-Conditional Hybrid Chain-of-Prompt structure.
+
+            The transformation emphasizes breaking tasks into hierarchical phases and embedding conditional logic
+            to adaptively handle outcomes, inspired by strategies in recent research on structured reasoning.
+
+            Args:
+                test_case (dict): A dictionary representing a single test case with fields like 'objective', 'steps', and 'security'.
+
+            Returns:
+                dict: A transformed test case structured hierarchically and conditionally.
+        """
+
+        # Initialize the transformed test case
+
+        transformed_case = {
+            "phase_title": f"Phase: {test_case['objective']}",
+            "steps": [],
+            "assessments": []
+        }
+
+        # Process steps in the test case
+        counter = 0
+        for step in test_case["steps"]:
+            if len(test_case["security"]) > 1:
+                security = test_case["security"][counter]
+            else:
+                security = test_case["security"][0]
+
+            if len(test_case["steps"]) > 1:
+                expected_response_code = test_case["expected_response_code"][counter]
+            else:
+                expected_response_code = test_case["expected_response_code"]
+            previous_example = self.response_history.get(purpose.name, None)
+            if previous_example is not None:
+                step = f"Previous example - Step: \"{previous_example['step']}\", Response: \"{previous_example['response']}\"" + step
+
+            step_details = {
+                "purpose": purpose,
+                "step": step,
+                "expected_response_code": expected_response_code,
+                "security": security,
+                "conditions": {
+                    "if_successful": "No Vulnerability found.",
+                    "if_unsuccessful": "Vulnerability found."
+                }
+            }
+            counter += 1
+            transformed_case["steps"].append(step_details)
+
+        # Add an assessment at the end of the phase
+        transformed_case["assessments"].append(
+            "Review all outcomes in this phase. If objectives are not met, revisit the necessary steps."
+        )
+
+        # Add a final assessment if applicable
+        transformed_case["final_assessment"] = "Confirm that all objectives for this test case have been met."
+
+        return transformed_case
+
+
+    def transform_test_case_to_string(self, test_case, character):
+        """
+        Transforms a single test case into a formatted string representation.
 
         Args:
-            init_steps (Dict[PromptPurpose, List[List[str]]]): A dictionary where each key is a PromptPurpose
-                and each value is a list of steps.
+            test_case (dict): A dictionary representing a single test case transformed into a hierarchical structure.
 
         Returns:
-            Dict[PromptPurpose, List[str]]: A dictionary where each key is a PromptPurpose and each value
-                is a list of in-context learning prompts as strings, each with a reference to a previous example.
+            str: A formatted string representation of the test case.
         """
-        icl_prompts = {}
+        # Initialize the result string
+        result = []
 
-        for purpose, steps_groups in init_steps.items():
-            prompts = []
+        # Add the phase title
+        result.append(f"{test_case['phase_title']}\n")
 
-            # Retrieve the previous example for the given purpose
-            previous_example = self.response_history.get(purpose.name, None)
+        # Add each step with conditions
+        if character == "steps":
+            for idx, step_details in enumerate(test_case["steps"], start=1):
+                result.append(f"    {step_details['step']}\n")
 
-            for steps in steps_groups:
-                for step in steps:
-                    # Format the in-context learning prompt with the previous example and current step
-                    if previous_example:
-                        prompt = (
-                            f"In a previous {purpose.name} test for endpoint {previous_example['step']}, "
-                            f"the following step was used:\n"
-                            f"- Step: \"{previous_example['step']}\"\n"
-                            f"- Response: \"{previous_example['response']}\"\n\n"
-                            f"For your current step on endpoint {step.split()[4]}:\n"
-                            f"Step: \"{step}\"\n"
-                            f"Expected Response: \"[Insert expected response based on step specifics]\""
-                        )
-                    else:
-                        # If no example, just use the current step with expected response placeholder
-                        prompt = (
-                            f"For your current {purpose.name} step on endpoint {step.split()[4]}:\n"
-                            f"Step: \"{step}\"\n"
-                            f"Expected Response: \"[Insert expected response based on step specifics]\""
-                        )
+        # Add phase assessments
+        if character == "assessments":
+            result.append("\nAssessments:\n")
+            for assessment in test_case["assessments"]:
+                result.append(f"  - {assessment}\n")
 
-                    prompts.append(prompt)
+        # Add the final assessment if applicable
+        if character == "final_assessment":
+            if "final_assessment" in test_case:
+                result.append(f"\nFinal Assessment:\n  {test_case['final_assessment']}\n")
 
-            icl_prompts[purpose] = prompts
+        return ''.join(result)
 
-        return icl_prompts

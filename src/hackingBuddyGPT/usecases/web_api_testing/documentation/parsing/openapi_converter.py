@@ -110,10 +110,12 @@ class OpenAPISpecificationConverter:
             # Collect query parameters for each endpoint
             endpoint_query_params = []
             for method, operation in path_item.items():
-                parameters = operation.get("parameters", [])
-                for param in parameters:
-                    if param.get("in") == "query":
-                        endpoint_query_params.append(param.get("name"))
+                if isinstance(operation, dict):
+                    if "parameters" in operation.keys():
+                        parameters = operation.get("parameters", [])
+                        for param in parameters:
+                            if param.get("in") == "query":
+                                endpoint_query_params.append(param.get("name"))
 
             if endpoint_query_params:
                 query_params[path] = endpoint_query_params
@@ -152,6 +154,6 @@ if __name__ == "__main__":
     # if json_file:
     #    converter.json_to_yaml(json_file)
 
-    openapi_path = "/hackingBuddyGPT/usecases/web_api_testing/configs/hard/oas/vapi_x_oas.json"
+    openapi_path = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/config/hard/oas/crapi_oas.json"
     converter.extract_openapi_info(openapi_path,
-                                   output_path="/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/hard")
+                                   output_path="/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/config/hard")

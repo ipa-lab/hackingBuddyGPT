@@ -73,13 +73,15 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         Returns:
             List[str]: A list of steps for the Tree-of-Thought strategy in the pentesting context.
         """
-        if self.pentest_steps is None:
-            self.pentest_steps = self.pentesting_information.explore_steps()
+        if self.previous_purpose != self.purpose:
+            self.previous_purpose = self.purpose
+            if self.purpose != PromptPurpose.SETUP:
+                self.pentesting_information.accounts = self.prompt_helper.accounts
+            self.test_cases = self.pentesting_information.explore_steps(self.purpose)
 
         purpose = self.purpose
-        test_cases = self.pentesting_information.get_steps_of_phase(purpose, self.pentest_steps)
-
         if move_type == "explore":
+            test_cases = self.get_test_cases(self.test_cases)
             # Check if the purpose has already been transformed into Tree-of-Thought structure
             if purpose not in self.transformed_steps.keys():
                 for test_case in test_cases:
@@ -97,20 +99,20 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
             for step in tot_steps:
                 if step not in self.explored_steps:
                     self.explored_steps.append(step)
-                    print(f"Processing Branch: {step}")
+                    print(f'Prompt: {step}')
                     self.current_step = step
-                    # Process the step and return its formatted representation
-                    formatted_step = self.transform_tree_of_thought_to_string(step, "steps")
+                    self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(step)
+                    # Process the step and return its result
                     last_item = tot_steps[-1]
-
                     if step == last_item:
                         # If it's the last step, remove the purpose and update self.purpose
                         if purpose in self.pentesting_information.pentesting_step_list:
                             self.pentesting_information.pentesting_step_list.remove(purpose)
                         if self.pentesting_information.pentesting_step_list:
                             self.purpose = self.pentesting_information.pentesting_step_list[0]
+                    step = self.transform_tree_of_thought_to_string(step, "steps")
 
-                    return [formatted_step]
+                    return [step]
 
         else:
             return ["Look for exploits."]
@@ -133,12 +135,13 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
 
         # Initialize the root of the tree
         transformed_case = {
+            "purpose": purpose,
             "root": f"Objective: {test_case['objective']}",
-            "branches": [],
+            "steps": [],
             "assessments": []
         }
 
-        # Process steps in the test case as potential branches
+        # Process steps in the test case as potential steps
         for i, step in enumerate(test_case["steps"]):
             # Handle security and expected response codes conditionally
             security = (
@@ -153,41 +156,39 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
                 else test_case["expected_response_code"]
             )
 
+
+            step = """Imagine three different experts are answering this question.
+                      All experts will write down 1 step of their thinking,
+                      then share it with the group.
+                      Then all experts will go on to the next step, etc.
+                      If any expert realises they're wrong at any point then they leave.
+                      The question is : """ + step
+
+
             # Define a branch representing a single reasoning path
             branch = {
                 "step": step,
                 "security": security,
                 "expected_response_code": expected_response_code,
-                "thoughts": [
-                    {
-                        "action": f"Execute: {step}",
-                        "conditions": {
-                            "if_successful": {
-                                "outcome": "No Vulnerability found.",
-                                "next_action": "Proceed to the next step."
-                            },
-                            "if_unsuccessful": {
-                                "outcome": "Vulnerability found.",
-                                "next_action": "Reevaluate this step or explore alternative actions."
-                            }
-                        }
-                    }
-                ]
+                   "conditions": {
+                    "if_successful": "No Vulnerability found.",
+                    "if_unsuccessful": "Vulnerability found."
+                }
             }
             # Add branch to the tree
-            transformed_case["branches"].append(branch)
+            transformed_case["steps"].append(branch)
 
         # Add an assessment mechanism for self-evaluation
         transformed_case["assessments"].append(
             {
-                "phase_review": "Review outcomes of all branches. If any branch fails to meet objectives, backtrack and revise steps."
+                "phase_review": "Review outcomes of all steps. If any branch fails to meet objectives, backtrack and revise steps."
             }
         )
 
         # Add a final assessment for the entire tree
         transformed_case["final_assessment"] = {
-            "criteria": "Confirm all objectives are met across all branches.",
-            "next_action": "If objectives are not met, revisit unresolved branches."
+            "criteria": "Confirm all objectives are met across all steps.",
+            "next_action": "If objectives are not met, revisit unresolved steps."
         }
 
         return transformed_case
@@ -211,21 +212,14 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         # Add the root objective
         result.append(f"Root Objective: {tree_of_thought['root']}\n\n")
 
-        # Handle branches
+        # Handle steps
         if character == "steps":
-            result.append("Branches (Step-by-Step Thinking):\n")
-            for idx, branch in enumerate(tree_of_thought["branches"], start=1):
+            result.append("Tree of Thought:\n")
+            for idx, branch in enumerate(tree_of_thought["steps"], start=1):
                 result.append(f"  Branch {idx}:\n")
                 result.append(f"    Step: {branch['step']}\n")
                 result.append(f"    Security: {branch['security']}\n")
                 result.append(f"    Expected Response Code: {branch['expected_response_code']}\n")
-                result.append("    Thoughts:\n")
-                for thought in branch["thoughts"]:
-                    result.append(f"      Action: {thought['action']}\n")
-                    result.append("      Conditions:\n")
-                    for condition, outcome in thought["conditions"].items():
-                        result.append(f"        {condition.capitalize()}: {outcome['outcome']}\n")
-                        result.append(f"          Next Action: {outcome['next_action']}\n")
                 result.append("\n")
 
         # Handle assessments
@@ -254,7 +248,7 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
 
         Iterative Evaluation: Each step incorporates assessment points to check if the outcome meets expectations, partially succeeds, or fails, facilitating iterative refinement.
 
-        Dynamic Branching: Conditional branches allow for the creation of alternative paths ("sub-branches") based on intermediate outcomes. This enables the prompt to pivot when initial strategies don’t fully succeed.
+        Dynamic Branching: Conditional steps allow for the creation of alternative paths ("sub-steps") based on intermediate outcomes. This enables the prompt to pivot when initial strategies don’t fully succeed.
 
         Decision Nodes: Decision nodes evaluate whether to proceed, retry, or backtrack, supporting a flexible problem-solving strategy. This approach mirrors the tree-based structure proposed in ToT, where decisions at each node guide the overall trajectory.
 
@@ -311,7 +305,7 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
                     f"End of Level {current_level - 1}: Consolidate all insights before moving to the next logical phase.")
                 current_level = 1  # Reset level for subsequent purposes
 
-            # Add the structured Tree of Thought with branches and checkpoints to the final prompts dictionary
+            # Add the structured Tree of Thought with steps and checkpoints to the final prompts dictionary
             tot_prompts[purpose] = tree_steps
 
         return tot_prompts

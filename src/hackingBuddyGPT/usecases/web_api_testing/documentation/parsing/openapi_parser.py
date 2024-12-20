@@ -133,6 +133,8 @@ class OpenAPISpecificationParser:
         Returns:
             dict: The schema for the requestBody, or None if not available.
         """
+        print(f'path: {path}, method: {method}')
+
         method_details = self.api_data.get("paths", {}).get(path, {}).get(method.lower(), {})
         request_body = method_details.get("requestBody", {})
 
@@ -174,7 +176,7 @@ class OpenAPISpecificationParser:
         for path, path_item in self.api_data['paths'].items():
             for method, operation in path_item.items():
                 schema = self.get_schema_for_endpoint(path, method)
-                if method == 'get' and schema == None:
+                if method == 'get' and schema == None and "parameters" in operation.keys() and len(operation.get("parameters", [])) > 0:
                     schema = operation.get("parameters")[0]
                 classified = False
                 parameters = operation.get("parameters", [])
@@ -269,13 +271,14 @@ class OpenAPISpecificationParser:
                             "schema": schema})
                     classified = True
                 # User creation endpoint
-                if any(keyword in path.lower() for keyword in ['user', 'users']) and not "login" in path:
-                    if method.upper() == "POST":
-                        classifications["account_creation"].append({
+                if any(keyword in path.lower() for keyword in ['user', 'users', 'signup']) and not "login" in path or any(word in description for word in ['create a user']):
+                    if not any(keyword in path.lower() for keyword in ['pictures', 'verify-email-token', 'change-email', "reset", "verify", "videos", "mechanic"]):
+                        if method.upper() == "POST":
+                            classifications["account_creation"].append({
                             "method":method.upper(),
                             "path":path,
                             "schema": schema})
-                    classified = True
+                            classified = True
                 # Login endpoints
                 if any(keyword in path.lower() for keyword in ['login', 'signin', 'sign-in']):
                     if method.upper() == "POST":
@@ -295,12 +298,23 @@ class OpenAPISpecificationParser:
                 if not classified:
                     classifications['unclassified_endpoint'].append((method.upper(), path))
 
+        # Combine items from account_creation and login_endpoint into a set of tuples
+        to_remove = {
+            (item.get("method"), item.get("path"))
+            for item in classifications['account_creation'] + classifications['login_endpoint']
+        }
+
+        # Rebuild authentication_endpoint without the items in to_remove
+        classifications['authentication_endpoint'] = [
+            item for item in classifications['authentication_endpoint'] if item not in to_remove
+        ]
+
         return classifications
 
 
 if __name__ == "__main__":  # Usage
     parser = OpenAPISpecificationParser(
-        "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/configs/hard/reqres_config.json")
+        "/config/hard/reqres_config.json")
 
     endpoint_classes = parser.classify_endpoints()
     for category, endpoints in endpoint_classes.items():

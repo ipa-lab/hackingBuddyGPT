@@ -33,8 +33,6 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
 
-
-
     def generate_prompt(
             self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
     ) -> str:
@@ -77,10 +75,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 self.pentesting_information.accounts = self.prompt_helper.accounts
             self.test_cases = self.pentesting_information.explore_steps(self.purpose)
 
-
-
         purpose = self.purpose
-
 
         if move_type == "explore":
             test_cases = self.get_test_cases(self.test_cases)
@@ -177,7 +172,6 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
 
         return transformed_case
 
-
     def transform_test_case_to_string(self, test_case, character):
         """
         Transforms a single test case into a formatted string representation.
@@ -214,6 +208,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 result.append(f"\nFinal Assessment:\n  {test_case['final_assessment']}\n")
 
         return ''.join(result)
+
     def generate_documentation_steps(self, steps) -> list:
         """
         Creates a chain of thought prompt to guide the model through the API documentation process.
@@ -235,15 +230,3 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             transformed_steps.append(transformed_step)
 
         return transformed_steps
-
-    def get_test_cases(self, test_cases):
-        while len(test_cases) == 0:
-            for purpose in self.pentesting_information.pentesting_step_list:
-                if purpose in self.transformed_steps.keys():
-                    continue
-                else:
-                    test_cases = self.pentesting_information.get_steps_of_phase(purpose, self.pentest_steps)
-                    if test_cases != None :
-                        if len(test_cases) != 0 :
-                            return test_cases
-        return test_cases

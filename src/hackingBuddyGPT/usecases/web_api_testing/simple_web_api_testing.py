@@ -89,8 +89,15 @@ class SimpleWebAPITesting(Agent):
 
     def _setup_config_path(self):
         if self.config_path:
+            # Current file's directory
             current_file_path = os.path.dirname(os.path.abspath(__file__))
-            self.config_path = os.path.join(current_file_path, "configs", self.config_path)
+
+            # Navigate to the desired directory
+            config_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file_path)))),  # Go three levels up
+                'config'  # Add the 'config' directory
+            )
+            self.config_path = os.path.join(config_path, self.config_path)
 
     def _load_config(self):
         if not os.path.exists(self.config_path):
@@ -283,8 +290,11 @@ class SimpleWebAPITesting(Agent):
 
         with self._log.console.status("[bold green]Executing that command..."):
 
-            if self.prompt_helper.current_user != {} and "id" in self.prompt_helper.current_user.get("example").keys():
-                id = self.prompt_helper.current_user.get("example").get("id")
+            if self.prompt_helper.current_user != {}:
+                if  "example" in self.prompt_helper.current_user.keys() and "id" in self.prompt_helper.current_user.get("example").keys():
+                    id = self.prompt_helper.current_user.get("example").get("id")
+                if "id" in self.prompt_helper.current_user.keys():
+                    id = self.prompt_helper.current_user.get("id")
                 test_step =  self.prompt_helper.current_test_step.get("steps")
                 for step in test_step:
                     if step.get("step").__contains__("Authorization-Token"):
@@ -297,7 +307,7 @@ class SimpleWebAPITesting(Agent):
             self._log.console.print(Panel(command, title="assistant"))
             self._prompt_history.append(message)
             result: Any = response.execute()
-            self._log.console.print(Panel(result[:30], title="tool"))
+            self._log.console.print(Panel(result, title="tool"))
             if not isinstance(result, str):
                 endpoint: str = str(response.action.path).split("/")[1]
                 self._report_handler.write_endpoint_to_report(endpoint)

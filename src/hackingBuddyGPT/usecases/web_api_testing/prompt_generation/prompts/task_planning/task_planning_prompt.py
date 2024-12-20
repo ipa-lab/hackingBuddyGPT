@@ -119,3 +119,14 @@ class TaskPlanningPrompt(BasicPrompt):
     @abstractmethod
     def generate_documentation_steps(self, steps: List[str]) -> List[str] :
         pass
+    def get_test_cases(self, test_cases):
+        while len(test_cases) == 0:
+            for purpose in self.pentesting_information.pentesting_step_list:
+                if purpose in self.transformed_steps.keys():
+                    continue
+                else:
+                    test_cases = self.pentesting_information.get_steps_of_phase(purpose, self.pentest_steps)
+                    if test_cases != None :
+                        if len(test_cases) != 0 :
+                            return test_cases
+        return test_cases

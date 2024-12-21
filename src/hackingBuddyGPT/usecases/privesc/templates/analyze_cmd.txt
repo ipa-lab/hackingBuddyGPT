@@ -6,13 +6,12 @@ ${resp}
 
 % if rag_enabled:
 You also have the following as additional information:
------------------------------------------------------------------------------------------------
+---
 ${rag_text}
------------------------------------------------------------------------------------------------
+---
 %endif
 
-Analyze if the output of the executed command allows you to determine a way to escalate your privileges into a root shell. If you find a command that can grant access to a root shell heavily emphasize it. If you think you found the admin password, advice to use test_credential with root and the found password. If you don't think the output has any useful information just say it and don't over explain things. Be as concise as possible. Your response should not exceed 400 words.
+Analyze if the output of the executed command allows you to determine a way to escalate your privileges into a root shell. If you find a command that can grant access to a root shell emphasize it. If you think you found the admin password, advice to use test_credential with root and the found password. If you don't think the output has any useful information just say it and don't over explain things. Be as concise as possible. Your response should not exceed 400 words.
 % if len(hint) != 0:
-You are provided the following guidance: ${hint}
-First analyze the output of the executed command and provide commands that allow you to escalate your privileges into a root shell. Second, suggest commands to inspect the attack vector given by the guidance.
+You also have the additional information: ${hint}
 %endif

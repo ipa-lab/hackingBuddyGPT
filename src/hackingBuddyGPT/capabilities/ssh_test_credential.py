@@ -20,7 +20,7 @@ class SSHTestCredential(Capability):
     def __call__(self, username: str, password: str) -> Tuple[str, bool]:
         test_conn = self.conn.new_with(username=username, password=password)
         try:
-            for attempt in range(3):
+            for attempt in range(10):
                 try:
                     test_conn.init()
                     break;
@@ -31,7 +31,7 @@ class SSHTestCredential(Capability):
                     print(e)
                     print("Retrying")
                     print("-------------------------------------------------------")
-                    if attempt == 3:
+                    if attempt == 10:
                         raise
 
             user = test_conn.run("whoami")[0].strip('\n\r ')

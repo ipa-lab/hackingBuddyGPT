@@ -40,7 +40,8 @@ dependencies = [
 	'langchain-community',
 	'langchain-openai',
 	'markdown',
-	'chromadb'
+	'chromadb',
+	'transformers'
 ]
 
 [project.urls]

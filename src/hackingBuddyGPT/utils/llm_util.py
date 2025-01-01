@@ -19,6 +19,8 @@ class LLMResult:
 
 
 class LLM(abc.ABC):
+    qwen_tokenizer = None
+
     @abc.abstractmethod
     def get_response(self, prompt, *, capabilities=None, **kwargs) -> LLMResult:
         """
@@ -33,8 +35,11 @@ class LLM(abc.ABC):
         pass
 
     def count_tokens(self, query) -> int:
-        return len(self.encode(query))
-
+        if self.qwen_tokenizer:
+            # print("Using qwen_tokenizer")
+            return len(self.qwen_tokenizer(query)["input_ids"])
+        else:
+            return len(self.encode(query))
 
 def system_message(content: str) -> ChatCompletionSystemMessageParam:
     return {"role": "system", "content": content}

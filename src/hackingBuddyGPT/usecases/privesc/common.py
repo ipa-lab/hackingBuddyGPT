@@ -7,6 +7,7 @@ from langchain_core.vectorstores import VectorStoreRetriever
 from mako.template import Template
 from rich.panel import Panel
 from typing import Any, Dict
+from transformers import Qwen2Tokenizer
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_handler
@@ -195,6 +196,11 @@ class ThesisPrivescPrototyp(Agent):
             self._rag_document_retriever = initiate_rag()
 
 
+        if "Qwen2.5" in self.llm.model:
+            print("Set up Qwen Tokenizer")
+            self.llm.qwen_tokenizer = Qwen2Tokenizer.from_pretrained("Qwen/Qwen-tokenizer")
+
+
         self._template_params = {
             'capabilities': self.get_capability_block(),
             'system': self.system,
@@ -224,7 +230,8 @@ class ThesisPrivescPrototyp(Agent):
         cmd = answer.result
 
         if self.enable_chain_of_thought:
-            command = re.findall("<command>(.*?)</command>", answer.result)
+            # command = re.findall("<command>(.*?)</command>", answer.result)
+            command = re.findall(r"<command>([\s\S]*?)</command>", answer.result)
 
             if len(command) > 0:
                 command = "\n".join(command)

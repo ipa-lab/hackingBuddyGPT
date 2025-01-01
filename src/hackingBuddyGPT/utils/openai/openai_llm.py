@@ -33,11 +33,15 @@ class OpenAIConnection(LLM):
         if hasattr(prompt, "render"):
             prompt = prompt.render(**kwargs)
 
-        # normal header
-        headers = {"Authorization": f"Bearer {self.api_key}"}
 
-        # azure ai header
-        # headers = {"api-key": f"{self.api_key}"}
+        if "azure.com" in self.api_url:
+            # azure ai header
+            headers = {"api-key": f"{self.api_key}"}
+        else:
+            # normal header
+            headers = {"Authorization": f"Bearer {self.api_key}"}
+
+
 
 
         data = {'model': self.model, 'messages': [{'role': 'user', 'content': prompt}]}
@@ -62,8 +66,8 @@ class OpenAIConnection(LLM):
                 raise Exception(f"Error from OpenAI Gateway ({response.status_code}")
 
         except requests.exceptions.ConnectionError:
-            print("Connection error! Retrying in 5 seconds..")
-            time.sleep(5)
+            print("Connection error! Retrying in 10 seconds..")
+            time.sleep(10)
             return self.get_response(prompt, retry=retry+1)
 
         except requests.exceptions.Timeout:

@@ -44,7 +44,7 @@ class OpenAIConnection(LLM):
 
 
 
-        data = {'model': self.model, 'messages': [{'role': 'user', 'content': prompt}]}
+        data = {'model': self.model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.8}
 
         try:
             tic = time.perf_counter()

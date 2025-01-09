@@ -114,11 +114,12 @@ class ResponseAnalyzerWithLLM:
         else:
             # print(f'Body:{body}')
             if body.__contains__("{") and (body != '' or body != ""):
-                body = json.loads(body)
-                if any (value in body.values() for value in self.prompt_helper.current_user.values()):
-                    self.prompt_helper.current_user["id"] = body["id"]
-                    if self.prompt_helper.current_user not in self.prompt_helper.accounts:
-                        self.prompt_helper.accounts.append(self.prompt_helper.current_user)
+                if not  body.lower().__contains__("png") :
+                    body = json.loads(body)
+                    if any (value in body.values() for value in self.prompt_helper.current_user.values()):
+                        self.prompt_helper.current_user["id"] = body["id"]
+                        if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+                            self.prompt_helper.accounts.append(self.prompt_helper.current_user)
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
                 if self.prompt_helper.current_user in body:

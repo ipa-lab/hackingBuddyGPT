@@ -80,7 +80,7 @@ class LLMHandler:
                 self.adjusting_counter = 1
                 if isinstance(prompt, list) and len(prompt) >= 5:
                     adjusted_prompt = self.adjust_prompt(prompt, num_prompts=1)
-                    adjusted_prompt = self.ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+                    adjusted_prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
                 if isinstance(prompt, str):
                     adjusted_prompt = [prompt]
 
@@ -99,7 +99,7 @@ class LLMHandler:
                 if isinstance(adjusted_prompt, list):
                     if isinstance(adjusted_prompt[0], list):
                         adjusted_prompt = adjusted_prompt[0]
-                adjusted_prompt = self.ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+                adjusted_prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
                 print(f' Adjusted_prompt: {adjusted_prompt}')
                 self.adjusting_counter = 2
                 return call_model(adjusted_prompt)
@@ -151,7 +151,7 @@ class LLMHandler:
             try:
                 # Second adjustment based on token size if the first attempt fails
                 adjusted_prompt = self.adjust_prompt(prompt)
-                adjusted_prompt = self.ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+                adjusted_prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
 
                 self.adjusting_counter = 2
                 return call_model(adjusted_prompt, capability)
@@ -161,7 +161,7 @@ class LLMHandler:
 
                 # Final fallback with the smallest prompt size
                 shortened_prompt = self.adjust_prompt(prompt)
-                shortened_prompt = self.ensure_that_tool_messages_are_correct(shortened_prompt, prompt)
+                shortened_prompt = self._ensure_that_tool_messages_are_correct(shortened_prompt, prompt)
                 if isinstance(shortened_prompt, list):
                     if isinstance(shortened_prompt[0], list):
                         shortened_prompt = shortened_prompt[0]
@@ -200,11 +200,11 @@ class LLMHandler:
             adjusted_prompt = prompt
 
         # Ensure adjusted_prompt items are valid dicts and follow `tool` message constraints
-        validated_prompt = self.ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+        validated_prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
 
         return validated_prompt
 
-    def ensure_that_tool_messages_are_correct(self, adjusted_prompt, prompt):
+    def _ensure_that_tool_messages_are_correct(self, adjusted_prompt, prompt):
         # Ensure adjusted_prompt items are valid dicts and follow `tool` message constraints
         validated_prompt = []
         last_item = None
@@ -229,7 +229,7 @@ class LLMHandler:
             validated_prompt = [validated_prompt]
         return validated_prompt
 
-    def add_created_object(self, created_object: Any, object_type: str) -> None:
+    def _add_created_object(self, created_object: Any, object_type: str) -> None:
         """
         Adds a created object to the dictionary of created objects, categorized by object type.
 
@@ -242,7 +242,7 @@ class LLMHandler:
         if len(self.created_objects[object_type]) < 7:
             self.created_objects[object_type].append(created_object)
 
-    def get_created_objects(self) -> Dict[str, List[Any]]:
+    def _get_created_objects(self) -> Dict[str, List[Any]]:
         """
         Retrieves the dictionary of created objects and prints its contents.
 

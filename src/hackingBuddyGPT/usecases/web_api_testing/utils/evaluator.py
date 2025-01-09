@@ -5,7 +5,7 @@ from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher impo
 
 class Evaluator:
     def __init__(self, num_runs=10, config=None):
-        self.pattern_matcher = PatternMatcher()
+        self._pattern_matcher = PatternMatcher()
         self.documented_query_params = config.get("query_params")
         self.num_runs = num_runs
         self.documented_routes = config.get("correct_endpoints") #Example documented GET routes
@@ -64,7 +64,7 @@ class Evaluator:
         """
         # Example list of documented query parameters
         # Extract the query parameters from the response
-        response_query_params = self.pattern_matcher.extract_query_params(path).keys()
+        response_query_params = self._pattern_matcher.extract_query_params(path).keys()
 
         # Identify false positives
         false_positives = [param for param in response_query_params if param not in self.documented_query_params]
@@ -97,7 +97,7 @@ class Evaluator:
         # Example list of documented query parameters
 
         # Simulate response query parameters found (this would usually come from the response data)
-        response_query_params = self.pattern_matcher.extract_query_params(path)
+        response_query_params = self._pattern_matcher.extract_query_params(path)
         x = self.documented_query_params.values()
         # Count the valid query parameters found in the response
         valid_query_params = []
@@ -119,7 +119,7 @@ class Evaluator:
             list: A list of query parameter names found in the response.
         """
         # Placeholder code: Replace this with actual extraction logic
-        return self.pattern_matcher.extract_query_params(path).keys()
+        return self._pattern_matcher.extract_query_params(path).keys()
 
     def evaluate_response(self, response, routes_found):
         query_params_found = 0

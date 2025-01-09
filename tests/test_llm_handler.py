@@ -33,7 +33,7 @@ class TestLLMHandler(unittest.TestCase):
         created_object = MagicMock()
         object_type = "test_type"
 
-        self.llm_handler.add_created_object(created_object, object_type)
+        self.llm_handler._add_created_object(created_object, object_type)
 
         self.assertIn(object_type, self.llm_handler.created_objects)
         self.assertIn(created_object, self.llm_handler.created_objects[object_type])
@@ -43,16 +43,16 @@ class TestLLMHandler(unittest.TestCase):
         object_type = "test_type"
 
         for _ in range(8):  # Exceed the limit of 7 objects
-            self.llm_handler.add_created_object(created_object, object_type)
+            self.llm_handler._add_created_object(created_object, object_type)
 
         self.assertEqual(len(self.llm_handler.created_objects[object_type]), 7)
 
     def test_get_created_objects(self):
         created_object = MagicMock()
         object_type = "test_type"
-        self.llm_handler.add_created_object(created_object, object_type)
+        self.llm_handler._add_created_object(created_object, object_type)
 
-        created_objects = self.llm_handler.get_created_objects()
+        created_objects = self.llm_handler._get_created_objects()
 
         self.assertIn(object_type, created_objects)
         self.assertIn(created_object, created_objects[object_type])

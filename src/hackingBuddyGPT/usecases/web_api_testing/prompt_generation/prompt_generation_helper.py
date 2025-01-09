@@ -12,8 +12,6 @@ class PromptGenerationHelper(object):
         tracking interactions, and providing utilities for analyzing and responding to API behavior.
 
         Attributes:
-            host (str): Base URL for the API.
-            description (str): Description of the API's purpose or functionality.
             found_endpoints (list): Endpoints that have been successfully interacted with.
             tried_endpoints (list): Endpoints that have been tested, regardless of the outcome.
             unsuccessful_paths (list): Endpoints that failed during testing.
@@ -25,21 +23,16 @@ class PromptGenerationHelper(object):
             schemas (list): Definitions of data schemas used for constructing requests and validating responses.
         """
 
-    def __init__(self,
-                 host: str = "",
-                 description: str=""):
+    def __init__(self, host, description):
         """
           Initializes the PromptGenerationHelper with an optional host and description.
-
-          Args:
-              host (str): The base URL of the API.
-              description (str): A brief description of what the API offers or its testing scope.
           """
+        self.host = host
+        self._description= description
         self.current_test_step = None
         self.current_category = "root_level"
         self.correct_endpoint_but_some_error = {}
         self.hint_for_next_round = ""
-        self.description = description
         self.schemas = []
         self.endpoints = []
         self.tried_endpoints = []
@@ -47,7 +40,6 @@ class PromptGenerationHelper(object):
         self.endpoint_methods = {}
         self.unsuccessful_methods = {}
         self.endpoint_found_methods = {}
-        self.host = host
         self.unsuccessful_paths = ["/"]
         self.current_step = 1
         self.document_steps = 0
@@ -56,19 +48,8 @@ class PromptGenerationHelper(object):
 
         self.current_user = None
 
-    def setup_prompt_information(self, schemas, endpoints):
-        """
-        Sets up essential data for prompt generation based on provided schemas and endpoints.
 
-        Args:
-            schemas (list): Data schemas for the API.
-            endpoints (list): Initial list of API endpoints to test.
-        """
-        self.schemas = schemas
-        self.endpoints = endpoints
-        self.current_endpoint = endpoints[0]
-
-    def get_user_from_prompt(self,prompts):
+    def get_user_from_prompt(self,prompts:dict) -> dict:
         """
             Extracts the user information after 'user:' from the given prompts.
 
@@ -184,31 +165,14 @@ class PromptGenerationHelper(object):
         return [
             f"Look for any endpoint that might be missing, exclude endpoints from this list :{self.unsuccessful_paths}"]
 
-    def get_http_action_template(self, method):
-        """
-                Provides a template for HTTP actions based on the method specified.
 
-                Args:
-                    method (str): The HTTP method for the action.
-
-                Returns:
-                    str: A template describing the HTTP action to take.
-        """
-        if method in ["POST", "PUT"]:
-            return f"Create HTTPRequests of type {method} considering the found schemas: {self.schemas} and understand the responses. Ensure that they are correct requests."
-        else:
-            return f"Create HTTPRequests of type {method} considering only the object with id=1 for the endpoint and understand the responses. Ensure that they are correct requests."
-
-    def _get_initial_documentation_steps(self, common_steps, strategy, strategy_steps):
+    def _get_initial_documentation_steps(self, strategy_steps):
         """
         Constructs a series of documentation steps to guide the testing and documentation of API endpoints.
         These steps are formulated based on the strategy specified and integrate common steps that are essential
         across different strategies. The function also sets the number of documentation steps and determines specific
         steps based on the current testing phase.
 
-        Args:
-            common_steps (list): A list of common documentation steps that should be included in every strategy.
-            strategy (PromptStrategy): The strategy to be used, which affects the specific steps included in the documentation.
 
         Returns:
             list: A comprehensive list of documentation steps tailored to the provided strategy, enhanced with common steps and hints for further actions.
@@ -234,7 +198,7 @@ class PromptGenerationHelper(object):
 
 
 
-    def check_prompt(self, previous_prompt: list, steps: str, max_tokens: int = 900) -> str:
+    def _check_prompt(self, previous_prompt: list, steps: str) -> str:
         """
         Validates and shortens the prompt if necessary to ensure it does not exceed the maximum token count.
 
@@ -249,12 +213,8 @@ class PromptGenerationHelper(object):
 
         def validate_prompt(prompt):
             print(f'Prompt: {prompt}')
-            # if self.token_count(prompt) <= max_tokens:
             return prompt
-            # shortened_prompt = self.response_handler.get_response_for_prompt("Shorten this prompt: " + str(prompt))
-            # if self.token_count(shortened_prompt) <= max_tokens:
-            #   return shortened_prompt
-            # return "Prompt is still too long after summarization."
+
 
         if steps != None and not all(step in previous_prompt for step in steps):
             if isinstance(steps, list):
@@ -265,7 +225,7 @@ class PromptGenerationHelper(object):
 
         return validate_prompt(previous_prompt)
 
-    def get_endpoint_for_query_params(self):
+    def _get_endpoint_for_query_params(self):
         """
         Searches for an endpoint in the found endpoints list that has query parameters.
 
@@ -277,20 +237,20 @@ class PromptGenerationHelper(object):
                 return endpoint
         return None
 
-    def get_instance_level_endpoint(self):
+    def _get_instance_level_endpoint(self):
         """
         Retrieves an instance level endpoint that has not been tested or found unsuccessful.
 
         Returns:
             str: A templated instance level endpoint ready to be tested, or None if no such endpoint is available.
         """
-        for endpoint in self.get_instance_level_endpoints():
+        for endpoint in self._get_instance_level_endpoints():
             templated_endpoint = endpoint.replace("1", "{id}")
             if templated_endpoint not in self.found_endpoints and endpoint not in self.unsuccessful_paths:
                 return endpoint
         return None
 
-    def get_instance_level_endpoints(self):
+    def _get_instance_level_endpoints(self):
         """
         Generates a list of instance-level endpoints from the root-level endpoints by appending '/1'.
 
@@ -298,7 +258,7 @@ class PromptGenerationHelper(object):
             list: A list of potentially testable instance-level endpoints derived from root-level endpoints.
         """
         instance_level_endpoints = []
-        for endpoint in self.get_root_level_endpoints():
+        for endpoint in self._get_root_level_endpoints():
             if not endpoint + "/{id}" in self.found_endpoints or \
                     not endpoint + "/1" in self.unsuccessful_paths:
                 instance_level_endpoints.append(endpoint + "/1")
@@ -321,7 +281,7 @@ class PromptGenerationHelper(object):
                 hint = f"ADD an id after these endpoints: {endpoints_missing_id_or_query} avoid getting this error again: {self.hint_for_next_round}"
             if "base62" in self.hint_for_next_round and "Missing required field: ids" not in self.correct_endpoint_but_some_error:
                 hint += " Try an id like 6rqhFgbbKwnb9MLmUQDhG6"
-            new_endpoint = self.get_instance_level_endpoint()
+            new_endpoint = self._get_instance_level_endpoint()
             if new_endpoint:
                 hint += f" Create a GET request for this endpoint: {new_endpoint}"
 
@@ -330,14 +290,14 @@ class PromptGenerationHelper(object):
             hint = f"First, try out these endpoints: {endpoints_missing_query}"
 
         if self.current_step == 6:
-            hint = f'Use this endpoint: {self.get_endpoint_for_query_params()}'
+            hint = f'Use this endpoint: {self._get_endpoint_for_query_params()}'
 
         if self.hint_for_next_round:
             hint += self.hint_for_next_round
 
         return hint
 
-    def get_root_level_endpoints(self):
+    def _get_root_level_endpoints(self):
         """
         Retrieves all root-level endpoints which consist of only one path component.
 

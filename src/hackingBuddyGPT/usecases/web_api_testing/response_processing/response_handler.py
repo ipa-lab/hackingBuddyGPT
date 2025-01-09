@@ -213,19 +213,19 @@ class ResponseHandler:
 
         if len(body_dict) == 1:
             entry_dict["id"] = {"value": body_dict}
-            self.llm_handler.add_created_object(entry_dict, object_name)
+            self.llm_handler._add_created_object(entry_dict, object_name)
         else:
             if isinstance(body_dict, list):
                 for entry in body_dict:
                     key = entry.get("title") or entry.get("name") or entry.get("id")
                     entry_dict[key] = {"value": entry}
-                    self.llm_handler.add_created_object(entry_dict[key], object_name)
+                    self.llm_handler._add_created_object(entry_dict[key], object_name)
                     if len(entry_dict) > 3:
                         break
             else:
                 key = body_dict.get("title") or body_dict.get("name") or body_dict.get("id")
                 entry_dict[key] = {"value": body_dict}
-                self.llm_handler.add_created_object(entry_dict[key], object_name)
+                self.llm_handler._add_created_object(entry_dict[key], object_name)
 
         return entry_dict, reference, openapi_spec
 
@@ -362,7 +362,7 @@ class ResponseHandler:
         Returns:
             Any: The evaluation result from the LLM response analyzer.
         """
-        self.response_analyzer.prompt_helper = self.prompt_helper
+        self.response_analyzer._prompt_helper = self.prompt_helper
         llm_responses, status_code = self.response_analyzer.analyze_response(result, prompt_history, analysis_context)
         return llm_responses, status_code
 
@@ -426,8 +426,8 @@ class ResponseHandler:
                 self.no_action_counter = 0
             else:
                 response.action.path = self.adjust_path_if_necessary(response.action.path)
-                if move_type == "exploit" and len(self.prompt_helper.get_instance_level_endpoints()) != 0:
-                    exploit_endpoint = self.prompt_helper.get_instance_level_endpoint()
+                if move_type == "exploit" and len(self.prompt_helper._get_instance_level_endpoints()) != 0:
+                    exploit_endpoint = self.prompt_helper._get_instance_level_endpoint()
 
                     if exploit_endpoint != None:
                         response.action.path = exploit_endpoint
@@ -581,11 +581,11 @@ class ResponseHandler:
 
                 elif self.prompt_helper.current_step == 2 and len(parts) != 2:
                     if path in self.prompt_helper.unsuccessful_paths:
-                        path = self.prompt_helper.get_instance_level_endpoint()
+                        path = self.prompt_helper._get_instance_level_endpoint()
                     elif path in self.prompt_helper.found_endpoints and len(parts) == 1:
                         path = path + '/1'
                     else:
-                        path = self.prompt_helper.get_instance_level_endpoint()
+                        path = self.prompt_helper._get_instance_level_endpoint()
 
                     print(f'PATH: {path}')
                 elif self.prompt_helper.current_step == 6 and not "?" in path:
@@ -651,11 +651,11 @@ class ResponseHandler:
         # Check for step-specific conditions or query count thresholds
         if ( self.prompt_helper.current_step == 1 and self.query_counter > 150):
             update_step_and_category()
-        elif self.prompt_helper.current_step == 2 and not self.prompt_helper.get_instance_level_endpoints():
+        elif self.prompt_helper.current_step == 2 and not self.prompt_helper._get_instance_level_endpoints():
             update_step_and_category()
         elif self.prompt_helper.current_step > 2 and self.query_counter > 30:
             update_step_and_category()
-        elif self.prompt_helper.current_step == 7 and not self.prompt_helper.get_root_level_endpoints():
+        elif self.prompt_helper.current_step == 7 and not self.prompt_helper._get_root_level_endpoints():
             update_step_and_category()
 
     def create_common_query_for_endpoint(self, base_url, sample_size=2):
@@ -709,7 +709,7 @@ class ResponseHandler:
         # Encode the parameters into a query string
         query_string = urlencode(sampled_params)
         if base_url == None:
-            instance_level_endpoints = self.prompt_helper.get_instance_level_endpoints()
+            instance_level_endpoints = self.prompt_helper._get_instance_level_endpoints()
             base_url = random.choice(instance_level_endpoints)
         if base_url.endswith('/'):
             base_url = base_url[:-1]

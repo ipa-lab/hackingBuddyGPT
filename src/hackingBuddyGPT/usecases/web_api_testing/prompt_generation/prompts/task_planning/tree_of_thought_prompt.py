@@ -60,7 +60,7 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         if hint:
             chain_of_thought_steps.append(hint)
 
-        return self.prompt_helper.check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)
+        return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)
 
     def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> Any:
         """

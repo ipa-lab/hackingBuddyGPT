@@ -47,16 +47,17 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         Returns:
             str: The generated prompt.
         """
-        common_steps = self._get_common_steps()
         if self.context == PromptContext.DOCUMENTATION:
             self.purpose = PromptPurpose.DOCUMENTATION
-            chain_of_thought_steps = self._get_documentation_steps(common_steps, move_type)
+            chain_of_thought_steps = self._get_documentation_steps( [],move_type)
         else:
-            chain_of_thought_steps = self._get_pentesting_steps(move_type)
+            chain_of_thought_steps = self._get_pentesting_steps(move_type,"")
         if hint:
             chain_of_thought_steps.append(hint)
 
-        return self.prompt_helper.check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)
+        chain_of_thought_steps = [chain_of_thought_steps[0]] + ["Let's think step by step"] + chain_of_thought_steps[1:]
+
+        return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)
 
     def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> Any:
         """

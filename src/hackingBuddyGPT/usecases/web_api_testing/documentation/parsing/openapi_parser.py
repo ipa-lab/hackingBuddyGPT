@@ -133,8 +133,6 @@ class OpenAPISpecificationParser:
         Returns:
             dict: The schema for the requestBody, or None if not available.
         """
-        print(f'path: {path}, method: {method}')
-
         method_details = self.api_data.get("paths", {}).get(path, {}).get(method.lower(), {})
         request_body = method_details.get("requestBody", {})
 

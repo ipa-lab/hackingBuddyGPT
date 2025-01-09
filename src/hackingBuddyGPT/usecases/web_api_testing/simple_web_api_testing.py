@@ -133,7 +133,7 @@ class SimpleWebAPITesting(Agent):
 
     def _setup_handlers(self):
         self._llm_handler = LLMHandler(self.llm, self._capabilities, all_possible_capabilities=self.all_capabilities)
-        self.prompt_helper = PromptGenerationHelper(host=self.host)
+        self.prompt_helper = PromptGenerationHelper(self.host, self.description)
         if "username" in self.config.keys() and "password" in self.config.keys():
             username = self.config.get("username")
             password = self.config.get("password")
@@ -211,7 +211,6 @@ class SimpleWebAPITesting(Agent):
         self.prompt_engineer = PromptEngineer(
             strategy=self.strategy,
             history=self._prompt_history,
-            handlers=(self._llm_handler, self._response_handler),
             context=PromptContext.PENTESTING,
             open_api_spec=self._openapi_specification,
             rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints),
@@ -264,14 +263,13 @@ class SimpleWebAPITesting(Agent):
     def _perform_prompt_generation(self, turn: int) -> None:
         response: Any
         completion: Any
-        while self.purpose == self.prompt_engineer.purpose:
-            prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore", log=self._log,
-                                                          prompt_history=self._prompt_history,
-                                                          llm_handler=self._llm_handler)
+        while self.purpose == self.prompt_engineer._purpose:
+            prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore",
+                                                          prompt_history=self._prompt_history)
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
             self._handle_response(completion, response, prompt)
 
-        self.purpose = self.prompt_engineer.purpose
+        self.purpose = self.prompt_engineer._purpose
         if self.purpose == PromptPurpose.LOGGING_MONITORING:
             self.pentesting_information.next_testing_endpoint()
 
@@ -330,7 +328,7 @@ class SimpleWebAPITesting(Agent):
                 endpoint=response.action.path,
                 method=response.action.method,
                 prompt_history=self._prompt_history, status_code=status_code)
-            self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer.purpose)
+            self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)
 
         self.all_http_methods_found()
 

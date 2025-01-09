@@ -61,8 +61,7 @@ class TaskPlanningPrompt(BasicPrompt):
         """
         if move_type == "explore":
             doc_steps = self.generate_documentation_steps(self.get_documentation_steps())
-            return self.prompt_helper._get_initial_documentation_steps(common_steps=common_steps,
-                                                                       strategy=self.strategy,
+            return self.prompt_helper._get_initial_documentation_steps(
                                                                        strategy_steps= doc_steps)
         else:
             return self.prompt_helper.get_endpoints_needing_help()
@@ -125,7 +124,7 @@ class TaskPlanningPrompt(BasicPrompt):
                 if purpose in self.transformed_steps.keys():
                     continue
                 else:
-                    test_cases = self.pentesting_information.get_steps_of_phase(purpose, self.pentest_steps)
+                    test_cases = self.pentesting_information.get_steps_of_phase(purpose)
                     if test_cases != None :
                         if len(test_cases) != 0 :
                             return test_cases

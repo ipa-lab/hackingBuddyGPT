@@ -13,7 +13,7 @@ class TestPromptHelper(unittest.TestCase):
 
     def test_check_prompt(self):
         self.response_handler.get_response_for_prompt = MagicMock(return_value="shortened_prompt")
-        prompt = self.prompt_helper.check_prompt(
+        prompt = self.prompt_helper._check_prompt(
             previous_prompt="previous_prompt",
             steps=["step1", "step2", "step3", "step4", "step5", "step6"],
             max_tokens=2,

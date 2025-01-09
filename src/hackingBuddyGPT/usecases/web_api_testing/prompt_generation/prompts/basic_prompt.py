@@ -79,10 +79,10 @@ class BasicPrompt(ABC):
 
         # Define specific documentation steps based on the given strategy
          return [
-            [f"Objective: Identify all accessible endpoints via GET requests for {self.prompt_helper.host}. {self.prompt_helper.description}"],
+            [f"Objective: Identify all accessible endpoints via GET requests for {self.prompt_helper.host}. {self.prompt_helper._description}"],
             [
                 f""" Query root-level resource endpoints.
-                               Find root-level endpoints for {self.prompt_helper.host}. {self.prompt_helper.description}
+                               Find root-level endpoints for {self.prompt_helper.host}. {self.prompt_helper._description}
                                Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
                                1. Send GET requests to new paths only, avoiding any in the lists above.
                                2. Do not reuse previously tested paths."""

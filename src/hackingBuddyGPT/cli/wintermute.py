@@ -27,7 +27,7 @@ def main():
     instance = parsed.use_case(parsed)
     if instance.__class__.__name__.__contains__("API"):
         instance.agent.config_path = config.config
-        instance.agent.strategy = strategy.strategy
+        instance.agent._strategy = strategy.strategy
     instance.init()
 
     instance.run()

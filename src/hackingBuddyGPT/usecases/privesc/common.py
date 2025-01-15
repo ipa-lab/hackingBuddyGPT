@@ -196,7 +196,7 @@ class ThesisPrivescPrototyp(Agent):
             self._rag_document_retriever = initiate_rag()
 
 
-        if "Qwen2.5" in self.llm.model:
+        if "Qwen" in self.llm.model:
             print("Set up Qwen Tokenizer")
             self.llm.qwen_tokenizer = Qwen2Tokenizer.from_pretrained("Qwen/Qwen-tokenizer")
 

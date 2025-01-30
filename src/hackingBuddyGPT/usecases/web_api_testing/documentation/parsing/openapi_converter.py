@@ -138,6 +138,7 @@ class OpenAPISpecificationConverter:
         # Write to JSON file
         with open(output_path, 'w') as json_file:
             json.dump(extracted_info, json_file, indent=2)
+        print(f'output path:{output_path}')
 
         return extracted_info
 
@@ -154,6 +155,6 @@ if __name__ == "__main__":
     # if json_file:
     #    converter.json_to_yaml(json_file)
 
-    openapi_path = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/config/hard/oas/crapi_oas.json"
+    openapi_path = "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/config/hard/oas/coincap_oas.json"
     converter.extract_openapi_info(openapi_path,
                                    output_path="/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/config/hard")

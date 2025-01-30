@@ -671,7 +671,7 @@
         }
       }
     },
-    "/identity/api/v2/user/videos/{video_id}": {
+    "/identity/api/v2/user/videos/{id}": {
       "get": {
         "operationId": "get_profile_video",
         "summary": "Get User Profile Video",
@@ -873,7 +873,7 @@
         }
       }
     },
-    "/identity/api/v2/admin/videos/{video_id}": {
+    "/identity/api/v2/admin/videos/{id}": {
       "delete": {
         "summary": "Delete Profile Video Admin",
         "description": "Delete profile video of other users by video_id as admin",
@@ -1125,7 +1125,7 @@
         "parameters": []
       }
     },
-    "/identity/api/v2/vehicle/{vehicleId}/location": {
+    "/identity/api/v2/vehicle/{id}/location": {
       "get": {
         "operationId": "get_location",
         "summary": "Get Vehicle Location",
@@ -1244,7 +1244,7 @@
         "parameters": []
       }
     },
-    "/community/api/v2/community/posts/{postId}": {
+    "/community/api/v2/community/posts/{id}": {
       "get": {
         "operationId": "get_post",
         "summary": "Get Post",
@@ -1388,7 +1388,7 @@
         "parameters": []
       }
     },
-    "/community/api/v2/community/posts/{postId}/comment": {
+    "/community/api/v2/community/posts/{id}/comment": {
       "post": {
         "operationId": "post_comment",
         "summary": "Post Comment",
@@ -1971,7 +1971,7 @@
         }
       }
     },
-    "/workshop/api/shop/orders/{order_id}": {
+    "/workshop/api/shop/orders/{id}": {
       "put": {
         "operationId": "update_order",
         "summary": "Update Order",

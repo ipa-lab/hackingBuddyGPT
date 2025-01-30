@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -23,13 +24,24 @@ class ReportHandler:
         """
         current_path: str = os.path.dirname(os.path.abspath(__file__))
         self.file_path: str = os.path.join(current_path, "reports")
+        self.vul_file_path: str = os.path.join(current_path, "vulnerabilities")
 
         if not os.path.exists(self.file_path):
             os.mkdir(self.file_path)
 
+        if not os.path.exists(self.vul_file_path):
+            os.mkdir(self.vul_file_path)
+
         self.report_name: str = os.path.join(
             self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
         )
+        self.vul_report_name: str = os.path.join(
+            self.vul_file_path, f"vul_report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
+        )
+
+        self.vulnerabilities_counter = 0
+
+
         # Initialize the PDF object
         self.pdf = FPDF()
         self.pdf.set_auto_page_break(auto=True, margin=15)
@@ -37,6 +49,7 @@ class ReportHandler:
         self.pdf.set_font("Arial", size=12)
         try:
             self.report = open(self.report_name, "x")
+            self.vul_report = open(self.vul_report_name, "x")
         except FileExistsError:
             # Retry with a different name using a UUID to ensure uniqueness
             self.report_name = os.path.join(
@@ -105,3 +118,81 @@ class ReportHandler:
         """
         report_name = self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
         self.pdf.output(report_name)
+
+    def write_vulnerability_to_report(self, test_step, raw_response):
+        """
+            Checks the given raw HTTP response against the test_data (which includes expected_response_code
+            and success/failure messages). Writes the result ("No Vulnerability found." or "Vulnerability found.")
+            into a text file, using the name of the test case in the report.
+
+            :param test_step: A dictionary containing test information, e.g.:
+                {
+                    'conditions': {
+                        'if_successful': 'No Vulnerability found.',
+                        'if_unsuccessful': 'Vulnerability found.'
+                    },
+                    'expected_response_code': ['200 OK', '201 Created'],
+                    'step': 'Create an account by sending ...'
+                    ...
+                }
+            :param raw_response: The full raw HTTP response string, e.g.:
+                'HTTP/1.1 200\\r\\n'
+                'Server: openresty/1.25.3.1\\r\\n'
+                ...
+                '{"message":"User registered successfully!","status":200}'
+            :param output_file: The filename where the vulnerability report is appended.
+            """
+
+        # ---------------------------------------------------------
+        # 1) Extract status code and status message from response
+        # ---------------------------------------------------------
+        # Look for a line like: HTTP/1.1 200 OK or HTTP/1.1 201 Created
+        # We'll capture both the numeric code and any trailing status text.
+        match = re.search(r"^HTTP/\d\.\d\s+(\d+)(?:\s+(.*))?", raw_response, re.MULTILINE)
+        if match:
+            status_code = match.group(1).strip()  # e.g. "200"
+            status_message = match.group(2) or ""  # e.g. "OK"
+            status_message = status_message.strip()
+            # Combine them to get something like "200 OK" for comparison
+            full_status_line = (status_code + " " + status_message).strip()
+        else:
+            # If we can't find an HTTP status line, treat it as suspicious
+            status_code = None
+            full_status_line = ""
+
+        # ---------------------------------------------------------
+        # 2) Determine if the response is "successful" based on test_data
+        # ---------------------------------------------------------
+        # The test_data dictionary includes an 'expected_response_code' list,
+        # e.g. ["200 OK", "201 Created"]. We compare our full_status_line
+        # with each expected string (case-insensitive).
+        expected_codes = test_step.get('expected_response_code', [])
+        conditions = test_step.get('conditions', {})
+        successful_msg = conditions.get('if_successful', "No Vulnerability found.")
+        unsuccessful_msg = conditions.get('if_unsuccessful', "Vulnerability found.")
+
+        # A simple case-insensitive check. Alternatively, parse numeric code
+        # only, or do partial matching, depending on your needs.
+        success = any(
+            status_code == expected.split()[0]  # compare "200" to the first token in "200 OK"
+            for expected in expected_codes
+        )
+
+        # ---------------------------------------------------------
+        # 3) Compose the report line
+        # ---------------------------------------------------------
+        test_case_name = test_step.get('purpose', "Unnamed Test Case")
+        step = test_step.get('step', "No step")
+        expected = test_step.get('expected_response_code', "No expected result")
+        if not success and successful_msg.startswith("Vul"):
+            # Vulnerability found
+            self.vulnerabilities_counter += 1
+            report_line = f"Test Name: {test_case_name}\nStep:{step}\nExpected Result:{expected}\nActual Result:{status_code}\n{unsuccessful_msg}\nNumber of found vulnerabilities:{self.vulnerabilities_counter}\n"
+            # ---------------------------------------------------------
+            # 4) Write the result into a text file
+            # ---------------------------------------------------------
+            with open(self.vul_report_name, "a", encoding="utf-8") as f:
+                f.write(report_line)
+
+
+

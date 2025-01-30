@@ -8,11 +8,13 @@ class Evaluator:
         self._pattern_matcher = PatternMatcher()
         self.documented_query_params = config.get("query_params")
         self.num_runs = num_runs
-        self.documented_routes = config.get("correct_endpoints") #Example documented GET routes
+        self.query_params_found = {}
+        self.name = config.get("name")
+        self.documented_routes = config.get("correct_endpoints")  # Example documented GET routes
         self.query_params_documented = len(config.get("query_params"))  # Example documented query parameters
         self.results = {
             "routes_found": [],
-            "query_params_found": [],
+            "query_params_found": {},
             "false_positives": [],
         }
 
@@ -21,33 +23,45 @@ class Evaluator:
         Calculate evaluation metrics.
         """
         # Average percentages of documented routes and parameters found
+        percent_params_found_values = 0
+        percent_params_found_keys = 0
 
-
-
+        self.results["routes_found"] = list(set(self.results["routes_found"]))
         # Calculate percentages
         percent_routes_found = self.get_percentage(self.results["routes_found"], self.documented_routes)
         if len(self.documented_query_params) > 0:
-            percent_params_found = self.get_percentage(self.results["query_params_found"], self.documented_query_params)
+            percent_params_found_values = self.calculate_match_percentage(self.documented_query_params, self.results["query_params_found"])["Value Match Percentage"]
+            percent_params_found_keys = self.calculate_match_percentage(self.documented_query_params, self.results["query_params_found"])["Key Match Percentage"]
         else:
             percent_params_found = 0
 
         # Average false positives
         avg_false_positives = len(self.results["false_positives"]) / self.num_runs
 
+
         # Best and worst for routes and parameters
-        r_best = max(self.results["routes_found"])
-        r_worst = min(self.results["routes_found"])
-        p_best = max(self.results["query_params_found"])
-        p_worst = min(self.results["query_params_found"])
+        if len(self.results["routes_found"]) >0:
+
+            r_best = max(self.results["routes_found"])
+            r_worst = min(self.results["routes_found"])
+        else:
+            r_best = 0
+            r_worst = 0
+        self.documented_routes = list(set(self.documented_routes))
 
         metrics = {
             "Percent Routes Found": percent_routes_found,
-            "Percent Parameters Found": percent_params_found,
+            "Percent Parameters Values Found": percent_params_found_values,
+            "Percent Parameters Keys Found": percent_params_found_keys,
             "Average False Positives": avg_false_positives,
             "Routes Best/Worst": (r_best, r_worst),
-            "Params Best/Worst": (p_best, p_worst),
-            "Additional_routes Found":  set(self.results["routes_found"]).difference(set(self.documented_routes)),
-            "Missing routes Found":  set(self.documented_routes).difference(set(self.results["routes_found"])),
+            "Additional_Params Best/Worst": set(
+    tuple(value) if isinstance(value, list) else value for value in self.documented_query_params.values()
+).difference(
+    set(tuple(value) if isinstance(value, list) else value for value in self.query_params_found.values())
+),
+            "Additional_routes Found": set(self.results["routes_found"]).difference(set(self.documented_routes)),
+            "Missing routes Found": set(self.documented_routes).difference(set(self.results["routes_found"])),
         }
 
         return metrics
@@ -81,7 +95,6 @@ class Evaluator:
         Returns:
             list: A list of query parameter names found in the response.
         """
-        # Placeholder code: Replace with actual logic to parse response and extract query parameters
         return response.get("query_params", [])
 
     def all_query_params_found(self, path):
@@ -94,19 +107,28 @@ class Evaluator:
         Returns:
             int: The count of documented query parameters found in this turn.
         """
-        # Example list of documented query parameters
 
         # Simulate response query parameters found (this would usually come from the response data)
         response_query_params = self._pattern_matcher.extract_query_params(path)
-        x = self.documented_query_params.values()
-        # Count the valid query parameters found in the response
         valid_query_params = []
-        if response_query_params:
-            for param, value in response_query_params.items():
-                if value in x:
-                    valid_query_params.append(value)
-
-        return len(valid_query_params)
+        if "?" in path:
+            ep = path.split("?")[0]  # Count the valid query parameters found in the response
+            if response_query_params:
+                for param, value in response_query_params.items():
+                    if ep in self.documented_query_params.keys():
+                        x = self.documented_query_params[ep]
+                        if param in x:
+                            valid_query_params.append(param)
+                            if ep not in self.results["query_params_found"].keys():
+                                self.results["query_params_found"][ep] = []
+                            if param not in self.results["query_params_found"][ep]:
+                                self.results["query_params_found"][ep].append(param)
+                    if ep not in self.query_params_found.keys():
+                        self.query_params_found[ep] = []
+                    if param not in self.query_params_found[ep]:
+                        self.query_params_found[ep].append(param)
+        print(f'Documented params;{self.documented_query_params}')
+        print(f'Found params;{self.results["query_params_found"]}')
 
     def extract_query_params_from_response(self, path):
         """
@@ -121,20 +143,89 @@ class Evaluator:
         # Placeholder code: Replace this with actual extraction logic
         return self._pattern_matcher.extract_query_params(path).keys()
 
+    def calculate_match_percentage(self, documented, result):
+        total_keys = len(documented)
+        matching_keys = 0
+        value_matches = 0
+        total_values = 0
+
+        for key in documented:
+            # Check if the key exists in the result
+            if key in result:
+                matching_keys += 1
+                # Compare values as sets (ignoring order)
+                documented_values = set(documented[key])
+                result_values = set(result[key])
+
+                # Count the number of matching values
+                value_matches += len(documented_values & result_values)  # Intersection
+                total_values += len(documented_values)  # Total documented values for the key
+            else:
+                total_values += len(documented[key])  # Add documented values for missing keys
+
+        # Calculate percentages
+        key_match_percentage = (matching_keys / total_keys) * 100
+        value_match_percentage = (value_matches / total_values) * 100 if total_values > 0 else 0
+
+        return {
+            "Key Match Percentage": key_match_percentage,
+            "Value Match Percentage": value_match_percentage,
+        }
+
     def evaluate_response(self, response, routes_found):
         query_params_found = 0
         false_positives = 0
+        if self.name.__contains__("Coin"):
+            print(f'Routes found:{routes_found}')
+            for route in routes_found:
+                self.add_if_is_cryptocurrency(route, routes_found)
+            print(f'Updated_routes_found:{routes_found}')
         # Use evaluator to record routes and parameters found
         if response.action.__class__.__name__ != "RecordNote":
             path = response.action.path
             if path.__contains__('?'):
-                query_params_found = self.all_query_params_found(path)  # This function should return the number found
+                self.all_query_params_found(path)  # This function should return the number found
                 false_positives = self.check_false_positives(path)  # Define this function to determine FP count
 
             # Record these results in the evaluator
             self.results["routes_found"] += routes_found
-            self.results["query_params_found"].append(query_params_found)
+            #self.results["query_params_found"].append(query_params_found)
             self.results["false_positives"].append(false_positives)
+
+    def add_if_is_cryptocurrency(self, path,routes_found, cryptos=None):
+        """
+               If the path contains a known cryptocurrency name, replace that part with '{id}'
+               and add the resulting path to `self.prompt_helper.found_endpoints`.
+               """
+        if cryptos is None:
+            # Default list of cryptos to detect
+            cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
+                       "cardano", "solana"]
+
+        # Convert to lowercase for the match, but preserve the original path for reconstruction if you prefer
+        lower_path = path.lower()
+
+
+        for crypto in cryptos:
+            if crypto in lower_path:
+                # Example approach: split by '/' and replace the segment that matches crypto
+                parts = path.split('/')
+                replaced_any = False
+                for i, segment in enumerate(parts):
+                    if segment.lower() == crypto:
+                        parts[i] = "{id}"
+                        replaced_any = True
+
+                # Only join and store once per path
+                if replaced_any:
+                    replaced_path = "/".join(parts)
+                    if path in routes_found:
+                        for i, route in enumerate(routes_found):
+                            if route == path:
+                                routes_found[i] = replaced_path
+
+                    else:
+                        routes_found.append(replaced_path)
 
     def get_percentage(self, param, documented_param):
         found_set = set(param)
@@ -157,12 +248,13 @@ class Evaluator:
         with open(file_path, 'a') as file:  # 'a' is for append mode
             file.write("\n\nDocumentation Effectiveness Metrics:\n")
             file.write(f"Percent Routes Found: {metrics['Percent Routes Found']:.2f}%\n")
-            file.write(f"Percent Parameters Found: {metrics['Percent Parameters Found']:.2f}%\n")
+            file.write(f"Percent Parameters Values Found: {metrics['Percent Parameters Values Found']:.2f}%\n")
+            file.write(f"Percent Parameters Keys Found: {metrics['Percent Parameters Keys Found']:.2f}%\n")
             file.write(f"Average False Positives: {metrics['Average False Positives']}\n")
             file.write(
                 f"Routes Found - Best: {metrics['Routes Best/Worst'][0]}, Worst: {metrics['Routes Best/Worst'][1]}\n")
             file.write(
-                f"Query Parameters Found - Best: {metrics['Params Best/Worst'][0]}, Worst: {metrics['Params Best/Worst'][1]}\n")
+                f"Additional Query Parameters Found - Best: {', '.join(map(str, metrics['Additional_Params Best/Worst']))}\n")
             file.write(f"Additional Routes Found: {', '.join(map(str, metrics['Additional_routes Found']))}\n")
             file.write(f"Missing Routes Found: {', '.join(map(str, metrics['Missing routes Found']))}\n")
 
@@ -171,6 +263,7 @@ class Evaluator:
             total_additional_routes = len(metrics['Additional_routes Found'])
             total_missing_routes = len(metrics['Missing routes Found'])
             file.write("\nSummary:\n")
+            file.write(f"Total Params Found: {self.query_params_found}\n")
             file.write(f"Total Documented Routes: {total_documented_routes}\n")
             file.write(f"Total Additional Routes Found: {total_additional_routes}\n")
             file.write(f"Total Missing Routes: {total_missing_routes}\n")
@@ -179,4 +272,3 @@ class Evaluator:
             from datetime import datetime
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             file.write(f"Metrics generated on: {current_time}\n")
-

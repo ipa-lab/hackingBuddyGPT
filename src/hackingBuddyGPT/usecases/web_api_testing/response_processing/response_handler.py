@@ -1,4 +1,5 @@
 import json
+import os.path
 import re
 from collections import Counter
 from itertools import cycle
@@ -42,13 +43,13 @@ class ResponseHandler:
         Args:
             llm_handler (LLMHandler): An instance of the LLM handler for interacting with the LLM.
         """
+        self.all_query_combinations = []
         self.llm_handler = llm_handler
         self.no_action_counter = 0
         if prompt_context == PromptContext.PENTESTING:
             self.pentesting_information = pentesting_information
 
-
-        self.common_endpoints = ['/api', '/auth', '/login', '/admin', '/register', '/users', '/photos', '/images',
+        self.common_endpoints = ['autocomplete', '/api', '/auth', '/login', '/admin', '/register', '/users', '/photos', '/images',
                                  '/products', '/orders',
                                  '/search', '/posts', '/todos', '/1', '/resources', '/categories',
                                  '/cart', '/checkout', '/payments', '/transactions', '/invoices', '/teams', '/comments',
@@ -84,7 +85,7 @@ class ResponseHandler:
         self.query_counter = 0
         self.repeat_counter = 0
         self.variants_of_found_endpoints = []
-        self.name= config.get("name")
+        self.name = config.get("name")
         self.token = config.get("token")
         self.last_path = ""
         self.prompt_helper = prompt_helper
@@ -389,9 +390,11 @@ class ResponseHandler:
 
         if self.repeat_counter == 3:
             self.repeat_counter = 0
-            self.prompt_helper.hint_for_next_round = f'Try this endpoint in the next round {next(self.common_endpoints)}'
-            self.no_action_counter += 1
-            return False, prompt_history, None, None
+            if self.prompt_helper.current_step == 2:
+                adjusted_path = self.adjust_path_if_necessary(response.action.path)
+                self.prompt_helper.hint_for_next_round = f'Try this endpoint in the next round {adjusted_path}'
+                self.no_action_counter += 1
+                return False, prompt_history, None, None
 
         if response.__class__.__name__ == "RecordNote":
             prompt_history.append(tool_message(response, tool_call_id))
@@ -420,85 +423,59 @@ class ResponseHandler:
 
     def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any,
                              categorized_endpoints, tool_call_id, move_type) -> Any:
-        if not response.action.__class__.__name__ == "RecordNote":
-            if self.no_action_counter == 5:
-                response.action.path = self.get_next_path(response.action.path)
-                self.no_action_counter = 0
-            else:
-                response.action.path = self.adjust_path_if_necessary(response.action.path)
-                if move_type == "exploit" and len(self.prompt_helper._get_instance_level_endpoints()) != 0:
-                    exploit_endpoint = self.prompt_helper._get_instance_level_endpoint()
+        print(f'response.action:{response.action}')
 
-                    if exploit_endpoint != None:
-                        response.action.path = exploit_endpoint
-            # Add Authorization header if token is available
-            if self.token != "":
+        response = self.adjust_path(response, move_type)
+        # Add Authorization header if token is available
+        if self.token:
                 response.action.headers = {"Authorization": f"Bearer {self.token}"}
+
         # Convert response to JSON and display it
         command = json.loads(pydantic_core.to_json(response).decode())
         log.console.print(Panel(json.dumps(command, indent=2), title="assistant"))
-
 
         # Execute the command and parse the result
         with log.console.status("[bold green]Executing command..."):
             if response.__class__.__name__ == "RecordNote":
                 print("HHHHHHHH")
+
             result = response.execute()
             self.query_counter += 1
             result_dict = self.extract_json(result)
             log.console.print(Panel(result, title="tool"))
-        if not response.action.__class__.__name__ == "RecordNote":
 
+        if response.action.__class__.__name__ != "RecordNote":
             self.prompt_helper.tried_endpoints.append(response.action.path)
 
             # Parse HTTP status and request path
             result_str = self.parse_http_status_line(result)
-
             request_path = response.action.path
 
-            # Check for missing action
             if "action" not in command:
                 return False, prompt_history, response, completion
 
-            # Determine if the response is successful
+            # Check response success
             is_successful = result_str.startswith("200")
             prompt_history.append(message)
             self.last_path = request_path
 
-            # Determine if the request path is correct and set the status message
-            if is_successful:
-                if request_path.split("?")[0] not in self.prompt_helper.found_endpoints:
-                    # Update current step and add to found endpoints
-                    self.prompt_helper.found_endpoints.append(request_path.split("?")[0])
-                status_message = f"{request_path} is a correct endpoint"
-            else:
-                # Handle unsuccessful paths and error message
-
-                error_msg = result_dict.get("error", {}).get("message", "unknown error")
-                print(f'ERROR MSG: {error_msg}')
-
-                if result_str.startswith("400"):
-                    status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"
-
-                    if error_msg not in self.prompt_helper.correct_endpoint_but_some_error.keys():
-                        self.prompt_helper.correct_endpoint_but_some_error[error_msg] = []
-                    self.prompt_helper.correct_endpoint_but_some_error[error_msg].append(request_path)
-                    self.prompt_helper.hint_for_next_round = error_msg
-
-                else:
-                    self.prompt_helper.unsuccessful_paths.append(request_path)
-                    status_message = f"{request_path} is not a correct endpoint; Reason: {error_msg}"
-
-            self.adjust_counter(categorized_endpoints)
-
+            status_message = self.check_if_successful(is_successful, request_path, result_dict, result_str, categorized_endpoints)
             prompt_history.append(tool_message(status_message, tool_call_id))
-            print(f'QUERY COUNT: {self.query_counter}')
+
         else:
             prompt_history.append(tool_message(result, tool_call_id))
-            is_successful = False
-            result_str = result[:20]
+        is_successful = False
+        result_str = result[:20]
 
         return is_successful, prompt_history, result, result_str
+
+    def extract_params(self, url):
+
+        params = re.findall(r'(\w+)=([^&]*)', url)
+        extracted_params = {key: value for key, value in params}
+        print(f'PARAMS EXTRACTED:{extracted_params}')
+
+        return extracted_params
 
     def get_next_key(self, current_key, dictionary):
         keys = list(dictionary.keys())  # Convert keys to a list
@@ -534,7 +511,10 @@ class ResponseHandler:
     def get_next_path(self, path):
         counter = 0
         if self.prompt_helper.current_step >= 6:
-            return self.create_common_query_for_endpoint(path)
+            new_path = self.create_common_query_for_endpoint(path)
+            if path == "params":
+                return path
+            return new_path
         try:
 
             new_path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
@@ -548,78 +528,163 @@ class ResponseHandler:
         except StopIteration:
             return path
 
-    def adjust_path_if_necessary(self, path):
-        # Initial processing and checks
-        parts = [part for part in path.split("/") if part]
-        pattern_replaced_path = self.pattern_matcher.replace_according_to_pattern(path)
 
-        if not path.startswith("/"):
-            path = "/" + path
-        # Check for no action and reset if needed
-        if self.no_action_counter == 5:
-            path = self.get_next_path(path)
-            self.no_action_counter = 0
-        else:
+    def finalize_path(self, path: str) -> str:
+            """
+            Final processing on the path before returning:
+              - Replace any '{id}' with '1'
+              - Then ALWAYS replace '1' with 'bitcoin' (no more 'if "Coin" in self.name')
+              - If "OWASP API" in self.name, capitalize the path
+            """
+            # Replace {id} with '1'
+            path = path.replace("{id}", "1")
+            # Unconditionally replace '1' with 'bitcoin'
+            path = path.replace("1", "bitcoin")
 
-            # Specific logic based on current_step and the structure of parts
+            # Keep the OWASP API naming convention if needed
+            if "OWASP API" in self.name:
+                path = path.capitalize()
+
+            return path
+
+    def adjust_path_if_necessary(self, path: str) -> str:
+            """
+            Adjusts the given path based on the current step in self.prompt_helper and certain conditions.
+            Always replaces '1' with 'bitcoin', no matter what self.name is.
+            """
+            # Ensure path starts with a slash
+            if not path.startswith("/"):
+                path = "/" + path
+
+            parts = [part for part in path.split("/") if part]
+            pattern_replaced_path = self.pattern_matcher.replace_according_to_pattern(path)
+
+            # Reset logic
+            if self.no_action_counter == 5:
+                self.no_action_counter = 0
+                # Return next path (finalize it)
+                return self.finalize_path(self.get_next_path(path))
+
             if parts:
                 root_path = '/' + parts[0]
+
+                # -------------- STEP 1 --------------
                 if self.prompt_helper.current_step == 1:
-                    if len(parts) != 1:
-                        if (root_path not in self.prompt_helper.found_endpoints and root_path not in self.prompt_helper.unsuccessful_paths):
+                    if len(parts) > 1:
+                        if root_path not in (
+                                self.prompt_helper.found_endpoints or self.prompt_helper.unsuccessful_paths):
                             self.save_endpoint(path)
-                            path = root_path
+                            return self.finalize_path(root_path)
                         else:
                             self.save_endpoint(path)
-                            path = self.get_next_path(path)
-
-
+                            return self.finalize_path(self.get_next_path(path))
                     else:
-                            self.save_endpoint(path)
-                            if path in self.prompt_helper.found_endpoints or path in self.prompt_helper.unsuccessful_paths or path == self.last_path:
-                                path = self.get_next_path(path)
+                        # Single-part path
+                        if (path in self.prompt_helper.found_endpoints or
+                                path in self.prompt_helper.unsuccessful_paths or
+                                path == self.last_path):
+                            return self.finalize_path(self.get_next_path(path))
 
-                elif self.prompt_helper.current_step == 2 and len(parts) != 2:
+                # -------------- STEP 2 --------------
+                elif self.prompt_helper.current_step == 2:
+                    if len(parts) != 2:
+                        if path in self.prompt_helper.unsuccessful_paths:
+                            ep = self.prompt_helper._get_instance_level_endpoint(self.name)
+                            return self.finalize_path(ep)
+
+                        if path in self.prompt_helper.found_endpoints and len(parts) == 1:
+                            # Append /1 -> becomes /bitcoin after finalize_path
+                            return self.finalize_path(f"{path}/1")
+
+                        ep = self.prompt_helper._get_instance_level_endpoint(self.name)
+                        return self.finalize_path(ep)
+
+                # -------------- STEP 3 --------------
+                elif self.prompt_helper.current_step == 3:
                     if path in self.prompt_helper.unsuccessful_paths:
-                        path = self.prompt_helper._get_instance_level_endpoint()
-                    elif path in self.prompt_helper.found_endpoints and len(parts) == 1:
-                        path = path + '/1'
+                        ep = self.prompt_helper._get_sub_resource_endpoint(
+                            random.choice(self.prompt_helper.found_endpoints),
+                            self.common_endpoints
+                        )
+                        return self.finalize_path(ep)
+
+                    ep = self.prompt_helper._get_sub_resource_endpoint(path, self.common_endpoints, self.name)
+                    return self.finalize_path(ep)
+
+                # -------------- STEP 4 --------------
+                elif self.prompt_helper.current_step == 4:
+                    if path in self.prompt_helper.unsuccessful_paths:
+                        ep = self.prompt_helper._get_related_resource_endpoint(
+                            random.choice(self.prompt_helper.found_endpoints),
+                            self.common_endpoints,
+                            self.name
+                        )
+                        return self.finalize_path(ep)
+
+                    ep = self.prompt_helper._get_related_resource_endpoint(path, self.common_endpoints, self.name)
+                    return self.finalize_path(ep)
+
+                # -------------- STEP 5 --------------
+                elif self.prompt_helper.current_step == 5:
+                    if path in self.prompt_helper.unsuccessful_paths:
+                        ep = self.prompt_helper._get_multi_level_resource_endpoint(
+                            random.choice(self.prompt_helper.found_endpoints),
+                            self.common_endpoints,
+                            self.name
+                        )
                     else:
-                        path = self.prompt_helper._get_instance_level_endpoint()
+                        ep = self.prompt_helper._get_multi_level_resource_endpoint(path, self.common_endpoints, self.name)
+                    return self.finalize_path(ep)
 
-                    print(f'PATH: {path}')
-                elif self.prompt_helper.current_step == 6 and not "?" in path:
-                    path = self.create_common_query_for_endpoint(path)
+                # -------------- STEP 6 --------------
+                elif (self.prompt_helper.current_step == 6 and
+                      "?" not in path and
+                      path.endswith("?")):
+                    new_path = self.create_common_query_for_endpoint(path)
+                    # If "no params", keep original path, else use new_path
+                    return self.finalize_path(path if new_path == "no params" else new_path)
 
-                # Check if the path is already handled or matches known patterns
-                elif (path == self.last_path or
-                    path in self.prompt_helper.unsuccessful_paths or
-                    path in self.prompt_helper.found_endpoints and self.prompt_helper.current_step != 6 or
-                    pattern_replaced_path in self.prompt_helper.found_endpoints or
-                    pattern_replaced_path in self.prompt_helper.unsuccessful_paths
-                    and self.prompt_helper.current_step != 2):
+                # Already-handled paths
+                print(f'PATh:{path}')
+                if (path in {self.last_path,
+                             *self.prompt_helper.unsuccessful_paths,
+                             *self.prompt_helper.found_endpoints}
+                        and self.prompt_helper.current_step != 6):
+                    return self.finalize_path(self.get_saved_endpoint())
 
-                    path = self.get_saved_endpoint()
-        if path == None:
-            path = self.get_next_path(path)
+                # Pattern-based check
+                if (pattern_replaced_path in self.prompt_helper.found_endpoints or
+                    pattern_replaced_path in self.prompt_helper.unsuccessful_paths) and self.prompt_helper.current_step != 2:
+                    return self.finalize_path(self.get_saved_endpoint())
 
-            # Replacement logic for dynamic paths containing placeholders
+            else:
+                # No parts
+                if self.prompt_helper.current_step == 1:
+                    root_level_endpoints = self.prompt_helper._get_root_level_endpoints()
+                    chosen = root_level_endpoints[0] if root_level_endpoints else self.get_next_path(path)
+                    return self.finalize_path(chosen)
 
-        if "{id}" in path:
-            path = path.replace("{id}", "1")
+                if self.prompt_helper.current_step == 2:
+                    ep = self.prompt_helper._get_instance_level_endpoint(self.name)
+                    return self.finalize_path(ep)
 
-        print(f'PATH: {path}')
+            # -------------- FALLBACK --------------
+            # If none of the above conditions matched, we finalize the path or get_next_path
+            if path:
+                return self.finalize_path(path)
+            return self.finalize_path(self.get_next_path(path))
 
-        if self.name.__contains__("OWASP API"):
-            return path.capitalize()
 
-        return path
 
     def save_endpoint(self, path):
-        parts = [part for part in path.split("/") if part]
+
+        parts = [part.strip() for part in path.split("/") if part.strip()]
         if len(parts) not in self.saved_endpoints.keys():
             self.saved_endpoints[len(parts)] = []
-        self.saved_endpoints[len(parts)].append(path)
+        if path not in self.saved_endpoints[len(parts)]:
+            self.saved_endpoints[len(parts)].append(path)
+        if path not in self.prompt_helper.saved_endpoints:
+            self.prompt_helper.saved_endpoints.append(path)
 
     def get_saved_endpoint(self):
         # First check if there are any saved endpoints for the current step
@@ -643,38 +708,40 @@ class ResponseHandler:
     def adjust_counter(self, categorized_endpoints):
         # Helper function to handle the increment and reset actions
         def update_step_and_category():
-            self.prompt_helper.current_step += 1
-            self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
+            if self.prompt_helper.current_step != 6:
+                self.prompt_helper.current_step += 1
+                self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
                                                                     categorized_endpoints)
-            self.query_counter = 0
+                self.query_counter = 0
 
         # Check for step-specific conditions or query count thresholds
-        if ( self.prompt_helper.current_step == 1 and self.query_counter > 150):
+        if (self.prompt_helper.current_step == 1 and self.query_counter > 150):
             update_step_and_category()
-        elif self.prompt_helper.current_step == 2 and not self.prompt_helper._get_instance_level_endpoints():
+        elif self.prompt_helper.current_step == 2 and not self.prompt_helper._get_instance_level_endpoints(self.name):
             update_step_and_category()
         elif self.prompt_helper.current_step > 2 and self.query_counter > 30:
             update_step_and_category()
-        elif self.prompt_helper.current_step == 7 and not self.prompt_helper._get_root_level_endpoints():
+        elif self.prompt_helper.current_step == 7 and not self.prompt_helper._get_root_level_endpoints(self.name):
             update_step_and_category()
 
-    def create_common_query_for_endpoint(self, base_url, sample_size=2):
+    import random
+    from urllib.parse import urlencode
+
+    def create_common_query_for_endpoint(self, endpoint):
         """
-           Constructs a complete URL with query parameters for an API request.
+        Constructs complete URLs with one query parameter for each API endpoint.
 
-           Args:
-               base_url (str): The base URL of the API endpoint.
-               params (dict): A dictionary of parameters where keys are parameter names and values are the values for those parameters.
 
-           Returns:
-               str: The full URL with appended query parameters.
-           """
+        Returns:
+            list: A list of full URLs with appended query parameters.
+        """
 
+        print(f'endpoint:{endpoint}')
         # Define common query parameters
         common_query_params = [
             "page", "limit", "sort", "filter", "search", "api_key", "access_token",
             "callback", "fields", "expand", "since", "until", "status", "lang",
-            "locale", "region", "embed", "version", "format"
+            "locale", "region", "embed", "version", "format", "username"
         ]
 
         # Sample dictionary of parameters for demonstration
@@ -697,21 +764,157 @@ class ResponseHandler:
             "region": "North America",
             "embed": "true",
             "version": "1.0",
-            "format": "json"
+            "format": "json",
+            "username": "test"
         }
 
-        # Randomly pick a subset of parameters from the list
-        sampled_params_keys = random.sample(common_query_params, min(sample_size, len(common_query_params)))
+        urls_with_params = []
 
-        # Filter the full_params to include only the sampled parameters
-        sampled_params = {key: full_params[key] for key in sampled_params_keys if key in full_params}
+        # Iterate through all found endpoints
+        # Pick one random parameter from the common query params
+        random_param_key = random.choice(common_query_params)
+
+        # Check if the selected key is in the full_params
+        if random_param_key in full_params:
+            sampled_params = {random_param_key: full_params[random_param_key]}
+        else:
+            sampled_params = {}
 
         # Encode the parameters into a query string
         query_string = urlencode(sampled_params)
-        if base_url == None:
-            instance_level_endpoints = self.prompt_helper._get_instance_level_endpoints()
-            base_url = random.choice(instance_level_endpoints)
-        if base_url.endswith('/'):
-            base_url = base_url[:-1]
 
-        return f"{base_url}?{query_string}"
+        # Ensure the endpoint doesn't end with a slash
+        if endpoint.endswith('/') or endpoint.endswith("?"):
+            endpoint = endpoint[:-1]
+
+        # Construct the full URL with the query parameter
+        full_url = f"{endpoint}?{query_string}"
+        urls_with_params.append(full_url)
+        if endpoint in self.prompt_helper.query_endpoints_params.keys():
+            if random_param_key not in self.prompt_helper.query_endpoints_params[endpoint]:
+                if random_param_key not in self.prompt_helper.tried_endpoints_with_params[endpoint]:
+                    return full_url
+
+        if urls_with_params == None:
+            return "no params"
+        return random.choice(urls_with_params)
+
+    def adjust_path(self, response, move_type):
+            """
+            Adjusts the response action path based on current step, unsuccessful paths, and move type.
+
+            Args:
+                response (Any): The HTTP response object containing the action and path.
+                move_type (str): The type of move (e.g., 'exploit') influencing path adjustment.
+
+            Returns:
+                Any: The updated response object with an adjusted path.
+            """
+            old_path = response.action.path
+            # Process action if it's not RecordNote
+            if response.action.__class__.__name__ != "RecordNote":
+                if self.prompt_helper.current_step == 6 and response.action.path.endswith("?"):
+                    response.action.path = self.create_common_query_for_endpoint(response.action.path)
+
+                if response.action.path in self.prompt_helper.unsuccessful_paths:
+                    self.repeat_counter += 1
+
+                if self.no_action_counter == 5:
+                    response.action.path = self.get_next_path(response.action.path)
+                    self.no_action_counter = 0
+                else:
+                    if self.prompt_helper.current_step != 6 and not response.action.path.endswith("?"):
+                        response.action.path = self.adjust_path_if_necessary(response.action.path)
+
+                        if move_type == "exploit" and self.repeat_counter == 3:
+                            if len(self.prompt_helper.endpoints_to_try) != 0:
+                                exploit_endpoint = self.prompt_helper.endpoints_to_try[0]
+                                response.action.path = self.create_common_query_for_endpoint(exploit_endpoint)
+                            else:
+                                exploit_endpoint = self.prompt_helper._get_instance_level_endpoint()
+                                self.repeat_counter = 0
+
+                                if exploit_endpoint and response.action.path not in self.prompt_helper._get_instance_level_endpoints():
+                                    response.action.path = exploit_endpoint
+
+            if response.action.path == None:
+                response.action.path = old_path
+
+            return response
+
+    def check_if_successful(self, is_successful, request_path, result_dict, result_str, categorized_endpoints):
+        if is_successful:
+            ep = request_path.split("?")[0]
+            if ep in self.prompt_helper.endpoints_to_try:
+                self.prompt_helper.endpoints_to_try.remove(ep)
+            if ep in self.saved_endpoints:
+                self.saved_endpoints[1].remove(ep)
+            if ep in self.prompt_helper.saved_endpoints:
+                self.prompt_helper.saved_endpoints.remove(ep)
+
+            self.prompt_helper.query_endpoints_params.setdefault(ep, [])
+            self.prompt_helper.tried_endpoints_with_params.setdefault(ep, [])
+            ep = self.check_if_crypto(ep)
+            if ep not in self.prompt_helper.found_endpoints:
+
+                self.prompt_helper.found_endpoints.append(ep)
+
+            for key in self.extract_params(request_path):
+                self.prompt_helper.query_endpoints_params[ep].append(key)
+                self.prompt_helper.tried_endpoints_with_params[ep].append(key)
+
+            status_message = f"{request_path} is a correct endpoint"
+        else:
+            error_msg = result_dict.get("error", {}).get("message", "unknown error") if isinstance(
+                result_dict.get("error", {}), dict) else result_dict.get("error", "unknown error")
+            print(f'ERROR MSG: {error_msg}')
+
+            if result_str.startswith("400"):
+                status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"
+                self.prompt_helper.endpoints_to_try.append(request_path)
+                self.save_endpoint(request_path)
+
+                if error_msg not in self.prompt_helper.correct_endpoint_but_some_error:
+                    self.prompt_helper.correct_endpoint_but_some_error[error_msg] = []
+                self.prompt_helper.correct_endpoint_but_some_error[error_msg].append(request_path)
+                self.prompt_helper.hint_for_next_round = error_msg
+            else:
+                self.prompt_helper.unsuccessful_paths.append(request_path)
+                status_message = f"{request_path} is not a correct endpoint; Reason: {error_msg}"
+
+            ep = request_path.split("?")[0]
+            self.prompt_helper.tried_endpoints_with_params.setdefault(ep, [])
+            for key in self.extract_params(request_path):
+                self.prompt_helper.tried_endpoints_with_params[ep].append(key)
+
+        self.adjust_counter(categorized_endpoints)
+        print(f'QUERY COUNT: {self.query_counter}')
+
+        return status_message
+
+    def check_if_crypto(self, path):
+
+        # Default list of cryptos to detect
+        cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
+                       "cardano", "solana"]
+
+        # Convert to lowercase for the match, but preserve the original path for reconstruction if you prefer
+        lower_path = path.lower()
+
+
+        for crypto in cryptos:
+            if crypto in lower_path:
+                # Example approach: split by '/' and replace the segment that matches crypto
+                parts = path.split('/')
+                replaced_any = False
+                for i, segment in enumerate(parts):
+                    if segment.lower() == crypto:
+                        parts[i] = "{id}"
+                        if segment.lower() == crypto:
+                            parts[i] = "{id}"
+                            replaced_any = True
+                            if replaced_any:
+                                return "/".join(parts)
+
+
+        return path

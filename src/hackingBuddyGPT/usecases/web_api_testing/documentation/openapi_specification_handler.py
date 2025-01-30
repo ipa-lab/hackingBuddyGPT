@@ -81,7 +81,7 @@ class OpenAPISpecificationHandler(object):
             result (str): The result of the API call.
         """
         request = resp.action
-        status_code, status_message = result_str.split(" ", 1)
+        status_code, status_message = self.extract_status_code_and_message(result)
 
         if request.__class__.__name__ == "RecordNote":  # TODO: check why isinstance does not work
             # self.check_openapi_spec(resp)
@@ -90,6 +90,9 @@ class OpenAPISpecificationHandler(object):
         if request.__class__.__name__ == "HTTPRequest":
             path = request.path
             method = request.method
+            if "1" in path:
+                path = path.replace("1", "{id}")
+            path  = self.replace_crypto_with_id(path)
             if not path or not method or path == "/" or not path.startswith("/"):
                 return list(self.openapi_spec["endpoints"].keys())
 
@@ -109,13 +112,16 @@ class OpenAPISpecificationHandler(object):
             main_path = path if len(path_parts) > 1 else ""
 
             # Initialize the path if it's not present and is valid
-            if path not in endpoints and main_path and str(status_code).startswith("20")  and not path.__contains__("?"):
-                endpoints[path] = {}
-                endpoint_methods[path] = []
+            if status_code.startswith("20"):
+                if path not in endpoints and "?" not in path:
+                    endpoints[path] = {}
+                    endpoint_methods[path] = []
 
-            if path not in endpoints and (status_code != '400'):
+            unsuccessful_status_codes = ["400", "404", "500"]
+
+            if path in endpoints and (status_code in unsuccessful_status_codes):
                 self.unsuccessful_paths.append(path)
-                if path not in  self.unsuccessful_methods:
+                if path in  self.unsuccessful_methods:
                     self.unsuccessful_methods[path] = []
                 self.unsuccessful_methods[path].append(method)
                 return list(self.openapi_spec["endpoints"].keys())
@@ -164,6 +170,10 @@ class OpenAPISpecificationHandler(object):
             if path.__contains__('?'):
                 query_params_dict = self.pattern_matcher.extract_query_params(path)
                 if query_params_dict != {}:
+                    if path not in endpoints.keys():
+                        endpoints[path] = {}
+                    if method.lower() not in  endpoints[path]:
+                        endpoints[path][method.lower()] = {}
                     endpoints[path][method.lower()].setdefault('parameters', [])
                     print(f'query_params: {query_params_dict}')
                     print(f'query_params: {query_params_dict.items()}')
@@ -222,7 +232,7 @@ class OpenAPISpecificationHandler(object):
 
     def _update_documentation(self, response, result, result_str, prompt_engineer):
         endpoints = self.update_openapi_spec(response, result, result_str)
-        if prompt_engineer.prompt_helper.found_endpoints != endpoints and endpoints != []:
+        if prompt_engineer.prompt_helper.found_endpoints != endpoints and endpoints != [] and len(endpoints) != 1:
             prompt_engineer.prompt_helper.found_endpoints = list(
                 set(prompt_engineer.prompt_helper.found_endpoints + endpoints))
             self.write_openapi_to_yaml()
@@ -264,3 +274,37 @@ class OpenAPISpecificationHandler(object):
             return "double"
         else:
             return "string"
+
+    def extract_status_code_and_message(self, result):
+        match = re.search(r"^HTTP/\d\.\d\s+(\d+)\s+(.*)", result, re.MULTILINE)
+        if match:
+            status_code = match.group(1)
+            status_message = match.group(2).strip()
+            return status_code, status_message
+        else:
+            return None, None
+
+    def replace_crypto_with_id(self, path):
+
+        # Default list of cryptos to detect
+        cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
+                   "cardano", "solana"]
+
+        # Convert to lowercase for the match, but preserve the original path for reconstruction if you prefer
+        lower_path = path.lower()
+
+        for crypto in cryptos:
+            if crypto in lower_path:
+                # Example approach: split by '/' and replace the segment that matches crypto
+                parts = path.split('/')
+                replaced_any = False
+                for i, segment in enumerate(parts):
+                    if segment.lower() == crypto:
+                        parts[i] = "{id}"
+                        if segment.lower() == crypto:
+                            parts[i] = "{id}"
+                            replaced_any = True
+                            if replaced_any:
+                                return "/".join(parts)
+
+        return path

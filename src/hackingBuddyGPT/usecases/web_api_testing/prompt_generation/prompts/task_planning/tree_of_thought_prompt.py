@@ -54,13 +54,17 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         common_steps = self._get_common_steps()
         if self.context == PromptContext.DOCUMENTATION:
             self.purpose = PromptPurpose.DOCUMENTATION
-            chain_of_thought_steps = self._get_documentation_steps(common_steps, move_type)
-        else:
-            chain_of_thought_steps = self._get_pentesting_steps(move_type)
-        if hint:
-            chain_of_thought_steps.append(hint)
+            tree_of_thought_steps = self._get_documentation_steps(common_steps, move_type)
+            tree_of_thought_steps = [
+                                        "Imagine three experts each proposing one step at a time. If an expert realizes their step was incorrect, they leave. The question is:"] + tree_of_thought_steps
 
-        return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)
+        else:
+            tree_of_thought_steps = self._get_pentesting_steps(move_type)
+        if hint:
+            tree_of_thought_steps.append(hint)
+
+
+        return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=tree_of_thought_steps)
 
     def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> Any:
         """
@@ -178,18 +182,7 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
             # Add branch to the tree
             transformed_case["steps"].append(branch)
 
-        # Add an assessment mechanism for self-evaluation
-        transformed_case["assessments"].append(
-            {
-                "phase_review": "Review outcomes of all steps. If any branch fails to meet objectives, backtrack and revise steps."
-            }
-        )
 
-        # Add a final assessment for the entire tree
-        transformed_case["final_assessment"] = {
-            "criteria": "Confirm all objectives are met across all steps.",
-            "next_action": "If objectives are not met, revisit unresolved steps."
-        }
 
         return transformed_case
 
@@ -317,7 +310,7 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
                 "Start by querying root-level resource endpoints.",
                 "Focus on sending GET requests only to those endpoints that consist of a single path component directly following the root.",
                 "For instance, paths should look like '/users' or '/products', with each representing a distinct resource type.",
-                "Ensure to explore new paths that haven't been previously tested to maximize coverage."
+                "Ensure to explore new paths that haven't been previously tested to maximize coverage.",
             ],
             [
                 "Next, move to instance-level resource endpoints.",

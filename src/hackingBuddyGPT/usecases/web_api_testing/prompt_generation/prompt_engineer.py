@@ -49,6 +49,7 @@ class PromptEngineer:
         """
 
         token, host, correct_endpoints, categorized_endpoints = rest_api_info
+        self.host = host
         self._token = token
         self.prompt_helper = prompt_helper
         self.prompt_helper.current_test_step = None
@@ -97,6 +98,8 @@ class PromptEngineer:
             raise ValueError("Invalid prompt strategy")
 
         self.turn = turn
+        if self.host.__contains__("coincap"):
+            hint = "Try as id or other_resoure cryptocurrency names like bitcoin.\n"
         prompt = self._prompt_func.generate_prompt(
             move_type=move_type, hint=hint, previous_prompt=prompt_history, turn=0
         )
@@ -104,6 +107,7 @@ class PromptEngineer:
 
         if self._context == PromptContext.PENTESTING:
             self.prompt_helper.current_test_step = self._prompt_func.current_step
+            self.prompt_helper.current_sub_step = self._prompt_func.current_sub_step
 
 
         prompt_history.append({"role": "system", "content": prompt})

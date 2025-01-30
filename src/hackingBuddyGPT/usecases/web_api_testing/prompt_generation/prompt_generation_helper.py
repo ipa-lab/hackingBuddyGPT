@@ -1,4 +1,5 @@
 import json
+import random
 import re
 
 import nltk
@@ -27,16 +28,22 @@ class PromptGenerationHelper(object):
         """
           Initializes the PromptGenerationHelper with an optional host and description.
           """
+        self.current_sub_step = None
+        self.saved_endpoints = []
+        self.tried_endpoints_with_params = {}
         self.host = host
         self._description= description
         self.current_test_step = None
         self.current_category = "root_level"
         self.correct_endpoint_but_some_error = {}
+        self.endpoints_to_try = []
         self.hint_for_next_round = ""
         self.schemas = []
         self.endpoints = []
         self.tried_endpoints = []
         self.found_endpoints = []
+        self.query_endpoints_params = {}
+        self.found_query_endpoints = []
         self.endpoint_methods = {}
         self.unsuccessful_methods = {}
         self.endpoint_found_methods = {}
@@ -45,11 +52,12 @@ class PromptGenerationHelper(object):
         self.document_steps = 0
         self.tried_methods_by_enpoint = {}
         self.accounts = []
+        self.possible_instance_level_endpoints = []
 
         self.current_user = None
 
 
-    def get_user_from_prompt(self,prompts:dict) -> dict:
+    def get_user_from_prompt(self,step) -> dict:
         """
             Extracts the user information after 'user:' from the given prompts.
 
@@ -60,10 +68,9 @@ class PromptGenerationHelper(object):
                 list: A list of extracted user information.
             """
         user_info = {}
-        for steps in prompts.get("steps", []):
-            step = steps.get("step", "")
-            # Search for the substring containing 'user:'
-            if "user:" in step:
+        step = step["step"]
+        # Search for the substring containing 'user:'
+        if "user:" in step:
                 # Extract the part after 'user:' and add it to the user_info list
                 data_string = step.split("user:")[1].split(".\n")[0]
                 # Replace single quotes with double quotes for JSON compatibility
@@ -163,7 +170,7 @@ class PromptGenerationHelper(object):
                     ]
 
         return [
-            f"Look for any endpoint that might be missing, exclude endpoints from this list :{self.unsuccessful_paths}"]
+            f"Look for any endpoint that might be missing params, exclude endpoints from this list :{self.unsuccessful_paths}"]
 
 
     def _get_initial_documentation_steps(self, strategy_steps):
@@ -232,25 +239,38 @@ class PromptGenerationHelper(object):
         Returns:
             str: The first endpoint that includes a query parameter, or None if no such endpoint exists.
         """
+        query_endpoint = None
         for endpoint in self.found_endpoints:
-            if any(endpoint + "?" in element for element in self.found_endpoints):
+            if "?" in endpoint and endpoint not in self.query_endpoints_params.keys():
                 return endpoint
-        return None
 
-    def _get_instance_level_endpoint(self):
+        # If no endpoint with query parameters is found, generate one
+        if len(self.saved_endpoints) != 0:
+            query_endpoints = [endpoint  for endpoint in self.saved_endpoints]
+            query_endpoint = random.choice(query_endpoints)
+
+        else:
+            query_endpoint = random.choice(self.found_endpoints)
+
+        return query_endpoint
+    def _get_instance_level_endpoint(self, name=""):
         """
         Retrieves an instance level endpoint that has not been tested or found unsuccessful.
 
         Returns:
             str: A templated instance level endpoint ready to be tested, or None if no such endpoint is available.
         """
-        for endpoint in self._get_instance_level_endpoints():
+        instance_level_endpoints = self._get_instance_level_endpoints(name)
+        for endpoint in instance_level_endpoints:
+            endpoint = endpoint.replace("//", "/")
             templated_endpoint = endpoint.replace("1", "{id}")
-            if templated_endpoint not in self.found_endpoints and endpoint not in self.unsuccessful_paths:
+            if "Coin" in name:
+                templated_endpoint = endpoint.replace("bitcoin", "{id}")
+            if templated_endpoint not in self.found_endpoints and endpoint.replace("1", "{id}") not in self.unsuccessful_paths and templated_endpoint != "/1/1":
                 return endpoint
         return None
 
-    def _get_instance_level_endpoints(self):
+    def _get_instance_level_endpoints(self, name):
         """
         Generates a list of instance-level endpoints from the root-level endpoints by appending '/1'.
 
@@ -259,9 +279,19 @@ class PromptGenerationHelper(object):
         """
         instance_level_endpoints = []
         for endpoint in self._get_root_level_endpoints():
-            if not endpoint + "/{id}" in self.found_endpoints or \
-                    not endpoint + "/1" in self.unsuccessful_paths:
-                instance_level_endpoints.append(endpoint + "/1")
+            new_endpoint = endpoint + "/1"
+            new_endpoint = new_endpoint.replace("//", "/")
+            if new_endpoint != "/1/1" and (
+                    endpoint + "/{id}" not in self.found_endpoints and
+                    endpoint + "/1" not in self.unsuccessful_paths and
+                    new_endpoint.replace("1", "{id}") not in self.unsuccessful_paths and
+                    new_endpoint not in self.unsuccessful_paths
+            ):
+                if "Coin" in name:
+                    new_endpoint = new_endpoint.replace("1", "bitcoin")
+                instance_level_endpoints.append(new_endpoint)
+                self.possible_instance_level_endpoints.append(new_endpoint)
+
         print(f'instance_level_endpoints: {instance_level_endpoints}')
         return instance_level_endpoints
 
@@ -290,7 +320,11 @@ class PromptGenerationHelper(object):
             hint = f"First, try out these endpoints: {endpoints_missing_query}"
 
         if self.current_step == 6:
-            hint = f'Use this endpoint: {self._get_endpoint_for_query_params()}'
+            query_endpoint = self._get_endpoint_for_query_params()
+            hint = f'Use this endpoint: {query_endpoint}'
+
+            if query_endpoint.endswith("?"):
+                hint +=" and use appropriate query params"
 
         if self.hint_for_next_round:
             hint += self.hint_for_next_round
@@ -310,3 +344,102 @@ class PromptGenerationHelper(object):
             if len(parts) == 1 and not endpoint+ "/{id}" in self.found_endpoints :
                 root_level_endpoints.append(endpoint)
         return root_level_endpoints
+
+    def _get_related_resource_endpoint(self, path, common_endpoints, name):
+        """
+                Identify related resource endpoints that match the format /resource/id/other_resource.
+
+                Returns:
+                    dict: A mapping of identified endpoints to their responses or error messages.
+                """
+
+        other_resource = random.choice(common_endpoints)
+
+        # Determine if the path is a root-level or instance-level endpoint
+        if path.endswith("/1"):
+            # Root-level source endpoint
+            test_endpoint = f"{path}/{other_resource}"
+        else:
+            # Instance-level endpoint
+            test_endpoint = f"{path}/1/{other_resource}"
+
+        if "Coin" in name:
+            test_endpoint = test_endpoint.replace("1", "bitcoin")
+
+        # Query the constructed endpoint
+
+        return test_endpoint
+
+    def _get_multi_level_resource_endpoint(self, path, common_endpoints, name):
+        """
+                Identify related resource endpoints that match the format /resource/id/other_resource.
+
+                Returns:
+                    dict: A mapping of identified endpoints to their responses or error messages.
+                """
+
+        other_resource = random.choice(common_endpoints)
+        another_resource = random.choice(common_endpoints)
+        if other_resource == another_resource:
+            another_resource = random.choice(common_endpoints)
+        path = path.replace("{id}", "1")
+        if "Coin" in name:
+            path = path.replace("1", "bitcoin")
+
+        parts = [part.strip() for part in path.split("/") if part.strip()]
+        multilevel_endpoint = path
+
+        if len(parts) == 1:
+            multilevel_endpoint = f"{path}{other_resource}{another_resource}"
+        elif len(parts) == 2:
+            path = [part.strip() for part in path.split("/") if part.strip()]
+            if len(path) == 1:
+                multilevel_endpoint = f"{path}{other_resource}{another_resource}"
+            if len(path) >=2:
+                multilevel_endpoint = f"{path}{another_resource}"
+        else:
+            if "/1" not in path:
+                multilevel_endpoint = path
+
+        return multilevel_endpoint
+
+    def _get_sub_resource_endpoint(self, path, common_endpoints, name):
+        """
+                Identify related resource endpoints that match the format /resource/other_resource.
+
+                Returns:
+                    dict: A mapping of identified endpoints to their responses or error messages.
+                """
+
+        filtered_endpoints = [resource for resource in common_endpoints
+                              if "id" not in resource ]
+        possible_resources = []
+        for endpoint in filtered_endpoints:
+            partz = [part.strip() for part in endpoint.split("/") if part.strip()]
+            if len(partz) == 1 and "1" not in partz:
+                possible_resources.append(endpoint)
+
+        other_resource = random.choice(possible_resources)
+        path = path.replace("{id}", "1")
+
+        parts = [part.strip() for part in path.split("/") if part.strip()]
+
+        multilevel_endpoint = path
+
+
+        if len(parts) == 1:
+            multilevel_endpoint = f"{path}{other_resource}"
+        elif len(parts) == 2:
+            if "1" in parts:
+                p = path.split("/1")
+                new_path = ""
+                for part in p:
+                    new_path = path.join(part)
+                multilevel_endpoint = f"{new_path}{other_resource}"
+        else:
+            if "1" not in path:
+                multilevel_endpoint = path
+        if "Coin" in name:
+            multilevel_endpoint = multilevel_endpoint.replace("1", "bitcoin")
+        return multilevel_endpoint
+

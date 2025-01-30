@@ -163,13 +163,6 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             counter += 1
             transformed_case["steps"].append(step_details)
 
-        # Add an assessment at the end of the phase
-        transformed_case["assessments"].append(
-            "Review all outcomes in this phase. If objectives are not met, revisit the necessary steps."
-        )
-
-        # Add a final assessment if applicable
-        transformed_case["final_assessment"] = "Confirm that all objectives for this test case have been met."
 
         return transformed_case
 

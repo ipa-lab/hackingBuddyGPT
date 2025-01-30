@@ -38,6 +38,7 @@ class ResponseAnalyzerWithLLM:
         self.pentesting_information = pentesting_info
         self.capacity = capacity
         self.prompt_helper = prompt_helper
+        self.token = ""
 
     def set_purpose(self, purpose: PromptPurpose):
         """
@@ -81,7 +82,8 @@ class ResponseAnalyzerWithLLM:
                 if step != steps[0]:
                     print(f'Step:{step}')
                     print(f'Step:{type(step)}')
-                    prompt_history, raw_response = self.process_step(step.get("step"),prompt_history, "http_request")
+                    current_step = step.get("step")
+                    prompt_history, raw_response = self.process_step(current_step, prompt_history, "http_request")
                 test_case_responses, status_code = self.analyse_response(raw_response, step, prompt_history)
                 llm_responses = llm_responses + test_case_responses
         else:
@@ -104,28 +106,39 @@ class ResponseAnalyzerWithLLM:
         body = header_body_split[1] if len(header_body_split) > 1 else ""
         status_line = header_lines[0].strip()
 
-        match = re.match(r"HTTP/1\.1 (\d{3}) (.*)", status_line)
-        status_code = int(match.group(1)) if match else None
+        match = re.search(r"^HTTP/\d\.\d\s+(\d+)\s+(.*)", raw_response, re.MULTILINE)
+        if match:
+            status_code = match.group(1)
+        else:
+            status_code = None
         if body.__contains__("<!DOCTYPE"):
             body = ""
 
-        elif status_code in [500, 400, 404, 422]:
+        elif status_code in ["500", "400", "404", "422"]:
             body = body
         else:
             # print(f'Body:{body}')
             if body.__contains__("{") and (body != '' or body != ""):
                 if not  body.lower().__contains__("png") :
                     body = json.loads(body)
+                    if "token" in body:
+                        self.prompt_helper.current_user["token"] = body["token"]
+                        self.token = body["token"]
                     if any (value in body.values() for value in self.prompt_helper.current_user.values()):
-                        self.prompt_helper.current_user["id"] = body["id"]
+                        if "id" in body:
+                            self.prompt_helper.current_user["id"] = body["id"]
                         if self.prompt_helper.current_user not in self.prompt_helper.accounts:
                             self.prompt_helper.accounts.append(self.prompt_helper.current_user)
+                    self.replace_account()
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
                 if self.prompt_helper.current_user in body:
                     self.prompt_helper.current_user["id"] = self.get_id_from_user(body)
                     if self.prompt_helper.current_user not in self.prompt_helper.accounts:
                         self.prompt_helper.accounts.append(self.prompt_helper.current_user)
+            else:
+                if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+                    self.prompt_helper.accounts.append(self.prompt_helper.current_user)
 
 
         headers = {
@@ -133,9 +146,8 @@ class ResponseAnalyzerWithLLM:
             for key, value in (line.split(":", 1) for line in header_lines[1:] if ":" in line)
         }
 
-        match = re.match(r"HTTP/1\.1 (\d{3}) (.*)", status_line)
-        status_code = int(match.group(1)) if match else None
-
+        if isinstance(body, str) and body.startswith(" <!doctype html>") and body.endswith("</html>"):
+            body = ""
 
         return status_code, headers, body
 
@@ -176,7 +188,7 @@ class ResponseAnalyzerWithLLM:
 
 
         if step.get("purpose") == PromptPurpose.SETUP:
-            status_code, additional_analysis_context, full_response = self.do_setup(status_code, step,  additional_analysis_context, full_response, prompt_history)
+            _, additional_analysis_context, full_response = self.do_setup(status_code, step,  additional_analysis_context, full_response, prompt_history)
 
         if not any(str(status_code) in response for response in expected_responses):
             additional_analysis_context += step.get("conditions").get("if_unsuccessful")
@@ -221,6 +233,19 @@ class ResponseAnalyzerWithLLM:
 
         return status_code, additional_analysis_context, full_response
 
+    def replace_account(self):
+        # Now let's replace the existing account if it exists, otherwise add it
+        replaced = False
+        for i, account in enumerate(self.prompt_helper.accounts):
+            # Compare the 'id' (or any unique field) to find the matching account
+            if account.get("name") == self.prompt_helper.current_user.get("name"):
+                self.prompt_helper.accounts[i] = self.prompt_helper.current_user
+                replaced = True
+                break
+
+        # If we did not replace any existing account, append this as a new account
+        if not replaced:
+            self.prompt_helper.accounts.append(self.prompt_helper.current_user)
 
 
 

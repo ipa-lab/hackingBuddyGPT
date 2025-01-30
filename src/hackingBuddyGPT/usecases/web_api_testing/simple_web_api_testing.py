@@ -118,7 +118,7 @@ class SimpleWebAPITesting(Agent):
             "tot": PromptStrategy.TREE_OF_THOUGHT,
             "icl": PromptStrategy.IN_CONTEXT
         }
-        self.strategy = strategies.get(self.strategy, PromptStrategy.IN_CONTEXT)
+        self.strategy = strategies.get(self._strategy, PromptStrategy.IN_CONTEXT)
 
     def _load_openapi_specification(self):
         if os.path.exists(self.config_path):
@@ -210,7 +210,6 @@ class SimpleWebAPITesting(Agent):
 
         self.prompt_engineer = PromptEngineer(
             strategy=self.strategy,
-            history=self._prompt_history,
             context=PromptContext.PENTESTING,
             open_api_spec=self._openapi_specification,
             rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints),
@@ -297,7 +296,13 @@ class SimpleWebAPITesting(Agent):
                 for step in test_step:
                     if step.get("step").__contains__("Authorization-Token"):
                         token = self.pentesting_information.tokens[id]
-                        response.action.headers =  {"Authorization-Token": f"{token}"}
+                        response.action.headers =  {"Authorization-Token": f"Bearer {token}"}
+            token = self.prompt_helper.current_sub_step.get("token")
+            if token != "":
+                response.action.headers = {"Authorization-Token": f"Bearer {token}"}
+            if response.action.path != self.prompt_helper.current_sub_step.get("path"):
+                response.action.path = self.prompt_helper.current_step.get("path")
+
 
             message = completion.choices[0].message
             tool_call_id: str = message.tool_calls[0].id
@@ -315,14 +320,22 @@ class SimpleWebAPITesting(Agent):
 
             if "token" in result and self.token == "your_api_token_here":
                 self.token = self.extract_token_from_http_response(result)
+                for account in self.pentesting_information.accounts:
+                    if account.get("number") == self.prompt_helper.current_user.get("number"):
+                        account["token"] = self.token
                 self.pentesting_information.set_valid_token(self.token)
 
+            self._report_handler.write_vulnerability_to_report(self.prompt_helper.current_test_step, result)
 
 
             analysis, status_code = self._response_handler.evaluate_result(
                 result=result,
                 prompt_history=self._prompt_history,
                 analysis_context= self.prompt_engineer.prompt_helper.current_test_step)
+
+
+
+
             self._prompt_history = self._test_handler.generate_test_cases(
                 analysis=analysis,
                 endpoint=response.action.path,
@@ -353,7 +366,10 @@ class SimpleWebAPITesting(Agent):
                 # Parse the body as JSON
                 body_json = json.loads(body)
                 # Extract the token
-                return body_json.get("authentication", {}).get("token", None)
+                if "token" in body_json.keys():
+                    return body_json["token"]
+                elif "authentication" in body_json.keys():
+                    return body_json.get("authentication", {}).get("token", None)
             except json.JSONDecodeError:
                 # If the body is not valid JSON, return None
                 return None

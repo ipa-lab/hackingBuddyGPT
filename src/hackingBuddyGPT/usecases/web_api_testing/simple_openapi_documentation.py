@@ -49,9 +49,12 @@ class SimpleWebAPIDocumentation(Agent):
         default="GET,POST,PUT,PATCH,DELETE",
     )
 
+
     def init(self):
         """Initialize the agent with configurations, capabilities, and handlers."""
         super().init()
+        self.explore_steps_done = False
+
         self.found_all_http_methods: bool = False
         if self.config_path != "":
             if self.config_path != "":
@@ -104,7 +107,7 @@ class SimpleWebAPIDocumentation(Agent):
         name = base_name.split('_config')[0]
         print(f'NAME:{name}')
 
-        self.prompt_helper = PromptGenerationHelper(self.host, description)
+        self.prompt_helper = PromptGenerationHelper(self.host, description) # TODO Remove
         return name, initial_prompt
 
     def _initialize_handlers(self, config, description, token, name, initial_prompt):
@@ -204,7 +207,10 @@ class SimpleWebAPIDocumentation(Agent):
                 and last_endpoint_found_x_steps_ago <= 10
                 and not self.found_all_http_methods
         ):
-            self.run_documentation(turn, "explore")
+            if self.explore_steps_done :
+                self.run_documentation(turn, "exploit")
+            else:
+                self.run_documentation(turn, "explore")
             current_count = len(self._prompt_engineer.prompt_helper.found_endpoints)
             last_endpoint_found_x_steps_ago = last_endpoint_found_x_steps_ago + 1 if current_count == last_found_endpoints else 0
             last_found_endpoints = current_count
@@ -232,6 +238,7 @@ class SimpleWebAPIDocumentation(Agent):
         is_good = False
         counter = 0
         while not is_good:
+            print(f'counter:{counter}')
             prompt = self._prompt_engineer.generate_prompt(turn=turn, move_type=move_type,
                                                            prompt_history=self._prompt_history)
             response, completion = self._llm_handler.execute_prompt(prompt=prompt)
@@ -241,6 +248,7 @@ class SimpleWebAPIDocumentation(Agent):
                                                                                                        self._log,
                                                                                                        self.categorized_endpoints,
                                                                                                        move_type)
+
             if result == None:
                 continue
             self._prompt_history, self._prompt_engineer = self._documentation_handler.document_response(
@@ -249,15 +257,22 @@ class SimpleWebAPIDocumentation(Agent):
 
             if self._prompt_engineer.prompt_helper.current_step == 7 and move_type == "explore":
                 is_good = True
-                self.all_steps_done = True
-            if counter == 30 and move_type == "exploit" and len(self.prompt_helper._get_instance_level_endpoints()) == 0:
+            if self._response_handler.query_counter == 500 and self.prompt_helper.current_step == 6:
+                is_good = True
+                self.explore_steps_done = True
+            if  move_type == "exploit" :
+                if self._response_handler.query_counter >= 50 :
+                    is_good = True
+                    self.all_steps_done = True
+
+            if self._prompt_engineer.prompt_helper.current_step < 6 and self._response_handler.query_counter > 500:
                 is_good = True
             counter = counter + 1
 
             self._evaluator.evaluate_response(response, self._prompt_engineer.prompt_helper.found_endpoints)
 
-        self._evaluator.finalize_documentation_metrics(
-            file_path=self._documentation_handler.file.split(".yaml")[0] + ".txt")
+            self._evaluator.finalize_documentation_metrics(
+                file_path=self._documentation_handler.file.split(".yaml")[0] + ".txt")
 
         self.all_http_methods_found(turn)
 

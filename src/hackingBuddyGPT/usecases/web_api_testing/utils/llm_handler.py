@@ -125,7 +125,7 @@ class LLMHandler:
                 model=self.llm.model,
                 messages=adjusted_prompt,
                 response_model=capabilities_to_action_model(capability),
-                max_tokens=500  # adjust as needed
+                max_tokens=1000  # adjust as needed
             )
 
         # Helper to adjust the prompt based on its length.

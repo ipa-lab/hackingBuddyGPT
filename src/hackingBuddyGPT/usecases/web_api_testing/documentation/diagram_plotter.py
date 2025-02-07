@@ -129,8 +129,7 @@ class DiagramPlotter(object):
                         step_count += 1
                         percentages.append(percent_found)
                         steps.append(step_count)
-                    if 100.0 in percentages:
-                        break
+
 
             # Plot the data for this file
             plt.plot(
@@ -167,8 +166,9 @@ class DiagramPlotter(object):
 
 if __name__ == "__main__":
     dp= DiagramPlotter([
-        "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/chain_of_thought/ballardtide/2024-11-29_14-24-03.txt"
+"/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/chain_of_thought/openbrewerydb/2025-02-06_13-39-44.txt",
+        "/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/chain_of_thought/coincap/2025-02-06_13-42-48.txt"
          ])
-    dp.plot_files()
+    dp.plot_file()
 
 

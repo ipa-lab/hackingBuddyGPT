@@ -224,9 +224,13 @@ class ResponseHandler:
                     if len(entry_dict) > 3:
                         break
             else:
-                key = body_dict.get("title") or body_dict.get("name") or body_dict.get("id")
-                entry_dict[key] = {"value": body_dict}
-                self.llm_handler._add_created_object(entry_dict[key], object_name)
+                if "data" in body_dict.keys():
+                    entry_dict = body_dict["data"]
+                    if isinstance(entry_dict, list) and len(entry_dict) > 0:
+                        entry_dict = entry_dict[0]
+                else:
+                    entry_dict= body_dict
+                self.llm_handler._add_created_object(entry_dict, object_name)
 
         return entry_dict, reference, openapi_spec
 
@@ -429,6 +433,8 @@ class ResponseHandler:
         # Add Authorization header if token is available
         if self.token:
                 response.action.headers = {"Authorization": f"Bearer {self.token}"}
+        if self.name.__contains__("ballardtide"):
+                response.action.headers = {"Authorization": f"{self.token}"}
 
         # Convert response to JSON and display it
         command = json.loads(pydantic_core.to_json(response).decode())
@@ -442,7 +448,7 @@ class ResponseHandler:
             result = response.execute()
             self.query_counter += 1
             result_dict = self.extract_json(result)
-            log.console.print(Panel(result, title="tool"))
+            log.console.print(Panel(result[:20], title="tool"))
 
         if response.action.__class__.__name__ != "RecordNote":
             self.prompt_helper.tried_endpoints.append(response.action.path)
@@ -537,9 +543,13 @@ class ResponseHandler:
               - If "OWASP API" in self.name, capitalize the path
             """
             # Replace {id} with '1'
-            path = path.replace("{id}", "1")
             # Unconditionally replace '1' with 'bitcoin'
-            path = path.replace("1", "bitcoin")
+            if ("Coin" in self.name or "gbif" in self.name)and self.prompt_helper.current_step == 2:
+                id = self.prompt_helper.get_possible_id_for_instance_level_ep(path)
+                if id:
+                    path = path.replace("1", f"{id}")
+            else:
+                path = path.replace("{id}", "1")
 
             # Keep the OWASP API naming convention if needed
             if "OWASP API" in self.name:
@@ -593,6 +603,11 @@ class ResponseHandler:
                             return self.finalize_path(ep)
 
                         if path in self.prompt_helper.found_endpoints and len(parts) == 1:
+                            if "Coin" in self.name or "gbif" in self.name:
+                                id =  self.prompt_helper.get_possible_id_for_instance_level_ep(path)
+                                if id:
+                                    path = path.replace("1", f"{id}")
+                                    return self.finalize_path(path)
                             # Append /1 -> becomes /bitcoin after finalize_path
                             return self.finalize_path(f"{path}/1")
 
@@ -604,7 +619,7 @@ class ResponseHandler:
                     if path in self.prompt_helper.unsuccessful_paths:
                         ep = self.prompt_helper._get_sub_resource_endpoint(
                             random.choice(self.prompt_helper.found_endpoints),
-                            self.common_endpoints
+                            self.common_endpoints, self.name
                         )
                         return self.finalize_path(ep)
 
@@ -638,8 +653,7 @@ class ResponseHandler:
 
                 # -------------- STEP 6 --------------
                 elif (self.prompt_helper.current_step == 6 and
-                      "?" not in path and
-                      path.endswith("?")):
+                      "?" not in path):
                     new_path = self.create_common_query_for_endpoint(path)
                     # If "no params", keep original path, else use new_path
                     return self.finalize_path(path if new_path == "no params" else new_path)
@@ -650,12 +664,12 @@ class ResponseHandler:
                              *self.prompt_helper.unsuccessful_paths,
                              *self.prompt_helper.found_endpoints}
                         and self.prompt_helper.current_step != 6):
-                    return self.finalize_path(self.get_saved_endpoint())
+                    return self.finalize_path(random.choice(self.common_endpoints))
 
                 # Pattern-based check
                 if (pattern_replaced_path in self.prompt_helper.found_endpoints or
                     pattern_replaced_path in self.prompt_helper.unsuccessful_paths) and self.prompt_helper.current_step != 2:
-                    return self.finalize_path(self.get_saved_endpoint())
+                    return self.finalize_path(random.choice(self.common_endpoints))
 
             else:
                 # No parts
@@ -737,6 +751,7 @@ class ResponseHandler:
         """
 
         print(f'endpoint:{endpoint}')
+        endpoint = endpoint + "?"
         # Define common query parameters
         common_query_params = [
             "page", "limit", "sort", "filter", "search", "api_key", "access_token",
@@ -813,7 +828,7 @@ class ResponseHandler:
             old_path = response.action.path
             # Process action if it's not RecordNote
             if response.action.__class__.__name__ != "RecordNote":
-                if self.prompt_helper.current_step == 6 and response.action.path.endswith("?"):
+                if self.prompt_helper.current_step == 6 :
                     response.action.path = self.create_common_query_for_endpoint(response.action.path)
 
                 if response.action.path in self.prompt_helper.unsuccessful_paths:
@@ -822,20 +837,31 @@ class ResponseHandler:
                 if self.no_action_counter == 5:
                     response.action.path = self.get_next_path(response.action.path)
                     self.no_action_counter = 0
+                parts = response.action.path.split("/")
+                len_path = len([part.strip() for part in parts if part.strip()])
+                if self.prompt_helper.current_step == 2:
+                    if len_path  <2 or len_path > 2 or response.action.path  in self.prompt_helper.unsuccessful_paths:
+                        id = self.prompt_helper.get_possible_id_for_instance_level_ep(parts[0])
+                        if id:
+                            response.action.path = parts[0] + f"/{id}"
                 else:
                     if self.prompt_helper.current_step != 6 and not response.action.path.endswith("?"):
-                        response.action.path = self.adjust_path_if_necessary(response.action.path)
+                        adjusted_path = self.adjust_path_if_necessary(response.action.path)
+                        if adjusted_path != None:
+                            response.action.path = adjusted_path
 
                         if move_type == "exploit" and self.repeat_counter == 3:
                             if len(self.prompt_helper.endpoints_to_try) != 0:
                                 exploit_endpoint = self.prompt_helper.endpoints_to_try[0]
                                 response.action.path = self.create_common_query_for_endpoint(exploit_endpoint)
                             else:
-                                exploit_endpoint = self.prompt_helper._get_instance_level_endpoint()
+                                exploit_endpoint = self.prompt_helper._get_instance_level_endpoint(self.name)
                                 self.repeat_counter = 0
 
-                                if exploit_endpoint and response.action.path not in self.prompt_helper._get_instance_level_endpoints():
+                                if exploit_endpoint and response.action.path not in self.prompt_helper._get_instance_level_endpoints(self.name):
                                     response.action.path = exploit_endpoint
+            if move_type != "exploit":
+                response.action.method = "GET"
 
             if response.action.path == None:
                 response.action.path = old_path
@@ -844,6 +870,8 @@ class ResponseHandler:
 
     def check_if_successful(self, is_successful, request_path, result_dict, result_str, categorized_endpoints):
         if is_successful:
+            if "?" in request_path and request_path not in self.prompt_helper.found_query_endpoints:
+                self.prompt_helper.found_query_endpoints.append(request_path)
             ep = request_path.split("?")[0]
             if ep in self.prompt_helper.endpoints_to_try:
                 self.prompt_helper.endpoints_to_try.remove(ep)
@@ -854,12 +882,18 @@ class ResponseHandler:
 
             self.prompt_helper.query_endpoints_params.setdefault(ep, [])
             self.prompt_helper.tried_endpoints_with_params.setdefault(ep, [])
-            ep = self.check_if_crypto(ep)
+           # ep = self.check_if_crypto(ep)
             if ep not in self.prompt_helper.found_endpoints:
-
-                self.prompt_helper.found_endpoints.append(ep)
+                if "?" not in ep and ep not in self.prompt_helper.found_endpoints:
+                    self.prompt_helper.found_endpoints.append(ep)
+                if "?" in ep and ep not in self.prompt_helper.found_query_endpoints:
+                    self.prompt_helper.found_query_endpoints.append(ep)
 
             for key in self.extract_params(request_path):
+                if ep not in self.prompt_helper.query_endpoints_params:
+                    self.prompt_helper.query_endpoints_params[ep] = []
+                if ep not  in self.prompt_helper.tried_endpoints_with_params:
+                    self.prompt_helper.tried_endpoints_with_params[ep] = []
                 self.prompt_helper.query_endpoints_params[ep].append(key)
                 self.prompt_helper.tried_endpoints_with_params[ep].append(key)
 
@@ -872,6 +906,7 @@ class ResponseHandler:
             if result_str.startswith("400"):
                 status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"
                 self.prompt_helper.endpoints_to_try.append(request_path)
+                self.prompt_helper.bad_request_endpoints.append(request_path)
                 self.save_endpoint(request_path)
 
                 if error_msg not in self.prompt_helper.correct_endpoint_but_some_error:

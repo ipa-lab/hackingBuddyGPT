@@ -1,5 +1,6 @@
 import json
 import os.path
+import re
 from dataclasses import field
 from datetime import datetime
 from typing import Any, Dict, List
@@ -301,7 +302,14 @@ class SimpleWebAPITesting(Agent):
             if token != "":
                 response.action.headers = {"Authorization-Token": f"Bearer {token}"}
             if response.action.path != self.prompt_helper.current_sub_step.get("path"):
-                response.action.path = self.prompt_helper.current_step.get("path")
+                response.action.path = self.prompt_helper.current_sub_step.get("path")
+
+            if "_id}" in response.action.path:
+                self.save_resource(response.action.path, response.action.data)
+
+            if isinstance(response.action.path, dict):
+                response.action.path = response.action.path.get("path")
+
 
 
             message = completion.choices[0].message
@@ -320,8 +328,8 @@ class SimpleWebAPITesting(Agent):
 
             if "token" in result and self.token == "your_api_token_here":
                 self.token = self.extract_token_from_http_response(result)
-                for account in self.pentesting_information.accounts:
-                    if account.get("number") == self.prompt_helper.current_user.get("number"):
+                for account in self.prompt_helper.accounts:
+                    if account.get("x") == self.prompt_helper.current_user.get("x"):
                         account["token"] = self.token
                 self.pentesting_information.set_valid_token(self.token)
 
@@ -344,6 +352,38 @@ class SimpleWebAPITesting(Agent):
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)
 
         self.all_http_methods_found()
+
+
+    def extract_resource_name(self, path: str) -> str:
+        """
+        Extracts the key resource word from a path.
+
+        Examples:
+          - '/identity/api/v2/user/videos/{video_id}' -> 'video'
+          - '/workshop/api/shop/orders/{order_id}'    -> 'order'
+          - '/community/api/v2/community/posts/{post_id}/comment' -> 'comment'
+        """
+        # Split into non-empty segments
+        parts = [p for p in path.split('/') if p]
+        if not parts:
+            return ""
+
+        last_segment = parts[-1]
+
+        # 1) If last segment is a placeholder like "{video_id}", return 'video'
+        #    i.e., capture the substring before "_id".
+        match = re.match(r'^\{(\w+)_id\}$', last_segment)
+        if match:
+            return match.group(1)  # e.g. 'video', 'order'
+
+        # 2) Otherwise, if the last segment is a word like "videos" or "orders",
+        #    strip a trailing 's' (e.g., "videos" -> "video").
+        if last_segment.endswith('s'):
+            return last_segment[:-1]
+
+        # 3) If it's just "comment" or a similar singular word, return as-is
+        return last_segment
+
 
     def extract_token_from_http_response(self, http_response):
             """
@@ -373,6 +413,16 @@ class SimpleWebAPITesting(Agent):
             except json.JSONDecodeError:
                 # If the body is not valid JSON, return None
                 return None
+
+    def save_resource(self, path, data):
+        resource = self.extract_resource_name(path)
+        if resource != "" and resource not in self.prompt_helper.current_user.keys():
+            self.prompt_helper.current_user[resource] = []
+        if data not in self.prompt_helper.current_user[resource]:
+            self.prompt_helper.current_user[resource].append(data)
+            for i, account in enumerate(self.prompt_helper.accounts):
+                if account.get("x") == self.prompt_helper.current_user.get("x"):
+                    self.pentesting_information.accounts[i][resource] = self.prompt_helper.current_user[resource]
 
 
 

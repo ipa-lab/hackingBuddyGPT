@@ -1,6 +1,7 @@
 import json
 import random
 import re
+import uuid
 
 import nltk
 
@@ -28,6 +29,12 @@ class PromptGenerationHelper(object):
         """
           Initializes the PromptGenerationHelper with an optional host and description.
           """
+        self.uuid =uuid.uuid4()
+        self.bad_request_endpoints = []
+        self.endpoint_examples = {}
+        self.name = ""
+        if "coin" in host.lower():
+            self.name = "Coin"
         self.current_sub_step = None
         self.saved_endpoints = []
         self.tried_endpoints_with_params = {}
@@ -57,7 +64,7 @@ class PromptGenerationHelper(object):
         self.current_user = None
 
 
-    def get_user_from_prompt(self,step) -> dict:
+    def get_user_from_prompt(self,step, accounts) -> dict:
         """
             Extracts the user information after 'user:' from the given prompts.
 
@@ -78,6 +85,20 @@ class PromptGenerationHelper(object):
 
                 # Parse the string into a dictionary
                 user_info = json.loads(data_string_json)
+        counter =0
+        for acc in accounts:
+            for key in acc.keys():
+                if key in user_info.keys():
+                    if key != "x":
+                        if acc[key] == user_info[key]:
+                            counter +=1
+
+            if counter == len(acc.keys()) - 1:
+
+                user_info["x"] = acc["x"]
+                break
+            else:
+                user_info["x"] = ""
 
         return user_info
 
@@ -241,7 +262,7 @@ class PromptGenerationHelper(object):
         """
         query_endpoint = None
         for endpoint in self.found_endpoints:
-            if "?" in endpoint and endpoint not in self.query_endpoints_params.keys():
+            if len(self.query_endpoints_params[endpoint]) == 0:
                 return endpoint
 
         # If no endpoint with query parameters is found, generate one
@@ -264,9 +285,9 @@ class PromptGenerationHelper(object):
         for endpoint in instance_level_endpoints:
             endpoint = endpoint.replace("//", "/")
             templated_endpoint = endpoint.replace("1", "{id}")
-            if "Coin" in name:
-                templated_endpoint = endpoint.replace("bitcoin", "{id}")
-            if templated_endpoint not in self.found_endpoints and endpoint.replace("1", "{id}") not in self.unsuccessful_paths and templated_endpoint != "/1/1":
+            id = self.get_possible_id_for_instance_level_ep(endpoint)
+            templated_endpoint = endpoint.replace(f"{id}", "{id}")
+            if templated_endpoint not in self.found_endpoints and endpoint.replace("1", "{id}") not in self.unsuccessful_paths and endpoint not in self.unsuccessful_paths  and templated_endpoint != "/1/1":
                 return endpoint
         return None
 
@@ -284,13 +305,20 @@ class PromptGenerationHelper(object):
             if new_endpoint != "/1/1" and (
                     endpoint + "/{id}" not in self.found_endpoints and
                     endpoint + "/1" not in self.unsuccessful_paths and
-                    new_endpoint.replace("1", "{id}") not in self.unsuccessful_paths and
                     new_endpoint not in self.unsuccessful_paths
             ):
-                if "Coin" in name:
-                    new_endpoint = new_endpoint.replace("1", "bitcoin")
-                instance_level_endpoints.append(new_endpoint)
-                self.possible_instance_level_endpoints.append(new_endpoint)
+
+                id = self.get_possible_id_for_instance_level_ep(endpoint)
+                if id:
+                    new_endpoint = new_endpoint.replace("1", f"{id}")
+                if new_endpoint not in self.unsuccessful_paths and new_endpoint not in self.found_endpoints:
+                    if new_endpoint in self.bad_request_endpoints:
+                        id = str(self.uuid)
+                        new_endpoint = endpoint + f"/{id}"
+                        instance_level_endpoints.append(new_endpoint)
+                    else:
+                        instance_level_endpoints.append(new_endpoint)
+                    self.possible_instance_level_endpoints.append(new_endpoint)
 
         print(f'instance_level_endpoints: {instance_level_endpoints}')
         return instance_level_endpoints
@@ -311,7 +339,7 @@ class PromptGenerationHelper(object):
                 hint = f"ADD an id after these endpoints: {endpoints_missing_id_or_query} avoid getting this error again: {self.hint_for_next_round}"
             if "base62" in self.hint_for_next_round and "Missing required field: ids" not in self.correct_endpoint_but_some_error:
                 hint += " Try an id like 6rqhFgbbKwnb9MLmUQDhG6"
-            new_endpoint = self._get_instance_level_endpoint()
+            new_endpoint = self._get_instance_level_endpoint(self.name)
             if new_endpoint:
                 hint += f" Create a GET request for this endpoint: {new_endpoint}"
 
@@ -322,9 +350,7 @@ class PromptGenerationHelper(object):
         if self.current_step == 6:
             query_endpoint = self._get_endpoint_for_query_params()
             hint = f'Use this endpoint: {query_endpoint}'
-
-            if query_endpoint.endswith("?"):
-                hint +=" and use appropriate query params"
+            hint +=" and use appropriate query params"
 
         if self.hint_for_next_round:
             hint += self.hint_for_next_round
@@ -363,10 +389,16 @@ class PromptGenerationHelper(object):
             # Instance-level endpoint
             test_endpoint = f"{path}/1/{other_resource}"
 
-        if "Coin" in name:
-            test_endpoint = test_endpoint.replace("1", "bitcoin")
+        if "Coin" in name or "gbif" in name:
+            parts = [part.strip() for part in path.split("/") if part.strip()]
+
+            id = self.get_possible_id_for_instance_level_ep(parts[0])
+            if id:
+                test_endpoint = test_endpoint.replace("1", f"{id}")
 
         # Query the constructed endpoint
+        test_endpoint = test_endpoint.replace("//", "/")
+
 
         return test_endpoint
 
@@ -378,28 +410,36 @@ class PromptGenerationHelper(object):
                     dict: A mapping of identified endpoints to their responses or error messages.
                 """
 
+        if "brew" in name or "gbif" in name:
+            common_endpoints = ["autocomplete", "search",  "random","match", "suggest", "related"]
+
         other_resource = random.choice(common_endpoints)
         another_resource = random.choice(common_endpoints)
         if other_resource == another_resource:
             another_resource = random.choice(common_endpoints)
         path = path.replace("{id}", "1")
-        if "Coin" in name:
-            path = path.replace("1", "bitcoin")
-
         parts = [part.strip() for part in path.split("/") if part.strip()]
+
+        if "Coin" in name or "gbif" in name:
+            id = self.get_possible_id_for_instance_level_ep(parts[0])
+            if id:
+                path = path.replace("1", f"{id}")
+
         multilevel_endpoint = path
 
         if len(parts) == 1:
-            multilevel_endpoint = f"{path}{other_resource}{another_resource}"
+            multilevel_endpoint = f"{path}/{other_resource}/{another_resource}"
         elif len(parts) == 2:
             path = [part.strip() for part in path.split("/") if part.strip()]
             if len(path) == 1:
-                multilevel_endpoint = f"{path}{other_resource}{another_resource}"
+                multilevel_endpoint = f"{path}/{other_resource}/{another_resource}"
             if len(path) >=2:
-                multilevel_endpoint = f"{path}{another_resource}"
+                multilevel_endpoint = f"{path}/{another_resource}"
         else:
             if "/1" not in path:
                 multilevel_endpoint = path
+
+        multilevel_endpoint = multilevel_endpoint.replace("//", "/")
 
         return multilevel_endpoint
 
@@ -410,6 +450,9 @@ class PromptGenerationHelper(object):
                 Returns:
                     dict: A mapping of identified endpoints to their responses or error messages.
                 """
+        if "brew" in name or "gbif" in name:
+
+            common_endpoints = ["autocomplete", "search",  "random","match", "suggest", "related"]
 
         filtered_endpoints = [resource for resource in common_endpoints
                               if "id" not in resource ]
@@ -428,18 +471,54 @@ class PromptGenerationHelper(object):
 
 
         if len(parts) == 1:
-            multilevel_endpoint = f"{path}{other_resource}"
+            multilevel_endpoint = f"{path}/{other_resource}"
         elif len(parts) == 2:
             if "1" in parts:
                 p = path.split("/1")
                 new_path = ""
                 for part in p:
                     new_path = path.join(part)
-                multilevel_endpoint = f"{new_path}{other_resource}"
+                multilevel_endpoint = f"{new_path}/{other_resource}"
         else:
             if "1" not in path:
                 multilevel_endpoint = path
-        if "Coin" in name:
-            multilevel_endpoint = multilevel_endpoint.replace("1", "bitcoin")
+        if "Coin" in name or "gbif" in name:
+            id = self.get_possible_id_for_instance_level_ep(parts[0])
+            if id:
+                multilevel_endpoint = multilevel_endpoint.replace("1", f"{id}")
+        multilevel_endpoint = multilevel_endpoint.replace("//", "/")
+
         return multilevel_endpoint
+
+    def get_possible_id_for_instance_level_ep(self, endpoint):
+        if endpoint in self.endpoint_examples:
+            example = self.endpoint_examples[endpoint]
+            resource = endpoint.split("s")[0].replace("/", "")
+
+            if example:
+                for key in example.keys():
+                    print(f'key: {key}')
+                    if key and isinstance(key, str):
+                        check_key = key.lower()
+                        if "id" in check_key and check_key.endswith("id"):
+                            id =  example[key]
+                            if isinstance(id, int) or (isinstance(id, str) and id.isdigit()):
+                                pattern = re.compile(rf"^/{re.escape(endpoint)}/\d+$")
+                                if any(pattern.match(e) for e in self.found_endpoints):
+                                    continue
+                            if key == "id":
+                                if endpoint + f"/{id}" in self.found_endpoints or endpoint + f"/{id}" in self.unsuccessful_paths:
+                                    continue
+                                else:
+                                    return example[key]
+                            elif resource in key:
+                                if endpoint + f"/{id}" in self.found_endpoints or endpoint + f"/{id}" in self.unsuccessful_paths:
+                                    continue
+                                else:
+                                    return example[key]
+
+
+        return None
+
+
 

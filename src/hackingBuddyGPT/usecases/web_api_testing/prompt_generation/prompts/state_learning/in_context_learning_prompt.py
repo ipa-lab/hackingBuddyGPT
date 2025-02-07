@@ -48,6 +48,8 @@ class InContextLearningPrompt(StatePlanningPrompt):
         self.current_step = 0
         self.explored_sub_steps =[]
         self.previous_purpose = None
+        self.counter = 0
+
 
     def generate_prompt(
             self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
@@ -129,10 +131,13 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
         if self.previous_purpose != self.purpose:
             self.previous_purpose = self.purpose
-            if self.purpose != PromptPurpose.SETUP:
+            if self.purpose == PromptPurpose.SETUP:
+                if not self.counter == 0:
+                    self.pentesting_information.accounts = self.prompt_helper.accounts
+            else:
                 self.pentesting_information.accounts = self.prompt_helper.accounts
+
         self.test_cases = self.pentesting_information.explore_steps(self.purpose)
-        self.counter = 0
 
         purpose = self.purpose
 
@@ -166,7 +171,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
                         print(f'Current step: {self.current_step}')
                         print(f'Current sub step: {self.current_sub_step}')
 
-                        self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step)
+                        self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step, self.pentesting_information.accounts)
 
                         step = self.transform_test_case_to_string(self.current_step, "steps")
                         self.counter += 1
@@ -311,18 +316,26 @@ class InContextLearningPrompt(StatePlanningPrompt):
             "assessments": []
         }
 
+        print(f' PHASE: {test_case["objective"]}')
+
         # Process steps in the test case
         counter = 0
         for step in test_case["steps"]:
-            if len(test_case["security"]) > 1:
+            if counter < len(test_case["security"]):
                 security = test_case["security"][counter]
             else:
                 security = test_case["security"][0]
 
             if len(test_case["steps"]) > 1:
-                expected_response_code = test_case["expected_response_code"][counter]
+                if counter <len(test_case["expected_response_code"]):
+                    expected_response_code = test_case["expected_response_code"][counter]
+
+                else:
+                    expected_response_code = test_case["expected_response_code"]
+
+                print(f'COunter: {counter}')
                 token = test_case["token"][counter]
-                path = test_case[path][counter]
+                path = test_case["path"][counter]
             else:
                 expected_response_code = test_case["expected_response_code"]
                 token = test_case["token"][0]
@@ -415,7 +428,11 @@ class InContextLearningPrompt(StatePlanningPrompt):
                     if ep["path"] == endpoint:
                         print(f'ep:{ep}')
                         print(f' endpoint: {endpoint}')
-                        properties = ep.get('schema', {}).get('properties', {})
+                        schema = ep.get('schema', {})
+                        if schema != None and schema != {}:
+                            properties = schema.get('properties', {})
+                        else:
+                            properties = None
                         return properties
 
     def next_purpose(self, step, icl_steps, purpose):

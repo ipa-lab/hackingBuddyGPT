@@ -46,6 +46,7 @@ class OpenAPISpecificationHandler(object):
         self.schemas = {}
         self.query_params = {}
         self.endpoint_methods = {}
+        self.endpoint_examples= {}
         self.filename = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
         self.openapi_spec = {
             "openapi": "3.0.0",
@@ -72,7 +73,7 @@ class OpenAPISpecificationHandler(object):
     def is_partial_match(self, element, string_list):
         return any(element in string or string in element for string in string_list)
 
-    def update_openapi_spec(self, resp, result, result_str):
+    def update_openapi_spec(self, resp, result, prompt_engineer):
         """
         Updates the OpenAPI specification based on the API response provided.
 
@@ -90,9 +91,7 @@ class OpenAPISpecificationHandler(object):
         if request.__class__.__name__ == "HTTPRequest":
             path = request.path
             method = request.method
-            if "1" in path:
-                path = path.replace("1", "{id}")
-            path  = self.replace_crypto_with_id(path)
+            path = self.replace_id_with_placeholder(path, prompt_engineer)
             if not path or not method or path == "/" or not path.startswith("/"):
                 return list(self.openapi_spec["endpoints"].keys())
 
@@ -116,12 +115,16 @@ class OpenAPISpecificationHandler(object):
                 if path not in endpoints and "?" not in path:
                     endpoints[path] = {}
                     endpoint_methods[path] = []
+                    self.endpoint_examples[path] = {}
 
             unsuccessful_status_codes = ["400", "404", "500"]
 
             if path in endpoints and (status_code in unsuccessful_status_codes):
+                print(f'path: {path}')
+                print(f'unsuccessful paths: {self.unsuccessful_paths}')
+                print(f'unsuccessful methods: {self.unsuccessful_methods}')
                 self.unsuccessful_paths.append(path)
-                if path in  self.unsuccessful_methods:
+                if path not in self.unsuccessful_methods:
                     self.unsuccessful_methods[path] = []
                 self.unsuccessful_methods[path].append(method)
                 return list(self.openapi_spec["endpoints"].keys())
@@ -130,6 +133,7 @@ class OpenAPISpecificationHandler(object):
             example, reference, self.openapi_spec = self.response_handler.parse_http_response_to_openapi_example(
                 self.openapi_spec, result, path, method
             )
+
             self.schemas = self.openapi_spec["components"]["schemas"]
 
             # Check if the path exists in the dictionary and the method is not already defined for this path
@@ -152,29 +156,32 @@ class OpenAPISpecificationHandler(object):
                 endpoint_methods[path] = list(set(endpoint_methods[path]))
 
             # Check if there's a need to add or update the 'content' based on the conditions provided
-            if example or reference or status_message == "No Content":
+            if example or reference or status_message == "No Content" and not path.__contains__("?"):
                 # Ensure the path and method exists and has the 'responses' structure
-                if path in endpoints and method.lower() in endpoints[path] and \
-                        f"{status_code}" in endpoints[path][method.lower()]["responses"]:
-                    # Get the response content dictionary
-                    response_content = endpoints[path][method.lower()]["responses"][f"{status_code}"]["content"]
+                if (path in endpoints and method.lower() in endpoints[path]):
+                    if "responses" in endpoints[path][method.lower()].keys() and f"{status_code}" in endpoints[path][method.lower()]["responses"]:
+                        # Get the response content dictionary
+                        response_content = endpoints[path][method.lower()]["responses"][f"{status_code}"]["content"]
 
-                    # Assign a new structure to 'content' under the specific status code
-                    response_content["application/json"] = {
+                        # Assign a new structure to 'content' under the specific status code
+                        response_content["application/json"] = {
                         "schema": {"$ref": reference},
                         "examples": example
-                    }
+                        }
+
+                        self.endpoint_examples[path] = example
 
 
             # Add query parameters to the OpenAPI path item object
             if path.__contains__('?'):
                 query_params_dict = self.pattern_matcher.extract_query_params(path)
+                new_path = path.split("?")[0]
                 if query_params_dict != {}:
                     if path not in endpoints.keys():
-                        endpoints[path] = {}
-                    if method.lower() not in  endpoints[path]:
-                        endpoints[path][method.lower()] = {}
-                    endpoints[path][method.lower()].setdefault('parameters', [])
+                        endpoints[new_path] = {}
+                    if method.lower() not in  endpoints[new_path]:
+                        endpoints[new_path][method.lower()] = {}
+                    endpoints[new_path][method.lower()].setdefault('parameters', [])
                     print(f'query_params: {query_params_dict}')
                     print(f'query_params: {query_params_dict.items()}')
                     for param, value in query_params_dict.items():
@@ -186,10 +193,10 @@ class OpenAPISpecificationHandler(object):
                                 "type": self.get_type(value)  # Adjust the type based on actual data type
                             }
                         }
-                        endpoints[path][method.lower()]['parameters'].append(param_entry)
+                        endpoints[new_path][method.lower()]['parameters'].append(param_entry)
                         if path not in self.query_params.keys():
-                            self.query_params[path] = []
-                        self.query_params[path].append(param)
+                            self.query_params[new_path] = []
+                        self.query_params[new_path].append(param)
 
 
         return list(self.openapi_spec["endpoints"].keys())
@@ -231,10 +238,8 @@ class OpenAPISpecificationHandler(object):
         # yaml_file_assistant.run(description)
 
     def _update_documentation(self, response, result, result_str, prompt_engineer):
-        endpoints = self.update_openapi_spec(response, result, result_str)
+        endpoints = self.update_openapi_spec(response, result, prompt_engineer)
         if prompt_engineer.prompt_helper.found_endpoints != endpoints and endpoints != [] and len(endpoints) != 1:
-            prompt_engineer.prompt_helper.found_endpoints = list(
-                set(prompt_engineer.prompt_helper.found_endpoints + endpoints))
             self.write_openapi_to_yaml()
             prompt_engineer.prompt_helper.schemas = self.schemas
 
@@ -245,8 +250,6 @@ class OpenAPISpecificationHandler(object):
 
         prompt_engineer.prompt_helper.endpoint_found_methods = http_methods_dict
         prompt_engineer.prompt_helper.endpoint_methods = self.endpoint_methods
-        prompt_engineer.prompt_helper.unsuccessful_paths = self.unsuccessful_paths
-        prompt_engineer.prompt_helper.unsuccessful_methods = self.unsuccessful_methods
         return prompt_engineer
 
     def document_response(self, result, response, result_str, prompt_history, prompt_engineer):
@@ -307,4 +310,13 @@ class OpenAPISpecificationHandler(object):
                             if replaced_any:
                                 return "/".join(parts)
 
+
+        return path
+
+    def replace_id_with_placeholder(self, path, prompt_engineer):
+        if "1" in path:
+            path = path.replace("1", "{id}")
+        if prompt_engineer.prompt_helper.current_step == 2:
+            parts = [part.strip() for part in path.split("/") if part.strip()]
+            path = parts[0] + "/{id}"
         return path

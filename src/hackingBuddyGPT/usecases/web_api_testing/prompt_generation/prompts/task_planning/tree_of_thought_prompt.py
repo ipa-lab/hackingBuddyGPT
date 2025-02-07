@@ -305,7 +305,8 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
 
 
     def generate_documentation_steps(self, steps):
-       return [ steps[0],
+       return [
+           [f"Objective: Identify all accessible endpoints via GET requests for {self.prompt_helper.host}. {self.prompt_helper._description}"],
             [
                 "Start by querying root-level resource endpoints.",
                 "Focus on sending GET requests only to those endpoints that consist of a single path component directly following the root.",
@@ -318,6 +319,10 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
                 "Attempt to query these endpoints to validate whether the 'id' parameter correctly retrieves individual resource instances.",
                 "Consider testing with various ID formats, such as integers, longs, or base62 encodings like '6rqhFgbbKwnb9MLmUQDhG6'."
             ],
+           ["Now, move to query Subresource Endpoints.",
+                "Identify subresource endpoints of the form `/resource/other_resource`.",
+                "Query these endpoints to check if they return data related to the main resource without requiring an `id` parameter."
+],
             [
                 "Proceed to analyze related resource endpoints.",
                 "Identify patterns where a resource is associated with another through an 'id', formatted as `/resource/id/other_resource`.",

@@ -127,8 +127,13 @@ class ResponseAnalyzerWithLLM:
                     if any (value in body.values() for value in self.prompt_helper.current_user.values()):
                         if "id" in body:
                             self.prompt_helper.current_user["id"] = body["id"]
-                        if self.prompt_helper.current_user not in self.prompt_helper.accounts:
-                            self.prompt_helper.accounts.append(self.prompt_helper.current_user)
+                    if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+                        for i, acc in enumerate(self.prompt_helper.accounts):
+                            print(f'acc:{acc}')
+                            print(f'current_user:{self.prompt_helper.current_user}')
+                            if acc["x"] == self.prompt_helper.current_user["x"]:
+                                self.prompt_helper.accounts[i] =self.prompt_helper.current_user
+
                     self.replace_account()
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]

@@ -254,6 +254,7 @@ class SimpleWebAPIDocumentation(Agent):
             self._prompt_history, self._prompt_engineer = self._documentation_handler.document_response(
                 result, response, result_str, self._prompt_history, self._prompt_engineer
             )
+            self.prompt_helper.endpoint_examples = self._documentation_handler.endpoint_examples
 
             if self._prompt_engineer.prompt_helper.current_step == 7 and move_type == "explore":
                 is_good = True
@@ -269,7 +270,8 @@ class SimpleWebAPIDocumentation(Agent):
                 is_good = True
             counter = counter + 1
 
-            self._evaluator.evaluate_response(response, self._prompt_engineer.prompt_helper.found_endpoints)
+            self._evaluator.evaluate_response(response, self._prompt_engineer.prompt_helper.found_endpoints, self.prompt_helper.current_step,
+                                              self.prompt_helper.found_query_endpoints)
 
             self._evaluator.finalize_documentation_metrics(
                 file_path=self._documentation_handler.file.split(".yaml")[0] + ".txt")

@@ -8,6 +8,7 @@ class Evaluator:
         self._pattern_matcher = PatternMatcher()
         self.documented_query_params = config.get("query_params")
         self.num_runs = num_runs
+        self.ids = []
         self.query_params_found = {}
         self.name = config.get("name")
         self.documented_routes = config.get("correct_endpoints")  # Example documented GET routes
@@ -172,18 +173,18 @@ class Evaluator:
             "Value Match Percentage": value_match_percentage,
         }
 
-    def evaluate_response(self, response, routes_found):
+    def evaluate_response(self, response, routes_found, current_step, query_endpoints):
         query_params_found = 0
+        routes_found = routes_found.copy()
+
         false_positives = 0
-        if self.name.__contains__("Coin"):
-            print(f'Routes found:{routes_found}')
-            for route in routes_found:
-                self.add_if_is_cryptocurrency(route, routes_found)
-            print(f'Updated_routes_found:{routes_found}')
+        print(f'Routes found:{routes_found}')
+        for route in routes_found:
+                self.add_if_is_cryptocurrency(route, routes_found, current_step)
+        print(f'Updated_routes_found:{routes_found}')
         # Use evaluator to record routes and parameters found
         if response.action.__class__.__name__ != "RecordNote":
-            path = response.action.path
-            if path.__contains__('?'):
+            for path in query_endpoints :
                 self.all_query_params_found(path)  # This function should return the number found
                 false_positives = self.check_false_positives(path)  # Define this function to determine FP count
 
@@ -192,19 +193,23 @@ class Evaluator:
             #self.results["query_params_found"].append(query_params_found)
             self.results["false_positives"].append(false_positives)
 
-    def add_if_is_cryptocurrency(self, path,routes_found, cryptos=None):
+    def add_if_is_cryptocurrency(self, path,routes_found,current_step):
         """
                If the path contains a known cryptocurrency name, replace that part with '{id}'
                and add the resulting path to `self.prompt_helper.found_endpoints`.
                """
-        if cryptos is None:
-            # Default list of cryptos to detect
-            cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
-                       "cardano", "solana"]
+        # Default list of cryptos to detect
+        cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
+                       "cardano", "solana", "binance", "polkadot", "tezos",]
 
         # Convert to lowercase for the match, but preserve the original path for reconstruction if you prefer
         lower_path = path.lower()
 
+        for route in routes_found:
+            if "1" in route:
+                routes_found.append(route.replace("1", "{id}"))
+
+        parts = [part.strip() for part in path.split("/") if part.strip()]
 
         for crypto in cryptos:
             if crypto in lower_path:
@@ -226,6 +231,13 @@ class Evaluator:
 
                     else:
                         routes_found.append(replaced_path)
+        if len(parts) == 3 and current_step == 4:
+            if "/"+ parts[0] + "/{id}/" + parts[2] not  in routes_found:
+                routes_found.append("/" + parts[0] + "/{id}/"+ parts[2])
+        if len(parts) == 2 and current_step == 2:
+            if "/"+parts[0] + "/{id}" not in routes_found:
+                routes_found.append("/"+parts[0] + "/{id}")
+
 
     def get_percentage(self, param, documented_param):
         found_set = set(param)

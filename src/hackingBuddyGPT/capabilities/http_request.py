@@ -36,7 +36,7 @@ class HTTPRequest(Capability):
             description += "\nRedirects are not followed."
         return description
 
-    def __call__(
+    async def __call__(
         self,
         method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTION", "PATCH"],
         path: str,

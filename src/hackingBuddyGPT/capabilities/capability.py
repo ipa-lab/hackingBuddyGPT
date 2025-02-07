@@ -35,7 +35,7 @@ class Capability(abc.ABC):
         return type(self).__name__
 
     @abc.abstractmethod
-    def __call__(self, *args, **kwargs):
+    async def __call__(self, *args, **kwargs):
         """
         The actual execution of a capability, please make sure, that the parameters and return type of your
         implementation are well typed, as this is used to properly support function calling.
@@ -59,8 +59,8 @@ class Capability(abc.ABC):
         }
         model_type = create_model(self.__class__.__name__, __doc__=self.describe(), **fields)
 
-        def execute(model):
-            return self(**model.dict())
+        async def execute(model):
+            return await self(**model.dict())
 
         model_type.execute = execute
 
@@ -72,8 +72,8 @@ class Capability(abc.ABC):
 class Action(BaseModel):
     action: BaseModel
 
-    def execute(self):
-        return self.action.execute()
+    async def execute(self):
+        return await self.action.execute()
 
 
 def capabilities_to_action_model(capabilities: Dict[str, Capability]) -> Type[Action]:

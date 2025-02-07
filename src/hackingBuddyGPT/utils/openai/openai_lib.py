@@ -35,7 +35,7 @@ class OpenAILib(LLM):
     api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=3)
 
     _client: openai.OpenAI = None
-    _can_stream: bool = False
+    _can_stream: bool = True
 
     def init(self):
         self._client = openai.OpenAI(

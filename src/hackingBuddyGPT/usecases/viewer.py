@@ -232,7 +232,7 @@ class Viewer(UseCase):
         with open(file_path, "a") as f:
             f.write(ReplayMessage(datetime.datetime.now(), message).to_json() + "\n")
 
-    def run(self):
+    async def run(self):
         @asynccontextmanager
         async def lifespan(app: FastAPI):
             app.state.db = self.log_db
@@ -337,7 +337,9 @@ class Viewer(UseCase):
                 print("Egress WebSocket disconnected")
 
         import uvicorn
-        uvicorn.run(app, host=self.listen_host, port=self.listen_port)
+        config = uvicorn.Config(app, host=self.listen_host, port=self.listen_port)
+        server = uvicorn.Server(config)
+        await server.serve()
 
     def get_name(self) -> str:
         return "log_viewer"

@@ -1,7 +1,14 @@
+import asyncio
 import argparse
 import sys
 
 from hackingBuddyGPT.usecases.base import use_cases
+
+
+async def run_instance(instance, configuration):
+    await instance.init(configuration=configuration)
+    await instance.run()
+
 
 
 def main():
@@ -15,8 +22,7 @@ def main():
     if "llm.api_key" in configuration: # do not leak the API key
         del configuration["llm.api_key"]
     instance = parsed.use_case(parsed)
-    instance.init(configuration=configuration)
-    instance.run()
+    asyncio.run(run_instance(instance, configuration))
 
 
 if __name__ == "__main__":

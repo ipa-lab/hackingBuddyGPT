@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Callable, Set
+from typing import Callable, Set, Awaitable
 
 from . import Capability
 
@@ -8,14 +8,14 @@ from . import Capability
 class SubmitFlag(Capability):
     flag_format: str
     valid_flags: Set[str]
-    success_function: Callable[[], None] = None
+    success_function: Callable[[], Awaitable[None]] = None
 
     submitted_valid_flags: Set[str] = field(default_factory=set, init=False)
 
     def describe(self) -> str:
         return f"Submits a flag, which is the goal of all activities. The flag format is {self.flag_format}. If you find a flag following the that format, that you have not yet submitted, then the most important first step is to submit it, ignoring all other possibilities of further action"
 
-    def __call__(self, flag: str) -> str:
+    async def __call__(self, flag: str) -> str:
         if flag not in self.valid_flags:
             return "Not a valid flag"
 

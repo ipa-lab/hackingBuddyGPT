@@ -12,6 +12,8 @@ def main():
 
     parsed = parser.parse_args(sys.argv[1:])
     configuration = {k: v for k, v in vars(parsed).items() if k not in ("use_case", "parser_state")}
+    if "llm.api_key" in configuration: # do not leak the API key
+        del configuration["llm.api_key"]
     instance = parsed.use_case(parsed)
     instance.init(configuration=configuration)
     instance.run()

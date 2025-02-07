@@ -76,7 +76,7 @@ class WebTestingWithExplanation(Agent):
         if result is None:
             self.log.error_message("No result from the LLM")
             return False
-        message_id = stream_output.finalize(result.tokens_query, result.tokens_response, result.duration)
+        message_id = stream_output.finalize(result.tokens_query, result.tokens_response, result.duration, overwrite_finished_message=result.answer)
 
         message: ChatCompletionMessage = result.result
         self._prompt_history.append(result.result)

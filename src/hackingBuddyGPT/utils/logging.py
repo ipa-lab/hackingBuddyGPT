@@ -181,7 +181,6 @@ class RemoteLogger:
     _keepalive_stop_event: threading.Event = field(init=False, default_factory=threading.Event)
 
     def __del__(self):
-        print("running log deleter")
         if self._upstream_websocket:
             self._upstream_websocket.close()
         if self._keepalive_thread:
@@ -372,7 +371,10 @@ class MessageStreamLogger:
 
     def finalize(self, tokens_query: int, tokens_response: int, duration: datetime.timedelta, overwrite_finished_message: Optional[str] = None):
         self._completed = True
-        self.logger._add_or_update_message(self.message_id, self.conversation, self.role, "", tokens_query, tokens_response, duration)
+        if overwrite_finished_message:
+            self.logger._add_or_update_message(self.message_id, self.conversation, self.role, overwrite_finished_message, tokens_query, tokens_response, duration)
+        else:
+            self.logger._add_or_update_message(self.message_id, self.conversation, self.role, "", tokens_query, tokens_response, duration)
         return self.message_id
 
 

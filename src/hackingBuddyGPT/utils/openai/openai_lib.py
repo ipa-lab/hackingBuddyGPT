@@ -1,4 +1,5 @@
 import datetime
+import itertools
 from dataclasses import dataclass
 from typing import Dict, Iterable, Optional, Union
 
@@ -34,6 +35,7 @@ class OpenAILib(LLM):
     api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=3)
 
     _client: openai.OpenAI = None
+    _can_stream: bool = False
 
     def init(self):
         self._client = openai.OpenAI(
@@ -51,7 +53,7 @@ class OpenAILib(LLM):
     def instructor(self) -> instructor.Instructor:
         return instructor.from_openai(self.client)
 
-    def get_response(self, prompt, *, capabilities: Optional[Dict[str, Capability] ] = None, **kwargs) -> LLMResult:
+    def get_response(self, prompt, *, capabilities: Optional[Dict[str, Capability] ] = None, console: Console = None, **kwargs) -> LLMResult:
         """  # TODO: re-enable compatibility layer
         if isinstance(prompt, str) or hasattr(prompt, "render"):
             prompt = {"role": "user", "content": prompt}
@@ -77,6 +79,14 @@ class OpenAILib(LLM):
         duration = datetime.datetime.now() - tic
         message = response.choices[0].message
 
+        if console:
+            console.print("\n\n[bold blue]ASSISTANT:[/bold blue]")
+            console.print(message.content)
+
+            for tool_call in message.tool_calls or []:
+                console.print(f"\n\n[bold red]TOOL CALL - {tool_call.function.name}:[/bold red]")
+                console.print(tool_call.function.arguments)
+
         return LLMResult(
             message,
             str(prompt),
@@ -87,12 +97,31 @@ class OpenAILib(LLM):
         )
 
     def stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None, get_individual_updates=False) -> Union[LLMResult, Iterable[Union[ChoiceDelta, LLMResult]]]:
-        generator = self._stream_response(prompt, console, capabilities)
+        if self._can_stream:
+            try:
+                response_generator = self._stream_response(prompt, console, capabilities)
+                # preload the first chunk to catch exceptions here
+                first_chunk = next(response_generator)
+                generator = itertools.chain([first_chunk], response_generator)
 
-        if get_individual_updates:
-            return generator
+                if get_individual_updates:
+                    return generator
 
-        return list(generator)[-1]
+                return list(generator)[-1]
+
+            except openai.BadRequestError as e:
+                if "'stream' does not support true with this model" in str(e):
+                    print("WARNING: Got an error that the model does not support streaming, falling back to non-streaming")
+                    self._can_stream = False
+                    return self.stream_response(prompt, console, capabilities, get_individual_updates)
+
+        else:
+            result = self.get_response(prompt, capabilities=capabilities, console=console)
+
+            if get_individual_updates:
+                return [result]
+
+            return result
 
     def _stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None) -> Iterable[Union[ChoiceDelta, LLMResult]]:
         tools = None

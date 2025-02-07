@@ -25,3 +25,4 @@ scripts/mac_ansible_hosts.ini
 scripts/mac_ansible_id_rsa
 scripts/mac_ansible_id_rsa.pub
 .aider*
+*.bak

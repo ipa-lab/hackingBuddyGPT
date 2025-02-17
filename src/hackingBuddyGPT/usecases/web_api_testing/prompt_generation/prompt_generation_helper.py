@@ -29,12 +29,16 @@ class PromptGenerationHelper(object):
         """
           Initializes the PromptGenerationHelper with an optional host and description.
           """
+        self.counter = 0
         self.uuid =uuid.uuid4()
         self.bad_request_endpoints = []
         self.endpoint_examples = {}
         self.name = ""
         if "coin" in host.lower():
             self.name = "Coin"
+        if "reqres" in host.lower():
+            self.name = "reqres"
+
         self.current_sub_step = None
         self.saved_endpoints = []
         self.tried_endpoints_with_params = {}
@@ -82,6 +86,7 @@ class PromptGenerationHelper(object):
                 data_string = step.split("user:")[1].split(".\n")[0]
                 # Replace single quotes with double quotes for JSON compatibility
                 data_string_json = data_string.replace("'", '"')
+
 
                 # Parse the string into a dictionary
                 user_info = json.loads(data_string_json)
@@ -190,8 +195,9 @@ class PromptGenerationHelper(object):
                         f"For endpoint {formatted_endpoint}, find this missing method: {needed_method}."
                     ]
 
+        unsuccessful_paths = [path for path in self.unsuccessful_paths if "?" not in path]
         return [
-            f"Look for any endpoint that might be missing params, exclude endpoints from this list :{self.unsuccessful_paths}"]
+            f"Look for any endpoint that might be missing params, exclude endpoints from this list :{unsuccessful_paths}"]
 
 
     def _get_initial_documentation_steps(self, strategy_steps):
@@ -240,7 +246,6 @@ class PromptGenerationHelper(object):
         """
 
         def validate_prompt(prompt):
-            print(f'Prompt: {prompt}')
             return prompt
 
 
@@ -261,7 +266,13 @@ class PromptGenerationHelper(object):
             str: The first endpoint that includes a query parameter, or None if no such endpoint exists.
         """
         query_endpoint = None
-        for endpoint in self.found_endpoints:
+        endpoints = self.found_endpoints + self.saved_endpoints + list(self.endpoint_examples.keys())
+        endpoints = list (set(endpoints))
+        for endpoint in endpoints:
+            if self.tried_endpoints.count(query_endpoint) > 3:
+                continue
+            if endpoint not in self.query_endpoints_params or self.tried_endpoints:
+                self.query_endpoints_params[endpoint] = []
             if len(self.query_endpoints_params[endpoint]) == 0:
                 return endpoint
 
@@ -284,10 +295,12 @@ class PromptGenerationHelper(object):
         instance_level_endpoints = self._get_instance_level_endpoints(name)
         for endpoint in instance_level_endpoints:
             endpoint = endpoint.replace("//", "/")
-            templated_endpoint = endpoint.replace("1", "{id}")
             id = self.get_possible_id_for_instance_level_ep(endpoint)
             templated_endpoint = endpoint.replace(f"{id}", "{id}")
-            if templated_endpoint not in self.found_endpoints and endpoint.replace("1", "{id}") not in self.unsuccessful_paths and endpoint not in self.unsuccessful_paths  and templated_endpoint != "/1/1":
+            if  (endpoint not in self.found_endpoints and templated_endpoint
+                    not in self.found_endpoints and endpoint.replace("1", "{id}")
+                    not in self.unsuccessful_paths and endpoint not in self.unsuccessful_paths
+                    and templated_endpoint != "/1/1"):
                 return endpoint
         return None
 
@@ -302,16 +315,20 @@ class PromptGenerationHelper(object):
         for endpoint in self._get_root_level_endpoints():
             new_endpoint = endpoint + "/1"
             new_endpoint = new_endpoint.replace("//", "/")
+            if new_endpoint == "seasons_average":
+                new_endpoint = "season_averages\general"
             if new_endpoint != "/1/1" and (
                     endpoint + "/{id}" not in self.found_endpoints and
                     endpoint + "/1" not in self.unsuccessful_paths and
-                    new_endpoint not in self.unsuccessful_paths
+                    new_endpoint not in self.unsuccessful_paths and
+                    new_endpoint not in self.found_endpoints
             ):
 
                 id = self.get_possible_id_for_instance_level_ep(endpoint)
                 if id:
                     new_endpoint = new_endpoint.replace("1", f"{id}")
                 if new_endpoint not in self.unsuccessful_paths and new_endpoint not in self.found_endpoints:
+
                     if new_endpoint in self.bad_request_endpoints:
                         id = str(self.uuid)
                         new_endpoint = endpoint + f"/{id}"
@@ -349,8 +366,19 @@ class PromptGenerationHelper(object):
 
         if self.current_step == 6:
             query_endpoint = self._get_endpoint_for_query_params()
-            hint = f'Use this endpoint: {query_endpoint}'
-            hint +=" and use appropriate query params"
+
+            if query_endpoint == "season_averages":
+                query_endpoint = "season_averages/general"
+            if query_endpoint == "stats":
+                query_endpoint = "stats/advanced"
+            query_params = self.get_possible_params(query_endpoint)
+            if query_params is None:
+                query_params = ["limit", "page", "size"]
+
+            self.tried_endpoints.append(query_endpoint)
+
+            hint = f'Use this endpoint: {query_endpoint} and infer params from this: {query_params}'
+            hint +=" and use appropriate query params like "
 
         if self.hint_for_next_round:
             hint += self.hint_for_next_round
@@ -379,6 +407,12 @@ class PromptGenerationHelper(object):
                     dict: A mapping of identified endpoints to their responses or error messages.
                 """
 
+        if "ball" in name:
+            common_endpoints = ["stats", "seasons_average", "history", "match", "suggest", "related", '/notifications',
+                                    '/messages', '/files', '/settings', '/status', '/health',
+                                    '/healthcheck',
+                                    '/feedback',
+                                    '/support', '/profile', '/account', '/reports', '/dashboard', '/activity', ]
         other_resource = random.choice(common_endpoints)
 
         # Determine if the path is a root-level or instance-level endpoint
@@ -412,6 +446,13 @@ class PromptGenerationHelper(object):
 
         if "brew" in name or "gbif" in name:
             common_endpoints = ["autocomplete", "search",  "random","match", "suggest", "related"]
+        if "Coin" in name :
+            common_endpoints = ["markets", "search",  "history","match", "suggest", "related", '/notifications',
+                                '/messages', '/files', '/settings', '/status', '/health',
+                                 '/healthcheck',
+                                 '/feedback',
+                                 '/support', '/profile', '/account', '/reports', '/dashboard', '/activity',]
+
 
         other_resource = random.choice(common_endpoints)
         another_resource = random.choice(common_endpoints)
@@ -497,7 +538,6 @@ class PromptGenerationHelper(object):
 
             if example:
                 for key in example.keys():
-                    print(f'key: {key}')
                     if key and isinstance(key, str):
                         check_key = key.lower()
                         if "id" in check_key and check_key.endswith("id"):
@@ -519,6 +559,23 @@ class PromptGenerationHelper(object):
 
 
         return None
+
+    def get_possible_params(self, endpoint):
+        if endpoint in self.endpoint_examples:
+            example = self.endpoint_examples[endpoint]
+            if "reqres" in self.name:
+                for key, value in example.items():
+                    if not key in self.query_endpoints_params[endpoint]:
+                        return f'{key}: {example[key]}'
+            elif "ballardtide" in self.name:
+                for key, value in example.items():
+                    if not key in self.query_endpoints_params[endpoint]:
+                        return f'{key}: {example[key]}'
+                if example is None:
+                    example = {"season_type": "regular", "type": "base"}
+
+            return example
+
 
 
 

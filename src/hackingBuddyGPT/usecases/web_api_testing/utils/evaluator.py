@@ -1,3 +1,4 @@
+import copy
 from itertools import chain
 
 from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher import PatternMatcher
@@ -98,7 +99,7 @@ class Evaluator:
         """
         return response.get("query_params", [])
 
-    def all_query_params_found(self, path):
+    def all_query_params_found(self, path, response):
         """
         Count the number of documented query parameters found in a response.
 
@@ -108,7 +109,9 @@ class Evaluator:
         Returns:
             int: The count of documented query parameters found in this turn.
         """
-
+        if response.action.query is not None:
+            query = response.action.query.split("?")[0]
+            path = path + "&"+ query
         # Simulate response query parameters found (this would usually come from the response data)
         response_query_params = self._pattern_matcher.extract_query_params(path)
         valid_query_params = []
@@ -129,6 +132,7 @@ class Evaluator:
                     if param not in self.query_params_found[ep]:
                         self.query_params_found[ep].append(param)
         print(f'Documented params;{self.documented_query_params}')
+        self.results["query_params_found"] = self.query_params_found
         print(f'Found params;{self.results["query_params_found"]}')
 
     def extract_query_params_from_response(self, path):
@@ -175,17 +179,17 @@ class Evaluator:
 
     def evaluate_response(self, response, routes_found, current_step, query_endpoints):
         query_params_found = 0
-        routes_found = routes_found.copy()
+        routes_found = copy.deepcopy(routes_found)
 
         false_positives = 0
         print(f'Routes found:{routes_found}')
-        for route in routes_found:
-                self.add_if_is_cryptocurrency(route, routes_found, current_step)
+        for idx, route in enumerate(routes_found):
+                routes_found = self.add_if_is_cryptocurrency(idx, route, routes_found, current_step)
         print(f'Updated_routes_found:{routes_found}')
         # Use evaluator to record routes and parameters found
         if response.action.__class__.__name__ != "RecordNote":
             for path in query_endpoints :
-                self.all_query_params_found(path)  # This function should return the number found
+                self.all_query_params_found(path, response)  # This function should return the number found
                 false_positives = self.check_false_positives(path)  # Define this function to determine FP count
 
             # Record these results in the evaluator
@@ -193,21 +197,18 @@ class Evaluator:
             #self.results["query_params_found"].append(query_params_found)
             self.results["false_positives"].append(false_positives)
 
-    def add_if_is_cryptocurrency(self, path,routes_found,current_step):
+    def add_if_is_cryptocurrency(self, idx, path,routes_found,current_step):
         """
                If the path contains a known cryptocurrency name, replace that part with '{id}'
                and add the resulting path to `self.prompt_helper.found_endpoints`.
                """
         # Default list of cryptos to detect
+        routes_found = list(set(routes_found))
         cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
                        "cardano", "solana", "binance", "polkadot", "tezos",]
 
         # Convert to lowercase for the match, but preserve the original path for reconstruction if you prefer
         lower_path = path.lower()
-
-        for route in routes_found:
-            if "1" in route:
-                routes_found.append(route.replace("1", "{id}"))
 
         parts = [part.strip() for part in path.split("/") if part.strip()]
 
@@ -233,10 +234,23 @@ class Evaluator:
                         routes_found.append(replaced_path)
         if len(parts) == 3 and current_step == 4:
             if "/"+ parts[0] + "/{id}/" + parts[2] not  in routes_found:
-                routes_found.append("/" + parts[0] + "/{id}/"+ parts[2])
+                for i, route in enumerate(routes_found):
+                    if route == path:
+                        routes_found[i] = "/" + parts[0] + "/{id}/" + parts[2]
+                        break
         if len(parts) == 2 and current_step == 2:
             if "/"+parts[0] + "/{id}" not in routes_found:
-                routes_found.append("/"+parts[0] + "/{id}")
+                for i, route in enumerate(routes_found):
+                    if route == path:
+                        routes_found[i] ="/"+parts[0] + "/{id}"
+                        break
+
+        if "/1" in path:
+            if idx < len(routes_found):
+                print(f'idx:{idx} path:{path} routes_found:{routes_found} ')
+                print(f'routes found idx:{idx} path:{routes_found[idx]} ')
+                routes_found[idx] = routes_found[idx].replace("/1", "/{id}")
+        return routes_found
 
 
     def get_percentage(self, param, documented_param):
@@ -253,6 +267,7 @@ class Evaluator:
         """Calculate and log the final effectiveness metrics after documentation process is complete."""
         metrics = self.calculate_metrics()
         # Specify the file path
+
 
         print(f'Appending metrics to {file_path}')
 
@@ -279,6 +294,7 @@ class Evaluator:
             file.write(f"Total Documented Routes: {total_documented_routes}\n")
             file.write(f"Total Additional Routes Found: {total_additional_routes}\n")
             file.write(f"Total Missing Routes: {total_missing_routes}\n")
+            file.write(f" Missing Parameters: {total_missing_routes}\n")
 
             # Optionally include a timestamp or other metadata
             from datetime import datetime

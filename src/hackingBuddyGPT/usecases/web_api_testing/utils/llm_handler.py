@@ -60,7 +60,7 @@ class LLMHandler:
                 model=self.llm.model,
                 messages=prompt,
                 response_model=capabilities_to_action_model(self._capabilities),
-                max_tokens=200  # adjust as needed
+                #max_tokens=200  # adjust as needed
             )
 
         # Helper to adjust the prompt based on its length.
@@ -81,12 +81,15 @@ class LLMHandler:
                 if isinstance(prompt, list) and len(prompt) >= 5:
                     adjusted_prompt = self.adjust_prompt(prompt, num_prompts=1)
                     adjusted_prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+                    prompt= adjusted_prompt
                 if isinstance(prompt, str):
                     adjusted_prompt = [prompt]
+                    prompt= adjusted_prompt
 
-                print(f'1-Adjusted_prompt: {adjusted_prompt}')
 
-                return call_model(adjusted_prompt)
+                print(f'1-Adjusted_prompt: {prompt}')
+
+                return call_model(prompt)
 
             except (openai.BadRequestError, IncompleteOutputException) as e:
                 print(f"Error: {str(e)} - Further adjusting and retrying.")
@@ -125,7 +128,7 @@ class LLMHandler:
                 model=self.llm.model,
                 messages=adjusted_prompt,
                 response_model=capabilities_to_action_model(capability),
-                max_tokens=1000  # adjust as needed
+                #max_tokens=1000  # adjust as needed
             )
 
         # Helper to adjust the prompt based on its length.

@@ -141,7 +141,7 @@ class SimpleWebAPITesting(Agent):
         else:
             username = "test"
             password = "<PASSWORD>"
-        self.pentesting_information = PenTestingInformation(self._openapi_specification_parser, username, password)
+        self.pentesting_information = PenTestingInformation(self._openapi_specification_parser, self.config)
         self._response_handler = ResponseHandler(
             llm_handler=self._llm_handler, prompt_context=self.prompt_context, prompt_helper=self.prompt_helper,
             config=self.config, pentesting_information = self.pentesting_information )
@@ -150,7 +150,7 @@ class SimpleWebAPITesting(Agent):
                                                          capacity=self.parse_capacity,
                                                          prompt_helper = self.prompt_helper)
         self._response_handler.set_response_analyzer(self.response_analyzer)
-        self._report_handler = ReportHandler()
+        self._report_handler = ReportHandler(self.config)
         self._test_handler = TestHandler(self._llm_handler)
 
     def categorize_endpoints(self, endpoints, query: dict):
@@ -287,6 +287,8 @@ class SimpleWebAPITesting(Agent):
 
 
         with self._log.console.status("[bold green]Executing that command..."):
+            if self.prompt_engineer._purpose == PromptPurpose.SETUP:
+                 response.action.method = "POST"
 
             if self.prompt_helper.current_user != {}:
                 if  "example" in self.prompt_helper.current_user.keys() and "id" in self.prompt_helper.current_user.get("example").keys():
@@ -294,13 +296,13 @@ class SimpleWebAPITesting(Agent):
                 if "id" in self.prompt_helper.current_user.keys():
                     id = self.prompt_helper.current_user.get("id")
                 test_step =  self.prompt_helper.current_test_step.get("steps")
-                for step in test_step:
-                    if step.get("step").__contains__("Authorization-Token"):
-                        token = self.pentesting_information.tokens[id]
-                        response.action.headers =  {"Authorization-Token": f"Bearer {token}"}
             token = self.prompt_helper.current_sub_step.get("token")
             if token != "":
-                response.action.headers = {"Authorization-Token": f"Bearer {token}"}
+                if self.config.get("name") == "vAPI":
+                    response.action.headers = {"Authorization-Token": f"{token}"}
+                else:
+
+                    response.action.headers = {"Authorization-Token": f"Bearer {token}"}
             if response.action.path != self.prompt_helper.current_sub_step.get("path"):
                 response.action.path = self.prompt_helper.current_sub_step.get("path")
 
@@ -317,6 +319,8 @@ class SimpleWebAPITesting(Agent):
             command: str = pydantic_core.to_json(response).decode()
             self._log.console.print(Panel(command, title="assistant"))
             self._prompt_history.append(message)
+            if response.action.body == None:
+                response.action.body = self.prompt_helper.current_user
             result: Any = response.execute()
             self._log.console.print(Panel(result, title="tool"))
             if not isinstance(result, str):
@@ -326,14 +330,22 @@ class SimpleWebAPITesting(Agent):
             self._prompt_history.append(
                 tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
-            if "token" in result and self.token == "your_api_token_here":
+            if "token" in result and (self.token == "your_api_token_here"or self.token == ""):
                 self.token = self.extract_token_from_http_response(result)
                 for account in self.prompt_helper.accounts:
                     if account.get("x") == self.prompt_helper.current_user.get("x"):
                         account["token"] = self.token
                 self.pentesting_information.set_valid_token(self.token)
+            headers, body = result.split("\r\n\r\n", 1)
+            if "id" in body and self.prompt_helper.current_sub_step.get("purpose")== PromptPurpose.SETUP:
+                data = json.loads(body)
+                user_id = data.get('id')
+                for account in self.prompt_helper.accounts:
+                    if account.get("x") == self.prompt_helper.current_user.get("x"):
+                        account["id"] = user_id
+                        break
 
-            self._report_handler.write_vulnerability_to_report(self.prompt_helper.current_test_step, result)
+            self._report_handler.write_vulnerability_to_report(self.prompt_helper.current_sub_step, result, self.prompt_helper.counter)
 
 
             analysis, status_code = self._response_handler.evaluate_result(

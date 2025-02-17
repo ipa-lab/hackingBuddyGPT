@@ -17,14 +17,16 @@ class ReportHandler:
         report (file): The file object for the report, opened for writing data.
     """
 
-    def __init__(self):
+    def __init__(self, config):
         """
         Initializes the ReportHandler by setting up the file path for reports,
         creating the directory if it does not exist, and preparing a new report file.
         """
         current_path: str = os.path.dirname(os.path.abspath(__file__))
-        self.file_path: str = os.path.join(current_path, "reports")
-        self.vul_file_path: str = os.path.join(current_path, "vulnerabilities")
+        print(f'config: {config}')
+        print(f'config: {config.get("name")}')
+        self.file_path: str = os.path.join(current_path, "reports", config.get("name"))
+        self.vul_file_path: str = os.path.join(current_path, "vulnerabilities",config.get("name") )
 
         if not os.path.exists(self.file_path):
             os.mkdir(self.file_path)
@@ -119,7 +121,7 @@ class ReportHandler:
         report_name = self.file_path, f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
         self.pdf.output(report_name)
 
-    def write_vulnerability_to_report(self, test_step, raw_response):
+    def write_vulnerability_to_report(self, test_step, raw_response, current_substep):
         """
             Checks the given raw HTTP response against the test_data (which includes expected_response_code
             and success/failure messages). Writes the result ("No Vulnerability found." or "Vulnerability found.")
@@ -172,10 +174,11 @@ class ReportHandler:
         unsuccessful_msg = conditions.get('if_unsuccessful', "Vulnerability found.")
 
         # A simple case-insensitive check. Alternatively, parse numeric code
-        # only, or do partial matching, depending on your needs.
+        print(f'expected_codes: {expected_codes}')
+
         success = any(
-            status_code == expected.split()[0]  # compare "200" to the first token in "200 OK"
-            for expected in expected_codes
+            str(status_code).strip() == str(expected.split()[0]).strip() and len(expected.split()[0].strip()) == 3 and expected.split()[0].strip().isdigit()  # Ensure first word is a 3-digit number
+            for expected in expected_codes if expected.strip()  # Ensure no empty or space-only entries in the list
         )
 
         # ---------------------------------------------------------
@@ -184,7 +187,7 @@ class ReportHandler:
         test_case_name = test_step.get('purpose', "Unnamed Test Case")
         step = test_step.get('step', "No step")
         expected = test_step.get('expected_response_code', "No expected result")
-        if not success and successful_msg.startswith("Vul"):
+        if (not success):
             # Vulnerability found
             self.vulnerabilities_counter += 1
             report_line = f"Test Name: {test_case_name}\nStep:{step}\nExpected Result:{expected}\nActual Result:{status_code}\n{unsuccessful_msg}\nNumber of found vulnerabilities:{self.vulnerabilities_counter}\n"

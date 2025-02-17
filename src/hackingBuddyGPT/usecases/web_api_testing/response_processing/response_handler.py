@@ -1,3 +1,4 @@
+import copy
 import json
 import os.path
 import re
@@ -43,6 +44,7 @@ class ResponseHandler:
         Args:
             llm_handler (LLMHandler): An instance of the LLM handler for interacting with the LLM.
         """
+        self.no_new_endpoint_counter = 0
         self.all_query_combinations = []
         self.llm_handler = llm_handler
         self.no_action_counter = 0
@@ -81,7 +83,7 @@ class ResponseHandler:
                                  '/activity/log', '/subscriptions/{id}', '/subscriptions/cancel', '/webhooks/{id}',
                                  '/events/{id}',
                                  '/images/{id}', '/videos/{id}', '/files/download/{id}', '/support/tickets/{id}']
-        self.common_endpoints_categorized = self.categorize_endpoints()
+        self.common_endpoints_categorized_cycle, self.common_endpoints_categorized = self.categorize_endpoints()
         self.query_counter = 0
         self.repeat_counter = 0
         self.variants_of_found_endpoints = []
@@ -96,7 +98,7 @@ class ResponseHandler:
     def set_response_analyzer(self, response_analyzer: ResponseAnalyzerWithLLM) -> None:
         self.response_analyzer = response_analyzer
 
-    def categorize_endpoints(self):
+    def categorize_endpoints(self) :
         root_level = []
         single_parameter = []
         subresource = []
@@ -128,7 +130,14 @@ class ResponseHandler:
             3: cycle(subresource),
             4: cycle(related_resource),
             5: cycle(multi_level_resource),
-        }
+        }, {
+        1: root_level,
+        2: single_parameter,
+        3: subresource,
+        4: related_resource,
+        5: multi_level_resource,
+    }
+
 
     def get_response_for_prompt(self, prompt: str) -> object:
         """
@@ -211,26 +220,51 @@ class ResponseHandler:
 
         reference, object_name, openapi_spec = self.parse_http_response_to_schema(openapi_spec, body_dict, path)
         entry_dict = {}
+        old_body_dict = copy.deepcopy(body_dict)
 
-        if len(body_dict) == 1:
-            entry_dict["id"] = {"value": body_dict}
+        if len(body_dict) == 1 and "data" not in body_dict:
+            entry_dict["id"] = body_dict
             self.llm_handler._add_created_object(entry_dict, object_name)
         else:
-            if isinstance(body_dict, list):
-                for entry in body_dict:
-                    key = entry.get("title") or entry.get("name") or entry.get("id")
-                    entry_dict[key] = {"value": entry}
-                    self.llm_handler._add_created_object(entry_dict[key], object_name)
-                    if len(entry_dict) > 3:
-                        break
+            if "data" in body_dict:
+                body_dict = body_dict["data"]
+                if isinstance(body_dict, list) and len(body_dict) > 0:
+                    body_dict = body_dict[0]
+                    if isinstance(body_dict, list):
+                        for entry in body_dict:
+                            key = entry.get("title") or entry.get("name") or entry.get("id")
+                            entry_dict[key] = {"value": entry}
+                            self.llm_handler._add_created_object(entry_dict[key], object_name)
+                            if len(entry_dict) > 3:
+                                break
+
+
+            if isinstance(body_dict, list) and len(body_dict) > 0:
+                body_dict = body_dict[0]
+                if isinstance(body_dict, list):
+
+                    for entry in body_dict:
+                        key = entry.get("title") or entry.get("name") or entry.get("id")
+                        entry_dict[key] = entry
+                        self.llm_handler._add_created_object(entry_dict[key], object_name)
+                        if len(entry_dict) > 3:
+                            break
             else:
-                if "data" in body_dict.keys():
+                if isinstance(body_dict, list) and len(body_dict) == 0:
+                    entry_dict = ""
+                elif isinstance(body_dict, dict) and "data" in body_dict.keys():
                     entry_dict = body_dict["data"]
                     if isinstance(entry_dict, list) and len(entry_dict) > 0:
                         entry_dict = entry_dict[0]
                 else:
                     entry_dict= body_dict
                 self.llm_handler._add_created_object(entry_dict, object_name)
+        if isinstance(old_body_dict, dict) and len(old_body_dict.keys()) > 0 and "data" in old_body_dict.keys() and isinstance(old_body_dict, dict) \
+                and isinstance(entry_dict, dict):
+            old_body_dict.pop("data")
+            entry_dict = {**entry_dict, **old_body_dict}
+            print(f'entry_dict:{entry_dict}')
+
 
         return entry_dict, reference, openapi_spec
 
@@ -391,6 +425,17 @@ class ResponseHandler:
         # Extract message and tool call information
         message = completion.choices[0].message
         tool_call_id = message.tool_calls[0].id
+        if "undefined" in response.action.path :
+            response.action.path = response.action.path.replace("undefined", "1")
+        if "Id" in response.action.path:
+            path = response.action.path.split("/")
+            if len(path) > 2:
+                response.action.path = f"/{path[0]}/1/{path[2]}"
+            else:
+                response.action.path = f"/{path[0]}/1"
+
+
+
 
         if self.repeat_counter == 3:
             self.repeat_counter = 0
@@ -427,7 +472,6 @@ class ResponseHandler:
 
     def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any,
                              categorized_endpoints, tool_call_id, move_type) -> Any:
-        print(f'response.action:{response.action}')
 
         response = self.adjust_path(response, move_type)
         # Add Authorization header if token is available
@@ -442,13 +486,14 @@ class ResponseHandler:
 
         # Execute the command and parse the result
         with log.console.status("[bold green]Executing command..."):
-            if response.__class__.__name__ == "RecordNote":
-                print("HHHHHHHH")
+
 
             result = response.execute()
             self.query_counter += 1
             result_dict = self.extract_json(result)
             log.console.print(Panel(result[:20], title="tool"))
+            if "Could not request" in result:
+                return False, prompt_history, result, ""
 
         if response.action.__class__.__name__ != "RecordNote":
             self.prompt_helper.tried_endpoints.append(response.action.path)
@@ -479,7 +524,6 @@ class ResponseHandler:
 
         params = re.findall(r'(\w+)=([^&]*)', url)
         extracted_params = {key: value for key, value in params}
-        print(f'PARAMS EXTRACTED:{extracted_params}')
 
         return extracted_params
 
@@ -523,9 +567,9 @@ class ResponseHandler:
             return new_path
         try:
 
-            new_path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
+            new_path = next(self.common_endpoints_categorized_cycle[self.prompt_helper.current_step])
             while not new_path in self.prompt_helper.found_endpoints or not new_path in self.prompt_helper.unsuccessful_paths:
-                new_path = next(self.common_endpoints_categorized[self.prompt_helper.current_step])
+                new_path = next(self.common_endpoints_categorized_cycle[self.prompt_helper.current_step])
                 counter = counter + 1
                 if counter >= 6:
                     return new_path
@@ -544,6 +588,11 @@ class ResponseHandler:
             """
             # Replace {id} with '1'
             # Unconditionally replace '1' with 'bitcoin'
+
+            if path is None:
+                l = self.common_endpoints_categorized[self.prompt_helper.current_step]
+                print(f'L: {l}')
+                return random.choice(l)
             if ("Coin" in self.name or "gbif" in self.name)and self.prompt_helper.current_step == 2:
                 id = self.prompt_helper.get_possible_id_for_instance_level_ep(path)
                 if id:
@@ -659,7 +708,6 @@ class ResponseHandler:
                     return self.finalize_path(path if new_path == "no params" else new_path)
 
                 # Already-handled paths
-                print(f'PATh:{path}')
                 if (path in {self.last_path,
                              *self.prompt_helper.unsuccessful_paths,
                              *self.prompt_helper.found_endpoints}
@@ -826,6 +874,11 @@ class ResponseHandler:
                 Any: The updated response object with an adjusted path.
             """
             old_path = response.action.path
+
+            if "?" not in response.action.path and self.prompt_helper.current_step == 6:
+                if response.action.path not in self.prompt_helper.saved_endpoints:
+                    if response.action.query is not None:
+                        return response
             # Process action if it's not RecordNote
             if response.action.__class__.__name__ != "RecordNote":
                 if self.prompt_helper.current_step == 6 :
@@ -879,6 +932,8 @@ class ResponseHandler:
                 self.saved_endpoints[1].remove(ep)
             if ep in self.prompt_helper.saved_endpoints:
                 self.prompt_helper.saved_endpoints.remove(ep)
+            if ep not in self.prompt_helper.found_endpoints:
+                self.prompt_helper.found_endpoints.append(ep)
 
             self.prompt_helper.query_endpoints_params.setdefault(ep, [])
             self.prompt_helper.tried_endpoints_with_params.setdefault(ep, [])
@@ -898,16 +953,19 @@ class ResponseHandler:
                 self.prompt_helper.tried_endpoints_with_params[ep].append(key)
 
             status_message = f"{request_path} is a correct endpoint"
+            self.no_new_endpoint_counter= 0
         else:
             error_msg = result_dict.get("error", {}).get("message", "unknown error") if isinstance(
                 result_dict.get("error", {}), dict) else result_dict.get("error", "unknown error")
-            print(f'ERROR MSG: {error_msg}')
+            self.no_new_endpoint_counter +=1
 
-            if result_str.startswith("400"):
+            if result_str.startswith("400") or result_str.startswith("401") or result_str.startswith("403"):
                 status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"
                 self.prompt_helper.endpoints_to_try.append(request_path)
                 self.prompt_helper.bad_request_endpoints.append(request_path)
                 self.save_endpoint(request_path)
+                if request_path not in self.prompt_helper.saved_endpoints:
+                    self.prompt_helper.saved_endpoints.append(request_path)
 
                 if error_msg not in self.prompt_helper.correct_endpoint_but_some_error:
                     self.prompt_helper.correct_endpoint_but_some_error[error_msg] = []
@@ -922,7 +980,7 @@ class ResponseHandler:
             for key in self.extract_params(request_path):
                 self.prompt_helper.tried_endpoints_with_params[ep].append(key)
 
-        self.adjust_counter(categorized_endpoints)
+       # self.adjust_counter(categorized_endpoints)
         print(f'QUERY COUNT: {self.query_counter}')
 
         return status_message

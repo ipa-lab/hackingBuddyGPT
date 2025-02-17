@@ -1,1103 +1,1123 @@
 {
   "openapi": "3.0.0",
-  "info": {
-    "version": "v1.0.0",
-    "title": "Swagger Demo Project",
-    "description": "Implementation of Swagger with TypeScript"
-  },
   "servers": [
     {
-      "url": "http://localhost:8080",
-      "description": ""
+      "url": "http://localhost:3000"
     }
   ],
+  "info": {
+    "title": "Application API",
+    "description": "Merged API documentation for both REST and API endpoints.",
+    "version": "1.0.0"
+  },
   "paths": {
+    "/user/login": {
+      "post": {
+        "content": {
+          "application/json": {
+            "example": {
+              "email": "user@example.com",
+              "password": "password123"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "Invalid email or password."
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/change-password": {
+      "get": {
+        "summary": "Change user password",
+        "operationId": "changePassword",
+        "responses": {
+          "200": {
+            "description": "Password change successful"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/user/reset-password": {
+      "post": {
+        "summary": "Reset user password",
+        "operationId": "resetPassword",
+        "responses": {
+          "200": {
+            "description": "Password reset successful"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reset-password"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/security-question": {
+      "get": {
+        "summary": "Get security question",
+        "operationId": "securityQuestion",
+        "responses": {
+          "200": {
+            "description": "Security question retrieved"
+          }
+        }
+      }
+    },
+    "/user/whoami": {
+      "get": {
+        "summary": "Get current user",
+        "operationId": "currentUser",
+        "responses": {
+          "200": {
+            "description": "Current user information"
+          }
+        }
+      }
+    },
+    "/user/authentication-details": {
+      "get": {
+        "summary": "Get authentication details of users",
+        "operationId": "authenticatedUsers",
+        "responses": {
+          "200": {
+            "description": "Authentication details retrieved"
+          }
+        }
+      }
+    },
+    "/products/search": {
+      "get": {
+        "summary": "Search products",
+        "operationId": "search",
+        "responses": {
+          "200": {
+            "description": "Products retrieved"
+          }
+        }
+      }
+    },
+    "/basket/{id}": {
+      "get": {
+        "summary": "Get basket by ID",
+        "operationId": "getBasket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Basket retrieved"
+          }
+        }
+      }
+    },
+    "/basket/{id}/checkout": {
+      "post": {
+        "summary": "Checkout basket by ID",
+        "operationId": "checkout",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Checkout successful"
+          }
+        }
+      }
+    },
+    "/basket/{id}/coupon/{coupon}": {
+      "put": {
+        "summary": "Apply coupon to basket by ID",
+        "operationId": "applyCoupon",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "coupon",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Coupon applied"
+          }
+        }
+      }
+    },
+    "/admin/application-version": {
+      "get": {
+        "summary": "Get application version",
+        "operationId": "appVersion",
+        "responses": {
+          "200": {
+            "description": "Application version retrieved"
+          }
+        }
+      }
+    },
+    "/admin/application-configuration": {
+      "get": {
+        "summary": "Get application configuration",
+        "operationId": "appConfiguration",
+        "responses": {
+          "200": {
+            "description": "Application configuration retrieved"
+          }
+        }
+      }
+    },
+    "/repeat-notification": {
+      "get": {
+        "summary": "Repeat notification",
+        "operationId": "repeatNotification",
+        "responses": {
+          "200": {
+            "description": "Notification repeated"
+          }
+        }
+      }
+    },
+    "/continue-code": {
+      "get": {
+        "summary": "Continue with code",
+        "operationId": "continueCode",
+        "responses": {
+          "200": {
+            "description": "Code continued"
+          }
+        }
+      }
+    },
+    "/continue-code-findIt": {
+      "get": {
+        "summary": "Continue code - find it",
+        "operationId": "continueCodeFindIt",
+        "responses": {
+          "200": {
+            "description": "Find it action continued"
+          }
+        }
+      }
+    },
+    "/continue-code-fixIt": {
+      "get": {
+        "summary": "Continue code - fix it",
+        "operationId": "continueCodeFixIt",
+        "responses": {
+          "200": {
+            "description": "Fix it action continued"
+          }
+        }
+      }
+    },
+    "/continue-code-findIt/apply/{continueCode}": {
+      "put": {
+        "summary": "Apply findIt continue code",
+        "operationId": "applyFindItContinueCode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "continueCode",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Continue code applied"
+          }
+        }
+      }
+    },
+    "/continue-code-fixIt/apply/{continueCode}": {
+      "put": {
+        "summary": "Apply fixIt continue code",
+        "operationId": "applyFixItContinueCode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "continueCode",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Continue code applied"
+          }
+        }
+      }
+    },
+    "/continue-code/apply/{continueCode}": {
+      "put": {
+        "summary": "Apply continue code",
+        "operationId": "applyContinueCode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "continueCode",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Continue code applied"
+          }
+        }
+      }
+    },
+    "/captcha": {
+      "get": {
+        "summary": "Get captcha",
+        "operationId": "getCaptcha",
+        "responses": {
+          "200": {
+            "description": "Captcha retrieved"
+          }
+        }
+      }
+    },
+    "/image-captcha": {
+      "get": {
+        "summary": "Get image captcha",
+        "operationId": "getImageCaptcha",
+        "responses": {
+          "200": {
+            "description": "Image captcha retrieved"
+          }
+        }
+      }
+    },
+    "/track-order/{id}": {
+      "get": {
+        "summary": "Track order by ID",
+        "operationId": "trackOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order tracking information retrieved"
+          }
+        }
+      }
+    },
+    "/country-mapping": {
+      "get": {
+        "summary": "Get country mapping",
+        "operationId": "countryMapping",
+        "responses": {
+          "200": {
+            "description": "Country mapping retrieved"
+          }
+        }
+      }
+    },
+    "/saveLoginIp": {
+      "get": {
+        "summary": "Save login IP",
+        "operationId": "saveLoginIp",
+        "responses": {
+          "200": {
+            "description": "Login IP saved"
+          }
+        }
+      }
+    },
+    "/user/data-export": {
+      "post": {
+        "summary": "Export user data",
+        "operationId": "dataExport",
+        "responses": {
+          "200": {
+            "description": "Data export started"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/languages": {
+      "get": {
+        "summary": "Get supported languages",
+        "operationId": "getLanguages",
+        "responses": {
+          "200": {
+            "description": "Supported languages retrieved"
+          }
+        }
+      }
+    },
+    "/order-history": {
+      "get": {
+        "summary": "Get order history",
+        "operationId": "orderHistory",
+        "responses": {
+          "200": {
+            "description": "Order history retrieved"
+          }
+        }
+      }
+    },
+    "/wallet/balance": {
+      "get": {
+        "summary": "Get wallet balance",
+        "operationId": "getWalletBalance",
+        "responses": {
+          "200": {
+            "description": "Wallet balance retrieved"
+          }
+        }
+      },
+      "put": {
+        "summary": "Add balance to wallet",
+        "operationId": "addWalletBalance",
+        "responses": {
+          "200": {
+            "description": "Balance added to wallet"
+          }
+        }
+      }
+    },
+    "/deluxe-membership": {
+      "get": {
+        "summary": "Get deluxe membership status",
+        "operationId": "deluxeMembershipStatus",
+        "responses": {
+          "200": {
+            "description": "Deluxe membership status retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Upgrade to deluxe membership",
+        "operationId": "upgradeToDeluxe",
+        "responses": {
+          "200": {
+            "description": "Upgraded to deluxe membership"
+          }
+        }
+      }
+    },
+    "/memories": {
+      "get": {
+        "summary": "Get memories",
+        "operationId": "getMemories",
+        "responses": {
+          "200": {
+            "description": "Memories retrieved"
+          }
+        }
+      }
+    },
+    "/chatbot/status": {
+      "get": {
+        "summary": "Get chatbot status",
+        "operationId": "chatbotStatus",
+        "responses": {
+          "200": {
+            "description": "Chatbot status retrieved"
+          }
+        }
+      }
+    },
+    "/chatbot/respond": {
+      "post": {
+        "summary": "Chatbot response",
+        "operationId": "chatbotRespond",
+        "responses": {
+          "200": {
+            "description": "Chatbot responded"
+          }
+        }
+      }
+    },
+    "/products/{id}/reviews": {
+      "get": {
+        "summary": "Show product reviews",
+        "operationId": "showProductReviews",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product reviews retrieved"
+          }
+        }
+      },
+      "put": {
+        "summary": "Create product reviews",
+        "operationId": "createProductReviews",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Product review created"
+          }
+        }
+      }
+    },
+    "/web3/submitKey": {
+      "post": {
+        "summary": "Submit Web3 key",
+        "operationId": "submitWeb3Key",
+        "responses": {
+          "200": {
+            "description": "Web3 key submitted"
+          }
+        }
+      }
+    },
     "/api/Users": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
       "post": {
-        "description": "",
+        "summary": "Register new user or admin",
+        "operationId": "registerUser",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterUserResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "Bad Request"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterUserRequest"
+              }
+            }
           }
         }
       }
     },
-    "/api/Users/{id}": {
-      "get": {
-        "description": "",
+    "/b2b/v2": {
+      "use": {
+        "summary": "B2B API - Access restricted to authorized users",
+        "operationId": "b2bAccess",
         "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "put": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "delete": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/Products": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/Products/{id}": {
-      "delete": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/Challenges": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/Complaints": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/Recycles": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/Recycles/{id}": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "put": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "delete": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/SecurityQuestions": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/SecurityAnswers": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/Feedbacks": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
+          "403": {
+            "description": "Forbidden - Unauthorized users"
           }
         }
       }
     },
     "/api/BasketItems/{id}": {
       "put": {
-        "description": "",
+        "summary": "Update basket item quantity",
+        "operationId": "updateBasketItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Basket item updated successfully"
+          },
+          "400": {
+            "description": "Quantity check failed"
           }
         }
       }
     },
     "/api/BasketItems": {
       "post": {
-        "description": "",
+        "summary": "Add item to basket",
+        "operationId": "addBasketItem",
         "responses": {
-          "default": {
-            "description": ""
+          "201": {
+            "description": "Basket item added successfully"
+          },
+          "400": {
+            "description": "Failed to add item to basket"
           }
         }
       }
     },
     "/api/Quantitys/{id}": {
       "delete": {
-        "description": "",
+        "summary": "Delete quantity entry",
+        "operationId": "deleteQuantity",
         "responses": {
-          "default": {
-            "description": ""
+          "403": {
+            "description": "Forbidden - Access denied"
           }
         }
-      }
-    },
-    "/api/Quantitys": {
-      "post": {
-        "description": "",
+      },
+      "use": {
+        "summary": "Restricted access to quantity management",
+        "operationId": "manageQuantity",
         "responses": {
-          "default": {
-            "description": ""
+          "403": {
+            "description": "Forbidden - Restricted to accounting users"
           }
         }
       }
     },
     "/api/Feedbacks/{id}": {
       "put": {
-        "description": "",
+        "summary": "Modify feedback entry",
+        "operationId": "updateFeedback",
         "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/Cards": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/Cards/{id}": {
-      "put": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "delete": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
+          "403": {
+            "description": "Forbidden - Modification not allowed"
           }
         }
       }
     },
     "/api/PrivacyRequests": {
       "post": {
-        "description": "",
+        "summary": "Submit a privacy request",
+        "operationId": "createPrivacyRequest",
         "responses": {
-          "default": {
-            "description": ""
+          "201": {
+            "description": "Privacy request created successfully"
           }
         }
       },
       "get": {
-        "description": "",
+        "summary": "Retrieve all privacy requests",
+        "operationId": "getPrivacyRequests",
         "responses": {
-          "default": {
-            "description": ""
+          "403": {
+            "description": "Forbidden - Access denied"
+          }
+        }
+      }
+    },
+    "/api/PrivacyRequests/{id}": {
+      "use": {
+        "summary": "Access a specific privacy request",
+        "operationId": "getPrivacyRequestById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden - Access denied"
+          }
+        }
+      }
+    },
+    "/api/Cards": {
+      "post": {
+        "summary": "Add new payment method",
+        "operationId": "addPaymentMethod",
+        "responses": {
+          "201": {
+            "description": "Payment method added successfully"
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve payment methods",
+        "operationId": "getPaymentMethods",
+        "responses": {
+          "200": {
+            "description": "Payment methods retrieved successfully"
+          }
+        }
+      }
+    },
+    "/api/Cards/{id}": {
+      "put": {
+        "summary": "Update payment method",
+        "operationId": "updatePaymentMethod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden - Access denied"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete payment method",
+        "operationId": "deletePaymentMethod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment method deleted successfully"
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve a specific payment method",
+        "operationId": "getPaymentMethodById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment method details retrieved"
           }
         }
       }
     },
     "/api/Addresss": {
       "post": {
-        "description": "",
+        "summary": "Add a new address",
+        "operationId": "addAddress",
         "responses": {
-          "default": {
-            "description": ""
+          "201": {
+            "description": "Address added successfully"
           }
         }
       },
       "get": {
-        "description": "",
+        "summary": "Retrieve all addresses",
+        "operationId": "getAddresses",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Addresses retrieved successfully"
           }
         }
       }
     },
     "/api/Addresss/{id}": {
       "put": {
-        "description": "",
+        "summary": "Update an address",
+        "operationId": "updateAddress",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Address updated successfully"
           }
         }
       },
       "delete": {
-        "description": "",
+        "summary": "Delete an address",
+        "operationId": "deleteAddress",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Address deleted successfully"
           }
         }
       },
       "get": {
-        "description": "",
+        "summary": "Retrieve a specific address",
+        "operationId": "getAddressById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Address details retrieved"
           }
         }
       }
     },
     "/api/Deliverys": {
       "get": {
-        "description": "",
+        "summary": "Retrieve delivery methods",
+        "operationId": "getDeliveryMethods",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Delivery methods retrieved"
           }
         }
       }
     },
     "/api/Deliverys/{id}": {
       "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/2fa/verify": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/2fa/status": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/2fa/setup": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/2fa/disable": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/user/login": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/user/change-password": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/user/reset-password": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/user/security-question": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/user/whoami": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/user/authentication-details": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/products/search": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/basket/{id}": {
-      "get": {
-        "description": "",
+        "summary": "Retrieve specific delivery method",
+        "operationId": "getDeliveryMethodById",
         "parameters": [
           {
+            "in": "path",
             "name": "id",
-            "in": "path",
-            "required": true,
             "schema": {
               "type": "string"
             }
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/basket/{id}/checkout": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/basket/{id}/coupon/{coupon}": {
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "coupon",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/admin/application-version": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/admin/application-configuration": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/repeat-notification": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/continue-code": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/continue-code-findIt": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/continue-code-fixIt": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/continue-code-findIt/apply/{continueCode}": {
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "continueCode",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/continue-code-fixIt/apply/{continueCode}": {
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "continueCode",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/continue-code/apply/{continueCode}": {
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "continueCode",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/captcha": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/image-captcha": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/track-order/{id}": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/country-mapping": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/saveLoginIp": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/user/data-export": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/languages": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/order-history": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/order-history/orders": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/order-history/{id}/delivery-status": {
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/wallet/balance": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "put": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/deluxe-membership": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/memories": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/chatbot/status": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/chatbot/respond": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/products/{id}/reviews": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/products/reviews": {
-      "patch": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/web3/submitKey": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/web3/nftUnlocked": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/web3/nftMintListen": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/web3/walletNFTVerify": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/rest/web3/walletExploitAddress": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/b2b/v2/orders": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/the/devs/are/so/funny/they/hid/an/easter/egg/within/the/easter/egg": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/this/page/is/hidden/behind/an/incredibly/high/paywall/that/could/only/be/unlocked/by/sending/1btc/to/us": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/we/may/also/instruct/you/to/refuse/all/reasonably/necessary/responsibility": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/redirect": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/promotion": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/video": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/profile": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      },
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/snippets": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/snippets/{challenge}": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/snippets/verdict": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/snippets/fixes/{key}": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/snippets/fixes": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/metrics": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Delivery method details retrieved"
           }
         }
       }
     }
   },
   "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "123"
+          },
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "123"
+          },
+          "name": {
+            "type": "string",
+            "example": "Apple Juice"
+          },
+          "description": {
+            "type": "string",
+            "example": "A refreshing apple juice"
+          },
+          "price": {
+            "type": "number",
+            "format": "float",
+            "example": 5.99
+          },
+          "category": {
+            "type": "string",
+            "example": "Beverages"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "price"
+        ]
+      },
+      "Basket": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "basket123"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BasketItem"
+            }
+          },
+          "totalPrice": {
+            "type": "number",
+            "format": "float",
+            "example": 20.97
+          }
+        }
+      },
+      "BasketItem": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "123"
+          },
+          "quantity": {
+            "type": "integer",
+            "example": 2
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "example": "order123"
+          },
+          "userId": {
+            "type": "string",
+            "example": "123"
+          },
+          "totalPrice": {
+            "type": "number",
+            "format": "float",
+            "example": 50.97
+          },
+          "status": {
+            "type": "string",
+            "example": "pending"
+          }
+        },
+        "required": [
+          "orderId",
+          "userId",
+          "totalPrice",
+          "status"
+        ]
+      },
+      "Coupon": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "DISCOUNT10"
+          },
+          "discount": {
+            "type": "number",
+            "format": "float",
+            "example": 10
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "example": "exampleToken12345"
+              },
+              "bid": {
+                "type": "integer",
+                "example": 1234
+              },
+              "umail": {
+                "type": "string",
+                "example": "user@example.com"
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "example": "totp_token_required"
+          },
+          "tmpToken": {
+            "type": "string",
+            "example": "temporaryTokenForSecondFactor"
+          }
+        }
+      },
+      "RegisterUserRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "newuser@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "securePassword123"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin"
+            ],
+            "example": "user"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "RegisterUserResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "User registered successfully"
+          }
+        }
       }
     }
   }

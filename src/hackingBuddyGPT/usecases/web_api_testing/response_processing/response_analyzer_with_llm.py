@@ -118,6 +118,8 @@ class ResponseAnalyzerWithLLM:
             body = body
         else:
             # print(f'Body:{body}')
+            if body.__contains__("<html>"):
+                body = ""
             if body.__contains__("{") and (body != '' or body != ""):
                 if not  body.lower().__contains__("png") :
                     body = json.loads(body)
@@ -133,8 +135,9 @@ class ResponseAnalyzerWithLLM:
                             print(f'current_user:{self.prompt_helper.current_user}')
                             if acc["x"] == self.prompt_helper.current_user["x"]:
                                 self.prompt_helper.accounts[i] =self.prompt_helper.current_user
+                                break
 
-                    self.replace_account()
+                    #self.replace_account()
             if isinstance(body, list) and len(body) > 1:
                 body = body[0]
                 if self.prompt_helper.current_user in body:
@@ -243,7 +246,7 @@ class ResponseAnalyzerWithLLM:
         replaced = False
         for i, account in enumerate(self.prompt_helper.accounts):
             # Compare the 'id' (or any unique field) to find the matching account
-            if account.get("name") == self.prompt_helper.current_user.get("name"):
+            if account.get("x") == self.prompt_helper.current_user.get("x"):
                 self.prompt_helper.accounts[i] = self.prompt_helper.current_user
                 replaced = True
                 break

@@ -49,7 +49,7 @@
                 }
             }
         },
-        "/vapi/api1/user/{api1_id}": {
+        "/vapi/api1/user/{id}": {
             "get": {
                 "tags": [
                     "API1"
@@ -380,7 +380,7 @@
                 }
             }
         },
-        "/vapi/api5/user/{api5_id}": {
+        "/vapi/api5/user/{id}": {
             "get": {
                 "tags": [
                     "API5"

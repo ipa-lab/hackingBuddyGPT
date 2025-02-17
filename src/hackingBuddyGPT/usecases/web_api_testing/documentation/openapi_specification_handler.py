@@ -149,7 +149,12 @@ class OpenAPISpecificationHandler(object):
                     }
                 }
 
+                if path in endpoint_methods:
+                    endpoint_methods[path] = []
+
                 # Update endpoint methods for the path
+                if path not in endpoint_methods:
+                    endpoint_methods[path] = []
                 endpoint_methods[path].append(method)
 
                 # Ensure uniqueness of methods for each path
@@ -157,6 +162,8 @@ class OpenAPISpecificationHandler(object):
 
             # Check if there's a need to add or update the 'content' based on the conditions provided
             if example or reference or status_message == "No Content" and not path.__contains__("?"):
+                if isinstance(example, list):
+                    example = example[0]
                 # Ensure the path and method exists and has the 'responses' structure
                 if (path in endpoints and method.lower() in endpoints[path]):
                     if "responses" in endpoints[path][method.lower()].keys() and f"{status_code}" in endpoints[path][method.lower()]["responses"]:
@@ -238,6 +245,8 @@ class OpenAPISpecificationHandler(object):
         # yaml_file_assistant.run(description)
 
     def _update_documentation(self, response, result, result_str, prompt_engineer):
+        if result_str is None:
+            return prompt_engineer
         endpoints = self.update_openapi_spec(response, result, prompt_engineer)
         if prompt_engineer.prompt_helper.found_endpoints != endpoints and endpoints != [] and len(endpoints) != 1:
             self.write_openapi_to_yaml()
@@ -318,5 +327,6 @@ class OpenAPISpecificationHandler(object):
             path = path.replace("1", "{id}")
         if prompt_engineer.prompt_helper.current_step == 2:
             parts = [part.strip() for part in path.split("/") if part.strip()]
-            path = parts[0] + "/{id}"
+            if len(parts) > 1:
+                path = parts[0] + "/{id}"
         return path

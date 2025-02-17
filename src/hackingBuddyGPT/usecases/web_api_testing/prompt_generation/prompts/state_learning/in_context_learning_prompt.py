@@ -1,5 +1,6 @@
 import json
 from typing import Dict, Optional, Any, List
+from unittest import result
 
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PromptContext,
@@ -131,13 +132,14 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
         if self.previous_purpose != self.purpose:
             self.previous_purpose = self.purpose
+            self.test_cases = self.pentesting_information.explore_steps(self.purpose)
             if self.purpose == PromptPurpose.SETUP:
-                if not self.counter == 0:
-                    self.pentesting_information.accounts = self.prompt_helper.accounts
+                if self.counter == 0:
+                    self.prompt_helper.accounts = self.pentesting_information.accounts
             else:
                 self.pentesting_information.accounts = self.prompt_helper.accounts
-
-        self.test_cases = self.pentesting_information.explore_steps(self.purpose)
+        else:
+            self.pentesting_information.accounts = self.prompt_helper.accounts
 
         purpose = self.purpose
 
@@ -162,8 +164,9 @@ class InContextLearningPrompt(StatePlanningPrompt):
                         if len(icl_test_case.get("steps")) == 1:
                             self.current_sub_step = icl_test_case.get("steps")[0]
                         else:
-                            # multi-step test case
-                            self.current_sub_step = icl_test_case.get("steps")[self.counter]
+                            if self.counter < len(icl_test_case.get("steps")):
+                                # multi-step test case
+                                self.current_sub_step = icl_test_case.get("steps")[self.counter]
                             self.explored_sub_steps.append(self.current_sub_step)
                         self.explored_steps.append(icl_test_case)
 
@@ -172,11 +175,12 @@ class InContextLearningPrompt(StatePlanningPrompt):
                         print(f'Current sub step: {self.current_sub_step}')
 
                         self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step, self.pentesting_information.accounts)
+                        self.prompt_helper.counter = self.counter
 
                         step = self.transform_test_case_to_string(self.current_step, "steps")
                         self.counter += 1
                         # if last step of exploration, change purpose to next
-                        self.next_purpose(icl_test_case, icl_steps, purpose)
+                        self.next_purpose(icl_test_case,test_cases, purpose)
 
                         return [step]
 
@@ -218,9 +222,17 @@ class InContextLearningPrompt(StatePlanningPrompt):
                     for example_name, example_details in examples.items():
                         if len(example_response) == 1:
                             break
-                        example_value = example_details.get("value", {})
-                        data = example_value.get("data", [])
-                        if data != []:
+                        if isinstance(example_details, dict):
+
+                            example_value = example_details.get("value", {})
+                            data = example_value.get("data", [])
+
+                        else:
+                            print(f'example_details: {example_details}')
+                            example_value = example_details
+                            data = example_details
+
+                        if isinstance(data, list) and data != []:
                             data = data[0]
                         example_response[example_name] = data
 
@@ -260,31 +272,13 @@ class InContextLearningPrompt(StatePlanningPrompt):
             data = list(data.values())[0]
 
         result = {}
+        if isinstance(data, list):
+            for item in data:
+                result = self.get_props(item, result)
 
-        for key, value in data.items():
 
-            if isinstance(value, dict):
-
-                # Recursively extract properties from nested dictionaries
-
-                nested_properties = self.extract_properties_with_examples(value)
-
-                result.update(nested_properties)
-
-            elif isinstance(value, list):
-
-                if value:
-
-                    example_value = value[0]
-
-                    result[key] = {"type": "list", "example": example_value}
-
-                else:
-
-                    result[key] = {"type": "list", "example": "[]"}
-            else:
-
-                result[key] = {"type": type(value).__name__, "example": value}
+        else:
+            result = self.get_props(data, result)
 
         return result
 
@@ -401,10 +395,21 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
         # Add each step with conditions
         if character == "steps":
-            for idx, step_details in enumerate(test_case["steps"], start=0):
-                if self.counter == idx:
-                    result.append(f"    {step_details['step']}\n")
-                    result.append(f"Example: {self.get_properties(step_details)}")
+            if "steps" not in test_case.keys():
+                for step_details in test_case["step"]:
+                        result.append(f"    {step_details['step']}\n")
+                        result.append(f"Example: {self.get_properties(step_details)}")
+            else:
+
+                for idx, step_details in enumerate(test_case["steps"], start=0):
+                    if len(test_case["steps"]) >1:
+                        if self.counter == idx:
+                            result.append(f"    {step_details['step']}\n")
+                            result.append(f"Example: {self.get_properties(step_details)}")
+                    else:
+                        result.append(f"    {step_details['step']}\n")
+                        result.append(f"Example: {self.get_properties(step_details)}")
+
 
         # Add phase assessments
         if character == "assessments":
@@ -424,6 +429,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
         for endpoint in endpoints:
             for keys in self.pentesting_information.categorized_endpoints:
                 for ep in self.pentesting_information.categorized_endpoints[keys]:
+                    print(f'ep:{ep}')
 
                     if ep["path"] == endpoint:
                         print(f'ep:{ep}')
@@ -438,15 +444,28 @@ class InContextLearningPrompt(StatePlanningPrompt):
     def next_purpose(self, step, icl_steps, purpose):
         # Process the step and return its result
         last_item = icl_steps[-1]
-        if step == last_item:
+        if self.check_if_step_is_same(last_item, step):
             # If it's the last step, remove the purpose and update self.purpose
             if purpose in self.pentesting_information.pentesting_step_list:
                 self.pentesting_information.pentesting_step_list.remove(purpose)
             if self.pentesting_information.pentesting_step_list:
                 self.purpose = self.pentesting_information.pentesting_step_list[0]
 
-        self.counter = 0 # Reset counter
+            self.counter = 0 # Reset counter
 
+    def check_if_step_is_same(self, step1, step2):
+        # Check if 'steps' and 'path' are identical
+        steps_same = (step1.get('steps', [])[0] == step2.get('steps', [])[0].get("step"))
+        #path_same = (step1.get('path', []) == step2.get('path', []))
+
+        # Check if 'expected_response_code' are identical
+        #response_code_same = (
+                    #
+        # Check if 'security' instructions are the same
+        #security_same = (step1.get('security', []) == step2.get('security', []))
+
+        # Evaluate and return the overall comparison
+        return steps_same
     def all_substeps_explored(self, icl_steps):
         all_steps = []
         for step in icl_steps.get("steps") :
@@ -456,6 +475,34 @@ class InContextLearningPrompt(StatePlanningPrompt):
             return True
         else:
             return False
+
+    def get_props(self, data, result ):
+        for key, value in data.items():
+
+            if isinstance(value, dict):
+
+                # Recursively extract properties from nested dictionaries
+
+                nested_properties = self.extract_properties_with_examples(value)
+
+                result.update(nested_properties)
+
+            elif isinstance(value, list):
+
+                if value:
+
+                    example_value = value[0]
+
+                    result[key] = {"type": "list", "example": example_value}
+
+                else:
+
+                    result[key] = {"type": "list", "example": "[]"}
+            else:
+
+                result[key] = {"type": type(value).__name__, "example": value}
+
+        return result
 
 
 

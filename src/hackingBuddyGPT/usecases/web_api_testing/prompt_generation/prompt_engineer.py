@@ -109,6 +109,7 @@ class PromptEngineer:
             self.prompt_helper.current_test_step = self._prompt_func.current_step
             self.prompt_helper.current_sub_step = self._prompt_func.current_sub_step
 
+        print(f'prompt: {prompt}')
 
         prompt_history.append({"role": "system", "content": prompt})
         self.turn += 1

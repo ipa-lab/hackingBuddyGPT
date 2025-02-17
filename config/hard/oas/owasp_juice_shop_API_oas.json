@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "servers": [
     {
-      "url": "http://localhost:3000/api"
+      "url": "http://localhost:3000"
     }
   ],
   "info": {
@@ -25,7 +25,7 @@
         }
       }
     },
-    "/b2b/v2": {
+    "/api/b2b/v2": {
       "use": {
         "summary": "B2B API - Access restricted to authorized users",
         "operationId": "b2bAccess",

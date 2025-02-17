@@ -111,7 +111,9 @@ class SimpleWebAPIDocumentation(Agent):
         return name, initial_prompt
 
     def _initialize_handlers(self, config, description, token, name, initial_prompt):
-        self._llm_handler = LLMHandler(self.llm, self._capabilities)
+        self.all_capabilities = {
+                                 "http_request": HTTPRequest(self.host)}
+        self._llm_handler = LLMHandler(self.llm, self._capabilities,  all_possible_capabilities=self.all_capabilities)
 
         self._response_handler = ResponseHandler(llm_handler=self._llm_handler, prompt_context=self._prompt_context,
                                                  prompt_helper=self.prompt_helper, config=config)
@@ -241,7 +243,7 @@ class SimpleWebAPIDocumentation(Agent):
             print(f'counter:{counter}')
             prompt = self._prompt_engineer.generate_prompt(turn=turn, move_type=move_type,
                                                            prompt_history=self._prompt_history)
-            response, completion = self._llm_handler.execute_prompt(prompt=prompt)
+            response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
             is_good, self._prompt_history, result, result_str = self._response_handler.handle_response(response,
                                                                                                        completion,
                                                                                                        self._prompt_history,
@@ -249,7 +251,8 @@ class SimpleWebAPIDocumentation(Agent):
                                                                                                        self.categorized_endpoints,
                                                                                                        move_type)
 
-            if result == None:
+            print(f'CURRENT_STEP: {self.prompt_helper.current_step}')
+            if result == None or "Could not request" in result:
                 continue
             self._prompt_history, self._prompt_engineer = self._documentation_handler.document_response(
                 result, response, result_str, self._prompt_history, self._prompt_engineer
@@ -258,17 +261,38 @@ class SimpleWebAPIDocumentation(Agent):
 
             if self._prompt_engineer.prompt_helper.current_step == 7 and move_type == "explore":
                 is_good = True
-            if self._response_handler.query_counter == 500 and self.prompt_helper.current_step == 6:
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+            if self._prompt_engineer.prompt_helper.current_step == 2 and len(self.prompt_helper._get_instance_level_endpoints("")) ==0:
+                is_good = True
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+
+
+            if self._response_handler.query_counter == 600 and self.prompt_helper.current_step == 6:
                 is_good = True
                 self.explore_steps_done = True
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+
             if  move_type == "exploit" :
                 if self._response_handler.query_counter >= 50 :
                     is_good = True
                     self.all_steps_done = True
 
-            if self._prompt_engineer.prompt_helper.current_step < 6 and self._response_handler.query_counter > 500:
+            if self._prompt_engineer.prompt_helper.current_step < 6 and self._response_handler.no_new_endpoint_counter >30:
                 is_good = True
+                self._response_handler.no_new_endpoint_counter = 0
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+
+            if self._prompt_engineer.prompt_helper.current_step < 6 and self._response_handler.query_counter > 200:
+                is_good = True
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+
             counter = counter + 1
+            self.prompt_helper.found_endpoints = list(set(self._prompt_engineer.prompt_helper.found_endpoints))
 
             self._evaluator.evaluate_response(response, self._prompt_engineer.prompt_helper.found_endpoints, self.prompt_helper.current_step,
                                               self.prompt_helper.found_query_endpoints)

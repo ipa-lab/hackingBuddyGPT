@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "servers": [
     {
-      "url": "http://localhost:3000/rest"
+      "url": "http://localhost:3000"
     }
   ],
   "info": {
@@ -11,7 +11,7 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/user/login": {
+    "/rest/user/login": {
       "post": {
         "summary": "User login",
         "operationId": "login",
@@ -25,7 +25,7 @@
         }
       }
     },
-    "/user/change-password": {
+    "/rest/user/change-password": {
       "get": {
         "summary": "Change user password",
         "operationId": "changePassword",
@@ -39,7 +39,7 @@
         }
       }
     },
-    "/user/reset-password": {
+    "/rest/user/reset-password": {
       "post": {
         "summary": "Reset user password",
         "operationId": "resetPassword",
@@ -53,7 +53,7 @@
         }
       }
     },
-    "/user/security-question": {
+    "/rest/user/security-question": {
       "get": {
         "summary": "Get security question",
         "operationId": "securityQuestion",
@@ -64,7 +64,7 @@
         }
       }
     },
-    "/user/whoami": {
+    "/rest/user/whoami": {
       "get": {
         "summary": "Get current user",
         "operationId": "currentUser",
@@ -75,7 +75,7 @@
         }
       }
     },
-    "/user/authentication-details": {
+    "/rest/user/authentication-details": {
       "get": {
         "summary": "Get authentication details of users",
         "operationId": "authenticatedUsers",
@@ -86,7 +86,7 @@
         }
       }
     },
-    "/products/search": {
+    "/rest/products/search": {
       "get": {
         "summary": "Search products",
         "operationId": "search",
@@ -97,7 +97,7 @@
         }
       }
     },
-    "/basket/{id}": {
+    "/rest/basket/{id}": {
       "get": {
         "summary": "Get basket by ID",
         "operationId": "getBasket",
@@ -118,7 +118,7 @@
         }
       }
     },
-    "/basket/{id}/checkout": {
+    "/rest/basket/{id}/checkout": {
       "post": {
         "summary": "Checkout basket by ID",
         "operationId": "checkout",
@@ -139,7 +139,7 @@
         }
       }
     },
-    "/basket/{id}/coupon/{coupon}": {
+    "/rest/basket/{id}/coupon/{coupon}": {
       "put": {
         "summary": "Apply coupon to basket by ID",
         "operationId": "applyCoupon",
@@ -168,7 +168,7 @@
         }
       }
     },
-    "/admin/application-version": {
+    "/rest/admin/application-version": {
       "get": {
         "summary": "Get application version",
         "operationId": "appVersion",
@@ -179,7 +179,7 @@
         }
       }
     },
-    "/admin/application-configuration": {
+    "/rest/admin/application-configuration": {
       "get": {
         "summary": "Get application configuration",
         "operationId": "appConfiguration",
@@ -190,7 +190,7 @@
         }
       }
     },
-    "/repeat-notification": {
+    "/rest/repeat-notification": {
       "get": {
         "summary": "Repeat notification",
         "operationId": "repeatNotification",
@@ -201,7 +201,7 @@
         }
       }
     },
-    "/continue-code": {
+    "/rest/continue-code": {
       "get": {
         "summary": "Continue with code",
         "operationId": "continueCode",
@@ -212,7 +212,7 @@
         }
       }
     },
-    "/continue-code-findIt": {
+    "/rest/continue-code-findIt": {
       "get": {
         "summary": "Continue code - find it",
         "operationId": "continueCodeFindIt",
@@ -223,7 +223,7 @@
         }
       }
     },
-    "/continue-code-fixIt": {
+    "/rest/continue-code-fixIt": {
       "get": {
         "summary": "Continue code - fix it",
         "operationId": "continueCodeFixIt",
@@ -234,7 +234,7 @@
         }
       }
     },
-    "/continue-code-findIt/apply/{continueCode}": {
+    "/rest/continue-code-findIt/apply/{continueCode}": {
       "put": {
         "summary": "Apply findIt continue code",
         "operationId": "applyFindItContinueCode",
@@ -255,7 +255,7 @@
         }
       }
     },
-    "/continue-code-fixIt/apply/{continueCode}": {
+    "/rest/continue-code-fixIt/apply/{continueCode}": {
       "put": {
         "summary": "Apply fixIt continue code",
         "operationId": "applyFixItContinueCode",
@@ -276,7 +276,7 @@
         }
       }
     },
-    "/continue-code/apply/{continueCode}": {
+    "/rest/continue-code/apply/{continueCode}": {
       "put": {
         "summary": "Apply continue code",
         "operationId": "applyContinueCode",
@@ -297,7 +297,7 @@
         }
       }
     },
-    "/captcha": {
+    "/rest/captcha": {
       "get": {
         "summary": "Get captcha",
         "operationId": "getCaptcha",
@@ -308,7 +308,7 @@
         }
       }
     },
-    "/image-captcha": {
+    "/rest/image-captcha": {
       "get": {
         "summary": "Get image captcha",
         "operationId": "getImageCaptcha",
@@ -319,7 +319,7 @@
         }
       }
     },
-    "/track-order/{id}": {
+    "/rest/track-order/{id}": {
       "get": {
         "summary": "Track order by ID",
         "operationId": "trackOrder",
@@ -340,7 +340,7 @@
         }
       }
     },
-    "/country-mapping": {
+    "/rest/country-mapping": {
       "get": {
         "summary": "Get country mapping",
         "operationId": "countryMapping",
@@ -351,7 +351,7 @@
         }
       }
     },
-    "/saveLoginIp": {
+    "/rest/saveLoginIp": {
       "get": {
         "summary": "Save login IP",
         "operationId": "saveLoginIp",
@@ -362,7 +362,7 @@
         }
       }
     },
-    "/user/data-export": {
+    "/rest/user/data-export": {
       "post": {
         "summary": "Export user data",
         "operationId": "dataExport",
@@ -376,7 +376,7 @@
         }
       }
     },
-    "/languages": {
+    "/rest/languages": {
       "get": {
         "summary": "Get supported languages",
         "operationId": "getLanguages",
@@ -387,7 +387,7 @@
         }
       }
     },
-    "/order-history": {
+    "/rest/order-history": {
       "get": {
         "summary": "Get order history",
         "operationId": "orderHistory",
@@ -398,7 +398,7 @@
         }
       }
     },
-    "/wallet/balance": {
+    "/rest/wallet/balance": {
       "get": {
         "summary": "Get wallet balance",
         "operationId": "getWalletBalance",
@@ -418,7 +418,7 @@
         }
       }
     },
-    "/deluxe-membership": {
+    "/rest/deluxe-membership": {
       "get": {
         "summary": "Get deluxe membership status",
         "operationId": "deluxeMembershipStatus",
@@ -438,7 +438,7 @@
         }
       }
     },
-    "/memories": {
+    "/rest/memories": {
       "get": {
         "summary": "Get memories",
         "operationId": "getMemories",
@@ -449,7 +449,7 @@
         }
       }
     },
-    "/chatbot/status": {
+    "/rest/chatbot/status": {
       "get": {
         "summary": "Get chatbot status",
         "operationId": "chatbotStatus",
@@ -460,7 +460,7 @@
         }
       }
     },
-    "/chatbot/respond": {
+    "/rest/chatbot/respond": {
       "post": {
         "summary": "Chatbot response",
         "operationId": "chatbotRespond",
@@ -471,7 +471,7 @@
         }
       }
     },
-    "/products/{id}/reviews": {
+    "/rest/products/{id}/reviews": {
       "get": {
         "summary": "Show product reviews",
         "operationId": "showProductReviews",
@@ -511,7 +511,7 @@
         }
       }
     },
-    "/web3/submitKey": {
+    "/rest/web3/submitKey": {
       "post": {
         "summary": "Submit Web3 key",
         "operationId": "submitWeb3Key",

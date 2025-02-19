@@ -1,5 +1,6 @@
 import os
 import re
+import textwrap
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -28,6 +29,9 @@ class ReportHandler:
         self.file_path: str = os.path.join(current_path, "reports", config.get("name"))
         self.vul_file_path: str = os.path.join(current_path, "vulnerabilities",config.get("name") )
 
+        os.makedirs(self.file_path, exist_ok=True)
+        os.makedirs(self.vul_file_path, exist_ok=True)
+
         if not os.path.exists(self.file_path):
             os.mkdir(self.file_path)
 
@@ -49,6 +53,7 @@ class ReportHandler:
         self.pdf.set_auto_page_break(auto=True, margin=15)
         self.pdf.add_page()
         self.pdf.set_font("Arial", size=12)
+
         try:
             self.report = open(self.report_name, "x")
             self.vul_report = open(self.vul_report_name, "x")
@@ -99,21 +104,34 @@ class ReportHandler:
         # Write the analysis data
         with open(self.report_name, 'a') as report:
             for item in analysis:
-                lines = item.split("\n")
-                filtered_lines = [line for line in lines if "note recorded" not in line]
+                filtered_lines = [line for line in item.split("\n") if "note recorded" not in line]
                 report.write("\n".join(filtered_lines) + "\n")
 
-                # Write the purpose if it's new
-                self.pdf.set_font("Arial", 'B', 12)
-                self.pdf.multi_cell(0, 10, f"Purpose: {purpose.name}")
-                self.pdf.set_font("Arial", size=12)
+        # Set up PDF formatting
+        self.pdf.set_font("Arial", 'B', 12)
+        self.pdf.text(10, self.pdf.get_y() + 10, f"Purpose: {purpose.name}")
+        self.pdf.set_font("Arial", size=12)
 
-                # Write each item in the analysis list
-                for item in analysis:
-                    lines = item.split("\n")
-                    filtered_lines = [line for line in lines if "note recorded" not in line]
-                    self.pdf.multi_cell(0, 10, "\n".join(filtered_lines))
+        # Write filtered analysis to PDF
+        self.pdf.set_font("Arial", size=10)
 
+        for item in analysis:
+            filtered_lines = [line for line in item.split("\n") if "note recorded" not in line]
+
+            # Wrap text properly
+            wrapped_text = [textwrap.fill(line, width=80) for line in filtered_lines if line.strip()]
+
+            # Print to debug
+            print(f"Writing to PDF: {wrapped_text}")
+
+            # Write to PDF using text() for precise positioning
+            y_position = self.pdf.get_y() + 5  # Increment position for each line
+            for line in wrapped_text:
+                self.pdf.text(10, y_position, line)
+                y_position += 5  # Move cursor for next line
+
+            # Move cursor down for next section
+            self.pdf.set_y(y_position + 5)
     def save_report(self) -> None:
         """
         Finalizes and saves the PDF report to the file system.

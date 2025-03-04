@@ -26,15 +26,15 @@ classifiers = [
 dependencies = [
 	'fabric == 3.2.2',
 	'Mako == 1.3.2',
-	'requests == 2.32.0',
+	'requests == 2.32.3',
 	'rich == 13.7.1',
 	'tiktoken == 0.8.0',
-	'instructor == 1.3.5',
+	'instructor == 1.7.2',
 	'PyYAML == 6.0.1',
 	'python-dotenv == 1.0.1',
 	'pypsexec == 0.3.0',
 	'pydantic == 2.8.2',
-	'openai == 1.28.0',
+	'openai == 1.65.2',
 	'BeautifulSoup4',
 	'nltk'
 ]

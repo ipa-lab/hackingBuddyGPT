@@ -12,6 +12,7 @@ class SSHConnection:
     host: str
     hostname: str
     username: str
+    password: str
     keyfilename: str
     port: int = 22
     
@@ -22,16 +23,17 @@ class SSHConnection:
         # create the SSH Connection
         conn = Connection(
             f"{self.username}@{self.host}:{self.port}",
-            connect_kwargs={ "key_filename": self.keyfilename, "allow_agent": False},
+            connect_kwargs={"password": self.password, "key_filename": self.keyfilename, "allow_agent": False},
         )
         self._conn = conn
         self._conn.open()
 
-    def new_with(self, *, host=None, hostname=None, username=None, keyfilename=None, port=None) -> "SSHConnection":
+    def new_with(self, *, host=None, hostname=None, username=None, password=None, keyfilename=None, port=None) -> "SSHConnection":
         return SSHConnection(
             host=host or self.host,
             hostname=hostname or self.hostname,
             username=username or self.username,
+            password=password or self.password,
             keyfilename=keyfilename or self.keyfilename,
             port=port or self.port,
             

@@ -17,8 +17,8 @@ class SSHTestCredential(Capability):
     def get_name(self):
         return "test_credential"
 
-    def __call__(self, username: str, keyfilename: str, ) -> Tuple[str, bool]:
-        test_conn = self.conn.new_with(username=username, keyfilename=keyfilename)
+    def __call__(self, username: str, password: str, keyfilename: str, ) -> Tuple[str, bool]:
+        test_conn = self.conn.new_with(username=username, password=password,keyfilename=keyfilename)
         try:
             test_conn.init()
             user = test_conn.run("whoami")[0].strip('\n\r ')

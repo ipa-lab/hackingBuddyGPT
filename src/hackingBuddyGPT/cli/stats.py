@@ -2,7 +2,7 @@
 
 import argparse
 
-from utils.db_storage import DbStorage
+from hackingBuddyGPT.utils.db_storage import DbStorage
 from rich.console import Console
 from rich.table import Table
 

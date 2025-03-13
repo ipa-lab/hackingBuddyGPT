@@ -13,7 +13,9 @@ class SSHConnection:
     hostname: str
     username: str
     password: str
+    keyfilename: str
     port: int = 22
+    
 
     _conn: Connection = None
 
@@ -21,18 +23,20 @@ class SSHConnection:
         # create the SSH Connection
         conn = Connection(
             f"{self.username}@{self.host}:{self.port}",
-            connect_kwargs={"password": self.password, "look_for_keys": False, "allow_agent": False},
+            connect_kwargs={"password": self.password, "key_filename": self.keyfilename, "allow_agent": False},
         )
         self._conn = conn
         self._conn.open()
 
-    def new_with(self, *, host=None, hostname=None, username=None, password=None, port=None) -> "SSHConnection":
+    def new_with(self, *, host=None, hostname=None, username=None, password=None, keyfilename=None, port=None) -> "SSHConnection":
         return SSHConnection(
             host=host or self.host,
             hostname=hostname or self.hostname,
             username=username or self.username,
             password=password or self.password,
+            keyfilename=keyfilename or self.keyfilename,
             port=port or self.port,
+            
         )
 
     def run(self, cmd, *args, **kwargs) -> Tuple[str, str, int]:

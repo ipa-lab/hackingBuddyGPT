@@ -27,6 +27,7 @@ class SSHConnection:
         )
         if self.keyfilname is None:
             conn.connect_kwargs.pop("key_filename")
+            conn.connect_kwargs.update({"look_for_keys": False})
         self._conn = conn
         self._conn.open()
 

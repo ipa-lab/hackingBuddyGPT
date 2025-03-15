@@ -25,6 +25,8 @@ class SSHConnection:
             f"{self.username}@{self.host}:{self.port}",
             connect_kwargs={"password": self.password, "key_filename": self.keyfilename, "allow_agent": False},
         )
+        if self.keyfilname is None:
+            conn.connect_kwargs.pop("key_filename")
         self._conn = conn
         self._conn.open()
 
@@ -37,7 +39,7 @@ class SSHConnection:
             keyfilename=keyfilename or self.keyfilename,
             port=port or self.port,
             
-        )
+            )
 
     def run(self, cmd, *args, **kwargs) -> Tuple[str, str, int]:
         res: Optional[invoke.Result] = self._conn.run(cmd, *args, **kwargs)

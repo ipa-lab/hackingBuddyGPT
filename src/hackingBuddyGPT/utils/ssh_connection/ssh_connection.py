@@ -20,14 +20,19 @@ class SSHConnection:
     _conn: Connection = None
 
     def init(self):
-        # create the SSH Connection
-        conn = Connection(
-            f"{self.username}@{self.host}:{self.port}",
-            connect_kwargs={"password": self.password, "key_filename": self.keyfilename, "allow_agent": False},
-        )
-        if self.keyfilname is None:
-            conn.connect_kwargs.pop("key_filename")
-            conn.connect_kwargs.update({"look_for_keys": False})
+        if self.keyfilename == '' or self.keyfilename == None:
+            # create the SSH Connection
+            conn = Connection(
+                f"{self.username}@{self.host}:{self.port}",
+                connect_kwargs={"password": self.password, "look_for_keys": False, "allow_agent": False},
+            )
+        else:
+             # create the SSH Connection
+            conn = Connection(
+                f"{self.username}@{self.host}:{self.port}",
+                connect_kwargs={"password": self.password, "key_filename": self.keyfilename, "look_for_keys": False, "allow_agent": False},
+            )
+
         self._conn = conn
         self._conn.open()
 

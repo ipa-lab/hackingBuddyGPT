@@ -20,14 +20,15 @@ class SSHConnection:
     _conn: Connection = None
 
     def init(self):
+        #If keyfile doesn't exist, default to user/pass auth
         if self.keyfilename == '' or self.keyfilename == None:
-            # create the SSH Connection
+            # Create the SSH Connection with username/password auth
             conn = Connection(
                 f"{self.username}@{self.host}:{self.port}",
                 connect_kwargs={"password": self.password, "look_for_keys": False, "allow_agent": False},
             )
         else:
-             # create the SSH Connection
+             # Create the SSH Connection with keyfile authentication
             conn = Connection(
                 f"{self.username}@{self.host}:{self.port}",
                 connect_kwargs={"password": self.password, "key_filename": self.keyfilename, "look_for_keys": False, "allow_agent": False},

@@ -79,47 +79,63 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         """
         if self.previous_purpose != self.purpose:
             self.previous_purpose = self.purpose
-            if self.purpose != PromptPurpose.SETUP:
-                self.pentesting_information.accounts = self.prompt_helper.accounts
             self.test_cases = self.pentesting_information.explore_steps(self.purpose)
+            if self.purpose == PromptPurpose.SETUP:
+                if self.counter == 0:
+                    self.prompt_helper.accounts = self.pentesting_information.accounts
+            else:
+                self.pentesting_information.accounts = self.prompt_helper.accounts
+        else:
+            self.pentesting_information.accounts = self.prompt_helper.accounts
 
         purpose = self.purpose
+
         if move_type == "explore":
             test_cases = self.get_test_cases(self.test_cases)
-            # Check if the purpose has already been transformed into Tree-of-Thought structure
-            if purpose not in self.transformed_steps.keys():
-                for test_case in test_cases:
-                    if purpose not in self.transformed_steps.keys():
-                        self.transformed_steps[purpose] = []
-                    # Transform test cases into Tree-of-Thought structure based on purpose
-                    self.transformed_steps[purpose].append(
-                        self.transform_to_tree_of_thought(test_case, purpose)
-                    )
+            for test_case in test_cases:
+                if purpose not in self.transformed_steps.keys():
+                    self.transformed_steps[purpose] = []
+                # Transform steps into icl based on purpose
+                self.transformed_steps[purpose].append(
+                    self.transform_to_tree_of_thought(test_case, purpose)
+                )
 
-            # Extract the ToT structure for the current purpose
-            tot_steps = self.transformed_steps[purpose]
+                # Extract the CoT for the current purpose
+                tot_steps = self.transformed_steps[purpose]
 
-            # Process steps branch by branch, with memory of explored steps and conditional handling
-            for step in tot_steps:
-                if step not in self.explored_steps:
-                    self.explored_steps.append(step)
-                    print(f'Prompt: {step}')
-                    self.current_step = step
-                    self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(step)
-                    # Process the step and return its result
-                    last_item = tot_steps[-1]
-                    if step == last_item:
-                        # If it's the last step, remove the purpose and update self.purpose
-                        if purpose in self.pentesting_information.pentesting_step_list:
-                            self.pentesting_information.pentesting_step_list.remove(purpose)
-                        if self.pentesting_information.pentesting_step_list:
-                            self.purpose = self.pentesting_information.pentesting_step_list[0]
-                    step = self.transform_tree_of_thought_to_string(step, "steps")
+                # Process steps one by one, with memory of explored steps and conditional handling
+                for tot_test_case in tot_steps:
+                    if tot_test_case not in self.explored_steps and not self.all_substeps_explored(tot_test_case):
+                        self.current_step = tot_test_case
+                        # single step test case
+                        if len(tot_test_case.get("steps")) == 1:
+                            self.current_sub_step = tot_test_case.get("steps")[0]
+                            self.current_sub_step["path"] = tot_test_case.get("path")[0]
+                        else:
+                            if self.counter < len(tot_test_case.get("steps")):
+                                # multi-step test case
+                                self.current_sub_step = tot_test_case.get("steps")[self.counter]
+                                if len(tot_test_case.get("path")) > 1:
+                                    self.current_sub_step["path"] = tot_test_case.get("path")[self.counter]
+                            self.explored_sub_steps.append(self.current_sub_step)
+                        self.explored_steps.append(tot_test_case)
 
-                    return [step]
+                        print(f'Current step: {self.current_step}')
+                        print(f'Current sub step: {self.current_sub_step}')
 
-        else:
-            return ["Look for exploits."]
+                        self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step,
+                                                                                                  self.pentesting_information.accounts)
+                        self.prompt_helper.counter = self.counter
+
+                        step = self.transform_test_case_to_string(self.current_step, "steps")
+                        self.counter += 1
+                        # if last step of exploration, change purpose to next
+                        self.next_purpose(tot_test_case, test_cases, purpose)
+
+                        return [step]
+
+        # Default steps if none match
+        return ["Look for exploits."]
 
     def transform_to_tree_of_thought(self, test_case, purpose):
         """
@@ -142,23 +158,31 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
             "purpose": purpose,
             "root": f"Objective: {test_case['objective']}",
             "steps": [],
-            "assessments": []
+            "assessments": [],
+            "path": test_case.get("path")
         }
-
+        counter = 0
         # Process steps in the test case as potential steps
         for i, step in enumerate(test_case["steps"]):
-            # Handle security and expected response codes conditionally
-            security = (
-                test_case["security"][i]
-                if len(test_case["security"]) > 1
-                else test_case["security"][0]
-            )
-            expected_response_code = (
-                test_case["expected_response_code"][i]
-                if isinstance(test_case["expected_response_code"], list) and len(
-                    test_case["expected_response_code"]) > 1
-                else test_case["expected_response_code"]
-            )
+            if counter < len(test_case["security"]):
+                security = test_case["security"][counter]
+            else:
+                security = test_case["security"][0]
+
+            if len(test_case["steps"]) > 1:
+                if counter < len(test_case["expected_response_code"]):
+                    expected_response_code = test_case["expected_response_code"][counter]
+
+                else:
+                    expected_response_code = test_case["expected_response_code"]
+
+                print(f'COunter: {counter}')
+                token = test_case["token"][counter]
+                path = test_case["path"][counter]
+            else:
+                expected_response_code = test_case["expected_response_code"]
+                token = test_case["token"][0]
+                path = test_case["path"][0]
 
 
             step = """Imagine three different experts are answering this question.
@@ -171,13 +195,16 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
 
             # Define a branch representing a single reasoning path
             branch = {
+                "purpose": purpose,
                 "step": step,
                 "security": security,
                 "expected_response_code": expected_response_code,
-                   "conditions": {
+                "conditions": {
                     "if_successful": "No Vulnerability found.",
                     "if_unsuccessful": "Vulnerability found."
-                }
+                },
+                "token": token,
+                "path": path
             }
             # Add branch to the tree
             transformed_case["steps"].append(branch)
@@ -187,7 +214,7 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         return transformed_case
 
 
-    def transform_tree_of_thought_to_string(self, tree_of_thought, character):
+    def transform_test_case_to_string(self, tree_of_thought, character):
         """
         Transforms a Tree-of-Thought structured test case into a formatted string representation.
 

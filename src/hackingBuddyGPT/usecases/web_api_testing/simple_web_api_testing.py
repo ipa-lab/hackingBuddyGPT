@@ -2,7 +2,6 @@ import json
 import os.path
 import re
 from dataclasses import field
-from datetime import datetime
 from typing import Any, Dict, List
 
 import pydantic_core
@@ -266,6 +265,7 @@ class SimpleWebAPITesting(Agent):
         while self.purpose == self.prompt_engineer._purpose:
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore",
                                                           prompt_history=self._prompt_history)
+            print(f'prompt:{prompt}')
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
             self._handle_response(completion, response, prompt)
 
@@ -303,11 +303,22 @@ class SimpleWebAPITesting(Agent):
                 else:
 
                     response.action.headers = {"Authorization-Token": f"Bearer {token}"}
+            print(f'response.action.path:{response.action.path}')
+            print(f'subsetp:{self.prompt_helper.current_sub_step.get("path")}')
             if response.action.path != self.prompt_helper.current_sub_step.get("path"):
                 response.action.path = self.prompt_helper.current_sub_step.get("path")
+                #
+            print(f'response action:{response.action}')
+            print(f'response :{response}')
 
             if "_id}" in response.action.path:
-                self.save_resource(response.action.path, response.action.data)
+                print(f'response action:{response.action}')
+                print(f'response :{response}')
+                print(f'type: {type(response.action)}')
+                print(f'is instance: {isinstance(response.action, HTTPRequest)}')
+                print(f'is instance: {response.action.__class__.name}')
+                if response.action.__class__.__name__ != "HTTPRequest":
+                    self.save_resource(response.action.path, response.action.data)
 
             if isinstance(response.action.path, dict):
                 response.action.path = response.action.path.get("path")

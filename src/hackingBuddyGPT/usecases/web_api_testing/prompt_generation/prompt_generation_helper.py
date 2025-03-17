@@ -3,10 +3,6 @@ import random
 import re
 import uuid
 
-import nltk
-
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy
-
 
 class PromptGenerationHelper(object):
     """
@@ -82,18 +78,24 @@ class PromptGenerationHelper(object):
         step = step["step"]
         # Search for the substring containing 'user:'
         if "user:" in step:
-                # Extract the part after 'user:' and add it to the user_info list
-                data_string = step.split("user:")[1].split(".\n")[0]
-                # Replace single quotes with double quotes for JSON compatibility
-                data_string_json = data_string.replace("'", '"')
+            # Extract the part after 'user:' and add it to the user_info list
+            data_string = step.split("user:")[1].split(".\n")[0]
+            # Replace single quotes with double quotes for JSON compatibility
 
+            data_string_json = data_string.replace("'", '"')
+            print(f'data_string_json: {data_string_json}')
+            data_string_json = data_string_json.replace("\"\" ", '" ')
+            print(f'data_string_json: {data_string_json}')
 
-                # Parse the string into a dictionary
-                user_info = json.loads(data_string_json)
+            # Parse the string into a dictionary
+            user_info = json.loads(data_string_json)
+            print(f'user_info: {user_info}')
         counter =0
         for acc in accounts:
             for key in acc.keys():
                 if key in user_info.keys():
+                    if isinstance(acc[key], str) and "or 1=1--" in acc[key]:
+                        acc[key] = "' or 1=1--"
                     if key != "x":
                         if acc[key] == user_info[key]:
                             counter +=1

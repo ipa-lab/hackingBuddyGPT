@@ -155,7 +155,7 @@ class OpenAPISpecificationParser:
 
         return None
 
-    def classify_endpoints(self):
+    def classify_endpoints(self, name=""):
         classifications = {
             'resource_intensive_endpoint': [],
             'public_endpoint': [],
@@ -272,6 +272,9 @@ class OpenAPISpecificationParser:
                 if any(keyword in path.lower() for keyword in ['user', 'users', 'signup']) and not "login" in path or any(word in description for word in ['create a user']):
                     if not any(keyword in path.lower() for keyword in ['pictures', 'verify-email-token', 'change-email', "reset", "verify", "videos", "mechanic"]):
                         if method.upper() == "POST" and not "data-export" in path:
+                            if "OWASP" in name:
+                                if "sers" not in path :
+                                    continue
                             classifications["account_creation"].append({
                             "method":method.upper(),
                             "path":path,

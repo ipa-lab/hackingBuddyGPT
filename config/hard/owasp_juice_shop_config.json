@@ -1,5 +1,12 @@
 {
   "name": "OWASP Juice Shop",
+  "bender": {
+    "email": "bender@juice-sh.op",
+    "password": "a"
+  },
+  "admin": {
+    "email": " admin@juice-sh.op"
+  },
   "username": "sdfdzasasdaasdasdsdwerwddd@mail",
   "password": "test",
   "token": "your_api_token_here",

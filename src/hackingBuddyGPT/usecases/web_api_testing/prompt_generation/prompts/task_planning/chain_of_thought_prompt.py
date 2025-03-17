@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Any
+from typing import List, Optional, Any
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PromptContext,
     PromptPurpose,
@@ -32,6 +32,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
+        self.counter = 0
 
     def generate_prompt(
             self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
@@ -50,12 +51,14 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         if self.context == PromptContext.DOCUMENTATION:
             self.purpose = PromptPurpose.DOCUMENTATION
             chain_of_thought_steps = self._get_documentation_steps( [],move_type)
+            chain_of_thought_steps = [chain_of_thought_steps[0]] + [
+                "Let's think step by step"] + chain_of_thought_steps[1:]
+
         else:
             chain_of_thought_steps = self._get_pentesting_steps(move_type,"")
+            print(f'chaon_pf-thought-steps: {chain_of_thought_steps}')
         if hint:
             chain_of_thought_steps.append(hint)
-
-        chain_of_thought_steps = [chain_of_thought_steps[0]] + ["Let's think step by step"] + chain_of_thought_steps[1:]
 
         return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)
 
@@ -70,50 +73,67 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
+
         if self.previous_purpose != self.purpose:
             self.previous_purpose = self.purpose
-            if self.purpose != PromptPurpose.SETUP:
-                self.pentesting_information.accounts = self.prompt_helper.accounts
             self.test_cases = self.pentesting_information.explore_steps(self.purpose)
+            if self.purpose == PromptPurpose.SETUP:
+                if self.counter == 0:
+                    self.prompt_helper.accounts = self.pentesting_information.accounts
+            else:
+                self.pentesting_information.accounts = self.prompt_helper.accounts
+        else:
+            self.pentesting_information.accounts = self.prompt_helper.accounts
 
         purpose = self.purpose
 
         if move_type == "explore":
             test_cases = self.get_test_cases(self.test_cases)
-            if purpose not in self.transformed_steps.keys():
-                for test_case in test_cases:
-                    if purpose not in self.transformed_steps.keys():
-                        self.transformed_steps[purpose] = []
-                    # Transform steps into hierarchical conditional CoT based on purpose
-                    self.transformed_steps[purpose].append(
-                        self.transform_to_hierarchical_conditional_cot(test_case, purpose))
+            for test_case in test_cases:
+                if purpose not in self.transformed_steps.keys():
+                    self.transformed_steps[purpose] = []
+                # Transform steps into icl based on purpose
+                self.transformed_steps[purpose].append(
+                    self.transform_to_hierarchical_conditional_cot(test_case, purpose)
+                )
 
-            # Extract the CoT for the current purpose
-            cot_steps = self.transformed_steps[purpose]
+                # Extract the CoT for the current purpose
+                cot_steps = self.transformed_steps[purpose]
 
-            # Process steps one by one, with memory of explored steps and conditional handling
-            for step in cot_steps:
-                if step not in self.explored_steps:
-                    self.explored_steps.append(step)
-                    print(f'Prompt: {step}')
-                    self.current_step = step
-                    self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(step)
-                    # Process the step and return its result
-                    last_item = cot_steps[-1]
-                    if step == last_item:
-                        # If it's the last step, remove the purpose and update self.purpose
-                        if purpose in self.pentesting_information.pentesting_step_list:
-                            self.pentesting_information.pentesting_step_list.remove(purpose)
-                        if self.pentesting_information.pentesting_step_list:
-                            self.purpose = self.pentesting_information.pentesting_step_list[0]
-                    step = self.transform_test_case_to_string(step, "steps")
+                # Process steps one by one, with memory of explored steps and conditional handling
+                for cot_test_case in cot_steps:
+                    if cot_test_case not in self.explored_steps and not self.all_substeps_explored(cot_test_case):
+                        self.current_step = cot_test_case
+                        # single step test case
+                        if len(cot_test_case.get("steps")) == 1:
+                            self.current_sub_step = cot_test_case.get("steps")[0]
+                            self.current_sub_step["path"] = cot_test_case.get("path")[0]
+                        else:
+                            if self.counter < len(cot_test_case.get("steps")):
+                                # multi-step test case
+                                self.current_sub_step = cot_test_case.get("steps")[self.counter]
+                                if len(cot_test_case.get("path")) > 1:
+                                    self.current_sub_step["path"] = cot_test_case.get("path")[self.counter]
+                            self.explored_sub_steps.append(self.current_sub_step)
+                        self.explored_steps.append(cot_test_case)
 
-                    return [step]
+                        print(f'Current step: {self.current_step}')
+                        print(f'Current sub step: {self.current_sub_step}')
 
+                        self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step,
+                                                                                                  self.pentesting_information.accounts)
+                        self.prompt_helper.counter = self.counter
 
+                        step = self.transform_test_case_to_string(self.current_step, "steps")
+                        self.counter += 1
+                        # if last step of exploration, change purpose to next
+                        self.next_purpose(cot_test_case, test_cases, purpose)
 
-        else:
-            return ["Look for exploits."]
+                        return [step]
+
+        # Default steps if none match
+        return ["Look for exploits."]
+
 
     def transform_to_hierarchical_conditional_cot(self, test_case, purpose):
         """
@@ -134,21 +154,32 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         transformed_case = {
             "phase_title": f"Phase: {test_case['objective']}",
             "steps": [],
-            "assessments": []
+            "assessments": [],
+            "path": test_case.get("path")
         }
 
         # Process steps in the test case
         counter = 0
         for step in test_case["steps"]:
-            if len(test_case["security"]) > 1:
+            if counter < len(test_case["security"]):
                 security = test_case["security"][counter]
             else:
                 security = test_case["security"][0]
 
             if len(test_case["steps"]) > 1:
-                expected_response_code = test_case["expected_response_code"][counter]
+                if counter < len(test_case["expected_response_code"]):
+                    expected_response_code = test_case["expected_response_code"][counter]
+
+                else:
+                    expected_response_code = test_case["expected_response_code"]
+
+                print(f'COunter: {counter}')
+                token = test_case["token"][counter]
+                path = test_case["path"][counter]
             else:
                 expected_response_code = test_case["expected_response_code"]
+                token = test_case["token"][0]
+                path = test_case["path"][0]
 
             step_details = {
                 "purpose": purpose,
@@ -158,8 +189,11 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 "conditions": {
                     "if_successful": "No Vulnerability found.",
                     "if_unsuccessful": "Vulnerability found."
-                }
+                },
+                "token": token,
+                "path": path
             }
+            print(f' step: {step}')
             counter += 1
             transformed_case["steps"].append(step_details)
 

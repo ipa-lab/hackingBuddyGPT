@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-
-# from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import (
     PenTestingInformation,
 )
@@ -47,7 +45,10 @@ class BasicPrompt(ABC):
         self.planning_type = planning_type
         self.prompt_helper = prompt_helper
         self.strategy = strategy
-        self.current_step = None
+        self.current_step = 0
+        self.explored_sub_steps = []
+        self.previous_purpose = None
+        self.counter = 0
 
     def set_pentesting_information(self, pentesting_information: PenTestingInformation):
         self.pentesting_information = pentesting_information
@@ -119,3 +120,121 @@ class BasicPrompt(ABC):
                 "Construct and make GET requests to these endpoints using common query parameters (e.g. `/resource?param1=1&param2=3`) or based on documentation hints, testing until a valid request with query parameters is achieved."
             ]
         ]
+    def extract_properties(self):
+        properties = self.open_api_spec.get("components", {}).get("schemas", {}).get("Post", {}).get("properties", {})
+        extracted_props = {}
+
+        for prop_name, prop_details in properties.items():
+            example = prop_details.get("example", "No example provided")
+            prop_type = prop_details.get("type", "Unknown type")
+            extracted_props[prop_name] = {
+                "example": example,
+                "type": prop_type
+            }
+
+        return extracted_props
+
+    def sort_previous_prompt(self, previous_prompt):
+        sorted_list = []
+        for i in range(len(previous_prompt) - 1, -1, -1):
+            sorted_list.append(previous_prompt[i])
+        return sorted_list
+
+
+    def extract_endpoints_from_prompts(self, step):
+        endpoints = []
+        # Extract endpoints from the text using simple keyword matching
+        if isinstance(step, list):
+            step = step[0]
+        if "endpoint" in step.lower():
+            words = step.split()
+            for word in words:
+                if word.startswith("https://") or word.startswith("/") and len(word) > 1:
+                    endpoints.append(word)
+
+        return list(set(endpoints))  # Return unique endpoints
+
+
+
+    def get_properties(self, step_details):
+        endpoints = self.extract_endpoints_from_prompts(step_details['step'])
+        for endpoint in endpoints:
+            for keys in self.pentesting_information.categorized_endpoints:
+                for ep in self.pentesting_information.categorized_endpoints[keys]:
+                    print(f'ep:{ep}')
+
+                    if ep["path"] == endpoint:
+                        print(f'ep:{ep}')
+                        print(f' endpoint: {endpoint}')
+                        schema = ep.get('schema', {})
+                        if schema != None and schema != {}:
+                            properties = schema.get('properties', {})
+                        else:
+                            properties = None
+                        return properties
+
+    def next_purpose(self, step, icl_steps, purpose):
+        # Process the step and return its result
+        last_item = icl_steps[-1]
+        if self.check_if_step_is_same(last_item, step):
+            # If it's the last step, remove the purpose and update self.purpose
+            if purpose in self.pentesting_information.pentesting_step_list:
+                self.pentesting_information.pentesting_step_list.remove(purpose)
+            if self.pentesting_information.pentesting_step_list:
+                self.purpose = self.pentesting_information.pentesting_step_list[0]
+
+            self.counter = 0 # Reset counter
+            print(f'purpose:{self.purpose}')
+
+    def check_if_step_is_same(self, step1, step2):
+        # Check if 'steps' and 'path' are identical
+        steps_same = (step1.get('steps', [])[0] == step2.get('steps', [])[0].get("step"))
+        print(f'step1: {step1}')
+        print(f'step2: {step2}')
+        #path_same = (step1.get('path', []) == step2.get('path', []))
+
+        # Check if 'expected_response_code' are identical
+        #response_code_same = (
+                    #
+        # Check if 'security' instructions are the same
+        #security_same = (step1.get('security', []) == step2.get('security', []))
+
+        # Evaluate and return the overall comparison
+        return steps_same
+    def all_substeps_explored(self, icl_steps):
+        all_steps = []
+        for step in icl_steps.get("steps") :
+            all_steps.append(step)
+
+        if all_steps in self.explored_sub_steps:
+            return True
+        else:
+            return False
+
+    def get_props(self, data, result ):
+        for key, value in data.items():
+
+            if isinstance(value, dict):
+
+                # Recursively extract properties from nested dictionaries
+
+                nested_properties = self.extract_properties_with_examples(value)
+
+                result.update(nested_properties)
+
+            elif isinstance(value, list):
+
+                if value:
+
+                    example_value = value[0]
+
+                    result[key] = {"type": "list", "example": example_value}
+
+                else:
+
+                    result[key] = {"type": "list", "example": "[]"}
+            else:
+
+                result[key] = {"type": type(value).__name__, "example": value}
+
+        return result

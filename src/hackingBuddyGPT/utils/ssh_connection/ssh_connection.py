@@ -40,7 +40,7 @@ class SSHConnection:
             hostname=hostname or self.hostname,
             username=username or self.username,
             password=password or self.password,
-            keyfilename=keyfilename or self.keyfilename
+            keyfilename=keyfilename or self.keyfilename,
             port=port or self.port,
         )
 

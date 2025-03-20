@@ -166,8 +166,11 @@ $ source ./venv/bin/activate
 # install python requirements
 $ pip install -e .
 
-# copy default .env.example
+# copy default .env.example 
 $ cp .env.example .env
+
+# NOTE: if you are trying to use this with AWS or ssh-key only authentication, copy .env.example.aws
+$ cp .env.example.aws .env 
 
 # IMPORTANT: setup your OpenAI API key, the VM's IP and credentials within .env
 $ vi .env

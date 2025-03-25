@@ -189,17 +189,7 @@ class BasicPrompt(ABC):
     def check_if_step_is_same(self, step1, step2):
         # Check if 'steps' and 'path' are identical
         steps_same = (step1.get('steps', [])[0] == step2.get('steps', [])[0].get("step"))
-        print(f'step1: {step1}')
-        print(f'step2: {step2}')
-        #path_same = (step1.get('path', []) == step2.get('path', []))
 
-        # Check if 'expected_response_code' are identical
-        #response_code_same = (
-                    #
-        # Check if 'security' instructions are the same
-        #security_same = (step1.get('security', []) == step2.get('security', []))
-
-        # Evaluate and return the overall comparison
         return steps_same
     def all_substeps_explored(self, icl_steps):
         all_steps = []

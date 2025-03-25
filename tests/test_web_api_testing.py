@@ -38,8 +38,8 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
     def test_all_flags_found(self):
         # Mock console.print to suppress output during testing
         with patch("rich.console.Console.print"):
-            self.agent.all_http_methods_found()
-            self.assertFalse(self.agent.all_http_methods_found())
+            self.agent.all_test_cases_run()
+            self.assertFalse(self.agent.all_test_cases_run())
 
     @patch("time.perf_counter", side_effect=[1, 2])  # Mocking perf_counter for consistent timing
     def test_perform_round(self, mock_perf_counter):

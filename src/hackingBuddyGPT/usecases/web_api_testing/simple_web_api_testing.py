@@ -49,7 +49,7 @@ class SimpleWebAPITesting(Agent):
         _prompt_history (Prompt): The history of prompts sent to the language model.
         _context (Context): Contextual data for the test session.
         _capabilities (Dict[str, Capability]): Available capabilities for the agent.
-        _all_http_methods_found (bool): Flag indicating if all HTTP methods have been found.
+        _all_test_cases_run (bool): Flag indicating if all HTTP methods have been found.
     """
 
     llm: OpenAILib
@@ -74,7 +74,7 @@ class SimpleWebAPITesting(Agent):
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list(), "parsed":list()})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
-    _all_http_methods_found: bool = False
+    _all_test_cases_run: bool = False
 
     def init(self):
         super().init()
@@ -218,13 +218,13 @@ class SimpleWebAPITesting(Agent):
         self.prompt_engineer.set_pentesting_information(self.pentesting_information)
         self.purpose = self.pentesting_information.pentesting_step_list[0]
 
-    def all_http_methods_found(self) -> None:
+    def all_test_cases_run(self) -> None:
         """
         Handles the event when all HTTP methods are found. Displays a congratulatory message
         and sets the _all_http_methods_found flag to True.
         """
-        self._log.console.print(Panel("All HTTP methods found! Congratulations!", title="system"))
-        self._all_http_methods_found = True
+        self._log.console.print(Panel("All test cases run!", title="system"))
+        self._all_test_cases_run = True
 
     def _setup_capabilities(self) -> None:
         """
@@ -265,7 +265,6 @@ class SimpleWebAPITesting(Agent):
         while self.purpose == self.prompt_engineer._purpose:
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore",
                                                           prompt_history=self._prompt_history)
-            print(f'prompt:{prompt}')
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
             self._handle_response(completion, response, prompt)
 
@@ -303,20 +302,13 @@ class SimpleWebAPITesting(Agent):
                 else:
 
                     response.action.headers = {"Authorization-Token": f"Bearer {token}"}
-            print(f'response.action.path:{response.action.path}')
-            print(f'subsetp:{self.prompt_helper.current_sub_step.get("path")}')
+
             if response.action.path != self.prompt_helper.current_sub_step.get("path"):
                 response.action.path = self.prompt_helper.current_sub_step.get("path")
-                #
-            print(f'response action:{response.action}')
-            print(f'response :{response}')
+
 
             if "_id}" in response.action.path:
-                print(f'response action:{response.action}')
-                print(f'response :{response}')
-                print(f'type: {type(response.action)}')
-                print(f'is instance: {isinstance(response.action, HTTPRequest)}')
-                print(f'is instance: {response.action.__class__.name}')
+
                 if response.action.__class__.__name__ != "HTTPRequest":
                     self.save_resource(response.action.path, response.action.data)
 
@@ -365,16 +357,14 @@ class SimpleWebAPITesting(Agent):
                 analysis_context= self.prompt_engineer.prompt_helper.current_test_step)
 
 
-
-
             self._prompt_history = self._test_handler.generate_test_cases(
                 analysis=analysis,
                 endpoint=response.action.path,
                 method=response.action.method,
                 prompt_history=self._prompt_history, status_code=status_code)
             self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)
-
-        self.all_http_methods_found()
+        if self.prompt_engineer._purpose == PromptPurpose.LOGGING_MONITORING:
+            self.all_test_cases_run()
 
 
     def extract_resource_name(self, path: str) -> str:

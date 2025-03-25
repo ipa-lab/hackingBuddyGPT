@@ -131,9 +131,7 @@ class Evaluator:
                         self.query_params_found[ep] = []
                     if param not in self.query_params_found[ep]:
                         self.query_params_found[ep].append(param)
-        print(f'Documented params;{self.documented_query_params}')
         self.results["query_params_found"] = self.query_params_found
-        print(f'Found params;{self.results["query_params_found"]}')
 
     def extract_query_params_from_response(self, path):
         """
@@ -182,10 +180,8 @@ class Evaluator:
         routes_found = copy.deepcopy(routes_found)
 
         false_positives = 0
-        print(f'Routes found:{routes_found}')
         for idx, route in enumerate(routes_found):
                 routes_found = self.add_if_is_cryptocurrency(idx, route, routes_found, current_step)
-        print(f'Updated_routes_found:{routes_found}')
         # Use evaluator to record routes and parameters found
         if response.action.__class__.__name__ != "RecordNote":
             for path in query_endpoints :
@@ -247,8 +243,6 @@ class Evaluator:
 
         if "/1" in path:
             if idx < len(routes_found):
-                print(f'idx:{idx} path:{path} routes_found:{routes_found} ')
-                print(f'routes found idx:{idx} path:{routes_found[idx]} ')
                 routes_found[idx] = routes_found[idx].replace("/1", "/{id}")
         return routes_found
 

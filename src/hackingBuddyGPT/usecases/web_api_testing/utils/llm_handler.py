@@ -47,14 +47,12 @@ class LLMHandler:
         Returns:
             Any: The response from the LLM.
         """
-        print(f"Initial prompt length: {len(prompt)}")
 
         def call_model(prompt: List[Dict[str, Any]]) -> Any:
             """Helper function to make the API call with the adjusted prompt."""
             if isinstance(prompt, list):
                 if isinstance(prompt[0], list):
                     prompt = prompt[0]
-            print(f'prompt: {prompt}')
 
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,
@@ -73,7 +71,6 @@ class LLMHandler:
             return call_model(prompt)
 
         except (openai.BadRequestError, IncompleteOutputException) as e:
-            print(f"Error: {str(e)} - Adjusting prompt size and retrying.")
 
             try:
                 # First adjustment attempt based on prompt length
@@ -87,12 +84,10 @@ class LLMHandler:
                     prompt= adjusted_prompt
 
 
-                print(f'1-Adjusted_prompt: {prompt}')
 
                 return call_model(prompt)
 
             except (openai.BadRequestError, IncompleteOutputException) as e:
-                print(f"Error: {str(e)} - Further adjusting and retrying.")
                 # Second adjustment based on token size if the first attempt fails
                 adjusted_prompt = self.adjust_prompt(prompt)
                 if isinstance(adjusted_prompt, str):
@@ -103,7 +98,6 @@ class LLMHandler:
                     if isinstance(adjusted_prompt[0], list):
                         adjusted_prompt = adjusted_prompt[0]
                 adjusted_prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
-                print(f' Adjusted_prompt: {adjusted_prompt}')
                 self.adjusting_counter = 2
                 return call_model(adjusted_prompt)
 
@@ -117,11 +111,9 @@ class LLMHandler:
         Returns:
             Any: The response from the LLM.
         """
-        print(f"Initial prompt length: {len(prompt)}")
 
         def call_model(adjusted_prompt: List[Dict[str, Any]], capability: Any) -> Any:
             """Helper function to make the API call with the adjusted prompt."""
-            print(f'prompt: {prompt}, capability: {capability}')
             capability = self.get_specific_capability(capability)
 
             return self.llm.instructor.chat.completions.create_with_completion(
@@ -133,7 +125,6 @@ class LLMHandler:
 
         # Helper to adjust the prompt based on its length.
         def adjust_prompt_based_on_length(prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-            print(f'adjust_prompt_based_on_length: {self.adjusting_counter}')
             if self.adjusting_counter == 2:
                 num_prompts = 10
                 self.adjusting_counter = 0
@@ -149,7 +140,6 @@ class LLMHandler:
             return call_model(prompt, capability)
 
         except (openai.BadRequestError, IncompleteOutputException) as e:
-            print(f"Error: {str(e)} - Adjusting prompt size and retrying.")
 
             try:
                 # Second adjustment based on token size if the first attempt fails
@@ -160,7 +150,6 @@ class LLMHandler:
                 return call_model(adjusted_prompt, capability)
 
             except (openai.BadRequestError, IncompleteOutputException) as e:
-                print(f"Error: {str(e)} - Further adjusting and retrying.")
 
                 # Final fallback with the smallest prompt size
                 shortened_prompt = self.adjust_prompt(prompt)
@@ -252,7 +241,6 @@ class LLMHandler:
         Returns:
             Dict[str, List[Any]]: The dictionary of created objects.
         """
-        print(f"created_objects: {self.created_objects}")
         return self.created_objects
 
     def adjust_prompt_based_on_token(self, prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -287,7 +275,6 @@ class LLMHandler:
 
             last_item = item
 
-        print(f"tokens:{tokens}")
         if removed_item == 0:
             counter = 5
             for item in prompt:

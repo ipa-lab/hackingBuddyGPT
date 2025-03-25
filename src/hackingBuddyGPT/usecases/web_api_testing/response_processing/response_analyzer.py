@@ -203,9 +203,7 @@ class ResponseAnalyzer:
             "Expected Behavior": expected_behavior,
             "Actual Behavior": actual_behavior,
         }
-        print("Documenting Findings:")
-        print(json.dumps(document, indent=4))
-        print("-" * 50)
+
         return document
 
     def report_issues(self, document: Dict[str, Any]) -> None:

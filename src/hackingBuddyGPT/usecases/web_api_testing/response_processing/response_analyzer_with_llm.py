@@ -80,8 +80,7 @@ class ResponseAnalyzerWithLLM:
         if len(steps) > 1:  # multisptep test case
             for step in steps:
                 if step != steps[0]:
-                    print(f'Step:{step}')
-                    print(f'Step:{type(step)}')
+
                     current_step = step.get("step")
                     prompt_history, raw_response = self.process_step(current_step, prompt_history, "http_request")
                 test_case_responses, status_code = self.analyse_response(raw_response, step, prompt_history)
@@ -117,7 +116,7 @@ class ResponseAnalyzerWithLLM:
         elif status_code in ["500", "400", "404", "422"]:
             body = body
         else:
-            # print(f'Body:{body}')
+
             if body.__contains__("<html>"):
                 body = ""
             if body.__contains__("{") and (body != '' or body != ""):
@@ -131,8 +130,6 @@ class ResponseAnalyzerWithLLM:
                             self.prompt_helper.current_user["id"] = body["id"]
                     if self.prompt_helper.current_user not in self.prompt_helper.accounts:
                         for i, acc in enumerate(self.prompt_helper.accounts):
-                            print(f'acc:{acc}')
-                            print(f'current_user:{self.prompt_helper.current_user}')
                             if acc["x"] == self.prompt_helper.current_user["x"]:
                                 self.prompt_helper.accounts[i] =self.prompt_helper.current_user
                                 break
@@ -169,7 +166,6 @@ class ResponseAnalyzerWithLLM:
         Helper function to process each analysis step with the LLM.
         """
         # Log current step
-        # print(f'Processing step: {step}')
         prompt_history.append({"role": "system", "content": step + "Stay within the output limit."})
 
         # Call the LLM and handle the response

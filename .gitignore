@@ -17,5 +17,5 @@ src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/
 src/hackingBuddyGPT/usecases/web_api_testing/documentation/reports/
 src/hackingBuddyGPT/usecases/web_api_testing/retrieve_spotify_token.py
 config/my_configs/*
-src/hackingBuddyGPT/usecases/web_api_testing/configs/*
-src/hackingBuddyGPT/usecases/web_api_testing/configs/
+config/configs/*
+config/configs/

@@ -263,7 +263,6 @@ class ResponseHandler:
                 and isinstance(entry_dict, dict):
             old_body_dict.pop("data")
             entry_dict = {**entry_dict, **old_body_dict}
-            print(f'entry_dict:{entry_dict}')
 
 
         return entry_dict, reference, openapi_spec
@@ -591,7 +590,6 @@ class ResponseHandler:
 
             if path is None:
                 l = self.common_endpoints_categorized[self.prompt_helper.current_step]
-                print(f'L: {l}')
                 return random.choice(l)
             if ("Coin" in self.name or "gbif" in self.name)and self.prompt_helper.current_step == 2:
                 id = self.prompt_helper.get_possible_id_for_instance_level_ep(path)
@@ -798,7 +796,6 @@ class ResponseHandler:
             list: A list of full URLs with appended query parameters.
         """
 
-        print(f'endpoint:{endpoint}')
         endpoint = endpoint + "?"
         # Define common query parameters
         common_query_params = [
@@ -981,7 +978,6 @@ class ResponseHandler:
                 self.prompt_helper.tried_endpoints_with_params[ep].append(key)
 
        # self.adjust_counter(categorized_endpoints)
-        print(f'QUERY COUNT: {self.query_counter}')
 
         return status_message
 

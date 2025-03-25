@@ -66,7 +66,6 @@ class DocumentationHandler:
         if request.__class__.__name__ == 'HTTPRequest':
             path = request.path
             method = request.method
-            print(f'method: {method}')
             # Ensure that path and method are not None and method has no numeric characters
             if path and method:
                 # Initialize the path if not already present

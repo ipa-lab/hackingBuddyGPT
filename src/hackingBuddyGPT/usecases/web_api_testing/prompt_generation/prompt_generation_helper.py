@@ -83,13 +83,10 @@ class PromptGenerationHelper(object):
             # Replace single quotes with double quotes for JSON compatibility
 
             data_string_json = data_string.replace("'", '"')
-            print(f'data_string_json: {data_string_json}')
             data_string_json = data_string_json.replace("\"\" ", '" ')
-            print(f'data_string_json: {data_string_json}')
 
             # Parse the string into a dictionary
             user_info = json.loads(data_string_json)
-            print(f'user_info: {user_info}')
         counter =0
         for acc in accounts:
             for key in acc.keys():
@@ -339,7 +336,6 @@ class PromptGenerationHelper(object):
                         instance_level_endpoints.append(new_endpoint)
                     self.possible_instance_level_endpoints.append(new_endpoint)
 
-        print(f'instance_level_endpoints: {instance_level_endpoints}')
         return instance_level_endpoints
 
     def get_hint(self):

@@ -105,7 +105,6 @@ class SimpleWebAPIDocumentation(Agent):
 
         # Split the base name by '_config' and take the first part
         name = base_name.split('_config')[0]
-        print(f'NAME:{name}')
 
         self.prompt_helper = PromptGenerationHelper(self.host, description) # TODO Remove
         return name, initial_prompt
@@ -240,7 +239,6 @@ class SimpleWebAPIDocumentation(Agent):
         is_good = False
         counter = 0
         while not is_good:
-            print(f'counter:{counter}')
             prompt = self._prompt_engineer.generate_prompt(turn=turn, move_type=move_type,
                                                            prompt_history=self._prompt_history)
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
@@ -251,7 +249,6 @@ class SimpleWebAPIDocumentation(Agent):
                                                                                                        self.categorized_endpoints,
                                                                                                        move_type)
 
-            print(f'CURRENT_STEP: {self.prompt_helper.current_step}')
             if result == None or "Could not request" in result:
                 continue
             self._prompt_history, self._prompt_engineer = self._documentation_handler.document_response(

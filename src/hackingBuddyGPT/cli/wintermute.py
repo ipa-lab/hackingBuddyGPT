@@ -1,6 +1,6 @@
 import argparse
 import sys
-import time
+
 from hackingBuddyGPT.usecases.base import use_cases
 
 
@@ -20,6 +20,4 @@ def main():
 
 
 if __name__ == "__main__":
-    start_time = time.time()
     main()
-    print("--- %s seconds ---" % (time.time() - start_time))

@@ -24,7 +24,7 @@ ${alt_rag_text}
 %endif
 
 % if len(analyze) != 0:
-Use the following analysis of the last command and its output to gain access to a root shell:
+You also have the following analysis of the last command and its output:
 
 ${analyze}
 %endif
@@ -38,7 +38,7 @@ ${state}
 You are provided the following guidance: ${hint}
 %endif
 % if not chain_of_thought:
-Based on the information above state your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`. Do not mix your capabilities. E.g dont use test_credential when you are already using exec_command.
+Based on the information above state your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`.
 %endif
 % if chain_of_thought:
 ${CoT}

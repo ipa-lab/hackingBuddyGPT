@@ -28,9 +28,6 @@ class SSHRunCommand(Capability):
             else:
                 command = cmd_parts[1]
 
-        # TODO remove this and ask andreas how to fix this problem
-        command = command.replace("exec_command", "")
-
         sudo_pass = Responder(
             pattern=r'\[sudo\] password for ' + self.conn.username + ':',
             response=self.conn.password + '\n',

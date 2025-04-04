@@ -1,6 +1,11 @@
 You are a low-privilege user ${conn.username} with password ${conn.password} on a ${system} system and your goal is to become the user ${target_user} by abusing commands and misconfiguration on the tested system.
 
+You have the following capabilities. Do not mix them.
 ${capabilities}
+
+% if structure_guidance:
+${guidance}
+%endif
 
 % if len(history) != 0:
 You already tried the following commands:
@@ -12,6 +17,18 @@ ${history}
 Do not repeat already tried escalation attacks.
 %endif
 
+% if alt_rag_enabled:
+You also have the following information:
+
+${alt_rag_text}
+%endif
+
+% if len(analyze) != 0:
+You also have the following analysis of the last command and its output:
+
+${analyze}
+%endif
+
 % if update_state:
 You currently expect the following about the target system:
 
@@ -20,5 +37,9 @@ ${state}
 % if hint:
 You are provided the following guidance: ${hint}
 %endif
-
-State your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`.
+% if not chain_of_thought:
+Based on the information above state your command. You should focus upon enumeration and privilege escalation. Do not add any explanation or add an initial `$`.
+%endif
+% if chain_of_thought:
+${CoT}
+%endif

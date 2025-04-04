@@ -18,7 +18,9 @@ from hackingBuddyGPT.utils.rag_utility import initiate_rag
 
 template_dir = pathlib.Path(__file__).parent / "templates"
 template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
+template_next_cmd_special = Template(filename=str(template_dir / "query_next_command_special.txt"))
 template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
+template_analyze_special = Template(filename=str(template_dir / "analyze_cmd_special.txt"))
 template_state = Template(filename=str(template_dir / "update_state.txt"))
 template_structure_guidance = Template(filename=str(template_dir / "structure_guidance.txt"))
 template_chain_of_thought = Template(filename=str(template_dir / "chain_of_thought.txt"))
@@ -79,9 +81,6 @@ class Privesc(Agent):
 
             assert(len(output) == 1)
             capability, cmd, (result, got_root) = output[0]
-
-            # TODO remove and ask andreas how to fix this problem
-            cmd = cmd.replace("exec_command", "")
 
         # log and output the command and its result
         self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
@@ -219,7 +218,7 @@ class ThesisPrivescPrototyp(Agent):
         if self.enable_chain_of_thought:
             self._chain_of_thought = template_chain_of_thought.source
 
-        template_size = self.llm.count_tokens(template_next_cmd.source)
+        template_size = self.llm.count_tokens(template_next_cmd_special.source)
         self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - template_size
 
     def perform_round(self, turn: int) -> bool:
@@ -264,9 +263,6 @@ class ThesisPrivescPrototyp(Agent):
                 got_root = got_root or got_root_
             cmd = cmd.rstrip()
             result = result.rstrip()
-
-            # TODO remove and ask andreas how to fix this problem
-            # cmd = cmd.replace("exec_command", "")
 
         # log and output the command and its result
         self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
@@ -372,7 +368,7 @@ class ThesisPrivescPrototyp(Agent):
             'alt_rag_text': self._rag_alt_text
         })
 
-        cmd = self.llm.get_response(template_next_cmd, **self._template_params)
+        cmd = self.llm.get_response(template_next_cmd_special, **self._template_params)
         # cmd.result = llm_util.cmd_output_fixer(cmd.result)
 
         if self.disable_duplicates:
@@ -380,7 +376,7 @@ class ThesisPrivescPrototyp(Agent):
             while cmd.result in self._previously_used_commands:
                 count += 1
                 self._log.console.print(f"Repeated command: '{cmd.result}', fetching new command")
-                cmd = self.llm.get_response(template_next_cmd, **self._template_params)
+                cmd = self.llm.get_response(template_next_cmd_special, **self._template_params)
                 cmd.result = llm_util.cmd_output_fixer(cmd.result)
                 if count == 25:
                     break
@@ -390,11 +386,11 @@ class ThesisPrivescPrototyp(Agent):
     def analyze_result(self, cmd, result):
         ctx = self.llm.context_size
 
-        template_size = self.llm.count_tokens(template_analyze.source)
+        template_size = self.llm.count_tokens(template_analyze_special.source)
         target_size = ctx - llm_util.SAFETY_MARGIN - template_size - self.get_rag_size()
         result = llm_util.trim_result_front(self.llm, target_size, result)
 
-        result = self.llm.get_response(template_analyze, cmd=cmd, resp=result, rag_enabled=self.enable_rag, rag_text=self._rag_text, hint=self.hint)
+        result = self.llm.get_response(template_analyze_special, cmd=cmd, resp=result, rag_enabled=self.enable_rag, rag_text=self._rag_text, hint=self.hint)
         self._analyze = result.result
         return result
 

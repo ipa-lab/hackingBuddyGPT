@@ -11,7 +11,7 @@ def initiate_rag():
     load_dotenv()
 
     # Define the persistent directory
-    rag_storage_path = os.path.abspath(os.path.join("..", "..", "..", "rag_storage"))
+    rag_storage_path = os.path.abspath(os.path.join("..", "usecases", "privesc","rag_storage"))
     persistent_directory = os.path.join(rag_storage_path, "vector_storage", os.environ['rag_database_folder_name'])
 
     embeddings = OpenAIEmbeddings(model=os.environ['rag_embedding'], api_key=os.environ['openai_api_key'])

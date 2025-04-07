@@ -33,16 +33,12 @@ class OpenAIConnection(LLM):
         if hasattr(prompt, "render"):
             prompt = prompt.render(**kwargs)
 
-
         if "azure.com" in self.api_url:
             # azure ai header
             headers = {"api-key": f"{self.api_key}"}
         else:
             # normal header
             headers = {"Authorization": f"Bearer {self.api_key}"}
-
-
-
 
         data = {'model': self.model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.8}
 
@@ -60,7 +56,6 @@ class OpenAIConnection(LLM):
                     return self.get_response(prompt, azure_retry = azure_retry + 1)
                 else:
                     raise Exception(f"Error from OpenAI Gateway ({response.status_code}")
-
 
             if response.status_code != 200:
                 raise Exception(f"Error from OpenAI Gateway ({response.status_code}")

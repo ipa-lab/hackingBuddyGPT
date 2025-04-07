@@ -12,7 +12,7 @@ class SSHTestCredential(Capability):
     conn: SSHConnection
 
     def describe(self) -> str:
-        return f"give credentials to be tested. If you use this, it should be the only thing in your response to us. Do not use exec_command in the same answer to us."
+        return f"give credentials to be tested."
 
     def get_name(self):
         return "test_credential"

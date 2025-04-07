@@ -1,14 +1,14 @@
+import datetime
 import pathlib
 from dataclasses import dataclass, field
-from typing import Any, Dict
-
 from mako.template import Template
-from rich.panel import Panel
+from typing import Any, Dict, Optional
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_handler
 from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.utils import llm_util, ui
+from hackingBuddyGPT.utils.logging import log_section, log_conversation
+from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
 
 template_dir = pathlib.Path(__file__).parent / "templates"
@@ -31,12 +31,9 @@ class Privesc(Agent):
     _template_params: Dict[str, Any] = field(default_factory=dict)
     _max_history_size: int = 0
 
-    def init(self):
-        super().init()
-
     def before_run(self):
         if self.hint != "":
-            self._log.console.print(f"[bold green]Using the following hint: '{self.hint}'")
+            self.log.status_message(f"[bold green]Using the following hint: '{self.hint}'")
 
         if self.disable_history is False:
             self._sliding_history = SlidingCliHistory(self.llm)
@@ -54,56 +51,24 @@ class Privesc(Agent):
         self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - template_size
 
     def perform_round(self, turn: int) -> bool:
-        got_root: bool = False
-
-        with self._log.console.status("[bold green]Asking LLM for a new command..."):
-            answer = self.get_next_command()
-        cmd = answer.result
-
-        with self._log.console.status("[bold green]Executing that command..."):
-            self._log.console.print(Panel(answer.result, title="[bold cyan]Got command from LLM:"))
-            _capability_descriptions, parser = capabilities_to_simple_text_handler(
-                self._capabilities, default_capability=self._default_capability
-            )
-            success, *output = parser(cmd)
-            if not success:
-                self._log.console.print(Panel(output[0], title="[bold red]Error parsing command:"))
-                return False
-
-            assert len(output) == 1
-            capability, cmd, (result, got_root) = output[0]
+        # get the next command and run it
+        cmd, message_id = self.get_next_command()
+        result, got_root = self.run_command(cmd, message_id)
 
         # log and output the command and its result
-        self._log.log_db.add_log_query(self._log.run_id, turn, cmd, result, answer)
         if self._sliding_history:
             self._sliding_history.add_command(cmd, result)
 
-        self._log.console.print(Panel(result, title=f"[bold cyan]{cmd}"))
-
         # analyze the result..
         if self.enable_explanation:
-            with self._log.console.status("[bold green]Analyze its result..."):
-                answer = self.analyze_result(cmd, result)
-                self._log.log_db.add_log_analyze_response(self._log.run_id, turn, cmd, answer.result, answer)
+            self.analyze_result(cmd, result)
 
         # .. and let our local model update its state
         if self.enable_update_state:
-            # this must happen before the table output as we might include the
-            # status processing time in the table..
-            with self._log.console.status("[bold green]Updating fact list.."):
-                state = self.update_state(cmd, result)
-                self._log.log_db.add_log_update_state(self._log.run_id, turn, "", state.result, state)
+            self.update_state(cmd, result)
 
-        # Output Round Data..
-        self._log.console.print(
-            ui.get_history_table(
-                self.enable_explanation, self.enable_update_state, self._log.run_id, self._log.log_db, turn
-            )
-        )
-
-        # .. and output the updated state
-        if self.enable_update_state:
-            self._log.console.print(Panel(self._state, title="What does the LLM Know about the system?"))
+        # Output Round Data..  # TODO: reimplement
+        # self.log.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self.log.run_id, self.log.log_db, turn))
 
         # if we got root, we can stop the loop
         return got_root
@@ -114,7 +79,8 @@ class Privesc(Agent):
         else:
             return 0
 
-    def get_next_command(self) -> llm_util.LLMResult:
+    @log_conversation("Asking LLM for a new command...", start_section=True)
+    def get_next_command(self) -> tuple[str, int]:
         history = ""
         if not self.disable_history:
             history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
@@ -122,17 +88,37 @@ class Privesc(Agent):
         self._template_params.update({"history": history, "state": self._state})
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)
-        cmd.result = llm_util.cmd_output_fixer(cmd.result)
-        return cmd
+        message_id = self.log.call_response(cmd)
 
+        return llm_util.cmd_output_fixer(cmd.result), message_id
+
+    @log_section("Executing that command...")
+    def run_command(self, cmd, message_id) -> tuple[Optional[str], bool]:
+        _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities, default_capability=self._default_capability)
+        start_time = datetime.datetime.now()
+        success, *output = parser(cmd)
+        if not success:
+            self.log.add_tool_call(message_id, tool_call_id=0, function_name="", arguments=cmd, result_text=output[0], duration=0)
+            return output[0], False
+
+        assert len(output) == 1
+        capability, cmd, (result, got_root) = output[0]
+        duration = datetime.datetime.now() - start_time
+        self.log.add_tool_call(message_id, tool_call_id=0, function_name=capability, arguments=cmd, result_text=result, duration=duration)
+
+        return result, got_root
+
+    @log_conversation("Analyze its result...", start_section=True)
     def analyze_result(self, cmd, result):
         state_size = self.get_state_size()
         target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - state_size
 
         # ugly, but cut down result to fit context size
         result = llm_util.trim_result_front(self.llm, target_size, result)
-        return self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state)
+        answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state)
+        self.log.call_response(answer)
 
+    @log_conversation("Updating fact list..", start_section=True)
     def update_state(self, cmd, result):
         # ugly, but cut down result to fit context size
         # don't do this linearly as this can take too long
@@ -141,6 +127,6 @@ class Privesc(Agent):
         target_size = ctx - llm_util.SAFETY_MARGIN - state_size
         result = llm_util.trim_result_front(self.llm, target_size, result)
 
-        result = self.llm.get_response(template_state, cmd=cmd, resp=result, facts=self._state)
-        self._state = result.result
-        return result
+        state = self.llm.get_response(template_state, cmd=cmd, resp=result, facts=self._state)
+        self._state = state.result
+        self.log.call_response(state)

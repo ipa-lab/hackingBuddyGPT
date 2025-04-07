@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="/static/style.css" />
+        <title>hackingBuddyGPT</title>
+    </head>
+    <body>
+        <div class="container">
+            <nav class="sidebar" id="sidebar">
+                <div id="sidebar-header-container">
+                    <header id="sidebar-header">
+                        <button class="menu-toggle">☰</button>
+                        <h2>Runs</h2>
+                    </header>
+                    <div id="follow-new-runs-container" class="small">
+                        <input type="checkbox" id="follow_new_runs" />
+                        <label for="follow_new_runs">Follow new runs</label>
+                    </div>
+                </div>
+                <ul id="run-list"></ul>
+            </nav>
+
+            <div id="main-body">
+                <header id="run-header">
+                    <button class="menu-toggle">☰</button>
+                    <h2 class="run-id" id="main-run-title"></h2>
+                </header>
+                <div id="black-block"></div>
+                <details id="run-config-details">
+                    <summary>
+                        <h3>Configuration</h3>
+                    </summary>
+                    <pre id="run-config"></pre>
+                </details>
+                <main id="messages"></main>
+            </div>
+        </div>
+    </body>
+    <template id="run-list-entry-template">
+        <li class="run-list-entry">
+            <a>
+                <div class="run-list-info">
+                    <h3 class="run-id"></h3>
+                    <span class="run-model"></span>
+                    <span class="run-tags"></span>
+                    <span class="run-state"></span>
+                </div>
+                <div class="run-list-timing">
+                    <span class="run-started-at"></span>
+                    <span class="run-stopped-at"></span>
+                </div>
+            </a>
+        </li>
+    </template>
+    <template id="section-template">
+        <div class="section">
+            <div class="line start-line"></div>
+            <span class="section-name"></span>
+            <div class="line end-line"></div>
+        </div>
+    </template>
+    <template id="message-template">
+        <details open class="message">
+            <summary>
+                <header class="message-header">
+                    <div>
+                        <h3 class="role"></h3>
+                        <span class="tokens-query"></span>
+                    </div>
+                    <div>
+                        <span class="duration"></span>
+                        <span class="tokens-response"></span>
+                    </div>
+                </header>
+            </summary>
+            <pre class="message-text"></pre>
+            <div class="tool-calls"></div>
+        </details>
+    </template>
+    <template id="message-tool-call">
+        <details open class="tool-call">
+            <summary>
+                <header class="tool-call-header">
+                    <h3 class="tool-call-function"></h3>
+                    <span class="tool-call-state"></span>
+                    <span class="tool-call-duration"></span>
+                </header>
+            </summary>
+            <pre class="tool-call-parameters binary"></pre>
+            <pre class="tool-call-results binary"></pre>
+        </details>
+    </template>
+    <script src="/static/client.js"></script>
+</html>

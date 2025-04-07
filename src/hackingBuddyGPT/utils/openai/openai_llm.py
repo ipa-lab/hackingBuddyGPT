@@ -1,4 +1,5 @@
 import time
+import datetime
 from dataclasses import dataclass
 
 import requests
@@ -41,10 +42,9 @@ class OpenAIConnection(LLM):
         data = {"model": self.model, "messages": [{"role": "user", "content": prompt}]}
 
         try:
-            tic = time.perf_counter()
-            response = requests.post(
-                f"{self.api_url}{self.api_path}", headers=headers, json=data, timeout=self.api_timeout
-            )
+            tic = datetime.datetime.now()
+            response = requests.post(f'{self.api_url}{self.api_path}', headers=headers, json=data, timeout=self.api_timeout)
+
             if response.status_code == 429:
                 print(f"[RestAPI-Connector] running into rate-limits, waiting for {self.api_backoff} seconds")
                 time.sleep(self.api_backoff)
@@ -64,18 +64,18 @@ class OpenAIConnection(LLM):
 
         # now extract the JSON status message
         # TODO: error handling..
-        toc = time.perf_counter()
         response = response.json()
         result = response["choices"][0]["message"]["content"]
         tok_query = response["usage"]["prompt_tokens"]
         tok_res = response["usage"]["completion_tokens"]
+        duration = datetime.datetime.now() - tic
 
-        return LLMResult(result, prompt, result, toc - tic, tok_query, tok_res)
+        return LLMResult(result, prompt, result, duration, tok_query, tok_res)
 
     def encode(self, query) -> list[int]:
         # I know this is crappy for all non-openAI models but sadly this
         # has to be good enough for now
-        if self.model.startswith("gpt-"):
+        if self.model.startswith("gpt-") and not self.model.startswith("gpt-4o"):
             encoding = tiktoken.encoding_for_model(self.model)
         else:
             encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -100,4 +100,32 @@ class GPT4(OpenAIConnection):
 @dataclass
 class GPT4Turbo(OpenAIConnection):
     model: str = "gpt-4-turbo-preview"
+    context_size: int = 128000
+
+
+@configurable("openai/gpt-4o", "OpenAI GPT-4o")
+@dataclass
+class GPT4oMini(OpenAIConnection):
+    model: str = "gpt-4o"
+    context_size: int = 128000
+
+
+@configurable("openai/gpt-4o-mini", "OpenAI GPT-4o-mini")
+@dataclass
+class GPT4oMini(OpenAIConnection):
+    model: str = "gpt-4o-mini"
+    context_size: int = 128000
+
+
+@configurable("openai/o1-preview", "OpenAI o1-preview")
+@dataclass
+class O1Preview(OpenAIConnection):
+    model: str = "o1-preview"
+    context_size: int = 128000
+
+
+@configurable("openai/o1-mini", "OpenAI o1-mini")
+@dataclass
+class O1Mini(OpenAIConnection):
+    model: str = "o1-mini"
     context_size: int = 128000

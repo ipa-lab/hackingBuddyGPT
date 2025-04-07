@@ -1,4 +1,5 @@
 import abc
+import datetime
 import re
 import typing
 from dataclasses import dataclass
@@ -20,7 +21,7 @@ class LLMResult:
     result: typing.Any
     prompt: str
     answer: str
-    duration: float = 0
+    duration: datetime.timedelta = datetime.timedelta(0)
     tokens_query: int = 0
     tokens_response: int = 0
 

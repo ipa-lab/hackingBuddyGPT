@@ -1,10 +1,11 @@
-import time
+import datetime
 from dataclasses import dataclass
 from typing import Dict, Iterable, Optional, Union
 
 import instructor
 import openai
 import tiktoken
+from dataclasses import dataclass
 from openai.types import CompletionUsage
 from openai.types.chat import (
     ChatCompletionChunk,
@@ -12,6 +13,7 @@ from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionMessageToolCall,
 )
+from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from openai.types.chat.chat_completion_message_tool_call import Function
 from rich.console import Console
 
@@ -49,8 +51,8 @@ class OpenAILib(LLM):
     def instructor(self) -> instructor.Instructor:
         return instructor.from_openai(self.client)
 
-    def get_response(self, prompt, *, capabilities: Dict[str, Capability] = None, **kwargs) -> LLMResult:
-        """# TODO: re-enable compatibility layer
+    def get_response(self, prompt, *, capabilities: Optional[Dict[str, Capability] ] = None, **kwargs) -> LLMResult:
+        """  # TODO: re-enable compatibility layer
         if isinstance(prompt, str) or hasattr(prompt, "render"):
             prompt = {"role": "user", "content": prompt}
 
@@ -66,35 +68,38 @@ class OpenAILib(LLM):
         if capabilities:
             tools = capabilities_to_tools(capabilities)
 
-        tic = time.perf_counter()
+        tic = datetime.datetime.now()
         response = self._client.chat.completions.create(
             model=self.model,
             messages=prompt,
             tools=tools,
         )
-        toc = time.perf_counter()
+        duration = datetime.datetime.now() - tic
         message = response.choices[0].message
 
         return LLMResult(
             message,
             str(prompt),
             message.content,
-            toc - tic,
+            duration,
             response.usage.prompt_tokens,
             response.usage.completion_tokens,
         )
 
-    def stream_response(
-        self,
-        prompt: Iterable[ChatCompletionMessageParam],
-        console: Console,
-        capabilities: Dict[str, Capability] = None,
-    ) -> Iterable[Union[ChatCompletionChunk, LLMResult]]:
+    def stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None, get_individual_updates=False) -> Union[LLMResult, Iterable[Union[ChoiceDelta, LLMResult]]]:
+        generator = self._stream_response(prompt, console, capabilities)
+
+        if get_individual_updates:
+            return generator
+
+        return list(generator)[-1]
+
+    def _stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None) -> Iterable[Union[ChoiceDelta, LLMResult]]:
         tools = None
         if capabilities:
             tools = capabilities_to_tools(capabilities)
 
-        tic = time.perf_counter()
+        tic = datetime.datetime.now()
         chunks = self._client.chat.completions.create(
             model=self.model,
             messages=prompt,
@@ -149,12 +154,13 @@ class OpenAILib(LLM):
                         message.tool_calls[tool_call.index].function.arguments += tool_call.function.arguments
                         outputs += 1
 
+                yield delta
+
             if chunk.usage is not None:
                 usage = chunk.usage
 
             if outputs > 1:
                 print("WARNING: Got more than one output in the stream response")
-            yield chunk
 
         console.print()
         if usage is None:
@@ -164,7 +170,7 @@ class OpenAILib(LLM):
         if len(message.tool_calls) == 0:  # the openAI API does not like getting empty tool call lists
             message.tool_calls = None
 
-        toc = time.perf_counter()
+        toc = datetime.datetime.now()
         yield LLMResult(
             message,
             str(prompt),
@@ -173,7 +179,6 @@ class OpenAILib(LLM):
             usage.prompt_tokens,
             usage.completion_tokens,
         )
-        pass
 
     def encode(self, query) -> list[int]:
         return tiktoken.encoding_for_model(self.model).encode(query)

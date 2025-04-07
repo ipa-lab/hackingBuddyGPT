@@ -1,0 +1,365 @@
+/* Reset default margin and padding */
+:root {
+    --section-count: 0;
+    --section-column-count: 0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+}
+
+pre {
+    white-space: pre-wrap;
+}
+
+pre.binary {
+    white-space: break-spaces;
+    word-break: break-all;
+    word-wrap: anywhere;
+    overflow-wrap: anywhere;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+    -webkit-line-break: after-white-space;
+}
+
+details summary {
+    list-style: none;
+    cursor: pointer;
+}
+details summary::-webkit-details-marker {
+    display: none;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Sidebar styling */
+.sidebar {
+    background-color: #333;
+    color: white;
+    padding: 0 1rem 1rem;
+    height: 100%;
+    overflow: scroll;
+    z-index: 100;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    margin-bottom: 1rem;
+}
+
+.sidebar a {
+    color: white;
+    text-decoration: none;
+}
+
+.sidebar a:hover {
+    text-decoration: underline;
+}
+
+.sidebar #run-list {
+    margin-top: 6.5rem;
+    padding-top: 1rem;
+}
+
+.sidebar .run-list-entry a {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.sidebar .run-list-entry a > div {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar .run-list-info {
+    flex-grow: 1;
+}
+
+.sidebar .run-list-info span {
+    color: lightgray;
+    font-size: small;
+}
+
+.sidebar .run-list-timing {
+    flex-shrink: 0;
+    font-size: small;
+    color: lightgray;
+}
+
+#follow-new-runs-container {
+    margin: 1.5rem 1rem 1rem;
+}
+
+/* Main content styling */
+#main-body {
+    background-color: #f4f4f4;
+    height: 100%;
+    overflow: auto;
+}
+
+#sidebar-header-container {
+    margin-left: -1rem;
+    height: 6.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    position: fixed;
+    background-color: #333;
+}
+
+#sidebar-header,
+#run-header {
+    display: flex;
+    flex-direction: row;
+    height: 3rem;
+    align-items: center;
+}
+
+#run-header {
+    position: fixed;
+    background-color: #f4f4f4;
+    z-index: 50;
+    width: 100%;
+    border-top: 4px solid #333;
+    border-bottom: 4px solid #333;
+}
+
+#black-block {
+    position: fixed;
+    height: 6.5rem;
+    width: calc(2rem + var(--section-column-count) * 1rem);
+    background-color: #333;
+    z-index: 25;
+}
+
+#run-header .menu-toggle {
+    background-color: #333;
+    color: #333;
+    width: 6rem;
+    height: 3rem;
+}
+
+#run-header #main-run-title {
+    display: inline-block;
+    flex-grow: 1;
+}
+
+#sidebar-header .menu-toggle {
+    background-color: #333;
+    color: #f4f4f4;
+    width: 3rem;
+    height: 3rem;
+}
+.menu-toggle {
+    background: none;
+    border: none;
+    font-size: 24px;
+    line-height: 22px;
+    margin-right: 0.5rem;
+    color: white;
+}
+
+.small {
+    font-size: small;
+}
+
+#run-config-details {
+    padding-top: 3rem;
+    border-left: calc(2rem + var(--section-column-count) * 1rem) solid #333;
+}
+
+#run-config-details summary {
+    /*background-color: #333;
+    color: white;*/
+    padding: 0.3rem 0.3rem 0.3rem 1rem;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+}
+
+#run-config-details pre {
+    margin: 0 1rem;
+    padding-bottom: 1rem;
+}
+
+#messages {
+    margin: 0 1rem 1rem;
+    display: grid;
+    /* this 1000 is a little bit of a hack, as other methods for auto sizing don't seem to work. Keep this one less than the number used as grid-column in .message */
+    grid-template-columns: repeat(1000, min-content) 1fr;
+    grid-auto-rows: auto;
+    grid-gap: 0;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    width: 1rem;
+    justify-self: center;
+}
+
+.section .line {
+    width: 4px;
+    background: black;
+    min-height: 0.2rem;
+    flex-grow: 1;
+}
+
+.section .end-line {
+    margin-bottom: 1rem;
+}
+
+.section span {
+    transform: rotate(-90deg);
+    padding: 0 4px;
+    margin: 5px 0;
+    white-space: nowrap;
+    background-color: #f4f4f4;
+}
+
+.message {
+    /* this 1000 is a little bit of a hack, as other methods for auto sizing don't seem to work. Keep this one more than the number used in grid-template-columns in .messages */
+    grid-column: calc(1001);
+    margin-left: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f9f9f9;
+    border-left: 4px solid #333;
+}
+
+/* this applies to both the message header as well as the individual tool calls */
+.message header {
+    background-color: #333;
+    color: white;
+    padding: 0.5rem;
+    display: flex;
+}
+
+.message .tool-call header {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.message .message-header {
+    flex-direction: column;
+}
+.message .message-header > div {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.message .message-text {
+    margin: 1rem;
+}
+
+.message .tool-calls {
+    margin: 1rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.message .tool-call {
+    border: 2px solid #333;
+    border-radius: 4px;
+    padding-top: 0;
+    height: 100%;
+    width: 100%;
+}
+
+.message .tool-call-parameters {
+    border-left: 4px solid lightgreen;
+    padding: 1rem 0.5rem;
+}
+
+.message .tool-call-results {
+    border-left: 4px solid lightcoral;
+    padding: 1rem 0.5rem;
+}
+
+/* Responsive behavior */
+@media (max-width: 1468px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        position: absolute;
+        width: 100vw;
+        height: 100%;
+        top: 0;
+        left: -100vw; /* Hidden off-screen by default */
+        transition: left 0.3s ease;
+    }
+
+    #main-body {
+        grid-column: span 2;
+    }
+
+    #sidebar-header .menu-toggle,
+    #run-header .menu-toggle {
+        display: inline-block;
+        cursor: pointer;
+    }
+
+    /* Show the sidebar when toggled */
+    .sidebar.active {
+        left: 0;
+    }
+
+    #messages,
+    .message {
+        margin-left: 0.5rem;
+        margin-right: 0;
+    }
+    #run-header .menu-toggle {
+        width: 4rem;
+        color: white;
+    }
+    #run-config-details {
+        border-left: calc(1rem + var(--section-column-count) * 1rem) solid #333;
+    }
+    #black-block {
+        width: calc(1rem + var(--section-column-count) * 1rem);
+    }
+
+    #sidebar-header-container {
+        width: 100%;
+    }
+    #sidebar-header .menu-toggle {
+        color: black;
+        background-color: #f4f4f4;
+    }
+    #sidebar-header {
+        border-top: 4px solid #f4f4f4;
+        border-bottom: 4px solid #f4f4f4;
+        width: 100%;
+    }
+    .sidebar #run-list {
+        margin-left: 2.5rem;
+    }
+    #follow-new-runs-container {
+        margin-left: 3.5rem;
+    }
+}

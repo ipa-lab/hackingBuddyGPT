@@ -19,12 +19,16 @@ def main():
             # Here you could add specific options for the 'config' command
             strategy_parser.add_argument('-s', '--strategy', required=True, help='strategy')
             strategy = strategy_parser.parse_args(argss[4:])
-
         else:
             use_case.build_parser(subparser.add_parser(name=name, help=use_case.description))
 
+    parsed = parser.parse_args(sys.argv[1:])
+    configuration = {k: v for k, v in vars(parsed).items() if k not in ("use_case", "parser_state")}
+
+
     parsed = parser.parse_args(sys.argv[1:2])
     instance = parsed.use_case(parsed)
+    instance.init(configuration=configuration)
     if instance.__class__.__name__.__contains__("API"):
         instance.agent.config_path = config.config
         instance.agent._strategy = strategy.strategy

@@ -1,0 +1,1 @@
+The Hacktricks pages can be found on <https://book.hacktricks.wiki/en/linux-hardening/privilege-escalation/index.html> or <https://github.com/HackTricks-wiki/hacktricks/tree/master/src/linux-hardening/privilege-escalation>. The pages that should be included in the vector store need to be placed in this folder. Each page in a seperate markdown file.

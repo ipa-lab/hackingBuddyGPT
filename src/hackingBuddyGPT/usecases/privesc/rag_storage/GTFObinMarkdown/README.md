@@ -1,0 +1,1 @@
+The GTFO binaries can be found on <https://gtfobins.github.io/> or <https://github.com/GTFOBins/GTFOBins.github.io/tree/master>. The binaries that should be included in the vector store need to be placed in this folder. Each binary in a seperate markdown file.

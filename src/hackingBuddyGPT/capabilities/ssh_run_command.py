@@ -17,7 +17,7 @@ class SSHRunCommand(Capability):
     timeout: int = 10
 
     def describe(self) -> str:
-        return "give a command to be executed and I will respond with the terminal output when running this command over SSH on the linux machine. The given command must not require user interaction."
+        return "give a command to be executed and I will respond with the terminal output when running this command over SSH on the linux machine. The given command must not require user interaction. Do not use quotation marks in front and after your command."
 
     def get_name(self):
         return "exec_command"
@@ -25,7 +25,10 @@ class SSHRunCommand(Capability):
     def __call__(self, command: str) -> Tuple[str, bool]:
         if command.startswith(self.get_name()):
             cmd_parts = command.split(" ", 1)
-            command = cmd_parts[1]
+            if len(cmd_parts) == 1:
+                command = ""
+            else:
+                command = cmd_parts[1]
 
         sudo_pass = Responder(
             pattern=r"\[sudo\] password for " + self.conn.username + ":",

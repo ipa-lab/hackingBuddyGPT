@@ -16,6 +16,13 @@ ${history}
 Do not repeat already tried escalation attacks.
 %endif
 
+% if len(analyze) != 0:
+You also have the following analysis of the last command and its output:
+~~~
+${analyze}
+~~~
+%endif
+
 % if hint:
 You are provided the following guidance: ${hint}
 %endif

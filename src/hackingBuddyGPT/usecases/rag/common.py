@@ -22,7 +22,7 @@ template_structure_guidance = Template(filename=str(template_dir / "structure_gu
 @dataclass
 class ThesisPrivescPrototype(Agent):
     system: str = ""
-    enable_explanation: bool = False
+    enable_analysis: bool = False
     enable_update_state: bool = False
     enable_compressed_history: bool = False
     disable_history: bool = False
@@ -87,16 +87,14 @@ class ThesisPrivescPrototype(Agent):
         # log and output the command and its result
         if self._sliding_history:
             if self.enable_compressed_history:
-                self._sliding_history.add_command_only(cmd, result)
+                self._sliding_history.add_command_only(cmds, result)
             else:
-                self._sliding_history.add_command(cmd, result)
+                self._sliding_history.add_command(cmds, result)
 
         # analyze the result..
-        if self.enable_explanation:
-            self.analyze_result(cmd, result)
+        if self.enable_analysis:
+            self.analyze_result(cmds, result)
 
-        # Output Round Data..  # TODO: reimplement
-        # self.log.console.print(ui.get_history_table(self.enable_explanation, self.enable_update_state, self.log.run_id, self.log.log_db, turn))
 
         # if we got root, we can stop the loop
         return got_root
@@ -113,18 +111,25 @@ class ThesisPrivescPrototype(Agent):
         else:
             return 0
 
+    def get_analyze_size(self) -> int:
+        if self.enable_analysis:
+            return self.llm.count_tokens(self._analyze)
+        else:
+            return 0
+
     @log_conversation("Asking LLM for a new command...", start_section=True)
     def get_next_command(self) -> tuple[str, int]:
         history = ""
         if not self.disable_history:
             if self.enable_compressed_history:
-                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_chain_of_thought_size() - self.get_structure_guidance_size())
+                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_chain_of_thought_size() - self.get_structure_guidance_size() - self.get_analyze_size())
             else:
-                history = self._sliding_history.get_history(self._max_history_size - self.get_chain_of_thought_size() - self.get_structure_guidance_size())
+                history = self._sliding_history.get_history(self._max_history_size - self.get_chain_of_thought_size() - self.get_structure_guidance_size() - self.get_analyze_size())
 
         self._template_params.update({
             "history": history,
             'CoT': self._chain_of_thought,
+            'analyze': self._analyze,
             'guidance': self._structure_guidance
         })
 
@@ -162,13 +167,16 @@ class ThesisPrivescPrototype(Agent):
 
     @log_conversation("Analyze its result...", start_section=True)
     def analyze_result(self, cmd, result):
-        state_size = self.get_state_size()
-        target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - state_size
+        ctx = self.llm.context_size
 
-        # ugly, but cut down result to fit context size
+        template_size = self.llm.count_tokens(template_analyze.source)
+        target_size = ctx - llm_util.SAFETY_MARGIN - template_size # - self.get_rag_size()
         result = llm_util.trim_result_front(self.llm, target_size, result)
-        answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state)
-        self.log.call_response(answer)
+
+        # result = self.llm.get_response(template_analyze, cmd=cmd, resp=result, rag_enabled=self.enable_rag, rag_text=self._rag_text, hint=self.hint)
+        result = self.llm.get_response(template_analyze, cmd=cmd, resp=result, hint=self.hint)
+        self._analyze = result.result
+        self.log.call_response(result)
 
     def split_into_multiple_commands(self, response: str):
         ret = self.split_with_delimiters(response, ["test_credential", "exec_command"])

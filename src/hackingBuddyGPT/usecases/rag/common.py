@@ -21,6 +21,7 @@ class ThesisPrivescPrototype(Agent):
     system: str = ""
     enable_explanation: bool = False
     enable_update_state: bool = False
+    enable_compressed_history: bool = False
     disable_history: bool = False
     hint: str = ""
 
@@ -56,7 +57,10 @@ class ThesisPrivescPrototype(Agent):
 
         # log and output the command and its result
         if self._sliding_history:
-            self._sliding_history.add_command(cmd, result)
+            if self.enable_compressed_history:
+                self._sliding_history.add_command_only(cmd, result)
+            else:
+                self._sliding_history.add_command(cmd, result)
 
         # analyze the result..
         if self.enable_explanation:
@@ -68,17 +72,14 @@ class ThesisPrivescPrototype(Agent):
         # if we got root, we can stop the loop
         return got_root
 
-    def get_state_size(self) -> int:
-        if self.enable_update_state:
-            return self.llm.count_tokens(self._state)
-        else:
-            return 0
-
     @log_conversation("Asking LLM for a new command...", start_section=True)
     def get_next_command(self) -> tuple[str, int]:
         history = ""
         if not self.disable_history:
-            history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
+            if self.enable_compressed_history:
+                history = self._sliding_history.get_commands_and_last_output(self._max_history_size)
+            else:
+                history = self._sliding_history.get_history(self._max_history_size)
 
         self._template_params.update({"history": history, "state": self._state})
 

@@ -17,7 +17,7 @@ template_dir = pathlib.Path(__file__).parent / "templates"
 template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt"))
 template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_chain_of_thought = Template(filename=str(template_dir / "chain_of_thought.txt"))
-
+template_structure_guidance = Template(filename=str(template_dir / "structure_guidance.txt"))
 
 @dataclass
 class ThesisPrivescPrototype(Agent):
@@ -27,13 +27,17 @@ class ThesisPrivescPrototype(Agent):
     enable_compressed_history: bool = False
     disable_history: bool = False
     enable_chain_of_thought: bool = False
+    enable_structure_guidance: bool = False
     hint: str = ""
 
     _sliding_history: SlidingCliHistory = None
-    _state: str = ""
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _template_params: Dict[str, Any] = field(default_factory=dict)
     _max_history_size: int = 0
+    _analyze: str = ""
+    _structure_guidance: str = ""
+    _chain_of_thought: str = ""
+    _rag_text: str = ""
 
     def before_run(self):
         if self.hint != "":
@@ -47,10 +51,13 @@ class ThesisPrivescPrototype(Agent):
             "system": self.system,
             "hint": self.hint,
             "conn": self.conn,
-            "update_state": self.enable_update_state,
             "target_user": "root",
+            'structure_guidance': self.enable_structure_guidance,
             'chain_of_thought': self.enable_chain_of_thought
         }
+
+        if self.enable_structure_guidance:
+            self._structure_guidance = template_structure_guidance.source
 
         if self.enable_chain_of_thought:
             self._chain_of_thought = template_chain_of_thought.source
@@ -100,16 +107,26 @@ class ThesisPrivescPrototype(Agent):
         else:
             return 0
 
+    def get_structure_guidance_size(self) -> int:
+        if self.enable_structure_guidance:
+            return self.llm.count_tokens(self._structure_guidance)
+        else:
+            return 0
+
     @log_conversation("Asking LLM for a new command...", start_section=True)
     def get_next_command(self) -> tuple[str, int]:
         history = ""
         if not self.disable_history:
             if self.enable_compressed_history:
-                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_chain_of_thought_size())
+                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_chain_of_thought_size() - self.get_structure_guidance_size())
             else:
-                history = self._sliding_history.get_history(self._max_history_size - self.get_chain_of_thought_size())
+                history = self._sliding_history.get_history(self._max_history_size - self.get_chain_of_thought_size() - self.get_structure_guidance_size())
 
-        self._template_params.update({"history": history, 'CoT': self._chain_of_thought})
+        self._template_params.update({
+            "history": history,
+            'CoT': self._chain_of_thought,
+            'guidance': self._structure_guidance
+        })
 
         cmd = self.llm.get_response(template_next_cmd, **self._template_params)
         message_id = self.log.call_response(cmd)

@@ -13,7 +13,7 @@ class SSHTestCredential(Capability):
     conn: SSHConnection
 
     def describe(self) -> str:
-        return "give credentials to be tested"
+        return "give credentials to be tested."
 
     def get_name(self):
         return "test_credential"

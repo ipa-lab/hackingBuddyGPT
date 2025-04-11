@@ -1,14 +1,17 @@
 import datetime
 import pathlib
 import re
+import os
 
 from dataclasses import dataclass, field
 from mako.template import Template
 from typing import Any, Dict, Optional
+from langchain_core.vectorstores import VectorStoreRetriever
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_handler
 from hackingBuddyGPT.usecases.agents import Agent
+from hackingBuddyGPT.usecases.rag import rag_utility as rag_util
 from hackingBuddyGPT.utils.logging import log_section, log_conversation
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
@@ -18,6 +21,8 @@ template_next_cmd = Template(filename=str(template_dir / "query_next_command.txt
 template_analyze = Template(filename=str(template_dir / "analyze_cmd.txt"))
 template_chain_of_thought = Template(filename=str(template_dir / "chain_of_thought.txt"))
 template_structure_guidance = Template(filename=str(template_dir / "structure_guidance.txt"))
+template_rag = Template(filename=str(template_dir / "rag_prompt.txt"))
+
 
 @dataclass
 class ThesisPrivescPrototype(Agent):
@@ -28,6 +33,8 @@ class ThesisPrivescPrototype(Agent):
     disable_history: bool = False
     enable_chain_of_thought: bool = False
     enable_structure_guidance: bool = False
+    enable_rag: bool = False
+    _rag_document_retriever: VectorStoreRetriever = None
     hint: str = ""
 
     _sliding_history: SlidingCliHistory = None
@@ -45,6 +52,9 @@ class ThesisPrivescPrototype(Agent):
 
         if self.disable_history is False:
             self._sliding_history = SlidingCliHistory(self.llm)
+
+        if self.enable_rag:
+            self._rag_document_retriever = rag_util.initiate_rag()
 
         self._template_params = {
             "capabilities": self.get_capability_block(),
@@ -91,6 +101,13 @@ class ThesisPrivescPrototype(Agent):
             else:
                 self._sliding_history.add_command(cmds, result)
 
+        if self.enable_rag:
+            query = self.get_rag_query(cmds, result)
+            relevant_documents = self._rag_document_retriever.invoke(query.result)
+            relevant_information = "".join([d.page_content + "\n" for d in relevant_documents])
+            self._rag_text = llm_util.trim_result_front(self.llm, int(os.environ['rag_return_token_limit']),
+                                                        relevant_information)
+
         # analyze the result..
         if self.enable_analysis:
             self.analyze_result(cmds, result)
@@ -117,6 +134,12 @@ class ThesisPrivescPrototype(Agent):
         else:
             return 0
 
+    def get_rag_size(self) -> int:
+        if self.enable_rag:
+            return self.llm.count_tokens(self._rag_text)
+        else:
+            return 0
+
     @log_conversation("Asking LLM for a new command...", start_section=True)
     def get_next_command(self) -> tuple[str, int]:
         history = ""
@@ -138,6 +161,18 @@ class ThesisPrivescPrototype(Agent):
 
         # return llm_util.cmd_output_fixer(cmd.result), message_id
         return cmd.result, message_id
+
+
+    @log_conversation("Asking LLM for a search query...", start_section=True)
+    def get_rag_query(self, cmd, result):
+        ctx = self.llm.context_size
+        template_size = self.llm.count_tokens(template_rag.source)
+        target_size = ctx - llm_util.SAFETY_MARGIN - template_size
+        result = llm_util.trim_result_front(self.llm, target_size, result)
+
+        result = self.llm.get_response(template_rag, cmd=cmd, resp=result)
+        self.log.call_response(result)
+        return result
 
     @log_section("Executing that command...")
     def run_command(self, cmd, message_id) -> tuple[Optional[str], Optional[str], bool]:
@@ -170,11 +205,10 @@ class ThesisPrivescPrototype(Agent):
         ctx = self.llm.context_size
 
         template_size = self.llm.count_tokens(template_analyze.source)
-        target_size = ctx - llm_util.SAFETY_MARGIN - template_size # - self.get_rag_size()
+        target_size = ctx - llm_util.SAFETY_MARGIN - template_size - self.get_rag_size()
         result = llm_util.trim_result_front(self.llm, target_size, result)
 
-        # result = self.llm.get_response(template_analyze, cmd=cmd, resp=result, rag_enabled=self.enable_rag, rag_text=self._rag_text, hint=self.hint)
-        result = self.llm.get_response(template_analyze, cmd=cmd, resp=result, hint=self.hint)
+        result = self.llm.get_response(template_analyze, cmd=cmd, resp=result, rag_enabled=self.enable_rag, rag_text=self._rag_text, hint=self.hint)
         self._analyze = result.result
         self.log.call_response(result)
 

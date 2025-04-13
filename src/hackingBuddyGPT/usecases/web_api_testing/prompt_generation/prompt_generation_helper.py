@@ -98,10 +98,9 @@ class PromptGenerationHelper(object):
                             counter +=1
 
             if "x" in acc:
-
-                user_info["x"] = acc["x"]
+                user_info = acc
                 break
-            if "x" not in acc or acc["x"] == "":
+            elif "x" not in acc or acc["x"] == "":
                 user_info["x"] = ""
             counter += 1
         return user_info

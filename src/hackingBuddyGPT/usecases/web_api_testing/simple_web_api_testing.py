@@ -353,12 +353,9 @@ class SimpleWebAPITesting(Agent):
             for account in self.prompt_helper.accounts:
                 if account.get("x") == self.prompt_helper.current_user.get("x") and "token" not in account.keys():
                     account["token"] = self.token
-            self.prompt_helper.accounts = self.pentesting_information.accounts
-            # self.pentesting_information.set_valid_token(self.token)
+
         if self.token and "token" not in self.prompt_helper.current_user:
             self.prompt_helper.current_user["token"] = self.token
-
-        print(f'self.token:{self.token}')
 
 
     def adjust_user(self, result):

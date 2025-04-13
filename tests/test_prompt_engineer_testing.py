@@ -91,7 +91,7 @@ class TestPromptEngineer(unittest.TestCase):
         prompt_engineer = PromptEngineer(
             strategy=strategy,
             prompt_helper=self.prompt_helper,
-            context=PromptContext.PENTESTING,
+            context=PromptContext.DOCUMENTATION,
             open_api_spec=self._openapi_specification,
             rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints),
         )

@@ -9,7 +9,7 @@ os.environ['SPOTIPY_REDIRECT_URI'] = 'your_redirect_uri'
 current_dir = os.path.dirname(__file__)
 
 # Define relative paths to JSON files
-oas_path = os.path.join(current_dir, "configs", "oas", "spotify_oas.json")
+oas_path = os.path.join(current_dir, "configs", "test_config.json", "spotify_oas.json")
 config_path = os.path.join(current_dir, "configs", "spotify_config.json")
 
 # Load the Spotify OAS JSON file to retrieve scopes

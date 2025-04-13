@@ -2,17 +2,12 @@ import os
 import re
 from collections import defaultdict
 from datetime import datetime
-
-import pydantic_core
 import yaml
-from rich.panel import Panel
-
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
-from hackingBuddyGPT.utils import tool_message
 
 
 class OpenAPISpecificationHandler(object):
@@ -61,6 +56,7 @@ class OpenAPISpecificationHandler(object):
         }
         self.llm_handler = llm_handler
         current_path = os.path.dirname(os.path.abspath(__file__))
+
         self.file_path = os.path.join(current_path, "openapi_spec", str(strategy).split(".")[1].lower(), name.lower())
         os.makedirs(self.file_path, exist_ok=True)
         self.file = os.path.join(self.file_path, self.filename)
@@ -120,9 +116,7 @@ class OpenAPISpecificationHandler(object):
             unsuccessful_status_codes = ["400", "404", "500"]
 
             if path in endpoints and (status_code in unsuccessful_status_codes):
-                print(f'path: {path}')
-                print(f'unsuccessful paths: {self.unsuccessful_paths}')
-                print(f'unsuccessful methods: {self.unsuccessful_methods}')
+
                 self.unsuccessful_paths.append(path)
                 if path not in self.unsuccessful_methods:
                     self.unsuccessful_methods[path] = []

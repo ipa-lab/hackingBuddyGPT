@@ -94,6 +94,7 @@ class OpenAPISpecificationParser:
 
     def find_oas(self, filepath):
         current_file_path = os.path.dirname(filepath)
+
         file_name = Path(filepath).name.split("_config")[0]
         oas_file_path = os.path.join(current_file_path, "oas", file_name + "_oas.json")
         print(f'OpenAPI specification file: {oas_file_path}')
@@ -185,6 +186,14 @@ class OpenAPISpecificationParser:
                 forbidden_description = responses.get("403", {}).get("description", "").lower()
                 too_many_requests_description = responses.get("429", {}).get("description", "").lower()
 
+                if "dashboard" in path:
+                    classifications['unclassified_endpoint'].append({
+                        "method": method.upper(),
+                        "path": path,
+                        "schema": schema})
+                    classified = True
+                    continue
+
                 # Protected endpoints: Paths mentioning "user" or "admin" explicitly
                 # Check if the path mentions "user" or "admin" and doesn't include "api"
                 path_condition = (
@@ -275,6 +284,8 @@ class OpenAPISpecificationParser:
                             if "OWASP" in name:
                                 if "sers" not in path :
                                     continue
+                                if not (path.endswith("user") or path.endswith("users") or path.endswith("signup")):
+                                    continue
                             classifications["account_creation"].append({
                             "method":method.upper(),
                             "path":path,
@@ -328,6 +339,43 @@ class OpenAPISpecificationParser:
        #]
        #
         return classifications
+
+
+    def categorize_endpoints(self, endpoints, query: dict):
+            root_level = []
+            single_parameter = []
+            subresource = []
+            related_resource = []
+            multi_level_resource = []
+
+            for endpoint in endpoints:
+                # Split the endpoint by '/' and filter out empty strings
+                parts = [part for part in endpoint.split('/') if part]
+
+                # Determine the category based on the structure
+                if len(parts) == 1:
+                    root_level.append(endpoint)
+                elif len(parts) == 2:
+                    if "id" in endpoint:
+                        single_parameter.append(endpoint)
+                    else:
+                        subresource.append(endpoint)
+                elif len(parts) == 3:
+                    if "id" in endpoint:
+                        related_resource.append(endpoint)
+                    else:
+                        multi_level_resource.append(endpoint)
+                else:
+                    multi_level_resource.append(endpoint)
+
+            return {
+                "root_level": root_level,
+                "instance_level": single_parameter,
+                "subresource": subresource,
+                "query": query.values(),
+                "related_resource": related_resource,
+                "multi-level_resource": multi_level_resource,
+            }
 
 
 if __name__ == "__main__":  # Usage

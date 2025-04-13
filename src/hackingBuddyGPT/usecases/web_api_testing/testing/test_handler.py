@@ -141,21 +141,37 @@ class TestHandler:
             list: Updated prompt history.
         """
         prompt = f"""
-        You are an expert in writing pytest-compatible test functions.
+        As a testing expert, you are tasked with creating pytest-compatible test functions using the Python 'requests' library.
 
-        Details:
-        - Description: {description}
+        Test Details:
+         - Description: {description}
         - Endpoint: {test_case['endpoint']}
         - Method: {test_case['method'].upper()}
         - Input: {json.dumps(test_case.get("input", {}), indent=4)}
         - Expected Status: {test_case['expected_output'].get('expected_status_code')}
         - Expected Body: {test_case['expected_output'].get('expected_body', {})}
 
-        Write a pytest function using 'requests' that:
-        - Sends the HTTP request
-        - Asserts both status code and body
-        - Includes a docstring
-        """
+        Instructions:
+        Write a syntactically and semantically correct pytest function that:
+        - Includes a docstring explaining the purpose of the test.
+        - Sends the appropriate HTTP request to the specified endpoint.
+        - Asserts the correctness of both the response status code and the response body.
+
+        Test Function Name:
+        Use the description to create a meaningful and relevant test function name, following Python's naming conventions for functions.
+
+        Example:
+        If the description is "Test for successful login", the function name could be 'test_successful_login'.
+
+        Code Example:
+        def test_function_name():
+            \"""Docstring describing the test purpose.\"""
+            response = requests.METHOD('http://example.com/api/endpoint', json={{"key": "value"}})
+            assert response.status_code == 200
+            assert response.json() == {{"expected": "output"}}
+
+        Replace 'METHOD', 'http://example.com/api/endpoint', and other placeholders with actual data based on the test details provided."""
+
         prompt_history.append({"role": "system", "content": prompt})
         response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt_history, "record_note")
         result = response.execute()

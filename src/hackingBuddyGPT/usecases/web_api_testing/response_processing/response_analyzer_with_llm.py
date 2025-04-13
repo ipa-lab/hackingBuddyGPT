@@ -119,7 +119,10 @@ class ResponseAnalyzerWithLLM:
 
             if body.__contains__("<html>"):
                 body = ""
-            if body.__contains__("{") and (body != '' or body != ""):
+            elif body.startswith("["):
+                body = json.loads(body)
+                print(f'"body:{body}')
+            elif body.__contains__("{") and (body != '' or body != ""):
                 if not  body.lower().__contains__("png") :
                     body = json.loads(body)
                     if "token" in body:
@@ -128,14 +131,17 @@ class ResponseAnalyzerWithLLM:
                     if any (value in body.values() for value in self.prompt_helper.current_user.values()):
                         if "id" in body:
                             self.prompt_helper.current_user["id"] = body["id"]
-                    if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+                    if self.prompt_helper.current_user not in self.prompt_helper.accounts  and self.prompt_helper.current_user != {} and "x" in self.prompt_helper.current_user:
                         for i, acc in enumerate(self.prompt_helper.accounts):
-                            if acc["x"] == self.prompt_helper.current_user["x"]:
-                                self.prompt_helper.accounts[i] =self.prompt_helper.current_user
-                                break
+                            if "x" in acc:
+                                print(f' ac:{acc}')
+                                print(f' curr user:{self.prompt_helper.current_user}')
+                                if acc["x"] == self.prompt_helper.current_user["x"]:
+                                    self.prompt_helper.accounts[i] =self.prompt_helper.current_user
+                                    break
 
                     #self.replace_account()
-            if isinstance(body, list) and len(body) > 1:
+            elif isinstance(body, list) and len(body) > 1:
                 body = body[0]
                 if self.prompt_helper.current_user in body:
                     self.prompt_helper.current_user["id"] = self.get_id_from_user(body)
@@ -200,13 +206,13 @@ class ResponseAnalyzerWithLLM:
             additional_analysis_context += step.get("conditions").get("if_successful")
 
         llm_responses.append(full_response)
-
-        for purpose in self.pentesting_information.analysis_step_list:
-            analysis_step = self.pentesting_information.get_analysis_step(purpose, full_response,
+        if step.get("purpose") != PromptPurpose.SETUP:
+            for purpose in self.pentesting_information.analysis_step_list:
+                analysis_step = self.pentesting_information.get_analysis_step(purpose, full_response,
                                                                           additional_analysis_context)
-            prompt_history, response = self.process_step(analysis_step, prompt_history, "record_note")
-            llm_responses.append(response)
-            full_response = response  # make it iterative
+                prompt_history, response = self.process_step(analysis_step, prompt_history, "record_note")
+                llm_responses.append(response)
+                full_response = response  # make it iterative
 
         return llm_responses, status_code
 

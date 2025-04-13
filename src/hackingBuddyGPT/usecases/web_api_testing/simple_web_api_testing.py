@@ -1,3 +1,4 @@
+import copy
 import json
 import os.path
 import re
@@ -26,6 +27,7 @@ from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analy
     ResponseAnalyzerWithLLM
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.testing.test_handler import TestHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
 from hackingBuddyGPT.utils import tool_message
@@ -54,23 +56,20 @@ class SimpleWebAPITesting(Agent):
 
     llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
-    http_method_description: str = parameter(
-        desc="Pattern description for expected HTTP methods in the API response",
-        default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).",
-    )
-    http_method_template: str = parameter(
-        desc="Template used to format HTTP methods in API requests. The {method} placeholder will be replaced by actual HTTP method names.",
-        default="{method}",
-    )
-    http_methods: str = parameter(
-        desc="Comma-separated list of HTTP methods expected to be used in the API response.",
-        default="GET,POST,PUT,DELETE",
-    )
     config_path: str = parameter(
         desc="Configuration file path",
         default="",
     )
 
+    strategy_string: str = parameter(
+        desc="strategy string",
+        default="",
+    )
+
+    _http_method_description: str = parameter(
+        desc="Pattern description for expected HTTP methods in the API response",
+        default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).",
+    )
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list(), "parsed":list()})
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
@@ -78,47 +77,15 @@ class SimpleWebAPITesting(Agent):
 
     def init(self):
         super().init()
-        self._setup_config_path()
-        self.config = self._load_config()
-        self._extract_config_values(self.config)
-        self._set_strategy()
+        configuration_handler = ConfigurationHandler(self.config_path, self.strategy_string)
+        self.config, self.strategy = configuration_handler.load()
+        self.token, self.host, self.description, self.correct_endpoints, self.query_params= configuration_handler._extract_config_values(self.config)
         self._load_openapi_specification()
         self._setup_environment()
         self._setup_handlers()
         self._setup_initial_prompt()
+        self.last_prompt = ""
 
-    def _setup_config_path(self):
-        if self.config_path:
-            # Current file's directory
-            current_file_path = os.path.dirname(os.path.abspath(__file__))
-
-            # Navigate to the desired directory
-            config_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file_path)))),  # Go three levels up
-                'config'  # Add the 'config' directory
-            )
-            self.config_path = os.path.join(config_path, self.config_path)
-
-    def _load_config(self):
-        if not os.path.exists(self.config_path):
-            raise FileNotFoundError(f"Configuration file not found at {self.config_path}")
-        with open(self.config_path, 'r') as file:
-            return json.load(file)
-
-    def _extract_config_values(self, config):
-        self.token = config.get("token")
-        self.host = config.get("host")
-        self.description = config.get("description")
-        self.correct_endpoints = config.get("correct_endpoints", {})
-        self.query_params = config.get("query_params", {})
-
-    def _set_strategy(self):
-        strategies = {
-            "cot": PromptStrategy.CHAIN_OF_THOUGHT,
-            "tot": PromptStrategy.TREE_OF_THOUGHT,
-            "icl": PromptStrategy.IN_CONTEXT
-        }
-        self.strategy = strategies.get(self._strategy, PromptStrategy.IN_CONTEXT)
 
     def _load_openapi_specification(self):
         if os.path.exists(self.config_path):
@@ -128,7 +95,7 @@ class SimpleWebAPITesting(Agent):
     def _setup_environment(self):
         self._context["host"] = self.host
         self._setup_capabilities()
-        self.categorized_endpoints = self.categorize_endpoints(self.correct_endpoints, self.query_params)
+        self.categorized_endpoints = self._openapi_specification_parser.categorize_endpoints(self.correct_endpoints, self.query_params)
         self.prompt_context = PromptContext.PENTESTING
 
     def _setup_handlers(self):
@@ -152,41 +119,6 @@ class SimpleWebAPITesting(Agent):
         self._report_handler = ReportHandler(self.config)
         self._test_handler = TestHandler(self._llm_handler)
 
-    def categorize_endpoints(self, endpoints, query: dict):
-        root_level = []
-        single_parameter = []
-        subresource = []
-        related_resource = []
-        multi_level_resource = []
-
-        for endpoint in endpoints:
-            # Split the endpoint by '/' and filter out empty strings
-            parts = [part for part in endpoint.split('/') if part]
-
-            # Determine the category based on the structure
-            if len(parts) == 1:
-                root_level.append(endpoint)
-            elif len(parts) == 2:
-                if "id" in endpoint:
-                    single_parameter.append(endpoint)
-                else:
-                    subresource.append(endpoint)
-            elif len(parts) == 3:
-                if "id" in endpoint:
-                    related_resource.append(endpoint)
-                else:
-                    multi_level_resource.append(endpoint)
-            else:
-                multi_level_resource.append(endpoint)
-
-        return {
-            "root_level": root_level,
-            "instance_level": single_parameter,
-            "subresource": subresource,
-            "query": query.values(),
-            "related_resource": related_resource,
-            "multi-level_resource": multi_level_resource,
-        }
 
     def _setup_initial_prompt(self) -> None:
         """
@@ -200,13 +132,10 @@ class SimpleWebAPITesting(Agent):
                 f"Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, "
                 f"and then devise and execute potential exploits. Be diligent in documenting your findings as you navigate through the APIs. "
                 f"Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves. "
-                f"Remember, if you encounter an HTTP method ({self.http_method_description}), promptly submit it as it is of utmost importance."
+                f"Remember, if you encounter an HTTP method ({self._http_method_description}), promptly submit it as it is of utmost importance."
             ),
         }
         self._prompt_history.append(initial_prompt)
-        handlers = (self._llm_handler, self._response_handler)
-        schemas: Dict[str, Any] = {}
-        endpoints: Dict[str, Any] = self.correct_endpoints
 
         self.prompt_engineer = PromptEngineer(
             strategy=self.strategy,
@@ -223,7 +152,7 @@ class SimpleWebAPITesting(Agent):
         Handles the event when all HTTP methods are found. Displays a congratulatory message
         and sets the _all_http_methods_found flag to True.
         """
-        self._log.console.print(Panel("All test cases run!", title="system"))
+        self.log.console.print(Panel("All test cases run!", title="system"))
         self._all_test_cases_run = True
 
     def _setup_capabilities(self) -> None:
@@ -232,9 +161,6 @@ class SimpleWebAPITesting(Agent):
         note recording capabilities, and HTTP method submission capabilities based on the provided
         configuration.
         """
-        methods_set: set[str] = {
-            self.http_method_template.format(method=method) for method in self.http_methods.split(",")
-        }
         notes: List[str] = self._context["notes"]
         parsed: List[str] = self._context["parsed"]
         test_cases = self._context["test_cases"]
@@ -265,14 +191,15 @@ class SimpleWebAPITesting(Agent):
         while self.purpose == self.prompt_engineer._purpose:
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore",
                                                           prompt_history=self._prompt_history)
+
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
-            self._handle_response(completion, response, prompt)
+            self._handle_response(completion, response)
 
         self.purpose = self.prompt_engineer._purpose
         if self.purpose == PromptPurpose.LOGGING_MONITORING:
             self.pentesting_information.next_testing_endpoint()
 
-    def _handle_response(self, completion: Any, response: Any, prompt) -> None:
+    def _handle_response(self, completion: Any, response: Any) -> None:
         """
         Handles the response from the LLM. Parses the response, executes the necessary actions,
         and updates the prompt history.
@@ -285,88 +212,70 @@ class SimpleWebAPITesting(Agent):
 
 
 
-        with self._log.console.status("[bold green]Executing that command..."):
-            if self.prompt_engineer._purpose == PromptPurpose.SETUP:
-                 response.action.method = "POST"
+        with self.log.console.status("[bold green]Executing that command..."):
+            if response is None:
+                return
 
-            if self.prompt_helper.current_user != {}:
-                if  "example" in self.prompt_helper.current_user.keys() and "id" in self.prompt_helper.current_user.get("example").keys():
-                    id = self.prompt_helper.current_user.get("example").get("id")
-                if "id" in self.prompt_helper.current_user.keys():
-                    id = self.prompt_helper.current_user.get("id")
-                test_step =  self.prompt_helper.current_test_step.get("steps")
-            token = self.prompt_helper.current_sub_step.get("token")
-            if token != "":
-                if self.config.get("name") == "vAPI":
-                    response.action.headers = {"Authorization-Token": f"{token}"}
-                else:
-
-                    response.action.headers = {"Authorization-Token": f"Bearer {token}"}
-
-            if response.action.path != self.prompt_helper.current_sub_step.get("path"):
-                response.action.path = self.prompt_helper.current_sub_step.get("path")
+            print(f'type:{type(response)}')
 
 
-            if "_id}" in response.action.path:
+            response = self.adjust_action(response)
 
-                if response.action.__class__.__name__ != "HTTPRequest":
-                    self.save_resource(response.action.path, response.action.data)
+            result = self.execute_response(response, completion)
 
-            if isinstance(response.action.path, dict):
-                response.action.path = response.action.path.get("path")
-
-
-
-            message = completion.choices[0].message
-            tool_call_id: str = message.tool_calls[0].id
-            command: str = pydantic_core.to_json(response).decode()
-            self._log.console.print(Panel(command, title="assistant"))
-            self._prompt_history.append(message)
-            if response.action.body == None:
-                response.action.body = self.prompt_helper.current_user
-            result: Any = response.execute()
-            self._log.console.print(Panel(result, title="tool"))
-            if not isinstance(result, str):
-                endpoint: str = str(response.action.path).split("/")[1]
-                self._report_handler.write_endpoint_to_report(endpoint)
-
-            self._prompt_history.append(
-                tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
-
-            if "token" in result and (self.token == "your_api_token_here"or self.token == ""):
-                self.token = self.extract_token_from_http_response(result)
-                for account in self.prompt_helper.accounts:
-                    if account.get("x") == self.prompt_helper.current_user.get("x"):
-                        account["token"] = self.token
-                self.pentesting_information.set_valid_token(self.token)
-            headers, body = result.split("\r\n\r\n", 1)
-            if "id" in body and self.prompt_helper.current_sub_step.get("purpose")== PromptPurpose.SETUP:
-                data = json.loads(body)
-                user_id = data.get('id')
-                for account in self.prompt_helper.accounts:
-                    if account.get("x") == self.prompt_helper.current_user.get("x"):
-                        account["id"] = user_id
-                        break
-
-            self._report_handler.write_vulnerability_to_report(self.prompt_helper.current_sub_step, result, self.prompt_helper.counter)
-
-
-            analysis, status_code = self._response_handler.evaluate_result(
-                result=result,
-                prompt_history=self._prompt_history,
-                analysis_context= self.prompt_engineer.prompt_helper.current_test_step)
-
-
-            self._prompt_history = self._test_handler.generate_test_cases(
-                analysis=analysis,
-                endpoint=response.action.path,
-                method=response.action.method,
-                prompt_history=self._prompt_history, status_code=status_code)
-            self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)
+            #self._report_handler.write_vulnerability_to_report(self.prompt_helper.current_sub_step, self.prompt_helper.current_test_step, result, self.prompt_helper.counter)
+            #
+            #analysis, status_code = self._response_handler.evaluate_result(
+            #    result=result,
+            #    prompt_history=self._prompt_history,
+            #    analysis_context= self.prompt_engineer.prompt_helper.current_test_step)
+            #
+            #if self.purpose != PromptPurpose.SETUP:
+            #    self._prompt_history = self._test_handler.generate_test_cases(
+            #    analysis=analysis,
+            #    endpoint=response.action.path,
+            #    method=response.action.method,
+            #    prompt_history=self._prompt_history, status_code=status_code)
+            #
+            #    self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)
         if self.prompt_engineer._purpose == PromptPurpose.LOGGING_MONITORING:
             self.all_test_cases_run()
 
+    def extract_ids(self, data, id_resources=None, parent_key=''):
+        if id_resources is None:
+            id_resources = {}
 
+        # If the data is a dictionary, iterate over each key-value pair
+        if isinstance(data, dict):
+            for key, value in data.items():
+                # Update the key to reflect nested structures
+                new_key = f"{parent_key}.{key}" if parent_key else key
+
+                # Check for 'id' in the key to classify it appropriately
+                if 'id' in key and isinstance(value, str):
+                    # Determine the category based on the key name before 'id'
+                    category = key.replace('id', '').rstrip('_').lower()  # Normalize the key
+                    if category == '':  # If no specific category, it could just be 'id'
+                        category = parent_key.split('.')[-1]  # Use parent key as category
+                    category = category.rstrip('s')  # Singular form for consistency
+                    if category != "id":
+                        category = category + "_id"
+
+                    # Append the ID to the appropriate category list
+                    if category in id_resources:
+                        id_resources[category].append(value)
+                    else:
+                        id_resources[category] = [value]
+                else:
+                    # Recursively search for ids within nested dictionaries or lists
+                    self.extract_ids(value, id_resources, new_key)
+
+        # If the data is a list, apply the function recursively to each item
+        elif isinstance(data, list):
+            for index, item in enumerate(data):
+                self.extract_ids(item, id_resources, f"{parent_key}[{index}]")
+
+        return id_resources
     def extract_resource_name(self, path: str) -> str:
         """
         Extracts the key resource word from a path.
@@ -436,6 +345,113 @@ class SimpleWebAPITesting(Agent):
             for i, account in enumerate(self.prompt_helper.accounts):
                 if account.get("x") == self.prompt_helper.current_user.get("x"):
                     self.pentesting_information.accounts[i][resource] = self.prompt_helper.current_user[resource]
+
+    def set_and_get_token(self, result):
+
+        if "token" in result and (not self.token or self.token == "your_api_token_here" or self.token == ""):
+            self.token = self.extract_token_from_http_response(result)
+            for account in self.prompt_helper.accounts:
+                if account.get("x") == self.prompt_helper.current_user.get("x") and "token" not in account.keys():
+                    account["token"] = self.token
+            self.prompt_helper.accounts = self.pentesting_information.accounts
+            # self.pentesting_information.set_valid_token(self.token)
+        if self.token and "token" not in self.prompt_helper.current_user:
+            self.prompt_helper.current_user["token"] = self.token
+
+        print(f'self.token:{self.token}')
+
+
+    def adjust_user(self, result):
+        headers, body = result.split("\r\n\r\n", 1)
+        print(f'body:{body}')
+        if "html" in body:
+            return
+
+        if "key" in body:
+            data = json.loads(body)
+            for account in self.prompt_helper.accounts:
+                if account.get("x") == self.prompt_helper.current_user.get("x"):
+                    account["key"] = data.get("key")
+        if "posts" in body:
+            data = json.loads(body)
+            # Extract ids
+            id_resources = self.extract_ids(data)
+            if len(self.pentesting_information.resources) == 0:
+                self.pentesting_information.resources = id_resources
+            else:
+                self.pentesting_information.resources.update(id_resources)
+
+        if "id" in body and self.prompt_helper.current_sub_step.get("purpose") == PromptPurpose.SETUP:
+            data = json.loads(body)
+            user_id = data.get('id')
+            for account in self.prompt_helper.accounts:
+
+                if account.get("x") == self.prompt_helper.current_user.get("x"):
+                    account["id"] = user_id
+                    break
+
+    def adjust_action(self, response:Any):
+        old_response = copy.deepcopy(response)
+
+        print(f'response:{response}')
+        print(f'response.action:{response.action}')
+        print(f'response.action.path:{response.action.path}')
+        if self.prompt_engineer._purpose == PromptPurpose.SETUP:
+            response.action.method = "POST"
+
+        token = self.prompt_helper.current_sub_step.get("token")
+        print(f'token:{token}')
+        if token and (token != "" or token is not None):
+            if self.config.get("name") == "vAPI":
+                response.action.headers = {"Authorization-Token": f"{token}"}
+            elif self.config.get("name") == "crapi":
+                response.action.headers = {"Authorization": f"Bearer {token}"}
+
+            else:
+
+                response.action.headers = {"Authorization-Token": f"Bearer {token}"}
+
+        if response.action.path != self.prompt_helper.current_sub_step.get("path"):
+            response.action.path = self.prompt_helper.current_sub_step.get("path")
+
+        if response.action.path and "_id}" in response.action.path:
+            if response.action.__class__.__name__ != "HTTPRequest":
+                self.save_resource(response.action.path, response.action.data)
+
+        if isinstance(response.action.path, dict):
+            response.action.path = response.action.path.get("path")
+
+        if response.action.body is None:
+            response.action.body = self.prompt_helper.current_user
+        print(f'response:{response}')
+
+        if response.action.path is None:
+            response.action.path = old_response.action.path
+        print(f' adjusted response:{response}')
+
+        return response
+
+    def execute_response(self, response, completion):
+        message = completion.choices[0].message
+        tool_call_id: str = message.tool_calls[0].id
+        command: str = pydantic_core.to_json(response).decode()
+        self.log.console.print(Panel(command, title="assistant"))
+        self._prompt_history.append(message)
+
+        result: Any = response.execute()
+        self.log.console.print(Panel(result, title="tool"))
+        if not isinstance(result, str):
+            endpoint: str = str(response.action.path).split("/")[1]
+            self._report_handler.write_endpoint_to_report(endpoint)
+
+        self._prompt_history.append(
+            tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
+
+        self.set_and_get_token(result)
+
+        self.adjust_user(result)
+        print(f' accounts after request:{self.pentesting_information.accounts}')
+        return result
 
 
 

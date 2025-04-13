@@ -1,5 +1,7 @@
 {
   "name": "OWASP Juice Shop",
+  "csv_file": "config/credentials.csv",
+  "password_file": "config/best1050.txt",
   "bender": {
     "email": "bender@juice-sh.op",
     "password": "a"

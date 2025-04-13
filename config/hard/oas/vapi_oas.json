@@ -49,6 +49,63 @@
                 }
             }
         },
+        "/vapi/api3/comment": {
+      "get": {
+        "tags": [
+          "API3"
+        ],
+        "summary": "Fetch comments",
+        "description": "Retrieve comments for the specific API endpoint.",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "example": "application/json"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "comments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "user": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": [
+                    {
+                      "id": 1,
+                      "text": "This is a comment.",
+                      "user": "user1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
         "/vapi/api1/user/{id}": {
             "get": {
                 "tags": [

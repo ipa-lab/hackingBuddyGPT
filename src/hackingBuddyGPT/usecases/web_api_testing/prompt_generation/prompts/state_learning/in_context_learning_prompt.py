@@ -38,7 +38,6 @@ class InContextLearningPrompt(StatePlanningPrompt):
             context_information (Dict[int, Dict[str, str]]): A dictionary containing the prompts for each round.
         """
         super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.IN_CONTEXT)
-        self.explored_steps = []
         self.prompt: Dict[int, Dict[str, str]] = context_information
         self.purpose: Optional[PromptPurpose] = None
         self.open_api_spec = open_api_spec
@@ -64,7 +63,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
         if self.context == PromptContext.DOCUMENTATION:
             steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt)
         else:
-            steps = self._get_pentesting_steps(move_type=move_type, common_step=previous_prompt)
+            steps = self._get_pentesting_steps(move_type=move_type)
 
         return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=steps)
 
@@ -107,83 +106,13 @@ class InContextLearningPrompt(StatePlanningPrompt):
             #   self.current_step == 1
             doc_steps = icl + doc_steps[1:]
             # self.current_step += 1
-            return self.prompt_helper._get_initial_documentation_steps(
+            return self.prompt_helper.get_initial_documentation_steps(
                 strategy_steps=doc_steps)
         else:
             return self.prompt_helper.get_endpoints_needing_help(
                 info=f"Based on this information :\n{icl_prompt}\n Do the following: ")
 
-    def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> List[str]:
-        """
-        Provides the steps for the chain-of-thought strategy when the context is pentesting.
 
-        Args:
-            move_type (str): The type of move to generate.
-            common_step (Optional[str]): A common step prefix to apply to each generated step.
-
-        Returns:
-            List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
-        """
-
-        if self.previous_purpose != self.purpose:
-            self.previous_purpose = self.purpose
-            self.test_cases = self.pentesting_information.explore_steps(self.purpose)
-            if self.purpose == PromptPurpose.SETUP:
-                if self.counter == 0:
-                    self.prompt_helper.accounts = self.pentesting_information.accounts
-            else:
-                self.pentesting_information.accounts = self.prompt_helper.accounts
-        else:
-            self.pentesting_information.accounts = self.prompt_helper.accounts
-
-        purpose = self.purpose
-
-        if move_type == "explore":
-            test_cases = self.get_test_cases(self.test_cases)
-            for test_case in test_cases:
-                if purpose not in self.transformed_steps.keys():
-                    self.transformed_steps[purpose] = []
-                # Transform steps into icl based on purpose
-                self.transformed_steps[purpose].append(
-                    self.transform_to_icl_with_previous_examples(test_case, purpose)
-                )
-
-                # Extract the CoT for the current purpose
-                icl_steps = self.transformed_steps[purpose]
-
-                # Process steps one by one, with memory of explored steps and conditional handling
-                for icl_test_case in icl_steps:
-                    if icl_test_case not in self.explored_steps and not self.all_substeps_explored(icl_test_case):
-                        self.current_step = icl_test_case
-                        # single step test case
-                        if len(icl_test_case.get("steps")) == 1:
-                            self.current_sub_step = icl_test_case.get("steps")[0]
-                            self.current_sub_step["path"] = icl_test_case.get("path")[0]
-                        else:
-                            if self.counter < len(icl_test_case.get("steps")):
-                                # multi-step test case
-                                self.current_sub_step = icl_test_case.get("steps")[self.counter]
-                                if len(icl_test_case.get("path")) > 1:
-                                    self.current_sub_step["path"] = icl_test_case.get("path")[self.counter]
-                            self.explored_sub_steps.append(self.current_sub_step)
-                        self.explored_steps.append(icl_test_case)
-
-
-                        print(f'Current step: {self.current_step}')
-                        print(f'Current sub step: {self.current_sub_step}')
-
-                        self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step, self.pentesting_information.accounts)
-                        self.prompt_helper.counter = self.counter
-
-                        step = self.transform_test_case_to_string(self.current_step, "steps")
-                        self.counter += 1
-                        # if last step of exploration, change purpose to next
-                        self.next_purpose(icl_test_case,test_cases, purpose)
-
-                        return [step]
-
-        # Default steps if none match
-        return ["Look for exploits."]
 
     import json
 
@@ -269,7 +198,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
         return result
 
 
-    def transform_to_icl_with_previous_examples(self, test_case, purpose):
+    def transform_into_prompt_structure_with_previous_examples(self, test_case, purpose):
         """
             Transforms a single test case into a  In context learning structure.
 

@@ -1,9 +1,7 @@
-import json
 import os
 from dataclasses import field
 from typing import Dict
 
-import yaml
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
@@ -13,9 +11,10 @@ from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specificatio
     OpenAPISpecificationHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer, PromptStrategy
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api_testing.utils.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
@@ -36,6 +35,12 @@ class SimpleWebAPIDocumentation(Agent):
         default="",
     )
 
+    strategy_string: str = parameter(
+        desc="strategy string",
+        default="",
+    )
+
+
     _http_method_description: str = parameter(
         desc="Pattern description for expected HTTP methods in the API response",
         default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).",
@@ -54,41 +59,23 @@ class SimpleWebAPIDocumentation(Agent):
         """Initialize the agent with configurations, capabilities, and handlers."""
         super().init()
         self.explore_steps_done = False
-
-        self.found_all_http_methods: bool = False
-        if self.config_path != "":
-            if self.config_path != "":
-                current_file_path = os.path.dirname(os.path.abspath(__file__))
-                self.config_path = os.path.join(current_file_path, "configs", self.config_path)
-        config = self._load_config(self.config_path)
-        token, self.host, description, self._correct_endpoints, query_params = (
-            config.get("token"), config.get("host"), config.get("description"), config.get("correct_endpoints"),
-            config.get("query_params")
-        )
-
+        self.found_all_http_methods = False
         self.all_steps_done = False
+
+
+        config_handler = ConfigurationHandler(self.config_path, self.strategy_string)
+        config, self.strategy = config_handler.load()
+        token, self.host, description, self._correct_endpoints, query_params = config_handler._extract_config_values(config)
 
         self.categorized_endpoints = self.categorize_endpoints(self._correct_endpoints, query_params)
 
-        if "spotify" in self.config_path:
-            os.environ['SPOTIPY_CLIENT_ID'] = config['client_id']
-            os.environ['SPOTIPY_CLIENT_SECRET'] = config['client_secret']
-            os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
         self._setup_capabilities()
-        self._set_strategy()
+        self._prompt_context = PromptContext.DOCUMENTATION
         name, initial_prompt = self._setup_initial_prompt(description=description)
         self._initialize_handlers(config=config, description=description, token=token, name=name,
                                   initial_prompt=initial_prompt)
 
-    def _set_strategy(self):
-        if self._strategy == "cot":
-            self._strategy = PromptStrategy.CHAIN_OF_THOUGHT
-        elif self._strategy == "tot":
-            self._strategy = PromptStrategy.TREE_OF_THOUGHT
-        else:
-            self._strategy = PromptStrategy.IN_CONTEXT
 
-        self._prompt_context = PromptContext.DOCUMENTATION
 
     def _setup_initial_prompt(self, description: str):
         """Configures the initial prompt for the documentation process."""
@@ -106,7 +93,7 @@ class SimpleWebAPIDocumentation(Agent):
         # Split the base name by '_config' and take the first part
         name = base_name.split('_config')[0]
 
-        self.prompt_helper = PromptGenerationHelper(self.host, description) # TODO Remove
+        self.prompt_helper = PromptGenerationHelper(self.host, description)
         return name, initial_prompt
 
     def _initialize_handlers(self, config, description, token, name, initial_prompt):
@@ -117,13 +104,13 @@ class SimpleWebAPIDocumentation(Agent):
         self._response_handler = ResponseHandler(llm_handler=self._llm_handler, prompt_context=self._prompt_context,
                                                  prompt_helper=self.prompt_helper, config=config)
         self._documentation_handler = OpenAPISpecificationHandler(
-            self._llm_handler, self._response_handler, self._strategy, self.host, description, name
+            self._llm_handler, self._response_handler, self.strategy, self.host, description, name
         )
 
         self._prompt_history.append(initial_prompt)
 
         self._prompt_engineer = PromptEngineer(
-            strategy=self._strategy,
+            strategy=self.strategy,
             context=self._prompt_context,
             prompt_helper=self.prompt_helper,
             open_api_spec=self._documentation_handler.openapi_spec,
@@ -167,10 +154,7 @@ class SimpleWebAPIDocumentation(Agent):
             "multi-level_resource": multi_level_resource,
         }
 
-    def _load_config(self, path):
-        """Loads JSON configuration from the specified path."""
-        with open(path, 'r') as file:
-            return json.load(file)
+
 
     def _setup_capabilities(self):
         """Initializes agent's capabilities for API documentation."""
@@ -245,7 +229,7 @@ class SimpleWebAPIDocumentation(Agent):
             is_good, self._prompt_history, result, result_str = self._response_handler.handle_response(response,
                                                                                                        completion,
                                                                                                        self._prompt_history,
-                                                                                                       self._log,
+                                                                                                       self.log,
                                                                                                        self.categorized_endpoints,
                                                                                                        move_type)
 

@@ -97,13 +97,13 @@ class PromptGenerationHelper(object):
                         if acc[key] == user_info[key]:
                             counter +=1
 
-            if counter == len(acc.keys()) - 1:
+            if "x" in acc:
 
                 user_info["x"] = acc["x"]
                 break
-            else:
+            if "x" not in acc or acc["x"] == "":
                 user_info["x"] = ""
-
+            counter += 1
         return user_info
 
     def find_missing_endpoint(self, endpoints: list) -> str:
@@ -199,7 +199,7 @@ class PromptGenerationHelper(object):
             f"Look for any endpoint that might be missing params, exclude endpoints from this list :{unsuccessful_paths}"]
 
 
-    def _get_initial_documentation_steps(self, strategy_steps):
+    def get_initial_documentation_steps(self, strategy_steps):
         """
         Constructs a series of documentation steps to guide the testing and documentation of API endpoints.
         These steps are formulated based on the strategy specified and integrate common steps that are essential

@@ -10,7 +10,7 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts import (
     BasicPrompt,
 )
 
-from typing import List, Optional
+from typing import List, Optional, Any
 
 
 class TaskPlanningPrompt(BasicPrompt):
@@ -61,10 +61,84 @@ class TaskPlanningPrompt(BasicPrompt):
         """
         if move_type == "explore":
             doc_steps = self.generate_documentation_steps(self.get_documentation_steps())
-            return self.prompt_helper._get_initial_documentation_steps(
+            return self.prompt_helper.get_initial_documentation_steps(
                                                                        strategy_steps= doc_steps)
         else:
             return self.prompt_helper.get_endpoints_needing_help()
+
+    def _get_pentesting_steps(self, move_type: str, common_step: Optional[str] = "") -> Any:
+        """
+        Provides the steps for the chain-of-thought strategy when the context is pentesting.
+
+        Args:
+            move_type (str): The type of move to generate.
+            common_step (Optional[str]): A list of common steps for generating prompts.
+
+        Returns:
+            List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
+        """
+
+        if self.previous_purpose != self.purpose:
+            self.previous_purpose = self.purpose
+            self.test_cases = self.pentesting_information.explore_steps(self.purpose)
+            if self.purpose == PromptPurpose.SETUP:
+                if self.counter == 0:
+                    self.prompt_helper.accounts = self.pentesting_information.accounts
+
+            else:
+                self.pentesting_information.accounts = self.prompt_helper.accounts
+
+        else:
+
+            self.prompt_helper.accounts = self.pentesting_information.accounts
+
+        purpose = self.purpose
+
+        if move_type == "explore":
+            test_cases = self.get_test_cases(self.test_cases)
+            for test_case in test_cases:
+                if purpose not in self.transformed_steps.keys():
+                    self.transformed_steps[purpose] = []
+                # Transform steps into icl based on purpose
+                self.transformed_steps[purpose].append(
+                    self.transform_into_prompt_structure(test_case, purpose)
+                )
+
+                # Extract the Task planning test cases for the current purpose
+                task_planning_test_cases = self.transformed_steps[purpose]
+
+                # Process steps one by one, with memory of explored steps and conditional handling
+                for task_planning_test_case in task_planning_test_cases:
+                    if task_planning_test_case not in self.explored_steps and not self.all_substeps_explored(task_planning_test_case):
+                        self.current_step = task_planning_test_case
+                        # single step test case
+                        if len(task_planning_test_case.get("steps")) == 1:
+                            self.current_sub_step = task_planning_test_case.get("steps")[0]
+                            self.current_sub_step["path"] = task_planning_test_case.get("path")[0]
+                        else:
+                            if self.counter < len(task_planning_test_case.get("steps")):
+                                # multi-step test case
+                                self.current_sub_step = task_planning_test_case.get("steps")[self.counter]
+                                if len(task_planning_test_case.get("path")) > 1:
+                                    self.current_sub_step["path"] = task_planning_test_case.get("path")[self.counter]
+                            self.explored_sub_steps.append(self.current_sub_step)
+                        self.explored_steps.append(task_planning_test_case)
+
+
+                        self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step,
+                                                                                                  self.pentesting_information.accounts)
+                        self.prompt_helper.counter = self.counter
+
+                        step = self.transform_test_case_to_string(self.current_step, "steps")
+                        self.counter += 1
+                        # if last step of exploration, change purpose to next
+                        self.next_purpose(task_planning_test_case, test_cases, purpose)
+
+                        return [step]
+
+        # Default steps if none match
+        return ["Look for exploits."]
+
 
     def _get_common_steps(self) -> List[str]:
         """
@@ -118,6 +192,7 @@ class TaskPlanningPrompt(BasicPrompt):
     @abstractmethod
     def generate_documentation_steps(self, steps: List[str]) -> List[str] :
         pass
+
     def get_test_cases(self, test_cases):
         while len(test_cases) == 0:
             for purpose in self.pentesting_information.pentesting_step_list:
@@ -125,7 +200,15 @@ class TaskPlanningPrompt(BasicPrompt):
                     continue
                 else:
                     test_cases = self.pentesting_information.get_steps_of_phase(purpose)
-                    if test_cases != None :
+                    if test_cases is not None:
                         if len(test_cases) != 0 :
                             return test_cases
         return test_cases
+
+    @abstractmethod
+    def transform_test_case_to_string(self, current_step, param):
+        pass
+
+    @abstractmethod
+    def transform_into_prompt_structure(self, test_case, purpose):
+        pass

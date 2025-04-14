@@ -68,6 +68,13 @@ testing = ['pytest', 'pytest-mock']
 dev = [
 	'ruff',
 ]
+rag-usecase = [
+    'langchain-community',
+	'langchain-openai',
+	'markdown',
+	'chromadb',
+	'langchain-chroma',
+]
 
 [project.scripts]
 wintermute = "hackingBuddyGPT.cli.wintermute:main"

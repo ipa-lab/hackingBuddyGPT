@@ -125,12 +125,20 @@ class TaskPlanningPrompt(BasicPrompt):
                         self.explored_steps.append(task_planning_test_case)
 
 
+
                         self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step,
                                                                                                   self.pentesting_information.accounts)
+
                         self.prompt_helper.counter = self.counter
 
                         step = self.transform_test_case_to_string(self.current_step, "steps")
+
+                        if self.prompt_helper.current_user is not None or isinstance(self.prompt_helper.current_user,                                                      dict):
+                            if "token" in self.prompt_helper.current_user and "'{{token}}'" in step:
+                                step = step.replace("'{{token}}'", self.prompt_helper.current_user.get("token"))
+
                         print(f'sub step:{self.current_sub_step}')
+                        print(f'step:{step}')
                         print(f'purpose:{self.purpose}')
                         self.counter += 1
                         # if last step of exploration, change purpose to next

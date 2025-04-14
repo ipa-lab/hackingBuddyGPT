@@ -49,8 +49,12 @@ class ResponseAnalyzer:
 
         if body != {} and bool(body and not body.isspace()):
             body = json.loads(body)[0]
-        else:
-            body = "Empty"
+
+        if body == "":
+            for line in header_lines:
+                if line.startswith("{") or line.startswith("["):
+                    body = line
+                    body = json.loads(body)
 
         status_line = header_lines[0].strip()
         headers = {
@@ -91,7 +95,7 @@ class ResponseAnalyzer:
             Optional[Dict[str, Any]]: The analysis results based on the purpose.
         """
         analysis_methods = {
-            PromptPurpose.AUTHENTICATION_AUTHORIZATION: self.analyze_authentication_authorization(
+            PromptPurpose.AUTHENTICATION: self.analyze_authentication_authorization(
                 status_code, headers, body
             ),
             PromptPurpose.INPUT_VALIDATION: self.analyze_input_validation(status_code, headers, body),

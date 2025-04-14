@@ -105,7 +105,7 @@ class ResponseAnalyzerWithLLM:
         body = header_body_split[1] if len(header_body_split) > 1 else ""
         if body == "":
             for line in header_lines:
-                if line.startswith("{"):
+                if line.startswith("{") or line.startswith("["):
                     body = line
 
         status_line = header_lines[0].strip()
@@ -135,8 +135,7 @@ class ResponseAnalyzerWithLLM:
                         self.prompt_helper.current_user["token"] = body["token"]
                         self.token = body["token"]
                         for account in self.prompt_helper.accounts:
-                                if account.get("x") == self.prompt_helper.current_user.get(
-                                        "x"):
+                                if account.get("x") == self.prompt_helper.current_user.get("x"):
                                     if  "token" not in account.keys():
                                         account["token"] = self.token
                                     else:

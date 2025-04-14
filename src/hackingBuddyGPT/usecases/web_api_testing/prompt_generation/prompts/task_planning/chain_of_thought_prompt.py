@@ -89,8 +89,9 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
 
         # Process steps in the test case
         counter = 0
-        print(f' test case:{test_case}')
+        #print(f' test case:{test_case}')
         for step in test_case["steps"]:
+            print(f'step:{step}')
             if counter < len(test_case["security"]):
                 security = test_case["security"][counter]
             else:
@@ -103,7 +104,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 else:
                     expected_response_code = test_case["expected_response_code"]
 
-                print(f'COunter: {counter}')
+                #print(f'COunter: {counter}')
                 token = test_case["token"][counter]
                 path = test_case["path"][counter]
             else:
@@ -123,7 +124,6 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 "token": token,
                 "path": path
             }
-            print(f' step: {step}')
             counter += 1
             transformed_case["steps"].append(step_details)
 

@@ -1,4 +1,5 @@
 {
+  "name": "test",
   "token": "your_api_token_here",
   "host": "No host URL provided.",
   "description": "See https://jsonplaceholder.typicode.com/",
@@ -6,5 +7,7 @@
     "/posts",
     "/posts/{id}"
   ],
-  "query_params": {}
+  "query_params": {},
+  "password_file": "/Users/dianastr/master/hackingBuddyGPT/config/best1050.txt",
+  "csv_file": "/Users/dianastr/master/hackingBuddyGPT/config/credentials.csv"
 }

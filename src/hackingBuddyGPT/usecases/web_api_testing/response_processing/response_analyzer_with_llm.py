@@ -103,6 +103,11 @@ class ResponseAnalyzerWithLLM:
         header_body_split = raw_response.split("\r\n\r\n", 1)
         header_lines = header_body_split[0].split("\n")
         body = header_body_split[1] if len(header_body_split) > 1 else ""
+        if body == "":
+            for line in header_lines:
+                if line.startswith("{"):
+                    body = line
+
         status_line = header_lines[0].strip()
 
         match = re.search(r"^HTTP/\d\.\d\s+(\d+)\s+(.*)", raw_response, re.MULTILINE)
@@ -126,19 +131,26 @@ class ResponseAnalyzerWithLLM:
                 if not  body.lower().__contains__("png") :
                     body = json.loads(body)
                     if "token" in body:
+
                         self.prompt_helper.current_user["token"] = body["token"]
                         self.token = body["token"]
+                        for account in self.prompt_helper.accounts:
+                                if account.get("x") == self.prompt_helper.current_user.get(
+                                        "x"):
+                                    if  "token" not in account.keys():
+                                        account["token"] = self.token
+                                    else:
+                                        if account["token"] != self.token:
+                                            account["token"] = self.token
+                                    print(f'token:{self.token}')
+                                    print(f"accoun:{account}")
                     if any (value in body.values() for value in self.prompt_helper.current_user.values()):
                         if "id" in body:
-                            self.prompt_helper.current_user["id"] = body["id"]
-                    if self.prompt_helper.current_user not in self.prompt_helper.accounts  and self.prompt_helper.current_user != {} and "x" in self.prompt_helper.current_user:
-                        for i, acc in enumerate(self.prompt_helper.accounts):
-                            if "x" in acc:
-                                print(f' ac:{acc}')
-                                print(f' curr user:{self.prompt_helper.current_user}')
-                                if acc["x"] == self.prompt_helper.current_user["x"]:
-                                    self.prompt_helper.accounts[i] =self.prompt_helper.current_user
-                                    break
+                            for account in self.prompt_helper.accounts:
+                                if account.get("x") == self.prompt_helper.current_user.get(
+                                        "x") and "id" not in account.keys():
+                                    account["id"] = body["id"]
+
 
                     #self.replace_account()
             elif isinstance(body, list) and len(body) > 1:

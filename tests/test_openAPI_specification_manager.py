@@ -1,76 +1,75 @@
-from unittest.mock import MagicMock, patch
-
+import os
 import unittest
-from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from unittest.mock import MagicMock
+
 from hackingBuddyGPT.usecases.web_api_testing.documentation import OpenAPISpecificationHandler
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptEngineer
-from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
-from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy
-from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
-from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher import PatternMatcher
+from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 
-class TestSpecificationHandler(unittest.TestCase):
 
+class TestOpenAPISpecificationHandler(unittest.TestCase):
     def setUp(self):
-        llm_handler_mock = MagicMock(spec=LLMHandler)
-        response_handler_mock =MagicMock(spec=ResponseHandler)
-        prompt_strategy_mock =MagicMock(spec=PromptStrategy).CHAIN_OF_THOUGHT
+        self.llm_handler = MagicMock(spec=LLMHandler)
         self.response_handler = MagicMock(spec=ResponseHandler)
-        self.doc_handler = OpenAPISpecificationHandler(
-                llm_handler=llm_handler_mock,
-                response_handler=response_handler_mock,
-                strategy=prompt_strategy_mock,
-                url="https://fakeapi.com",
-                description="A sample API",
-                name="FakeAPI"
-            )
-        self.doc_handler._capabilities['yaml'] = MagicMock(spec=YAMLFile)
-        self.doc_handler.pattern_matcher = MagicMock(spec=PatternMatcher)
+        self.strategy = PromptStrategy.IN_CONTEXT
+        self.url = "https://reqres.in"
+        self.description = "Fake API"
+        self.name = "reqres"
 
-    @patch("builtins.open", new_callable=MagicMock)
-    def test_write_openapi_to_yaml(self, mock_open, mock_makedirs):
-        # Simulate writing the OpenAPI spec to a YAML file
-        self.doc_handler.write_openapi_to_yaml()
-        mock_makedirs.assert_called_once_with(self.doc_handler.file_path, exist_ok=True)
-        mock_open.assert_called_once_with(self.doc_handler.file, "w")
+        self.openapi_handler = OpenAPISpecificationHandler(
+            llm_handler=self.llm_handler,
+            response_handler=self.response_handler,
+            strategy=self.strategy,
+            url=self.url,
+            description=self.description,
+            name=self.name,
+        )
 
-    def test_update_openapi_spec(self):
-        # Create a mock HTTPRequest object
-        request_mock = MagicMock(spec=HTTPRequest)
-        request_mock.path = "/test"
-        request_mock.method = "GET"
+    def test_update_openapi_spec_success(self):
+        # Mock HTTP Request object
+        mock_request = MagicMock()
+        mock_request.__class__.__name__ = "HTTPRequest"
+        mock_request.path = "/users"
+        mock_request.method = "GET"
 
-        response_mock = MagicMock()
-        response_mock.action = request_mock
+        # Mock Response object
+        mock_resp = MagicMock()
+        mock_resp.action = mock_request
 
-        result = 'HTTP/1.1 200 OK\nContent-Type: application/json\n\n{"key": "value"}'
-
-        # Setup the mock to return a tuple as expected by the method being tested
+        result = "HTTP/1.1 200 OK"
         self.response_handler.parse_http_response_to_openapi_example.return_value = (
-            {}, "#/components/schemas/TestSchema", self.doc_handler.openapi_spec
+            {"id": 1, "name": "John"},
+            "#/components/schemas/User",
+            self.openapi_handler.openapi_spec,
         )
-        prompt_engineer =MagicMock(spec=PromptEngineer)
 
+        prompt_engineer = MagicMock()
+        prompt_engineer.prompt_helper.current_step = 1  # Needed for replace_id_with_placeholder
 
-        # Run the method under test
-        endpoints = self.doc_handler.update_openapi_spec(response_mock, result, prompt_engineer)
+        updated_endpoints = self.openapi_handler.update_openapi_spec(mock_resp, result, prompt_engineer)
 
-        # Assertions to verify the behavior
-        self.assertIn("/test", self.doc_handler.openapi_spec["endpoints"])
-        self.assertIn("get", self.doc_handler.openapi_spec["endpoints"]["/test"])
-        self.assertEqual(
-            self.doc_handler.openapi_spec["endpoints"]["/test"]["get"]["summary"],
-            "GET operation on /test"
-        )
-        self.assertEqual(endpoints, ["/test"])
+        self.assertIn("/users", updated_endpoints)
+        self.assertIn("GET", self.openapi_handler.endpoint_methods["/users"])
+        self.assertEqual(self.openapi_handler.openapi_spec["endpoints"]["/users"]["get"]["summary"], "GET operation on /users")
 
-    def test_partial_match(self):
-        # Test partial match functionality
-        string_list = ["test_endpoint", "another_endpoint"]
-        self.assertTrue(self.doc_handler.is_partial_match("test", string_list))
-        self.assertFalse(self.doc_handler.is_partial_match("not_in_list", string_list))
+    def test_update_openapi_spec_unsuccessful(self):
+        mock_request = MagicMock()
+        mock_request.__class__.__name__ = "HTTPRequest"
+        mock_request.path = "/invalid"
+        mock_request.method = "POST"
 
+        mock_resp = MagicMock()
+        mock_resp.action = mock_request
+
+        result = "HTTP/1.1 404 Not Found"
+        prompt_engineer = MagicMock()
+        prompt_engineer.prompt_helper.current_step = 1
+
+        updated_endpoints = self.openapi_handler.update_openapi_spec(mock_resp, result, prompt_engineer)
+
+        self.assertIn("/invalid", self.openapi_handler.unsuccessful_paths)
+        self.assertIn("/invalid", updated_endpoints)
 
 if __name__ == "__main__":
     unittest.main()

@@ -346,25 +346,9 @@ class SimpleWebAPITesting(Agent):
                 if account.get("x") == self.prompt_helper.current_user.get("x"):
                     self.pentesting_information.accounts[i][resource] = self.prompt_helper.current_user[resource]
 
-    def set_and_get_token(self, result):
-
-
-        if "token" in result and (not self.token or self.token == "your_api_token_here" or self.token == ""):
-            self.token = self.extract_token_from_http_response(result)
-            for account in self.prompt_helper.accounts:
-                if account.get("x") == self.prompt_helper.current_user.get("x") and "token" not in account.keys():
-                    account["token"] = self.token
-
-        if "token" not in self.prompt_helper.current_user and "token" in result:
-            self.token = self.extract_token_from_http_response(result)
-            self.prompt_helper.current_user["token"] = self.token
-            for account in self.prompt_helper.accounts:
-                if account.get("x") == self.prompt_helper.current_user.get("x") and "token" not in account.keys():
-                    account["token"] = self.token
 
     def adjust_user(self, result):
         headers, body = result.split("\r\n\r\n", 1)
-        print(f'body:{body}')
         if "html" in body:
             return
 
@@ -448,10 +432,10 @@ class SimpleWebAPITesting(Agent):
         self._prompt_history.append(
             tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
-        self.set_and_get_token(result)
 
         self.adjust_user(result)
-        print(f' accounts after request:{self.pentesting_information.accounts}')
+        for account in self.pentesting_information.accounts:
+            print(f' accounts after request:{account}')
         return result
 
 

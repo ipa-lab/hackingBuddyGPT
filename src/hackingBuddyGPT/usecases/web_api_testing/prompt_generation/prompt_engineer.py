@@ -94,6 +94,8 @@ class PromptEngineer:
             ValueError: If an invalid prompt strategy is specified.
         """
 
+        if prompt_history is None:
+            prompt_history = []
         if not self._prompt_func:
             raise ValueError("Invalid prompt strategy")
 

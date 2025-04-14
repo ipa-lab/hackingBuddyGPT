@@ -229,7 +229,24 @@ class OpenAPISpecificationParser:
                     )
                     classified = True
 
-
+                    # User creation endpoint
+                    if any(keyword in path.lower() for keyword in
+                           ['users', 'signup']) and not "login" in path or any(
+                            word in description for word in ['create a user']):
+                        if not any(keyword in path.lower() for keyword in
+                                   ['pictures', 'verify-email-token', 'change-email', "reset", "verify", "videos",
+                                    "mechanic"]):
+                            if method.upper() == "POST" and not "data-export" in path:
+                                if "OWASP" in name:
+                                    if "sers" not in path:
+                                        continue
+                                    if not (path.endswith("user") or path.endswith("users") or path.endswith("signup")):
+                                        continue
+                                classifications["account_creation"].append({
+                                    "method": method.upper(),
+                                    "path": path,
+                                    "schema": schema})
+                                classified = True
 
                 # Secure action endpoints: Identified by roles or protected access
                 if any(keyword in path.lower() for keyword in ["user", "admin"]):
@@ -277,20 +294,7 @@ class OpenAPISpecificationParser:
                             "path":path,
                             "schema": schema})
                     classified = True
-                # User creation endpoint
-                if any(keyword in path.lower() for keyword in ['user', 'users', 'signup']) and not "login" in path or any(word in description for word in ['create a user']):
-                    if not any(keyword in path.lower() for keyword in ['pictures', 'verify-email-token', 'change-email', "reset", "verify", "videos", "mechanic"]):
-                        if method.upper() == "POST" and not "data-export" in path:
-                            if "OWASP" in name:
-                                if "sers" not in path :
-                                    continue
-                                if not (path.endswith("user") or path.endswith("users") or path.endswith("signup")):
-                                    continue
-                            classifications["account_creation"].append({
-                            "method":method.upper(),
-                            "path":path,
-                            "schema": schema})
-                            classified = True
+
                 # Login endpoints
                 if any(keyword in path.lower() for keyword in ['login', 'signin', 'sign-in']):
                     if method.upper() == "POST":
@@ -327,17 +331,6 @@ class OpenAPISpecificationParser:
                                 "path": path,
                                 "schema": schema})
 
-        # Combine items from account_creation and login_endpoint into a set of tuples
-       #to_remove = {
-       #    (item.get("method"), item.get("path"))
-       #    for item in classifications['account_creation'] + classifications['login_endpoint']
-       #}
-       #
-       ## Rebuild authentication_endpoint without the items in to_remove
-       #classifications['authentication_endpoint'] = [
-       #    item for item in classifications['authentication_endpoint'] if item not in to_remove
-       #]
-       #
         return classifications
 
 

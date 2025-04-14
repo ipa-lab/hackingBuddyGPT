@@ -130,6 +130,8 @@ class TaskPlanningPrompt(BasicPrompt):
                         self.prompt_helper.counter = self.counter
 
                         step = self.transform_test_case_to_string(self.current_step, "steps")
+                        print(f'sub step:{self.current_sub_step}')
+                        print(f'purpose:{self.purpose}')
                         self.counter += 1
                         # if last step of exploration, change purpose to next
                         self.next_purpose(task_planning_test_case, test_cases, purpose)

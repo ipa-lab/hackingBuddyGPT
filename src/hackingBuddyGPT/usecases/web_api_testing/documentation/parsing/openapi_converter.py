@@ -155,6 +155,6 @@ if __name__ == "__main__":
     # if json_file:
     #    converter.json_to_yaml(json_file)
 
-    openapi_path = "/tests/test_files/test_config.json"
+    openapi_path = "/Users/dianastr/master/hackingBuddyGPT/tests/test_files/oas/reqres_oas.json"
     converter.extract_openapi_info(openapi_path,
-                                   output_path="/home/diana/Desktop/masterthesis/00/hackingBuddyGPT/tests/test_files")
+                                   output_path="/Users/dianastr/master/hackingBuddyGPT/tests/test_files")

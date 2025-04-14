@@ -97,10 +97,7 @@ class PromptGenerationHelper(object):
                         if acc[key] == user_info[key]:
                             counter +=1
 
-            if "x" in acc:
-                user_info = acc
-                break
-            elif "x" not in acc or acc["x"] == "":
+            if "x" not in acc or acc["x"] == "":
                 user_info["x"] = ""
             counter += 1
         return user_info
@@ -246,8 +243,11 @@ class PromptGenerationHelper(object):
         def validate_prompt(prompt):
             return prompt
 
+        if previous_prompt is None:
+            potential_prompt = str(steps) + "\n"
+            return validate_prompt(potential_prompt)
 
-        if steps != None and not all(step in previous_prompt for step in steps):
+        if steps is not None and previous_prompt is not None and not all(step in previous_prompt for step in steps):
             if isinstance(steps, list):
                 potential_prompt = "\n".join(str(element) for element in steps)
             else:

@@ -65,6 +65,9 @@ class InContextLearningPrompt(StatePlanningPrompt):
         else:
             steps = self._get_pentesting_steps(move_type=move_type)
 
+        if hint:
+            steps = steps + [hint]
+
         return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=steps)
 
     def _get_documentation_steps(self, move_type: str, previous_prompt) -> List[str]:

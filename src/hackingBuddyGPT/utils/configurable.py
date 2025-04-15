@@ -2,33 +2,64 @@ import argparse
 import dataclasses
 import inspect
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, Field, MISSING, _MISSING_TYPE
 from types import NoneType
-from typing import Any, Dict, Type, TypeVar, Set, Union
+from typing import Any, Dict, Type, TypeVar, Set, Union, Optional, overload
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
+T = TypeVar("T")
+
+
+@overload
 def parameter(
     *,
     desc: str,
-    default=dataclasses.MISSING,
+    default: T = ...,
     init: bool = True,
     repr: bool = True,
-    hash=None,
+    hash: Optional[bool] = None,
     compare: bool = True,
-    metadata: Dict = None,
-    kw_only: bool = dataclasses.MISSING,
-):
+    metadata: Optional[Dict[str, Any]] = ...,
+    kw_only: Union[bool, _MISSING_TYPE] = MISSING,
+) -> T:
+    ...
+
+@overload
+def parameter(
+    *,
+    desc: str,
+    default: T = ...,
+    init: bool = True,
+    repr: bool = True,
+    hash: Optional[bool] = None,
+    compare: bool = True,
+    metadata: Optional[Dict[str, Any]] = ...,
+    kw_only: Union[bool, _MISSING_TYPE] = MISSING,
+) -> Field[T]:
+    ...
+
+def parameter(
+    *,
+    desc: str,
+    default: T = MISSING,
+    init: bool = True,
+    repr: bool = True,
+    hash: Optional[bool] = None,
+    compare: bool = True,
+    metadata: Optional[Dict[str, Any]] = None,
+    kw_only: Union[bool, _MISSING_TYPE] = MISSING,
+) -> Field[T]:
     if metadata is None:
         metadata = dict()
     metadata["desc"] = desc
 
     return dataclasses.field(
         default=default,
-        default_factory=dataclasses.MISSING,
+        default_factory=MISSING,
         init=init,
         repr=repr,
         hash=hash,
@@ -109,7 +140,7 @@ class ComplexParameterDefinition(ParameterDefinition):
                 instance = self.type(**args)
                 if hasattr(instance, "init") and not getattr(self.type, "__transparent__", False):
                     instance.init()
-                setattr(instance, "configurable_recreate", create)
+                setattr(instance, "configurable_recreate", create)  # noqa: B010
                 return instance
 
             return create()
@@ -226,9 +257,6 @@ def configurable(service_name: str, service_desc: str):
         return cls
 
     return inner
-
-
-T = TypeVar("T")
 
 
 def Global(subclass: T, global_name: str = None) -> T:

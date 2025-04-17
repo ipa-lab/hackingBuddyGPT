@@ -41,7 +41,7 @@ class OpenAPISpecificationHandler(object):
         self.schemas = {}
         self.query_params = {}
         self.endpoint_methods = {}
-        self.endpoint_examples= {}
+        self.endpoint_examples = {}
         self.filename = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
         self.openapi_spec = {
             "openapi": "3.0.0",
@@ -67,7 +67,39 @@ class OpenAPISpecificationHandler(object):
         self.pattern_matcher = PatternMatcher()
 
     def is_partial_match(self, element, string_list):
-        return any(element in string or string in element for string in string_list)
+        """
+            Checks if the given path `element` partially matches any path in `string_list`,
+            treating path parameters (e.g., `{id}`) as wildcards.
+
+            A partial match is defined as:
+            - Having the same number of path segments.
+            - Matching all static segments (segments not wrapped in `{}`).
+
+            This is useful when comparing generalized OpenAPI paths with actual request paths.
+
+            Args:
+                element (str): The path to check for partial matches (e.g., "/users/123").
+                string_list (List[str]): A list of known paths (e.g., ["/users/{id}", "/posts/{postId}"]).
+
+            Returns:
+                bool: True if a partial match is found, False otherwise.
+            """
+        element_parts = element.split("/")
+
+        for string in string_list:
+            string_parts = string.split("/")
+            if len(element_parts) != len(string_parts):
+                continue  # Skip if structure differs
+
+            for e_part, s_part in zip(element_parts, string_parts):
+                if s_part.startswith("{") and s_part.endswith("}"):
+                    continue  # Skip placeholders
+                if e_part != s_part:
+                    break  # No match
+            else:
+                return True  # All static parts matched
+
+        return False
 
     def update_openapi_spec(self, resp, result, prompt_engineer):
         """
@@ -93,11 +125,9 @@ class OpenAPISpecificationHandler(object):
 
             # replace specific values with generic values for doc
             path = self.pattern_matcher.replace_according_to_pattern(path)
-            print(f'Path:{path}')
 
             if path in self.unsuccessful_paths:
                 return list(self.openapi_spec["endpoints"].keys())
-
 
             endpoint_methods = self.endpoint_methods
             endpoints = self.openapi_spec["endpoints"]
@@ -160,18 +190,18 @@ class OpenAPISpecificationHandler(object):
                     example = example[0]
                 # Ensure the path and method exists and has the 'responses' structure
                 if (path in endpoints and method.lower() in endpoints[path]):
-                    if "responses" in endpoints[path][method.lower()].keys() and f"{status_code}" in endpoints[path][method.lower()]["responses"]:
+                    if "responses" in endpoints[path][method.lower()].keys() and f"{status_code}" in \
+                            endpoints[path][method.lower()]["responses"]:
                         # Get the response content dictionary
                         response_content = endpoints[path][method.lower()]["responses"][f"{status_code}"]["content"]
 
                         # Assign a new structure to 'content' under the specific status code
                         response_content["application/json"] = {
-                        "schema": {"$ref": reference},
-                        "examples": example
+                            "schema": {"$ref": reference},
+                            "examples": example
                         }
 
                         self.endpoint_examples[path] = example
-
 
             # Add query parameters to the OpenAPI path item object
             if path.__contains__('?'):
@@ -180,7 +210,7 @@ class OpenAPISpecificationHandler(object):
                 if query_params_dict != {}:
                     if path not in endpoints.keys():
                         endpoints[new_path] = {}
-                    if method.lower() not in  endpoints[new_path]:
+                    if method.lower() not in endpoints[new_path]:
                         endpoints[new_path][method.lower()] = {}
                     endpoints[new_path][method.lower()].setdefault('parameters', [])
                     print(f'query_params: {query_params_dict}')
@@ -198,7 +228,6 @@ class OpenAPISpecificationHandler(object):
                         if path not in self.query_params.keys():
                             self.query_params[new_path] = []
                         self.query_params[new_path].append(param)
-
 
         return list(self.openapi_spec["endpoints"].keys())
 
@@ -226,19 +255,26 @@ class OpenAPISpecificationHandler(object):
         except Exception as e:
             raise Exception(f"Error writing YAML file: {e}") from e
 
-    def check_openapi_spec(self, note):
-        """
-        Uses OpenAI's GPT model to generate a complete OpenAPI specification based on a natural language description.
-
-        Args:
-            note (object): The note object containing the description of the API.
-        """
-        description = self.response_handler.extract_description(note)
-
-        # yaml_file_assistant = YamlFileAssistant(self.file_path, self.llm_handler)
-        # yaml_file_assistant.run(description)
-
     def _update_documentation(self, response, result, result_str, prompt_engineer):
+        """
+    Updates the OpenAPI documentation based on a new API response and result string.
+
+    This method performs the following:
+      - Updates the OpenAPI specification using the latest API response.
+      - Writes the updated OpenAPI spec to a YAML file if new endpoints are discovered.
+      - Updates the schemas used by the `prompt_engineer`.
+      - Constructs a mapping of HTTP methods to endpoints and stores it in the prompt helper.
+
+    Args:
+        response (Any): The original API response object, possibly including metadata or status.
+        result (Any): The raw result of executing the API call, potentially including headers and body.
+        result_str (str): A string representation of the HTTP response, including status line and body.
+        prompt_engineer (PromptEngineer): An instance of the prompt engineer responsible for generating prompts and managing discovered schema information.
+
+    Returns:
+        PromptEngineer: The updated prompt engineer with any new endpoint or schema information applied.
+
+    """
         if result_str is None:
             return prompt_engineer
         endpoints = self.update_openapi_spec(response, result, prompt_engineer)
@@ -256,6 +292,24 @@ class OpenAPISpecificationHandler(object):
         return prompt_engineer
 
     def document_response(self, result, response, result_str, prompt_history, prompt_engineer):
+        """
+           Processes an API response and updates the OpenAPI documentation if the response is valid.
+
+           This method filters out invalid or placeholder responses using a set of known flags.
+           If the response appears valid, it triggers the `_update_documentation()` method
+           to update the OpenAPI spec and associated prompt engineering logic.
+
+           Args:
+               result (Any): The raw execution result, typically the HTTP response body or object.
+               response (Any): The full API response object, potentially containing metadata or headers.
+               result_str (str): A string representation of the HTTP response for validation and parsing.
+               prompt_history (Any): The accumulated history of prompt interactions.
+               prompt_engineer (PromptEngineer): Instance responsible for generating and managing prompts.
+
+           Returns:
+               Tuple[Any, PromptEngineer]: A tuple containing the unchanged `prompt_history` and
+               the (potentially updated) `prompt_engineer`.
+           """
 
         invalid_flags = {"recorded"}
         if result_str not in invalid_flags or any(flag in result_str for flag in invalid_flags):
@@ -264,12 +318,34 @@ class OpenAPISpecificationHandler(object):
         return prompt_history, prompt_engineer
 
     def found_all_endpoints(self):
+        """
+            Determines whether a sufficient number of API endpoints have been discovered.
+
+            Currently, this uses a simple heuristic: if the number of endpoint-method pairs
+            is at least 10, it is assumed that all relevant endpoints have been found.
+
+            Returns:
+                bool: True if at least 10 endpoint-method entries exist, False otherwise.
+            """
         if len(self.endpoint_methods.items()) < 10:
             return False
         else:
             return True
 
     def get_type(self, value):
+        """
+            Determines the data type of a given string value.
+
+            Checks whether the input string represents an integer, a floating-point number (double),
+            or should be treated as a generic string.
+
+            Args:
+                value (str): The value to inspect.
+
+            Returns:
+                str: One of "integer", "double", or "string" depending on the detected type.
+            """
+
         def is_double(s):
             # Matches numbers like -123.456, +7.890, and excludes integers
             return re.fullmatch(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?", s) is not None
@@ -282,6 +358,18 @@ class OpenAPISpecificationHandler(object):
             return "string"
 
     def extract_status_code_and_message(self, result):
+        """
+            Extracts the HTTP status code and status message from a response string.
+
+            Args:
+                result (str): A string containing the full HTTP response or just the status line.
+
+            Returns:
+                Tuple[Optional[str], Optional[str]]: A tuple containing the HTTP status code and message.
+                Returns (None, None) if the pattern is not matched.
+            """
+        if not isinstance(result, str):
+            result = str(result)
         match = re.search(r"^HTTP/\d\.\d\s+(\d+)\s+(.*)", result, re.MULTILINE)
         if match:
             status_code = match.group(1)
@@ -291,6 +379,17 @@ class OpenAPISpecificationHandler(object):
             return None, None
 
     def replace_crypto_with_id(self, path):
+        """
+    Replaces any known cryptocurrency name in a URL path with a placeholder `{id}`.
+
+    Useful for generalizing dynamic paths when generating or matching OpenAPI specs.
+
+    Args:
+        path (str): The URL path to process.
+
+    Returns:
+        str: The path with any matching cryptocurrency name replaced by `{id}`.
+    """
 
         # Default list of cryptos to detect
         cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
@@ -313,10 +412,26 @@ class OpenAPISpecificationHandler(object):
                             if replaced_any:
                                 return "/".join(parts)
 
-
         return path
 
     def replace_id_with_placeholder(self, path, prompt_engineer):
+        """
+        Replaces numeric IDs in the URL path with a placeholder `{id}` for generalization.
+
+        This function is used to abstract hardcoded numeric values (e.g., `/users/1`) in the path
+        to a parameterized form (e.g., `/users/{id}`), which is helpful when building or inferring
+        OpenAPI specifications.
+
+        Behavior varies slightly depending on the current step tracked by the `prompt_engineer`.
+
+        Args:
+            path (str): The URL path to process.
+            prompt_engineer (PromptEngineer): An object containing context about the current prompt
+                and parsing state, specifically the current step of API exploration.
+
+        Returns:
+            str: The updated path with numeric IDs replaced by `{id}`.
+        """
         if "1" in path:
             path = path.replace("1", "{id}")
         if prompt_engineer.prompt_helper.current_step == 2:

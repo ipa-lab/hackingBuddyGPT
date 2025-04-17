@@ -490,7 +490,7 @@ class ResponseHandler:
             result = response.execute()
             self.query_counter += 1
             result_dict = self.extract_json(result)
-            log.console.print(Panel(result[:20], title="tool"))
+            log.console.print(Panel(result, title="tool"))
             if "Could not request" in result:
                 return False, prompt_history, result, ""
 
@@ -625,7 +625,6 @@ class ResponseHandler:
             if parts:
                 root_path = '/' + parts[0]
 
-                # -------------- STEP 1 --------------
                 if self.prompt_helper.current_step == 1:
                     if len(parts) > 1:
                         if root_path not in (
@@ -642,7 +641,6 @@ class ResponseHandler:
                                 path == self.last_path):
                             return self.finalize_path(self.get_next_path(path))
 
-                # -------------- STEP 2 --------------
                 elif self.prompt_helper.current_step == 2:
                     if len(parts) != 2:
                         if path in self.prompt_helper.unsuccessful_paths:
@@ -661,7 +659,6 @@ class ResponseHandler:
                         ep = self.prompt_helper._get_instance_level_endpoint(self.name)
                         return self.finalize_path(ep)
 
-                # -------------- STEP 3 --------------
                 elif self.prompt_helper.current_step == 3:
                     if path in self.prompt_helper.unsuccessful_paths:
                         ep = self.prompt_helper._get_sub_resource_endpoint(
@@ -673,7 +670,6 @@ class ResponseHandler:
                     ep = self.prompt_helper._get_sub_resource_endpoint(path, self.common_endpoints, self.name)
                     return self.finalize_path(ep)
 
-                # -------------- STEP 4 --------------
                 elif self.prompt_helper.current_step == 4:
                     if path in self.prompt_helper.unsuccessful_paths:
                         ep = self.prompt_helper._get_related_resource_endpoint(
@@ -686,7 +682,6 @@ class ResponseHandler:
                     ep = self.prompt_helper._get_related_resource_endpoint(path, self.common_endpoints, self.name)
                     return self.finalize_path(ep)
 
-                # -------------- STEP 5 --------------
                 elif self.prompt_helper.current_step == 5:
                     if path in self.prompt_helper.unsuccessful_paths:
                         ep = self.prompt_helper._get_multi_level_resource_endpoint(
@@ -698,7 +693,6 @@ class ResponseHandler:
                         ep = self.prompt_helper._get_multi_level_resource_endpoint(path, self.common_endpoints, self.name)
                     return self.finalize_path(ep)
 
-                # -------------- STEP 6 --------------
                 elif (self.prompt_helper.current_step == 6 and
                       "?" not in path):
                     new_path = self.create_common_query_for_endpoint(path)
@@ -728,7 +722,6 @@ class ResponseHandler:
                     ep = self.prompt_helper._get_instance_level_endpoint(self.name)
                     return self.finalize_path(ep)
 
-            # -------------- FALLBACK --------------
             # If none of the above conditions matched, we finalize the path or get_next_path
             if path:
                 return self.finalize_path(path)

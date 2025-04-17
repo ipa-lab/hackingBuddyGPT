@@ -33,6 +33,7 @@ class ReportHandler:
             config (dict): Configuration dictionary containing metadata like the test name.
         """
         current_path = os.path.dirname(os.path.abspath(__file__))
+        print(f'current_path:{current_path}')
         self.file_path = os.path.join(current_path, "reports", config.get("name"))
         self.vul_file_path = os.path.join(current_path, "vulnerabilities", config.get("name"))
 
@@ -55,6 +56,10 @@ class ReportHandler:
         self.pdf.set_font("Arial", size=12)
         self.pdf.set_font("Arial", 'B', 16)
         self.pdf.cell(200, 10, "Vulnerability Report", ln=True, align='C')
+        self.pdf_path = os.path.join(
+            self.vul_file_path, f"vul_report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+        )
+        self.y = 10  # start position
 
 
         try:
@@ -66,6 +71,11 @@ class ReportHandler:
                 f"report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{uuid.uuid4().hex}.txt",
             )
             self.report = open(self.report_name, "x")
+
+    def write_line(self, text):
+        self.pdf.text(10, self.y, text)
+        self.y += 10  # move down for next line
+        self.pdf.output(self.pdf_path)
 
     def write_endpoint_to_report(self, endpoint: str) -> None:
         """

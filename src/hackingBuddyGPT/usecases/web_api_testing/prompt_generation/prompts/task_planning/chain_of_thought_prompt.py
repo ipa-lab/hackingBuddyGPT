@@ -91,7 +91,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         counter = 0
         #print(f' test case:{test_case}')
         for step in test_case["steps"]:
-            print(f'step:{step}')
+            #print(f'step:{step}')
             if counter < len(test_case["security"]):
                 security = test_case["security"][counter]
             else:

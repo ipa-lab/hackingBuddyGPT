@@ -147,7 +147,8 @@ class LLMHandler:
                 adjusted_prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
 
                 self.adjusting_counter = 2
-                return call_model(adjusted_prompt, capability)
+                adjusted_prompt =  call_model(adjusted_prompt, capability)
+                return adjusted_prompt
 
             except (openai.BadRequestError, IncompleteOutputException) as e:
 
@@ -157,6 +158,7 @@ class LLMHandler:
                 if isinstance(shortened_prompt, list):
                     if isinstance(shortened_prompt[0], list):
                         shortened_prompt = shortened_prompt[0]
+                print(f'shortened_prompt;{shortened_prompt}')
                 return call_model(shortened_prompt, capability)
 
     def adjust_prompt(self, prompt: List[Dict[str, Any]], num_prompts: int = 5) -> List[Dict[str, Any]]:

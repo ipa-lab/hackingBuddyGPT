@@ -72,10 +72,9 @@ class StatePlanningPrompt(BasicPrompt):
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
-
-
         if self.previous_purpose != self.purpose:
             self.previous_purpose = self.purpose
+            self.reset_accounts()
             self.test_cases = self.pentesting_information.explore_steps(self.purpose)
             if self.purpose == PromptPurpose.SETUP:
                 if self.counter == 0:
@@ -121,7 +120,13 @@ class StatePlanningPrompt(BasicPrompt):
                         self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step, self.pentesting_information.accounts)
                         self.prompt_helper.counter = self.counter
 
+
+
                         step = self.transform_test_case_to_string(self.current_step, "steps")
+                        if self.prompt_helper.current_user is not None or isinstance(self.prompt_helper.current_user,
+                                                                                     dict):
+                            if "token" in self.prompt_helper.current_user and "'{{token}}'" in step:
+                                step = step.replace("'{{token}}'", self.prompt_helper.current_user.get("token"))
                         self.counter += 1
                         # if last step of exploration, change purpose to next
                         self.next_purpose(icl_test_case,test_cases, purpose)

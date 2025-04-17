@@ -228,3 +228,6 @@ class BasicPrompt(ABC):
                 result[key] = {"type": type(value).__name__, "example": value}
 
         return result
+
+    def reset_accounts(self):
+        self.prompt_helper.accounts = [acc for acc in self.prompt_helper.accounts if "x" in acc and acc["x"] != ""]

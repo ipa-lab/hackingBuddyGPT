@@ -39,37 +39,40 @@ class TestPromptEngineer(unittest.TestCase):
 
         expected_prompt = """Based on this information :
 
-Objective: Identify all accessible endpoints via GET requests for No host URL provided.. See https://jsonplaceholder.typicode.com/
+Objective: Identify all accessible endpoints via GET requests for https://jsonplaceholder.typicode.com/. See https://jsonplaceholder.typicode.com/
  Query root-level resource endpoints.
-                               Find root-level endpoints for No host URL provided..
+                               Find root-level endpoints for https://jsonplaceholder.typicode.com/.
                                Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
                                1. Send GET requests to new paths only, avoiding any in the lists above.
                                2. Do not reuse previously tested paths.
 """
         actual_prompt = prompt_engineer.generate_prompt(hint="", turn=1)
+
+
+        print(f'actuaL.{actual_prompt[0].get("content"),}')
         self.assertEqual(actual_prompt[0].get("content"), expected_prompt)
 
     def test_in_context_learning_with_hint(self):
         prompt_engineer = self.generate_prompt_engineer("icl")
         expected_prompt = """Based on this information :
 
-        Objective: Identify all accessible endpoints via GET requests for No host URL provided.. See https://jsonplaceholder.typicode.com/
-         Query root-level resource endpoints.
-                                       Find root-level endpoints for No host URL provided..
-                                       Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
-                                       1. Send GET requests to new paths only, avoiding any in the lists above.
-                                       2. Do not reuse previously tested paths.
-        """
+Objective: Identify all accessible endpoints via GET requests for https://jsonplaceholder.typicode.com/. See https://jsonplaceholder.typicode.com/
+ Query root-level resource endpoints.
+                               Find root-level endpoints for https://jsonplaceholder.typicode.com/.
+                               Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
+                               1. Send GET requests to new paths only, avoiding any in the lists above.
+                               2. Do not reuse previously tested paths.
+"""
         hint = "This is a hint."
         actual_prompt = prompt_engineer.generate_prompt(hint=hint, turn=1)
-        self.assertIn(hint, actual_prompt[0].get("content"), )
+        self.assertIn(hint, actual_prompt[0].get("content"))
 
     def test_in_context_learning_with_doc_and_hint(self):
         prompt_engineer = self.generate_prompt_engineer("icl")
         hint = "This is another hint."
-        expected_prompt = """Objective: Identify all accessible endpoints via GET requests for No host URL provided.. See https://jsonplaceholder.typicode.com/
+        expected_prompt = """Objective: Identify all accessible endpoints via GET requests for 'https://jsonplaceholder.typicode.com/ provided.. See https://jsonplaceholder.typicode.com/
  Query root-level resource endpoints.
-                               Find root-level endpoints for No host URL provided..
+                               Find root-level endpoints for 'https://jsonplaceholder.typicode.com/ provided..
                                Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
                                1. Send GET requests to new paths only, avoiding any in the lists above.
                                2. Do not reuse previously tested paths.
@@ -110,13 +113,12 @@ This is another hint."""
     def generate_prompt_engineer(self, param):
         config, strategy = self.configuration_handler.load(param)
         self.pentesting_information = PenTestingInformation(self._openapi_specification_parser, config)
-
         prompt_engineer = PromptEngineer(
             strategy=strategy,
             prompt_helper=self.prompt_helper,
             context=PromptContext.DOCUMENTATION,
             open_api_spec=self._openapi_specification,
-            rest_api_info=(self.token, self.description, self.correct_endpoints, self.categorized_endpoints),
+            rest_api_info=(self.token, self.host, self.correct_endpoints, self.categorized_endpoints),
         )
         prompt_engineer.set_pentesting_information(pentesting_information=self.pentesting_information)
         return prompt_engineer

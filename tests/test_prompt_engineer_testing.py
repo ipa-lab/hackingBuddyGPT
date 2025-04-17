@@ -22,7 +22,7 @@ class TestPromptEngineer(unittest.TestCase):
         self.history = [{"content": "initial_prompt", "role": "system"}]
         self.schemas = MagicMock()
         self.response_handler = MagicMock()
-        self.config_path = os.path.join(os.path.dirname(__file__), "test_files","reqres_config.json")
+        self.config_path = os.path.join(os.path.dirname(__file__), "test_files","fakeapi_config.json")
         self.configuration_handler = ConfigurationHandler(self.config_path)
         self.config = self.configuration_handler._load_config(self.config_path)
         self._openapi_specification_parser = OpenAPISpecificationParser(self.config_path)

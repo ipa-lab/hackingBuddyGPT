@@ -77,9 +77,9 @@ class TaskPlanningPrompt(BasicPrompt):
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
         """
-
         if self.previous_purpose != self.purpose:
             self.previous_purpose = self.purpose
+            self.reset_accounts()
             self.test_cases = self.pentesting_information.explore_steps(self.purpose)
             if self.purpose == PromptPurpose.SETUP:
                 if self.counter == 0:
@@ -133,13 +133,11 @@ class TaskPlanningPrompt(BasicPrompt):
 
                         step = self.transform_test_case_to_string(self.current_step, "steps")
 
-                        if self.prompt_helper.current_user is not None or isinstance(self.prompt_helper.current_user,                                                      dict):
+                        if self.prompt_helper.current_user is not None or isinstance(self.prompt_helper.current_user,dict):
                             if "token" in self.prompt_helper.current_user and "'{{token}}'" in step:
                                 step = step.replace("'{{token}}'", self.prompt_helper.current_user.get("token"))
 
-                        print(f'sub step:{self.current_sub_step}')
                         print(f'step:{step}')
-                        print(f'purpose:{self.purpose}')
                         self.counter += 1
                         # if last step of exploration, change purpose to next
                         self.next_purpose(task_planning_test_case, test_cases, purpose)
@@ -222,3 +220,4 @@ class TaskPlanningPrompt(BasicPrompt):
     @abstractmethod
     def transform_into_prompt_structure(self, test_case, purpose):
         pass
+

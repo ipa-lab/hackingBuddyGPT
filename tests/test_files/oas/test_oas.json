@@ -5,6 +5,11 @@
     "title": "JSON Placeholder API",
     "description": "See https://jsonplaceholder.typicode.com/"
   },
+    "servers": [
+    {
+      "url": "https://jsonplaceholder.typicode.com/"
+    }
+  ],
   "paths": {
     "/posts": {
       "get": {

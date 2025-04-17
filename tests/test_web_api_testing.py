@@ -1,7 +1,9 @@
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 
 from hackingBuddyGPT.usecases import SimpleWebAPITesting
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptPurpose
 from hackingBuddyGPT.utils.logging import Logger
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
     SimpleWebAPITestingUseCase,
@@ -21,22 +23,29 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         log = Logger(
             log_db=log_db,
             console=console,
-            tag="integration_test_linuxprivesc",
         )
-        self.agent = SimpleWebAPITesting(llm=self.mock_llm, log=log)
+        config_path = os.path.join(os.path.dirname(__file__), "test_files","fakeapi_config.json")
+
+        self.agent = SimpleWebAPITesting(llm=self.mock_llm, log=log,config_path= config_path, strategy_string= "cot")
+
         self.agent.init()
         self.simple_api_testing = SimpleWebAPITestingUseCase(
             agent=self.agent,
             log=log,
-            max_turns=len(self.mock_llm.responses),
+            max_turns=len(self.mock_llm.responses)
+
         )
+
         self.simple_api_testing.init({})
 
+
+
     def test_initial_prompt(self):
+        contents = [prompt_history_entry["content"] for prompt_history_entry in self.agent._prompt_history]
         # Test if the initial prompt is set correctly
         self.assertIn(
-            "You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at https://jsonplaceholder.typicode.com. Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, and then devise and execute potential exploits. Be diligent in documenting your findings as you navigate through the APIs. Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves. Remember, if you encounter an HTTP method (A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).), promptly submit it as it is of utmost importance.",
-            self.agent._prompt_history[0]["content"],
+            "You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at https://dummyjson.com. Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, and then devise and execute potential exploits. Be diligent in documenting your findings as you navigate through the APIs. Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves. Remember, if you encounter an HTTP method (A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).), promptly submit it as it is of utmost importance.",
+            contents,
         )
 
     def test_all_flags_found(self):
@@ -64,7 +73,25 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         )
 
         # Mock the tool execution result
-        mock_response.execute.return_value = "HTTP/1.1 200 OK"
+        mock_response.execute.return_value = (
+    "HTTP/1.1 200 OK\n"
+    "Date: Wed, 17 Apr 2025 12:00:00 GMT\n"
+    "Content-Type: application/json; charset=utf-8\n"
+    "Content-Length: 85\n"
+    "Connection: keep-alive\n"
+    "X-Powered-By: Express\n"
+    "Strict-Transport-Security: max-age=31536000; includeSubDomains\n"
+    "Cache-Control: no-store\n"
+    "Set-Cookie: sessionId=abc123; HttpOnly; Secure; Path=/\r\n\r\n"
+    "\n"
+    "{\n"
+    '  "id": 1,\n'
+    '  "username": "alice@example.com",\n'
+    '  "role": "user",\n'
+    '  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."\n'
+    "}"
+)
+
         mock_response.action.path = "/users/"
 
         # Perform the round

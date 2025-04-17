@@ -65,7 +65,7 @@ class TestHandler:
             "expected_output": expected_output
         }
 
-    def generate_test_case(self, analysis: str, endpoint: str, method: str, status_code: Any, prompt_history) -> Tuple[
+    def generate_test_case(self, analysis: str, endpoint: str, method: str, body:str, status_code: Any, prompt_history) -> Tuple[
         str, Dict[str, Any], list]:
         """
         Uses LLM to generate a test case dictionary from analysis and test metadata.
@@ -96,7 +96,7 @@ class TestHandler:
            Format:
            {{
                "description": "Test case for {method} {endpoint}",
-               "input": {{}},
+               "input": {body},
                "expected_output": {{"expected_body": body, "expected_status_code": status_code}}
            }}
 
@@ -141,7 +141,7 @@ class TestHandler:
             list: Updated prompt history.
         """
         prompt = f"""
-        As a testing expert, you are tasked with creating pytest-compatible test functions using the Python 'requests' library.
+        As a testing expert, you are tasked with creating pytest-compatible test functions using the Python 'requests' library (also import it).
 
         Test Details:
          - Description: {description}
@@ -206,7 +206,7 @@ class TestHandler:
 
         return text[func_start:func_end]
 
-    def generate_test_cases(self, analysis: str, endpoint: str, method: str, status_code: Any, prompt_history) -> list:
+    def generate_test_cases(self, analysis: str, endpoint: str, method: str, body:str,  status_code: Any, prompt_history) -> list:
         """
         Generates and stores both JSON and Python test cases based on analysis.
 
@@ -220,7 +220,7 @@ class TestHandler:
         Returns:
             list: Updated prompt history.
         """
-        description, test_case, prompt_history = self.generate_test_case(analysis, endpoint, method, status_code,
+        description, test_case, prompt_history = self.generate_test_case(analysis, endpoint, method, body, status_code,
                                                                          prompt_history)
         self.write_test_case_to_file(description, test_case)
         prompt_history = self.write_pytest_case(description, test_case, prompt_history)

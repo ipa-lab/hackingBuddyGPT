@@ -207,8 +207,7 @@ class Viewer(UseCase):
     """
     log: GlobalLocalLogger
     log_db: DbStorage
-    listen_host: str = "127.0.0.1"
-    listen_port: int = 4444
+    log_server_address: str = "127.0.0.1:4444"
     save_playback_dir: str = ""
 
     async def save_message(self, message: ControlMessage):
@@ -337,7 +336,21 @@ class Viewer(UseCase):
                 print("Egress WebSocket disconnected")
 
         import uvicorn
-        uvicorn.run(app, host=self.listen_host, port=self.listen_port)
+        listen_parts = self.log_server_address.split(":", 1)
+        if len(listen_parts) != 2:
+            if listen_parts[0].startswith("http://"):
+                listen_parts.append("80")
+            elif listen_parts[0].startswith("https://"):
+                listen_parts.append("443")
+            else:
+                raise ValueError(f"Invalid log server address (does not contain http/https or a port): {self.log_server_address}")
+
+        listen_host, listen_port = listen_parts[0], int(listen_parts[1])
+        if listen_host.startswith("http://"):
+            listen_host = listen_host[len("http://"):]
+        elif listen_host.startswith("https://"):
+            listen_host = listen_host[len("https://"):]
+        uvicorn.run(app, host=listen_host, port=listen_port)
 
     def get_name(self) -> str:
         return "log_viewer"

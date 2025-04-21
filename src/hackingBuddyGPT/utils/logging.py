@@ -8,7 +8,7 @@ import threading
 
 from dataclasses_json.api import dataclass_json
 
-from hackingBuddyGPT.utils import configurable, DbStorage, Console, LLMResult
+from hackingBuddyGPT.utils import Console, DbStorage, LLMResult, configurable, parameter
 from hackingBuddyGPT.utils.db_storage.db_storage import StreamAction
 from hackingBuddyGPT.utils.configurable import Global, Transparent
 from rich.console import Group
@@ -82,9 +82,10 @@ class ControlMessage:
 class Logger:
     log_db: DbStorage
     console: Console
-    tag: str = ""
 
-    run: Run = field(init=False, default=None)
+    tag: str = parameter(desc="Tag for your current run", default="")
+
+    run: Run = field(init=False, default=None)  # field and not a parameter, since this can not be user configured
 
     _last_message_id: int = 0
     _last_section_id: int = 0
@@ -168,46 +169,23 @@ class Logger:
 @dataclass
 class RemoteLogger:
     console: Console
-    log_server_address: str = "localhost:4444"
+    log_server_address: str = parameter(desc="address:port of the log server to be used", default="localhost:4444")
 
-    tag: str = ""
-    run: Run = field(init=False, default=None)
+    tag: str = parameter(desc="Tag for your current run", default="")
+
+    run: Run = field(init=False, default=None)  # field and not a parameter, since this can not be user configured
 
     _last_message_id: int = 0
     _last_section_id: int = 0
     _current_conversation: Optional[str] = None
     _upstream_websocket: ClientConnection = None
-    _keepalive_thread: Optional[threading.Thread] = None
-    _keepalive_stop_event: threading.Event = field(init=False, default_factory=threading.Event)
 
     def __del__(self):
-        print("running log deleter")
         if self._upstream_websocket:
             self._upstream_websocket.close()
-        if self._keepalive_thread:
-            self._keepalive_stop_event.set()
-            self._keepalive_thread.join()
 
     def init_websocket(self):
         self._upstream_websocket = ws_connect(f"ws://{self.log_server_address}/ingress")  # TODO: we want to support wss at some point
-        # self.start_keepalive()
-
-    def start_keepalive(self):
-        self._keepalive_stop_event.clear()
-        self._keepalive_thread = threading.Thread(target=self.keepalive)
-        self._keepalive_thread.start()
-
-    def keepalive(self):
-        while not self._keepalive_stop_event.is_set():
-            try:
-                self._upstream_websocket.ping()
-                self._upstream_websocket.pong()
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                print("Keepalive error:", e)
-                self._keepalive_stop_event.set()
-            time.sleep(5)
 
     def send(self, type: MessageType, data: MessageData):
         self._upstream_websocket.send(ControlMessage(type, data).to_json())

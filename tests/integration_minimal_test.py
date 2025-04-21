@@ -99,8 +99,8 @@ def test_linuxprivesc():
         max_turns=len(llm.responses),
     )
 
-    priv_esc.init({})
-    result = priv_esc.run()
+    priv_esc.init()
+    result = priv_esc.run({})
     assert result is True
 
 
@@ -123,8 +123,8 @@ def test_minimal_agent():
         max_turns=len(llm.responses)
     )
 
-    priv_esc.init({})
-    result = priv_esc.run()
+    priv_esc.init()
+    result = priv_esc.run({})
     assert result is True
 
 
@@ -147,6 +147,6 @@ def test_minimal_agent_state():
         max_turns=len(llm.responses)
     )
 
-    priv_esc.init({})
-    result = priv_esc.run()
+    priv_esc.init()
+    result = priv_esc.run({})
     assert result is True

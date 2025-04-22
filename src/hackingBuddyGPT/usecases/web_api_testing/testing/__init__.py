@@ -1,1 +1,1 @@
-from .test_handler import TestHandler
+from .test_handler import GenerationTestHandler

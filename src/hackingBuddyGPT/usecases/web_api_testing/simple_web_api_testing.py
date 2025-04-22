@@ -26,7 +26,7 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer 
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
-from hackingBuddyGPT.usecases.web_api_testing.testing.test_handler import TestHandler
+from hackingBuddyGPT.usecases.web_api_testing.testing.test_handler import GenerationTestHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
@@ -147,7 +147,7 @@ class SimpleWebAPITesting(Agent):
                                                          prompt_helper=self.prompt_helper)
         self._response_handler.set_response_analyzer(self.response_analyzer)
         self._report_handler = ReportHandler(self.config)
-        self._test_handler = TestHandler(self._llm_handler)
+        self._test_handler = GenerationTestHandler(self._llm_handler)
 
     def _setup_initial_prompt(self) -> None:
         """

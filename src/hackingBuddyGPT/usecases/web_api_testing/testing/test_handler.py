@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Dict, Tuple
 
 
-class TestHandler:
+class GenerationTestHandler:
     """
     A class responsible for parsing, generating, and saving structured API test cases,
     including generating pytest-compatible test functions using an LLM.

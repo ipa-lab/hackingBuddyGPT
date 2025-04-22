@@ -50,7 +50,8 @@ dependencies = [
     'fpdf',
     'langchain_core',
     'langchain_community',
-    'langchain_chroma'
+    'langchain_chroma',
+    'langchain_openai'
 
 ]
 

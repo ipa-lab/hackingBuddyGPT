@@ -47,7 +47,8 @@ dependencies = [
     'websockets == 13.1',
     'pandas',
     'faker',
-    'fpdf'
+    'fpdf',
+    'langchain_core'
 
 ]
 

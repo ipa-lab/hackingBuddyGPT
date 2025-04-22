@@ -326,6 +326,35 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
         return ''.join(result)
 
+    def get_props(self, data, result ):
+        for key, value in data.items():
+
+            if isinstance(value, dict):
+
+                # Recursively extract properties from nested dictionaries
+
+                nested_properties = self.extract_properties_with_examples(value)
+
+                result.update(nested_properties)
+
+            elif isinstance(value, list):
+
+                if value:
+
+                    example_value = value[0]
+
+                    result[key] = {"type": "list", "example": example_value}
+
+                else:
+
+                    result[key] = {"type": "list", "example": "[]"}
+            else:
+
+                result[key] = {"type": type(value).__name__, "example": value}
+
+        return result
+
+
 
 
 

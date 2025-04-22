@@ -96,7 +96,9 @@ class TaskPlanningPrompt(BasicPrompt):
 
         if move_type == "explore":
             test_cases = self.get_test_cases(self.test_cases)
+
             for test_case in test_cases:
+
                 if purpose not in self.transformed_steps.keys():
                     self.transformed_steps[purpose] = []
                 # Transform steps into icl based on purpose
@@ -137,7 +139,6 @@ class TaskPlanningPrompt(BasicPrompt):
                             if "token" in self.prompt_helper.current_user and "'{{token}}'" in step:
                                 step = step.replace("'{{token}}'", self.prompt_helper.current_user.get("token"))
 
-                        print(f'step:{step}')
                         self.counter += 1
                         # if last step of exploration, change purpose to next
                         self.next_purpose(task_planning_test_case, test_cases, purpose)
@@ -201,17 +202,6 @@ class TaskPlanningPrompt(BasicPrompt):
     def generate_documentation_steps(self, steps: List[str]) -> List[str] :
         pass
 
-    def get_test_cases(self, test_cases):
-        while len(test_cases) == 0:
-            for purpose in self.pentesting_information.pentesting_step_list:
-                if purpose in self.transformed_steps.keys():
-                    continue
-                else:
-                    test_cases = self.pentesting_information.get_steps_of_phase(purpose)
-                    if test_cases is not None:
-                        if len(test_cases) != 0 :
-                            return test_cases
-        return test_cases
 
     @abstractmethod
     def transform_test_case_to_string(self, current_step, param):

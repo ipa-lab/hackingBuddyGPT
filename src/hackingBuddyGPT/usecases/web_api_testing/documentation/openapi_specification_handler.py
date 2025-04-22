@@ -213,8 +213,6 @@ class OpenAPISpecificationHandler(object):
                     if method.lower() not in endpoints[new_path]:
                         endpoints[new_path][method.lower()] = {}
                     endpoints[new_path][method.lower()].setdefault('parameters', [])
-                    print(f'query_params: {query_params_dict}')
-                    print(f'query_params: {query_params_dict.items()}')
                     for param, value in query_params_dict.items():
                         param_entry = {
                             "name": param,

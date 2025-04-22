@@ -84,18 +84,15 @@ class PromptGenerationHelper(object):
 
             data_string_json = data_string.replace("'", '"')
             data_string_json = data_string_json.replace("\"\" ", '" ')
-            print(f'user_info:{data_string_json}')
 
 
             if "{" in data_string_json:
-                print(f'data:{data_string_json}')
                 data_string_json = data_string_json.replace("None", "null")
 
                 # Parse the string into a dictionary
                 user_info = json.loads(data_string_json)
             else:
                 user_info = data_string_json
-            print(f'user_info:{user_info}')
         counter =0
         for acc in accounts:
             for key in acc.keys():

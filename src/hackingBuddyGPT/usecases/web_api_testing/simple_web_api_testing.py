@@ -212,22 +212,27 @@ class SimpleWebAPITesting(Agent):
             turn (int): The current round number.
         """
         self._perform_prompt_generation(turn)
+        if len(self.prompt_engineer.pentesting_information.pentesting_step_list) == 0:
+            self.all_test_cases_run()
+            return
         if turn == 20:
             self._report_handler.save_report()
 
     def _perform_prompt_generation(self, turn: int) -> None:
         response: Any
         completion: Any
-        while self.purpose == self.prompt_engineer._purpose:
+        while self.purpose == self.prompt_engineer._purpose and not self._all_test_cases_run:
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore",
                                                           prompt_history=self._prompt_history)
 
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt, "http_request")
             self._handle_response(completion, response)
+            if len(self.prompt_engineer.pentesting_information.pentesting_step_list) == 0:
+                self.all_test_cases_run()
+                return
 
         self.purpose = self.prompt_engineer._purpose
-        if self.purpose == PromptPurpose.LOGGING_MONITORING:
-            self.pentesting_information.next_testing_endpoint()
+
 
     def _handle_response(self, completion: Any, response: Any) -> None:
         """
@@ -243,7 +248,6 @@ class SimpleWebAPITesting(Agent):
             if response is None:
                 return
 
-            print(f'type:{type(response)}')
 
             response = self.adjust_action(response)
 
@@ -267,8 +271,6 @@ class SimpleWebAPITesting(Agent):
                     prompt_history=self._prompt_history, status_code=status_code)
 
                 self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)
-        if self.prompt_engineer._purpose == PromptPurpose.LOGGING_MONITORING:
-            self.all_test_cases_run()
 
     def extract_ids(self, data, id_resources=None, parent_key=''):
         """
@@ -539,8 +541,6 @@ class SimpleWebAPITesting(Agent):
             tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
         self.adjust_user(result)
-        for account in self.pentesting_information.accounts:
-            print(f' accounts after request:{account}')
         return result
 
 

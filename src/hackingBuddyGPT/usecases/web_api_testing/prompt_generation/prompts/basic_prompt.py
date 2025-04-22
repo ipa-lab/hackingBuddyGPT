@@ -41,6 +41,8 @@ class BasicPrompt(ABC):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
             strategy (PromptStrategy): The strategy used for prompt generation.
         """
+        self.transformed_steps = {}
+        self.open_api_spec = {}
         self.context = context
         self.planning_type = planning_type
         self.prompt_helper = prompt_helper
@@ -77,9 +79,20 @@ class BasicPrompt(ABC):
         pass
 
     def get_documentation_steps(self):
+        """
+        Returns a predefined list of endpoint exploration steps based on the target API host.
+
+        These steps are used to guide automated documentation of a web API by progressively
+        discovering and querying endpoints using GET requests. The process follows a structured
+        hierarchy from root-level endpoints to more complex nested endpoints and those with query parameters.
+
+        Returns:
+            List[List[str]]: A list of steps, each step being a list of instruction strings.
+        """
 
         # Define specific documentation steps based on the given strategy
-         return [
+
+        return [
             [f"Objective: Identify all accessible endpoints via GET requests for {self.prompt_helper.host}. {self.prompt_helper._description}"],
             [
                 f""" Query root-level resource endpoints.
@@ -121,6 +134,16 @@ class BasicPrompt(ABC):
             ]
         ]
     def extract_properties(self):
+        """
+           Extracts example values and data types from the 'Post' schema in the OpenAPI specification.
+
+           This method reads the OpenAPI spec's components → schemas → Post → properties, and
+           gathers relevant information like example values and types for each property defined.
+
+           Returns:
+               dict: A dictionary mapping property names to their example values and types.
+                     Format: { prop_name: {"example": str, "type": str} }
+           """
         properties = self.open_api_spec.get("components", {}).get("schemas", {}).get("Post", {}).get("properties", {})
         extracted_props = {}
 
@@ -135,6 +158,19 @@ class BasicPrompt(ABC):
         return extracted_props
 
     def sort_previous_prompt(self, previous_prompt):
+        """
+           Reverses the order of a list of previous prompts.
+
+           This function takes a list of prompts (e.g., user or system instructions)
+           and returns a new list with the elements in reverse order, placing the most
+           recent prompt first.
+
+           Parameters:
+               previous_prompt (list): A list of prompts in chronological order (oldest first).
+
+           Returns:
+               list: A new list containing the prompts in reverse order (most recent first).
+           """
         sorted_list = []
         for i in range(len(previous_prompt) - 1, -1, -1):
             sorted_list.append(previous_prompt[i])
@@ -142,6 +178,21 @@ class BasicPrompt(ABC):
 
 
     def extract_endpoints_from_prompts(self, step):
+        """
+          Extracts potential endpoint paths or URLs from a prompt step.
+
+          This method scans the provided step (either a string or a list containing a string),
+          and attempts to identify words that represent API endpoints — such as relative paths
+          (e.g., '/users') or full URLs (e.g., 'https://example.com/users') — using simple keyword
+          heuristics and filtering.
+
+          Parameters:
+              step (str or list): A prompt step that may contain one or more textual instructions,
+                                  possibly with API endpoint references.
+
+          Returns:
+              list: A list of unique endpoint strings extracted from the step.
+          """
         endpoints = []
         # Extract endpoints from the text using simple keyword matching
         if isinstance(step, list):
@@ -157,6 +208,23 @@ class BasicPrompt(ABC):
 
 
     def get_properties(self, step_details):
+        """
+           Extracts the schema properties of an endpoint mentioned in a given step.
+
+           This function analyzes a prompt step, extracts referenced API endpoints,
+           and searches the stored categorized endpoints to find a matching one.
+           If a match is found and it contains a schema with defined properties,
+           those properties are returned.
+
+           Parameters:
+               step_details (dict): A dictionary containing step information.
+                                    It is expected to include a key 'step' with either a string
+                                    or list of strings that describe the test step.
+
+           Returns:
+               dict or None: A dictionary of properties from the matched endpoint's schema,
+                             or None if no match is found or no schema is available.
+           """
         endpoints = self.extract_endpoints_from_prompts(step_details['step'])
         for endpoint in endpoints:
             for keys in self.pentesting_information.categorized_endpoints:
@@ -174,9 +242,29 @@ class BasicPrompt(ABC):
                         return properties
 
     def next_purpose(self, step, icl_steps, purpose):
+        """
+          Updates the current pentesting purpose based on the progress of ICL steps.
+
+          If the current purpose has no test cases left (`icl_steps` is None), it is removed from
+          the list of remaining purposes. Otherwise, if the current `step` matches the last explored
+          step, it also considers the current purpose complete and advances to the next one.
+
+          Parameters:
+              step (dict or None): The current step being evaluated.
+              icl_steps (list or None): A list of previously explored steps.
+              purpose (str): The current pentesting purpose associated with the step.
+
+          Returns:
+              None
+          """
         # Process the step and return its result
+        if icl_steps is None:
+            self.pentesting_information.pentesting_step_list.remove(purpose)
+            self.purpose = self.pentesting_information.pentesting_step_list[0]
+            self.counter = 0 # Reset counter
+            return
         last_item = icl_steps[-1]
-        if self.check_if_step_is_same(last_item, step):
+        if self.check_if_step_is_same(last_item, step) or step is None:
             # If it's the last step, remove the purpose and update self.purpose
             if purpose in self.pentesting_information.pentesting_step_list:
                 self.pentesting_information.pentesting_step_list.remove(purpose)
@@ -184,14 +272,39 @@ class BasicPrompt(ABC):
                 self.purpose = self.pentesting_information.pentesting_step_list[0]
 
             self.counter = 0 # Reset counter
-            print(f'purpose:{self.purpose}')
 
     def check_if_step_is_same(self, step1, step2):
+        """
+            Compares two step dictionaries to determine if they represent the same step.
+
+            Specifically checks if the first item in the 'steps' list of `step1` is equal to
+            the 'step' value of the first item in the 'steps' list of `step2`.
+
+            Parameters:
+                step1 (dict): The first step to compare.
+                step2 (dict): The second step to compare.
+
+            Returns:
+                bool: True if both steps are considered the same, False otherwise.
+            """
         # Check if 'steps' and 'path' are identical
         steps_same = (step1.get('steps', [])[0] == step2.get('steps', [])[0].get("step"))
 
         return steps_same
     def all_substeps_explored(self, icl_steps):
+
+        """
+            Checks whether all substeps in the provided ICL step block have already been explored.
+
+            Compares the list of substeps in `icl_steps` against the `explored_sub_steps` list
+            to determine if they were previously processed.
+
+            Parameters:
+                icl_steps (dict): A dictionary containing a list of steps under the 'steps' key.
+
+            Returns:
+                bool: True if all substeps were explored, False otherwise.
+            """
         all_steps = []
         for step in icl_steps.get("steps") :
             all_steps.append(step)
@@ -201,33 +314,42 @@ class BasicPrompt(ABC):
         else:
             return False
 
-    def get_props(self, data, result ):
-        for key, value in data.items():
-
-            if isinstance(value, dict):
-
-                # Recursively extract properties from nested dictionaries
-
-                nested_properties = self.extract_properties_with_examples(value)
-
-                result.update(nested_properties)
-
-            elif isinstance(value, list):
-
-                if value:
-
-                    example_value = value[0]
-
-                    result[key] = {"type": "list", "example": example_value}
-
-                else:
-
-                    result[key] = {"type": "list", "example": "[]"}
-            else:
-
-                result[key] = {"type": type(value).__name__, "example": value}
-
-        return result
 
     def reset_accounts(self):
         self.prompt_helper.accounts = [acc for acc in self.prompt_helper.accounts if "x" in acc and acc["x"] != ""]
+
+    def get_test_cases(self, test_cases):
+        """
+            Attempts to retrieve a valid list of test cases.
+
+            This method first checks if the input `test_cases` is an empty list.
+            If so, it iterates through the pentesting step list and attempts to fetch
+            non-empty test cases using `get_steps_of_phase`, skipping any already transformed steps.
+
+            If no valid test cases are found or if `test_cases` is None, it will repeatedly call
+            `next_purpose()` and use `explore_steps()` until it retrieves a non-None result.
+
+            Parameters:
+                test_cases (list or None): An initial set of test cases to validate or replace.
+
+            Returns:
+                list or None: A valid list of test cases or None if none could be retrieved.
+            """
+        # If test_cases is an empty list, try to find a new non-empty list from other phases
+        while isinstance(test_cases, list) and len(test_cases) == 0:
+            for purpose in self.pentesting_information.pentesting_step_list:
+                if purpose in self.transformed_steps.keys():
+                    continue
+                else:
+                    test_cases = self.pentesting_information.get_steps_of_phase(purpose)
+                    if test_cases is not None:
+                        if len(test_cases) != 0:
+                            return test_cases
+
+        # If test_cases is None, keep trying next_purpose and explore_steps until something is found
+        if test_cases is None:
+            while test_cases is None:
+                self.next_purpose(None, test_cases, self.purpose)
+                test_cases = self.pentesting_information.explore_steps(self.purpose)
+
+        return test_cases

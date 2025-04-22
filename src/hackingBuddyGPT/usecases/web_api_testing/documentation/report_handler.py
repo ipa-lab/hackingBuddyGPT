@@ -33,7 +33,6 @@ class ReportHandler:
             config (dict): Configuration dictionary containing metadata like the test name.
         """
         current_path = os.path.dirname(os.path.abspath(__file__))
-        print(f'current_path:{current_path}')
         self.file_path = os.path.join(current_path, "reports", config.get("name"))
         self.vul_file_path = os.path.join(current_path, "vulnerabilities", config.get("name"))
 
@@ -179,11 +178,9 @@ class ReportHandler:
 
 
 
-        print(f'security: {test_step.get("security")}')
         if "only one id" in test_step.get("security"):
             headers, body = raw_response.split('\r\n\r\n', 1)
             body = json.loads(body)
-            print(f'body:{body}')
             if len(body)> 1:
                 self.vulnerabilities_counter += 1
                 report_line = (

@@ -49,7 +49,8 @@ dependencies = [
     'faker',
     'fpdf',
     'langchain_core',
-    'langchain_community'
+    'langchain_community',
+    'langchain_chroma'
 
 ]
 

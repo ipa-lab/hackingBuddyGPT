@@ -69,7 +69,7 @@ where = ["src"]
 pythonpath = "src"
 addopts = ["--import-mode=importlib"]
 [project.optional-dependencies]
-testing = ['pytest', 'pytest-mock', 'pandas', 'faker']
+testing = ['pytest', 'pytest-mock', 'pandas', 'faker',     'langchain_core']
 dev = [
 	'ruff',
 ]

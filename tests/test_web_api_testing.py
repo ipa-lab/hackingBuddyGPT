@@ -2,11 +2,9 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from hackingBuddyGPT.usecases import SimpleWebAPITesting
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptPurpose
 from hackingBuddyGPT.utils.logging import Logger
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
-    SimpleWebAPITestingUseCase,
+    SimpleWebAPITestingUseCase, SimpleWebAPITesting,
 )
 from hackingBuddyGPT.utils import Console, DbStorage
 

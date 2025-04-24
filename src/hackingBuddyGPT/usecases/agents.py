@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from mako.template import Template
 from typing import Dict
 
-from hackingBuddyGPT.utils.logging import log_conversation, GlobalLogger
+from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param
 from hackingBuddyGPT.capabilities.capability import (
     Capability,
     capabilities_to_simple_text_handler,
@@ -15,7 +15,7 @@ from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 @dataclass
 class Agent(ABC):
-    log: GlobalLogger = None
+    log: Logger = log_param
 
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _default_capability: Capability = None

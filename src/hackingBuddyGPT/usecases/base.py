@@ -3,12 +3,10 @@ import json
 import argparse
 from dataclasses import dataclass
 
-from hackingBuddyGPT.utils.logging import GlobalLogger
+from hackingBuddyGPT.utils.logging import Logger, log_param
 from typing import Dict, Type, TypeVar, Generic
 
-from hackingBuddyGPT.utils.configurable import ParameterDefinitions, build_parser, get_arguments, get_class_parameters, \
-    Transparent, ParserState
-
+from hackingBuddyGPT.utils.configurable import Transparent, configurable
 
 @dataclass
 class UseCase(abc.ABC):
@@ -22,22 +20,21 @@ class UseCase(abc.ABC):
     so that they can be automatically discovered and run from the command line.
     """
 
-    log: GlobalLogger
+    log: Logger = log_param
 
-    def init(self, configuration):
+    def init(self):
         """
         The init method is called before the run method. It is used to initialize the UseCase, and can be used to
         perform any dynamic setup that is needed before the run method is called. One of the most common use cases is
         setting up the llm capabilities from the tools that were injected.
         """
-        self.configuration = configuration
-        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
+        pass
 
     def serialize_configuration(self, configuration) -> str:
         return json.dumps(configuration)
 
     @abc.abstractmethod
-    def run(self):
+    def run(self, configuration):
         """
         The run method is the main method of the UseCase. It is used to run the UseCase, and should contain the main
         logic. It is recommended to have only the main llm loop in here, and call out to other methods for the
@@ -70,7 +67,10 @@ class AutonomousUseCase(UseCase, abc.ABC):
     def after_run(self):
         pass
 
-    def run(self):
+    def run(self, configuration):
+        self.configuration = configuration
+        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
+
         self.before_run()
 
         turn = 1
@@ -98,31 +98,10 @@ class AutonomousUseCase(UseCase, abc.ABC):
             raise
 
 
-@dataclass
-class _WrappedUseCase:
-    """
-    A WrappedUseCase should not be used directly and is an internal tool used for initialization and dependency injection
-    of the actual UseCases.
-    """
-
-    name: str
-    description: str
-    use_case: Type[UseCase]
-    parameters: ParameterDefinitions
-
-    def build_parser(self, parser: argparse.ArgumentParser):
-        parser_state = ParserState()
-        build_parser(self.parameters, parser, parser_state)
-        parser.set_defaults(use_case=self, parser_state=parser_state)
-
-    def __call__(self, args: argparse.Namespace):
-        return self.use_case(**get_arguments(self.parameters, args, args.parser_state))
+use_cases: Dict[str, configurable] = dict()
 
 
-use_cases: Dict[str, _WrappedUseCase] = dict()
-
-
-T = TypeVar("T")
+T = TypeVar("T", bound=type)
 
 
 class AutonomousAgentUseCase(AutonomousUseCase, Generic[T]):
@@ -137,13 +116,12 @@ class AutonomousAgentUseCase(AutonomousUseCase, Generic[T]):
     @classmethod
     def __class_getitem__(cls, item):
         item = dataclass(item)
-        item.__parameters__ = get_class_parameters(item)
 
         class AutonomousAgentUseCase(AutonomousUseCase):
             agent: Transparent(item) = None
 
-            def init(self, configuration):
-                super().init(configuration)
+            def init(self):
+                super().init()
                 self.agent.init()
 
             def get_name(self) -> str:
@@ -169,7 +147,7 @@ def use_case(description):
         name = cls.__name__.removesuffix("UseCase")
         if name in use_cases:
             raise IndexError(f"Use case with name {name} already exists")
-        use_cases[name] = _WrappedUseCase(name, description, cls, get_class_parameters(cls))
+        use_cases[name] = configurable(name, description)(cls)
         return cls
 
     return inner
@@ -181,4 +159,4 @@ def register_use_case(name: str, description: str, use_case: Type[UseCase]):
     """
     if name in use_cases:
         raise IndexError(f"Use case with name {name} already exists")
-    use_cases[name] = _WrappedUseCase(name, description, use_case, get_class_parameters(use_case))
+    use_cases[name] = configurable(name, description)(use_case)

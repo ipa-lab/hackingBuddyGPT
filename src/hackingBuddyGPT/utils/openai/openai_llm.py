@@ -20,7 +20,7 @@ class OpenAIConnection(LLM):
     show you, that you did not specialize yet.
     """
 
-    api_key: str = parameter(desc="OpenAI API Key")
+    api_key: str = parameter(desc="OpenAI API Key", secret=True)
     model: str = parameter(desc="OpenAI model name")
     context_size: int = parameter(
         desc="Maximum context size for the model, only used internally for things like trimming to the context size"

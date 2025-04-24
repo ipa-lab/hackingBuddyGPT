@@ -64,14 +64,7 @@ where = ["src"]
 pythonpath = "src"
 addopts = ["--import-mode=importlib"]
 [project.optional-dependencies]
-testing = [
-    'pytest',
-    'pytest-mock',
-    'langchain-community',
-	'langchain-openai',
-	'markdown',
-	'chromadb',
-	'langchain-chroma',]
+testing = ['pytest', 'pytest-mock']
 dev = [
 	'ruff',
 ]

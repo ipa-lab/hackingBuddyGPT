@@ -3,7 +3,7 @@ import json
 import argparse
 from dataclasses import dataclass
 
-from hackingBuddyGPT.utils.logging import GlobalLogger
+from hackingBuddyGPT.utils.logging import Logger, log_param
 from typing import Dict, Type, TypeVar, Generic
 
 from hackingBuddyGPT.utils.configurable import Transparent, configurable
@@ -20,7 +20,7 @@ class UseCase(abc.ABC):
     so that they can be automatically discovered and run from the command line.
     """
 
-    log: GlobalLogger
+    log: Logger = log_param
 
     def init(self):
         """

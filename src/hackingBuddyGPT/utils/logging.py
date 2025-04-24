@@ -77,9 +77,9 @@ class ControlMessage:
         return cls(type=type_, data=data_instance)
 
 
-@configurable("logger", "Logger")
+@configurable("local_logger", "Local Logger")
 @dataclass
-class Logger:
+class LocalLogger:
     log_db: DbStorage
     console: Console
 
@@ -165,7 +165,7 @@ class Logger:
         self.log_db.handle_message_update(self.run.id, message_id, action, content)
 
 
-@configurable("logger", "Logger")
+@configurable("remote_logger", "Remote Logger")
 @dataclass
 class RemoteLogger:
     console: Console
@@ -285,6 +285,12 @@ class RemoteLogger:
         self.send(MessageType.MESSAGE_STREAM_PART, part)
 
 
+GlobalLocalLogger = Global(LocalLogger)
+GlobalRemoteLogger = Global(RemoteLogger)
+Logger = Union[GlobalRemoteLogger, GlobalLocalLogger]
+log_param = parameter(desc="choice of logging backend", default="local_logger")
+
+
 @dataclass
 class LogSectionContext:
     logger: Logger
@@ -352,8 +358,3 @@ class MessageStreamLogger:
         self._completed = True
         self.logger._add_or_update_message(self.message_id, self.conversation, self.role, "", tokens_query, tokens_response, duration)
         return self.message_id
-
-
-GlobalLocalLogger = Global(Transparent(Logger))
-GlobalRemoteLogger = Global(Transparent(RemoteLogger))
-GlobalLogger = GlobalRemoteLogger

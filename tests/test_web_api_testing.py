@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from hackingBuddyGPT.usecases import SimpleWebAPITesting
-from hackingBuddyGPT.utils.logging import Logger
+from hackingBuddyGPT.utils.logging import LocalLogger
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
     SimpleWebAPITestingUseCase,
 )
@@ -18,7 +18,7 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         console = Console()
 
         log_db.init()
-        log = Logger(
+        log = LocalLogger(
             log_db=log_db,
             console=console,
             tag="integration_test_linuxprivesc",

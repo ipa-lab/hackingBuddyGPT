@@ -6,7 +6,7 @@ import json
 from dotenv import dotenv_values
 from dataclasses import dataclass, Field, field, MISSING, _MISSING_TYPE
 from types import NoneType
-from typing import Any, Dict, Type, TypeVar, Set, Union, Optional, overload, Generic, Callable
+from typing import Any, Dict, Type, TypeVar, Set, Union, Optional, overload, Generic, Callable, get_origin, get_args
 
 
 def repr_text(value: Any, secret: bool = False) -> str:
@@ -44,18 +44,6 @@ def configurable(name: str, description: str):
     def inner(cls) -> Configurable:
         cls.name = name or cls.__name__
         cls.description = description
-        cls._parameter_collection = dict()
-        cls._parameter_definition = ComplexParameterDefinition(
-            name=[],
-            type=cls,
-            default=no_default(),
-            description=cls.description,
-            secret=False,
-            parameters={
-                name: parameter_definition_for(*metadata, parameter_collection=cls._parameter_collection)
-                for name, metadata in get_inspect_parameters_for_class(cls, []).items()
-            },
-        )
 
         return cls
 
@@ -63,14 +51,29 @@ def configurable(name: str, description: str):
 
 
 def Secret(subclass: C) -> C:
-    subclass.__secret__ = True
-    return subclass
+    class Cloned(subclass):
+        __secret__ = True
+        __transparent__ = getattr(subclass, "__transparent__", False)
+        __global__ = getattr(subclass, "__global__", False)
+        __global_name__ = getattr(subclass, "__global_name__", None)
+
+    Cloned.__name__ = subclass.__name__
+    Cloned.__qualname__ = subclass.__qualname__
+
+    return Cloned
 
 
 def Global(subclass: C, global_name: Optional[str] = None) -> C:
-    subclass.__global__ = True
-    subclass.__global_name__ = global_name
-    return subclass
+    class Cloned(subclass):
+        __secret__ = getattr(subclass, "__secret__", False)
+        __transparent__ = getattr(subclass, "__transparent__", False)
+        __global__ = True
+        __global_name__ = global_name
+
+    Cloned.__name__ = subclass.__name__
+    Cloned.__qualname__ = subclass.__qualname__
+
+    return Cloned
 
 
 def Transparent(subclass: C) -> C:
@@ -95,19 +98,15 @@ def Transparent(subclass: C) -> C:
     A transparent attribute will also not have its init function called automatically, so you will need to do that on your own, as seen in the Outer init.
     The function is upper case on purpose, as it is supposed to be used in a Type context
     """
+    class Cloned(subclass):
+        __secret__ = getattr(subclass, "__secret__", False)
+        __transparent__ = True
+        __global__ = getattr(subclass, "__global__", False)
+        __global_name__ = getattr(subclass, "__global_name__", None)
 
-    subclass.__transparent__ = True
-    return subclass
+    Cloned.__name__ = subclass.__name__
+    Cloned.__qualname__ = subclass.__qualname__
 
-
-def Choice(*subclasses: C, default: Optional[C] =None) -> C:
-    class Cloned(subclasses[0]):
-        __choice__ = True
-        __choices__ = subclasses
-        __default__ = default
-    Cloned.__name__ = subclasses[0].__name__
-    Cloned.__qualname__ = subclasses[0].__qualname__
-    Cloned.__module__ = subclasses[0].__module__
     return Cloned
 
 
@@ -162,6 +161,7 @@ def parameter(
     secret: bool = False,
     global_parameter: bool = False,
     global_name: Optional[str] = None,
+    choices: Optional[dict[str, type]] = None,
     default: T = MISSING,
     init: bool = True,
     repr: bool = True,
@@ -176,6 +176,7 @@ def parameter(
     metadata["secret"] = secret
     metadata["global"] = global_parameter
     metadata["global_name"] = global_name
+    metadata["choices"] = choices
 
     return field(
         default=default,
@@ -201,42 +202,46 @@ ParsingResults = NestedCollection[str]
 InstanceResults = NestedCollection[Any]
 
 
-def get_at(collection: NestedCollection[C], name: list[str], at: int = 0, meta: bool = False) -> Optional[C]:
+def get_at(collection: NestedCollection[C], name: list[str], at: int = 0, *, meta: bool = False, no_raise: bool = False) -> Optional[C]:
+    if meta:
+        name = name + ["$"]
+
     if len(name) == at:
         if isinstance(collection, dict):
-            raise ValueError(f"Value for {'.'.join(name)} not final in collection: {collection}")
+            if no_raise:
+                return None
+            raise ValueError(f"Value for '{'.'.join(name)}' not final in collection: {collection}")
         return collection
     if not isinstance(collection, dict):
-        raise ValueError(f"Lookup for {'.'.join(name)} overflowing in collection: {collection}")
+        if no_raise:
+            return None
+        raise ValueError(f"Lookup for '{'.'.join(name)}' overflowing in collection: {collection}")
 
     cur_name = name[at]
-    if len(name) - 1 == at and meta:
-        cur_name = "$"+cur_name
-
     if cur_name not in collection:
         return None
 
-    return get_at(collection[cur_name], name, at + 1, meta)
+    return get_at(collection[cur_name], name, at + 1, meta=False, no_raise=no_raise)
 
 
 def set_at(collection: NestedCollection[C], name: list[str], value: C, at: int = 0, meta: bool = False):
+    if meta:
+        name = name + ["$"]
+
     if len(name) == at:
-        raise ValueError(f"Lookup for collection {'.'.join(name)} has empty path")
+        raise ValueError(f"Lookup for collection '{'.'.join(name)}' has empty path")
 
     if not isinstance(collection, dict):
-        raise ValueError(f"Lookup for {'.'.join(name)} overflowing in collection: {collection}")
+        raise ValueError(f"Lookup for '{'.'.join(name)}' overflowing in collection: {collection}")
 
     if len(name) - 1 == at:
-        if meta:
-            collection["$"+name[at]] = value
-        else:
-            collection[name[at]] = value
+        collection[name[at]] = value
         return
 
     if name[at] not in collection:
         collection[name[at]] = {}
 
-    return set_at(collection[name[at]], name, value, at + 1, meta)
+    return set_at(collection[name[at]], name, value, at + 1, False)
 
 
 def dfs_flatmap(collection: NestedCollection[C], func: Callable[[list[str], C], Any], basename: Optional[list[str]] = None):
@@ -248,14 +253,16 @@ def dfs_flatmap(collection: NestedCollection[C], func: Callable[[list[str], C], 
         if isinstance(value, dict):
             output += dfs_flatmap(value, func, name)
         else:
-            output.append(func(name, value))
+            res = func(name, value)
+            if res is not None:
+                output.append(res)
     return output
 
 
 @dataclass
 class ParameterDefinition(Generic[C]):
     """
-    A ParameterDefinition is used for any parameter that is just a simple type, which can be handled by argparse directly.
+    A ParameterDefinition is used for any parameter that is just a simple type like str, int, float, bool.
     """
 
     name: list[str]
@@ -264,15 +271,15 @@ class ParameterDefinition(Generic[C]):
     description: Optional[str]
     secret: bool
 
-    def __call__(self, collection: ParsingResults, instances: InstanceResults) -> C:
-        instance = get_at(instances, self.name)
-        if instance is None:
+    _instance: Optional[Any] = field(init=False, default=None)
+
+    def __call__(self, collection: ParsingResults) -> C:
+        if self._instance is None:
             value = get_at(collection, self.name)
             if value is None:
                 raise ParameterError(f"Missing required parameter '--{'.'.join(self.name)}'", self.name)
-            instance = self.type(value)
-            set_at(instances, self.name, instance)
-        return instance
+            self._instance = self.type(value)
+        return self._instance
 
     def get_default(self, defaults: list[tuple[str, ParsingResults]], fail_fast: bool = True) -> tuple[Any, str, str]:
         default_value = None
@@ -317,29 +324,54 @@ class ParameterDefinition(Generic[C]):
 class ComplexParameterDefinition(ParameterDefinition[C]):
     """
     A ComplexParameterDefinition is used for any parameter that is a complex type (which itself only takes simple types,
-    or other types that fit the ComplexParameterDefinition), requiring a recursive build_parser.
-    It is important to note, that at some point, the parameter must be a simple type, so that argparse (and we) can handle
-    it. So if you have recursive type definitions that you try to make configurable, this will not work.
+    or other types that fit the ComplexParameterDefinition/UnionParameterDefinition).
+    It is important to note, that at some point, the parameter must be a simple type, so that it can be parsed.
+    So if you have recursive type definitions that you try to make configurable, this will not work.
     """
 
     parameters: dict[str, ParameterDefinition]
 
-    def __call__(self, collection: ParsingResults, instances: InstanceResults):
+    def __call__(self, collection: ParsingResults) -> C:
         # TODO: default handling?
         # we only do instance management on non-top level parameter definitions (those would be the full configurable, which does not need to be cached and also fails)
-        instance_name = self.name
-        if len(instance_name) == 0:
-            instance_name = [f"${self.type.__class__.__name__}"]
-        instance = get_at(instances, instance_name, meta=True)
-        if instance is None:
-            instance = self.type(**{name: param(collection, instances) for name, param in self.parameters.items()})
-            if hasattr(instance, "init"):
-                if "configuration" in inspect.signature(instance.init).parameters:
-                    instance.init(configuration=collection)
-                else:
-                    instance.init()
-            set_at(instances, instance_name, instance, meta=True)
-        return instance
+        if self._instance is None:
+            self._instance = self.type(**{
+                name: param(collection)
+                for name, param in self.parameters.items()
+            })
+            if hasattr(self._instance, "init"):
+                self._instance.init()
+        return self._instance
+
+    def get_default(self, defaults: list[tuple[str, ParsingResults]], fail_fast: bool = True) -> tuple[Any, str, str]:
+        return None, "", ""
+
+
+@dataclass
+class ChoiceParameterDefinition(ParameterDefinition[C]):
+    """
+    A ChoiceParameterDefinition is used for any parameter that is a choice / Union type.
+    It is important to note, that at some point, the parameter must be a simple type, so that it can be parsed.
+    So if you have recursive type definitions that you try to make configurable, this will not work.
+    """
+
+    choices: dict[str, tuple[ParameterDefinition, dict[str, ParameterDefinition]]]
+
+    def __call__(self, collection: ParsingResults) -> C:
+        if self._instance is None:
+            value = get_at(collection, self.name, meta=True)
+            if value is None:
+                raise ParameterError(f"Missing required parameter '--{'.'.join(self.name)}'", self.name)
+            if value not in self.choices:
+                raise ParameterError(f"Invalid value for parameter '--{'.'.join(self.name)}': {value} (possible values are {', '.join(self.choices.keys())})", self.name)
+            choice, parameters = self.choices[value]
+            self._instance = choice(**{
+                name: parameter(collection)
+                for name, parameter in parameters.items()
+            })
+            if hasattr(self._instance, "init"):
+                self._instance.init()
+        return self._instance
 
 
 def get_inspect_parameters_for_class(cls: type, basename: list[str]) -> dict[str, tuple[inspect.Parameter, list[str], Optional[dataclasses.Field]]]:
@@ -362,15 +394,40 @@ def get_type_description_default_for_parameter(parameter: inspect.Parameter, nam
     if field is not None:
         description = field.metadata.get("desc", None)
         if field.type is not None:
-            if not isinstance(field.type, type):
+            if not (isinstance(field.type, type) or get_origin(field.type) is Union):
                 raise ValueError(f"Parameter {'.'.join(name)} has an invalid type annotation: {field.type} ({type(field.type)})")
             parameter_type = field.type
 
     # check if type is an Optional, and then get the actual type
-    if hasattr(parameter_type, "__origin__") and parameter_type.__origin__ is Union and len(parameter_type.__args__) == 2 and parameter_type.__args__[1] is NoneType:
+    if get_origin(parameter_type) is Union and len(parameter_type.__args__) == 2 and parameter_type.__args__[1] is NoneType:
         parameter_type = parameter_type.__args__[0]
 
     return parameter_type, description, default
+
+
+def try_existing_parameter(parameter_collection: ParameterCollection, name: list[str], typ: type, parameter_type: type, default: Any, description: str, secret_parameter: bool) -> Optional[ParameterDefinition]:
+    existing_parameter = get_at(parameter_collection, name, meta=(typ in (ComplexParameterDefinition, ChoiceParameterDefinition)))
+    if not existing_parameter:
+        return None
+
+    if existing_parameter.type != parameter_type:
+        raise ValueError(f"Parameter {'.'.join(name)} already exists with a different type ({existing_parameter.type} != {parameter_type})")
+    if existing_parameter.default != default:
+        if existing_parameter.default is None and isinstance(secret_parameter, no_default) \
+            or existing_parameter.default is not None and not isinstance(secret_parameter, no_default):
+                pass  # syncing up "no defaults"
+        else:
+            raise ValueError(f"Parameter {'.'.join(name)} already exists with a different default value ({existing_parameter.default} != {default})")
+    if existing_parameter.description != description:
+        raise ValueError(f"Parameter {'.'.join(name)} already exists with a different description ({existing_parameter.description} != {description})")
+    if existing_parameter.secret != secret_parameter:
+        raise ValueError(f"Parameter {'.'.join(name)} already exists with a different secret status ({existing_parameter.secret} != {secret_parameter})")
+
+    return existing_parameter
+
+
+def parameter_definitions_for_class(cls: type, name: list[str], parameter_collection: ParameterCollection) -> dict[str, ParameterDefinition]:
+    return {name: parameter_definition_for(*metadata, parameter_collection=parameter_collection) for name, metadata in get_inspect_parameters_for_class(cls, name).items()}
 
 
 def parameter_definition_for(param: inspect.Parameter, name: list[str], field: Optional[dataclasses.Field] = None, *, parameter_collection: ParameterCollection) -> ParameterDefinition:
@@ -389,32 +446,55 @@ def parameter_definition_for(param: inspect.Parameter, name: list[str], field: O
         name = name[:-1]
 
     if parameter_type in (str, int, float, bool):
-        existing_parameter = get_at(parameter_collection, name)
+        existing_parameter = try_existing_parameter(parameter_collection, name, typ=ParameterDefinition, parameter_type=parameter_type, default=default, description=description, secret_parameter=secret_parameter)
         if existing_parameter:
-            if existing_parameter.type != parameter_type:
-                raise ValueError(f"Parameter {'.'.join(name)} already exists with a different type ({existing_parameter.type} != {parameter_type})")
-            if existing_parameter.default != default:
-                if existing_parameter.default is None and isinstance(secret_parameter, no_default) \
-                    or existing_parameter.default is not None and not isinstance(secret_parameter, no_default):
-                        pass  # syncing up "no defaults"
-                else:
-                    raise ValueError(f"Parameter {'.'.join(name)} already exists with a different default value ({existing_parameter.default} != {default})")
-            if existing_parameter.description != description:
-                raise ValueError(f"Parameter {'.'.join(name)} already exists with a different description ({existing_parameter.description} != {description})")
-            if existing_parameter.secret != secret_parameter:
-                raise ValueError(f"Parameter {'.'.join(name)} already exists with a different secret status ({existing_parameter.secret} != {secret_parameter})")
             return existing_parameter
         parameter = ParameterDefinition(name, parameter_type, default, description, secret_parameter)
         set_at(parameter_collection, name, parameter)
+
+    elif get_origin(parameter_type) is Union:
+        existing_parameter = try_existing_parameter(parameter_collection, name, typ=ChoiceParameterDefinition, parameter_type=parameter_type, default=default, description=description, secret_parameter=secret_parameter)
+        if existing_parameter:
+            return existing_parameter
+
+        if field and field.metadata.get("choices") is not None:
+            choices = {
+                name: (typ, parameter_definitions_for_class(typ, name, parameter_collection))
+                for name, typ in field.metadata.get('choices').items()
+            }
+        else:
+            choices = {
+                getattr(arg, "name", None) or getattr(arg, "__name__", None) or arg.__class__.__name__: (
+                    arg,
+                    parameter_definitions_for_class(arg, name, parameter_collection)
+                )
+                for arg in get_args(parameter_type)
+            }
+
+        parameter = ChoiceParameterDefinition(
+            name=name,
+            type=parameter_type,
+            default=default,
+            description=description,
+            secret=secret_parameter,
+            choices=choices,
+        )
+        set_at(parameter_collection, name, parameter, meta=True)
+
     else:
+        existing_parameter = try_existing_parameter(parameter_collection, name, typ=ComplexParameterDefinition, parameter_type=parameter_type, default=default, description=description, secret_parameter=secret_parameter)
+        if existing_parameter:
+            return existing_parameter
+
         parameter = ComplexParameterDefinition(
             name=name,
             type=parameter_type,
             default=default,
             description=description,
             secret=secret_parameter,
-            parameters={name: parameter_definition_for(*metadata, parameter_collection=parameter_collection) for name, metadata in get_inspect_parameters_for_class(parameter_type, name).items()},
+            parameters=parameter_definitions_for_class(parameter_type, name, parameter_collection),
         )
+        set_at(parameter_collection, name, parameter, meta=True)
 
     return parameter
 
@@ -430,7 +510,7 @@ class Parseable(Generic[C]):
     _parameter_collection: ParameterCollection = field(init=False, default_factory=dict)
 
     def __call__(self, parsing_results: ParsingResults):
-        return self._parameter(parsing_results, {})
+        return self._parameter(parsing_results)
 
     def __post_init__(self):
         self._parameter = ComplexParameterDefinition(
@@ -439,11 +519,11 @@ class Parseable(Generic[C]):
             default=no_default(),
             description=self.description,
             secret=False,
-            parameters={name: parameter_definition_for(*metadata, parameter_collection=self._parameter_collection) for name, metadata in get_inspect_parameters_for_class(self.cls, []).items()},
+            parameters=parameter_definitions_for_class(self.cls, [], self._parameter_collection),
         )
 
     def to_help(self, defaults: list[tuple[str, ParsingResults]], level: int = 0) -> str:
-        return "\n".join(dfs_flatmap(self._parameter_collection, lambda _, parameter: parameter.to_help(defaults, level+1)))
+        return "\n".join(dfs_flatmap(self._parameter_collection, lambda _, parameter: parameter.to_help(defaults, level+1) if not isinstance(parameter, ComplexParameterDefinition) else None))
 
 
 CommandMap = dict[str, Union["CommandMap[C]", Parseable[C]]]
@@ -598,8 +678,12 @@ def parse_args(program: str, command: list[str], direct_args: list[str], parseab
                     raise InvalidCommand(f"No value for argument {arg}", command, _help())
                 value = direct_args.pop(0)
             key = key.split(".")
-            if get_at(parameter_collection, key) is None:
-                raise InvalidCommand(f"Invalid argument {arg}", command, _help())
+            if get_at(parameter_collection, key, no_raise=True) is None:
+                meta_param = get_at(parameter_collection, key, meta=True, no_raise=True)
+                if meta_param is None or not isinstance(meta_param, ChoiceParameterDefinition):
+                    raise InvalidCommand(f"Invalid argument {arg}", command, _help())
+                else:
+                    key += ["$"]
             set_at(parsing_results, key, value)
         else:
             raise InvalidCommand(f"Invalid argument {arg}", command, _help())

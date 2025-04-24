@@ -62,10 +62,10 @@ class OpenAIConnection(LLM):
                     print("Received 408 Status Code, trying again.")
                     return self.get_response(prompt, azure_retry = azure_retry + 1)
                 else:
-                    raise Exception(f"Error from Gateway ({response.status_code}")
+                    raise Exception(f"Error from Gateway ({response.status_code})")
 
             if response.status_code != 200:
-                raise Exception(f"Error from OpenAI Gateway ({response.status_code}")
+                raise Exception(f"Error from OpenAI Gateway ({response.status_code})")
 
         except requests.exceptions.ConnectionError:
             print("Connection error! Retrying in 5 seconds..")

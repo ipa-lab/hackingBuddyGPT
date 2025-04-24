@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import requests
 import tiktoken
+from urllib.parse import urlparse
 
 from hackingBuddyGPT.utils.configurable import configurable, parameter
 from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
@@ -38,7 +39,7 @@ class OpenAIConnection(LLM):
         if hasattr(prompt, "render"):
             prompt = prompt.render(**kwargs)
 
-        if "azure.com" in self.api_url:
+        if urlparse(self.api_url).hostname and urlparse(self.api_url).hostname.endswith(".azure.com"):
             # azure ai header
             headers = {"api-key": f"{self.api_key}"}
         else:

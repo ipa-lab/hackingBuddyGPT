@@ -1,7 +1,13 @@
 from typing import List, Optional
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptStrategy, PromptContext, PromptPurpose
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning.task_planning_prompt import TaskPlanningPrompt
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+    PromptContext,
+    PromptPurpose,
+    PromptStrategy,
+)
+from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning.task_planning_prompt import (
+    TaskPlanningPrompt,
+)
 
 
 class ChainOfThoughtPrompt(TaskPlanningPrompt):
@@ -31,8 +37,9 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         self.explored_steps: List[str] = []
         self.purpose: Optional[PromptPurpose] = None
 
-    def generate_prompt(self, move_type: str, hint: Optional[str], previous_prompt: Optional[str],
-                        turn: Optional[int]) -> str:
+    def generate_prompt(
+        self, move_type: str, hint: Optional[str], previous_prompt: Optional[str], turn: Optional[int]
+    ) -> str:
         """
         Generates a prompt using the chain-of-thought strategy.
 
@@ -66,14 +73,14 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 "Create an OpenAPI document including metadata such as API title, version, and description, define the base URL of the API, list all endpoints, methods, parameters, and responses, and define reusable schemas, response types, and parameters.",
                 "Ensure the correctness and completeness of the OpenAPI specification by validating the syntax and completeness of the document using tools like Swagger Editor, and ensure the specification matches the actual behavior of the API.",
                 "Refine the document based on feedback and additional testing, share the draft with others, gather feedback, and make necessary adjustments. Regularly update the specification as the API evolves.",
-                "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes."
+                "Make the OpenAPI specification available to developers by incorporating it into your API documentation site and keep the documentation up to date with API changes.",
             ]
         else:
             return [
                 "Identify common data structures returned by various endpoints and define them as reusable schemas, specifying field types like integer, string, and array.",
                 "Create an OpenAPI document that includes API metadata (title, version, description), the base URL, endpoints, methods, parameters, and responses.",
                 "Ensure the document's correctness and completeness using tools like Swagger Editor, and verify it matches the API's behavior. Refine the document based on feedback, share drafts for review, and update it regularly as the API evolves.",
-                "Make the specification available to developers through the API documentation site, keeping it current with any API changes."
+                "Make the specification available to developers through the API documentation site, keeping it current with any API changes.",
             ]
 
     def _get_chain_of_thought_steps(self, common_steps: List[str], move_type: str) -> List[str]:
@@ -133,7 +140,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 if len(step) == 1:
                     del self.pentesting_information.explore_steps[purpose]
 
-                print(f'prompt: {prompt}')
+                print(f"prompt: {prompt}")
                 return prompt
         else:
             return ["Look for exploits."]

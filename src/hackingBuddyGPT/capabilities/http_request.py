@@ -67,7 +67,7 @@ class HTTPRequest(Capability):
                 allow_redirects=self.follow_redirects,
             )
         except requests.exceptions.RequestException as e:
-            url = self.host + ("" if path.startswith("/") else "/") + path + ("?{query}" if query else "")
+            url = self.host + ("" if path.startswith("/") else "/") + path + (f"?{query}" if query else "")
             return f"Could not request '{url}': {e}"
 
         response_headers = "\r\n".join(f"{k}: {v}" for k, v in resp.headers.items())

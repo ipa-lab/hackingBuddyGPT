@@ -30,7 +30,7 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
             agent=self.agent
 
         )
-        self.simple_api_testing.init({})
+        self.simple_api_testing.init()
 
 
 

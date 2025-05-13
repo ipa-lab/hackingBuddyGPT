@@ -1,3 +1,6 @@
+**NEITHER THE IPA-LAB NOR HACKINGBUDDYGPT ARE INVOLVED IN ANY CRYPTO COIN! ALL INFORMATION TO THE CONTRARY IS BEING USED TO SCAM YOU! THE TWITTER ACCOUNT THAT CURRENTLY EXISTS IS JUST TRYING TO GET YOUR MONEY, DO NOT FALL FOR IT!**
+
+
 # <div class="vertical-align: middle"><img src="https://github.com/ipa-lab/hackingBuddyGPT/blob/main/docs/hackingbuddy-rounded.png?raw=true" width="72"> HackingBuddyGPT [![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)</div>
 
 *Helping Ethical Hackers use LLMs in 50 Lines of Code or less..*
@@ -12,6 +15,7 @@ If you want to use hackingBuddyGPT and need help selecting the best LLM for your
 
 ## hackingBuddyGPT in the News
 
+- 2025-04-08: [Andreas Happe](https://github.com/andreashappe) presented hackingBuddyGPT at the [Google Developer Group TU Wien](https://www.linkedin.com/company/google-developer-group-tu-wien/)
 - 2024-11-20: [Manuel Reinsperger](https://www.github.com/neverbolt) presented hackingBuddyGPT at the [European Symposium on Security and Artificial Intelligence (ESSAI)](https://essai-conference.eu/) 
 - 2024-07-26: The [GitHub Accelerator Showcase](https://github.blog/open-source/maintainers/github-accelerator-showcase-celebrating-our-second-cohort-and-whats-next/) features hackingBuddyGPT
 - 2024-07-24: [Juergen](https://github.com/citostyle) speaks at [Open Source + mezcal night @ GitHub HQ](https://lu.ma/bx120myg)
@@ -50,6 +54,7 @@ Over time, more contributors joined:
 - Juergen Cito, [github](https://github.com/citostyle), [linkedin](https://at.linkedin.com/in/jcito), [twitter/x](https://twitter.com/citostyle), [Google Scholar](https://scholar.google.ch/citations?user=fj5MiWsAAAAJ&hl=en)
 - Manuel Reinsperger, [github](https://github.com/Neverbolt), [linkedin](https://www.linkedin.com/in/manuel-reinsperger-7110b8113/), [twitter/x](https://twitter.com/neverbolt)
 - Diana Strauss, [github](https://github.com/DianaStrauss), [linkedin](https://www.linkedin.com/in/diana-s-a853ba20a/)
+- Benjamin Probst, [github](https://github.com/Qsan1)
 
 ## Existing Agents/Usecases
 
@@ -60,13 +65,13 @@ Our initial forays were focused upon evaluating the efficiency of LLMs for [linu
 privilege escalation attacks](https://arxiv.org/abs/2310.11409) and we are currently breaching out into evaluation
 the use of LLMs for web penetration-testing and web api testing.
 
-| Name                                             | Description                                                                                                                                                                                                                                                                                  | Screenshot                                                                                                                                                    |
-|--------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [minimal](https://docs.hackingbuddy.ai/docs/dev-guide/dev-quickstart) | A minimal 50 LoC Linux Priv-Esc example. This is the usecase from [Build your own Agent/Usecase](#build-your-own-agentusecase)                                                                                                                                                               | ![A very minimal run](https://docs.hackingbuddy.ai/run_archive/2024-04-29_minimal.png)                                                                                                               |
-| [linux-privesc](https://docs.hackingbuddy.ai/docs/usecases/linux-priv-esc) | Given an SSH-connection for a low-privilege user, task the LLM to become the root user. This would be a typical Linux privilege escalation attack. We published two academic papers about this: [paper #1](https://arxiv.org/abs/2308.00121) and [paper #2](https://arxiv.org/abs/2310.11409) | ![Example wintermute run](https://docs.hackingbuddy.ai/run_archive/2024-04-06_linux.png)                                                                                                          |
-| [web-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web) | Directly hack a webpage. Currently in heavy development and pre-alpha stage.                                                                                                                                                                                                                 | ![Test Run for a simple Blog Page](https://docs.hackingbuddy.ai/run_archive/2024-05-03_web.png)                                                                                             |
-| [web-api-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web-api) | Directly test a REST API. Currently in heavy development and pre-alpha stage. (Documentation and testing of REST API.)                                                                                                                                                                       | Documentation:![web_api_documentation.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api_documentation.png) Testing:![web_api_testing.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api.png) |
-
+| Name                                                                         | Description                                                                                                                                                                                                                                                                                   | Screenshot                                                                                                                                                                                                                                                  |
+|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [minimal](https://docs.hackingbuddy.ai/docs/dev-guide/dev-quickstart)        | A minimal 50 LoC Linux Priv-Esc example. This is the usecase from [Build your own Agent/Usecase](#build-your-own-agentusecase)                                                                                                                                                                | ![A very minimal run](https://docs.hackingbuddy.ai/run_archive/2024-04-29_minimal.png)                                                                                                                                                                      |
+| [linux-privesc](https://docs.hackingbuddy.ai/docs/usecases/linux-priv-esc)   | Given an SSH-connection for a low-privilege user, task the LLM to become the root user. This would be a typical Linux privilege escalation attack. We published two academic papers about this: [paper #1](https://arxiv.org/abs/2308.00121) and [paper #2](https://arxiv.org/abs/2310.11409) | ![Example wintermute run](https://docs.hackingbuddy.ai/run_archive/2024-04-06_linux.png)                                                                                                                                                                    |
+| [web-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web)          | Directly hack a webpage. Currently in heavy development and pre-alpha stage.                                                                                                                                                                                                                  | ![Test Run for a simple Blog Page](https://docs.hackingbuddy.ai/run_archive/2024-05-03_web.png)                                                                                                                                                             |
+| [web-api-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web-api)  | Directly test a REST API. Currently in heavy development and pre-alpha stage. (Documentation and testing of REST API.)                                                                                                                                                                        | Documentation:![web_api_documentation.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api_documentation.png) Testing:![web_api_testing.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api.png)                                   |
+| [extended linux-privesc](https://docs.hackingbuddy.ai/docs/usecases/extended-linux-privesc) | This usecases extends linux-privesc with additional features such as retrieval augmented generation (RAG) or chain-of-thought (CoT)                                                                                                                                                           | ![Extended Linux Privilege Escalation Run](https://docs.hackingbuddy.ai/run_archive/2025-4-14_extended_privesc_usecase_1.png) ![Extended Linux Privilege Escalation Run](https://docs.hackingbuddy.ai/run_archive/2025-4-14_extended_privesc_usecase_2.png) |
 ## Build your own Agent/Usecase
 
 So you want to create your own LLM hacking agent? We've got you covered and taken care of the tedious groundwork.
@@ -177,13 +182,54 @@ $ vi .env
 
 # if you start wintermute without parameters, it will list all available use cases
 $ python src/hackingBuddyGPT/cli/wintermute.py
-usage: wintermute.py [-h]
-                     {LinuxPrivesc,WindowsPrivesc,ExPrivEscLinux,ExPrivEscLinuxTemplated,ExPrivEscLinuxHintFile,ExPrivEscLinuxLSE,MinimalWebTesting,WebTestingWithExplanation,SimpleWebAPITesting,SimpleWebAPIDocumentation}
-                     ...
-wintermute.py: error: the following arguments are required: {LinuxPrivesc,WindowsPrivesc,ExPrivEscLinux,ExPrivEscLinuxTemplated,ExPrivEscLinuxHintFile,ExPrivEscLinuxLSE,MinimalWebTesting,WebTestingWithExplanation,SimpleWebAPITesting,SimpleWebAPIDocumentation}
+No command provided
+usage: src/hackingBuddyGPT/cli/wintermute.py  <command> [--help] [--config config.json] [options...]
+
+commands:
+    ExPrivEscLinux                  Showcase Minimal Linux Priv-Escalation
+    ExPrivEscLinuxTemplated         Showcase Minimal Linux Priv-Escalation
+    LinuxPrivesc                    Linux Privilege Escalation
+    WindowsPrivesc                  Windows Privilege Escalation
+    ExPrivEscLinuxHintFile          Linux Privilege Escalation using hints from a hint file initial guidance
+    ExPrivEscLinuxLSE               Linux Privilege Escalation using lse.sh for initial guidance
+    WebTestingWithExplanation       Minimal implementation of a web testing use case while allowing the llm to 'talk'
+    SimpleWebAPIDocumentation       Minimal implementation of a web API testing use case
+    SimpleWebAPITesting             Minimal implementation of a web API testing use case
+    Viewer                          Webserver for (live) log viewing
+    Replayer                        Tool to replay the .jsonl logs generated by the Viewer (not well tested)
+    ThesisLinuxPrivescPrototype     Thesis Linux Privilege Escalation Prototype
+
+# to get more information about how to configure a use case you can call it with --help
+$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --help
+usage: src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc [--help] [--config config.json] [options...]
+
+    --log.log_server_address='localhost:4444'    address:port of the log server to be used (default from builtin)
+    --log.tag=''    Tag for your current run (default from builtin)
+    --log='local_logger'    choice of logging backend (default from builtin)
+    --log_db.connection_string='wintermute.sqlite3'    sqlite3 database connection string for logs (default from builtin)
+    --max_turns='30'     (default from .env file, alternatives: 10 from builtin)
+    --llm.api_key=<secret>    OpenAI API Key (default from .env file)
+    --llm.model    OpenAI model name
+    --llm.context_size='100000'    Maximum context size for the model, only used internally for things like trimming to the context size (default from .env file)
+    --llm.api_url='https://api.openai.com'    URL of the OpenAI API (default from builtin)
+    --llm.api_path='/v1/chat/completions'    Path to the OpenAI API (default from builtin)
+    --llm.api_timeout=240    Timeout for the API request (default from builtin)
+    --llm.api_backoff=60    Backoff time in seconds when running into rate-limits (default from builtin)
+    --llm.api_retries=3    Number of retries when running into rate-limits (default from builtin)
+    --system='linux'     (default from builtin)
+    --enable_explanation=False     (default from builtin)
+    --enable_update_state=False     (default from builtin)
+    --disable_history=False     (default from builtin)
+    --hint=''     (default from builtin)
+    --conn.host
+    --conn.hostname
+    --conn.username
+    --conn.password
+    --conn.keyfilename
+    --conn.port='2222'     (default from .env file, alternatives: 22 from builtin)
 ```
 
-## Provide a Target Machine over SSH
+### Provide a Target Machine over SSH
 
 The next important part is having a machine that we can run our agent against. In our case, the target machine will be situated at `192.168.122.151`.
 
@@ -192,6 +238,23 @@ We are using vulnerable Linux systems running in Virtual Machines for this. Neve
 > 💡 **We also provide vulnerable machines!**
 >
 > We are using virtual machines from our [Linux Privilege-Escalation Benchmark](https://github.com/ipa-lab/benchmark-privesc-linux) project. Feel free to use them for your own research!
+
+## Using the web based viewer and replayer
+
+If you want to have a better representation of the agent's output, you can use the web-based viewer. You can start it using `wintermute Viewer`, which will run the server on `http://127.0.0.1:4444` for the default `wintermute.sqlite3` database. You can change these options using the `--log_server_address` and `--log_db.connection_string` parameters.
+
+Navigating to the log server address will show you an overview of all runs and clicking on a run will show you the details of that run. The viewer updates live using a websocket connection, and if you enable `Follow new runs` it will automatically switch to the new run when one is started.
+
+Keep in mind that there is no additional protection for this webserver, other than how it can be reached (per default binding to `127.0.0.1` means it can only be reached from your local machine). If you make it accessible to the internet, everybody will be able to see all of your runs and also be able to inject arbitrary data into the database.
+
+Therefore **DO NOT** make it accessible to the internet if you're not super sure about what you're doing!
+
+There is also the experimental replay functionality, which can replay a run live from a capture file, including timing information. This is great for showcases and presentations, because it looks like everything is happening live and for real, but you know exactly what the results will be.
+
+To use this, the run needs to be captured by a Viewer server by setting `--save_playback_dir` to a directory where the viewer can write the capture files.
+
+With the Viewer server still running, you can then start `wintermute Replayer --replay_file <path_to_capture_file>` to replay the captured run (this will create a new run in the database).
+You can configure it to `--pause_on_message` and `--pause_on_tool_calls`, which will interrupt the replay at the respective points until enter is pressed in the shell where you run the Replayer in. You can also configure the `--playback_speed` to control the speed of the replay.
 
 ## Use Cases
 

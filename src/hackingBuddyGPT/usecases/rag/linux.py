@@ -20,8 +20,8 @@ class ThesisLinuxPrivescPrototype(ThesisPrivescPrototype):
 class ThesisLinuxPrivescPrototypeUseCase(AutonomousAgentUseCase[ThesisLinuxPrivescPrototype]):
     hints: str = ""
 
-    def init(self,configuration):
-        super().init(configuration)
+    def init(self):
+        super().init()
         if self.hints != "":
             self.agent.hint = self.read_hint()
 

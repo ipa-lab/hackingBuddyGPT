@@ -1,7 +1,6 @@
 import os
 import unittest
 from unittest.mock import MagicMock, patch
-
 from hackingBuddyGPT.utils.logging import Logger
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
     SimpleWebAPITestingUseCase, SimpleWebAPITesting,
@@ -18,7 +17,7 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         console = Console()
 
         log_db.init()
-        log = Logger(
+        log = LocalLogger(
             log_db=log_db,
             console=console,
         )
@@ -33,7 +32,6 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
             max_turns=len(self.mock_llm.responses)
 
         )
-
         self.simple_api_testing.init({})
 
 

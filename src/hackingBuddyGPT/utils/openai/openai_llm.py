@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import requests
 import tiktoken
+from urllib.parse import urlparse
 
 from hackingBuddyGPT.utils.configurable import configurable, parameter
 from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
@@ -20,7 +21,7 @@ class OpenAIConnection(LLM):
     show you, that you did not specialize yet.
     """
 
-    api_key: str = parameter(desc="OpenAI API Key")
+    api_key: str = parameter(desc="OpenAI API Key", secret=True)
     model: str = parameter(desc="OpenAI model name")
     context_size: int = parameter(
         desc="Maximum context size for the model, only used internally for things like trimming to the context size"
@@ -38,7 +39,7 @@ class OpenAIConnection(LLM):
         if hasattr(prompt, "render"):
             prompt = prompt.render(**kwargs)
 
-        if "azure.com" in self.api_url:
+        if urlparse(self.api_url).hostname and urlparse(self.api_url).hostname.endswith(".azure.com"):
             # azure ai header
             headers = {"api-key": f"{self.api_key}"}
         else:
@@ -61,10 +62,10 @@ class OpenAIConnection(LLM):
                     print("Received 408 Status Code, trying again.")
                     return self.get_response(prompt, azure_retry = azure_retry + 1)
                 else:
-                    raise Exception(f"Error from Gateway ({response.status_code}")
+                    raise Exception(f"Error from Gateway ({response.status_code})")
 
             if response.status_code != 200:
-                raise Exception(f"Error from OpenAI Gateway ({response.status_code}")
+                raise Exception(f"Error from OpenAI Gateway ({response.status_code})")
 
         except requests.exceptions.ConnectionError:
             print("Connection error! Retrying in 5 seconds..")

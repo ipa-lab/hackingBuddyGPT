@@ -17,7 +17,7 @@ description = "Helping Ethical Hackers use LLMs in 50 lines of code"
 readme = "README.md"
 keywords = ["hacking", "pen-testing", "LLM", "AI", "agent"]
 requires-python = ">=3.10"
-version = "0.4.0-dev"
+version = "0.4.0"
 license = { file = "LICENSE" }
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -28,20 +28,20 @@ classifiers = [
 dependencies = [
     'fabric == 3.2.2',
     'Mako == 1.3.2',
-    'requests == 2.32.0',
+    'requests == 2.32.3',
     'rich == 13.7.1',
     'tiktoken == 0.8.0',
-    'instructor == 1.3.5',
+    'instructor == 1.7.2',
     'PyYAML == 6.0.1',
     'python-dotenv == 1.0.1',
     'pypsexec == 0.3.0',
     'pydantic == 2.8.2',
-    'openai == 1.28.0',
+    'openai == 1.65.2',
     'BeautifulSoup4',
     'nltk',
     'fastapi == 0.114.0',
     'fastapi-utils == 0.7.0',
-    'jinja2 == 3.1.4',
+    'jinja2 == 3.1.6',
     'uvicorn[standard] == 0.30.6',
     'dataclasses_json == 0.6.7',
     'websockets == 13.1',
@@ -52,7 +52,9 @@ dependencies = [
     'langchain_community',
     'langchain_chroma',
     'langchain_openai'
-
+    'langchain-openai',
+    'markdown',
+    'chromadb',
 ]
 
 [project.urls]

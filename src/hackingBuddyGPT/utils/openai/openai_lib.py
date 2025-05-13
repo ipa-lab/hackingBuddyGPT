@@ -26,7 +26,7 @@ from hackingBuddyGPT.utils.configurable import parameter
 @configurable("openai-lib", "OpenAI Library based connection")
 @dataclass
 class OpenAILib(LLM):
-    api_key: str = parameter(desc="OpenAI API Key")
+    api_key: str = parameter(desc="OpenAI API Key", secret=True)
     model: str = parameter(desc="OpenAI model name")
     context_size: int = parameter(desc="OpenAI model context size")
     api_url: str = parameter(desc="URL of the OpenAI API", default="https://api.openai.com/v1")

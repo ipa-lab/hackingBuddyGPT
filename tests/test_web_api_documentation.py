@@ -30,10 +30,7 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
                                                strategy_string="cot")
         self.agent.init()
         self.simple_api_testing = SimpleWebAPIDocumentationUseCase(
-            agent=self.agent,
-            log=log,
-            max_turns=len(self.mock_llm.responses),
-        )
+            agent=self.agent        )
         self.simple_api_testing.init()
 
     def test_initial_prompt(self):

@@ -320,7 +320,7 @@ class PromptGenerationHelper(object):
             new_endpoint = endpoint + "/1"
             new_endpoint = new_endpoint.replace("//", "/")
             if new_endpoint == "seasons_average":
-                new_endpoint = "season_averages\general"
+                new_endpoint = r"season_averages\general"
             if new_endpoint != "/1/1" and (
                     endpoint + "/{id}" not in self.found_endpoints and
                     endpoint + "/1" not in self.unsuccessful_paths and

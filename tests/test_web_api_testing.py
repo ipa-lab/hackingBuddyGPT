@@ -6,8 +6,7 @@ from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
 )
 from hackingBuddyGPT.utils import Console, DbStorage
 
-from src.hackingBuddyGPT.utils.logging import LocalLogger
-
+from hackingBuddyGPT.utils.logging import LocalLogger
 
 class TestSimpleWebAPITestingTest(unittest.TestCase):
     @patch("hackingBuddyGPT.utils.openai.openai_lib.OpenAILib")

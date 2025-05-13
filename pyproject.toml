@@ -51,8 +51,7 @@ dependencies = [
     'langchain_core',
     'langchain_community',
     'langchain_chroma',
-    'langchain_openai'
-    'langchain-openai',
+    'langchain_openai',
     'markdown',
     'chromadb',
 ]

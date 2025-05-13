@@ -30,8 +30,9 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
                                                strategy_string="cot")
         self.agent.init()
         self.simple_api_testing = SimpleWebAPIDocumentationUseCase(
-            agent=self.agent        )
-        self.simple_api_testing.init()
+            agent=self.agent
+        )
+        self.simple_api_testing.init({})
 
     def test_initial_prompt(self):
         # Test if the initial prompt is set correctly

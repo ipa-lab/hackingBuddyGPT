@@ -27,9 +27,7 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
 
         self.agent.init()
         self.simple_api_testing = SimpleWebAPITestingUseCase(
-            agent=self.agent,
-            log=log,
-            max_turns=len(self.mock_llm.responses)
+            agent=self.agent
 
         )
         self.simple_api_testing.init({})

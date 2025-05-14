@@ -28,6 +28,6 @@
       "value"
     ]
   },
-  "password_file": "config/best1050.txt",
-  "csv_file": "config/credentials.csv"
+  "password_file": "",
+  "csv_file": ""
 }

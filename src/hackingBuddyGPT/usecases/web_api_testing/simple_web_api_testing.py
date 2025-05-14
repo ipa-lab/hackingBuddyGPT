@@ -10,7 +10,7 @@ from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
-from hackingBuddyGPT.capabilities.pased_information import ParsedInformation
+from hackingBuddyGPT.capabilities.parsed_information import ParsedInformation
 from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.agents import Agent

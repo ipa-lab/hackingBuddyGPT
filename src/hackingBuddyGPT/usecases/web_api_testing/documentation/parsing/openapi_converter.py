@@ -130,7 +130,8 @@ class OpenAPISpecificationConverter:
         }
         filename = os.path.basename(openapi_spec_file)
         filename = filename.replace("_oas", "_config")
-        output_filename = filename.replace(f".{openapi_spec_file}", f".json")
+        base_name, _ = os.path.splitext(filename)
+        output_filename = f"{base_name}.json"
         output_path = os.path.join(output_path, output_filename)
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)

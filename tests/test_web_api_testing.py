@@ -1,13 +1,12 @@
+import os
 import unittest
 from unittest.mock import MagicMock, patch
-
-from hackingBuddyGPT.usecases import SimpleWebAPITesting
-from hackingBuddyGPT.utils.logging import LocalLogger
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
-    SimpleWebAPITestingUseCase,
+    SimpleWebAPITestingUseCase, SimpleWebAPITesting,
 )
 from hackingBuddyGPT.utils import Console, DbStorage
 
+from hackingBuddyGPT.utils.logging import LocalLogger
 
 class TestSimpleWebAPITestingTest(unittest.TestCase):
     @patch("hackingBuddyGPT.utils.openai.openai_lib.OpenAILib")
@@ -21,29 +20,33 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         log = LocalLogger(
             log_db=log_db,
             console=console,
-            tag="integration_test_linuxprivesc",
         )
-        self.agent = SimpleWebAPITesting(llm=self.mock_llm, log=log)
+        config_path = os.path.join(os.path.dirname(__file__), "test_files","fakeapi_config.json")
+
+        self.agent = SimpleWebAPITesting(llm=self.mock_llm, log=log,config_path= config_path, strategy_string= "cot")
+
         self.agent.init()
         self.simple_api_testing = SimpleWebAPITestingUseCase(
-            agent=self.agent,
-            log=log,
-            max_turns=len(self.mock_llm.responses),
+            agent=self.agent
+
         )
         self.simple_api_testing.init()
 
+
+
     def test_initial_prompt(self):
+        contents = [prompt_history_entry["content"] for prompt_history_entry in self.agent._prompt_history]
         # Test if the initial prompt is set correctly
         self.assertIn(
-            "You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at https://jsonplaceholder.typicode.com. Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, and then devise and execute potential exploits. Be diligent in documenting your findings as you navigate through the APIs. Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves. Remember, if you encounter an HTTP method (A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).), promptly submit it as it is of utmost importance.",
-            self.agent._prompt_history[0]["content"],
+            "You're a seasoned API tester tasked with evaluating the REST APIs of a website hosted at https://dummyjson.com. Your primary objective is to thoroughly explore the APIs, understanding their endpoints, parameters, and responses, and then devise and execute potential exploits. Be diligent in documenting your findings as you navigate through the APIs. Avoid resorting to brute-force tactics. All necessary information can be obtained from the API endpoints themselves. Remember, if you encounter an HTTP method (A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).), promptly submit it as it is of utmost importance.",
+            contents,
         )
 
     def test_all_flags_found(self):
         # Mock console.print to suppress output during testing
         with patch("rich.console.Console.print"):
-            self.agent.all_http_methods_found()
-            self.assertFalse(self.agent.all_http_methods_found())
+            self.agent.all_test_cases_run()
+            self.assertFalse(self.agent.all_test_cases_run())
 
     @patch("time.perf_counter", side_effect=[1, 2])  # Mocking perf_counter for consistent timing
     def test_perform_round(self, mock_perf_counter):
@@ -64,7 +67,25 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         )
 
         # Mock the tool execution result
-        mock_response.execute.return_value = "HTTP/1.1 200 OK"
+        mock_response.execute.return_value = (
+    "HTTP/1.1 200 OK\n"
+    "Date: Wed, 17 Apr 2025 12:00:00 GMT\n"
+    "Content-Type: application/json; charset=utf-8\n"
+    "Content-Length: 85\n"
+    "Connection: keep-alive\n"
+    "X-Powered-By: Express\n"
+    "Strict-Transport-Security: max-age=31536000; includeSubDomains\n"
+    "Cache-Control: no-store\n"
+    "Set-Cookie: sessionId=abc123; HttpOnly; Secure; Path=/\r\n\r\n"
+    "\n"
+    "{\n"
+    '  "id": 1,\n'
+    '  "username": "alice@example.com",\n'
+    '  "role": "user",\n'
+    '  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."\n'
+    "}"
+)
+
         mock_response.action.path = "/users/"
 
         # Perform the round

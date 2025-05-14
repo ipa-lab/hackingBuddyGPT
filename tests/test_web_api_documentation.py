@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -23,18 +24,19 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
             console=console,
             tag="webApiDocumentation",
         )
-        self.agent = SimpleWebAPIDocumentation(llm=self.mock_llm, log=log)
+        config_path = os.path.join(os.path.dirname(__file__), "test_files", "test_config.json")
+
+        self.agent = SimpleWebAPIDocumentation(llm=self.mock_llm, log=log, config_path=config_path,
+                                               strategy_string="cot")
         self.agent.init()
         self.simple_api_testing = SimpleWebAPIDocumentationUseCase(
-            agent=self.agent,
-            log=log,
-            max_turns=len(self.mock_llm.responses),
+            agent=self.agent
         )
         self.simple_api_testing.init()
 
     def test_initial_prompt(self):
         # Test if the initial prompt is set correctly
-        expected_prompt = "You're tasked with documenting the REST APIs of a website hosted at https://jsonplaceholder.typicode.com. Start with an empty OpenAPI specification.\nMaintain meticulousness in documenting your observations as you traverse the APIs."
+        expected_prompt = "You're tasked with documenting the REST APIs of a website hosted at https://jsonplaceholder.typicode.com/. The website is See https://jsonplaceholder.typicode.com/. Start with an empty OpenAPI specification and be meticulous in documenting your observations as you traverse the APIs"
 
         self.assertIn(expected_prompt, self.agent._prompt_history[0]["content"])
 
@@ -63,10 +65,25 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         )
 
         # Mock the tool execution result
-        mock_response.execute.return_value = "HTTP/1.1 200 OK"
+        real_http_response = (
+            "HTTP/1.1 200 OK\r\n"
+            "Date: Fri, 18 Apr 2025 07:31:21 GMT\r\n"
+            "Content-Type: application/json; charset=utf-8\r\n"
+            "Transfer-Encoding: chunked\r\n"
+            "Connection: keep-alive\r\n"
+            "Content-Encoding: gzip\r\n"
+            "\r\n"
+            '{"page":1,"per_page":6,"total":12,"total_pages":2,"data":[{"id":1,"name":"cerulean"}]}'
+        )
 
+        mock_response.execute.return_value = real_http_response
+
+        mock_response.action.path = "/posts/"
+
+        self.agent.prompt_helper.found_endpoints = ["/users/"]
         # Perform the round
         result = self.agent.perform_round(1)
+
 
         # Assertions
         self.assertFalse(result)

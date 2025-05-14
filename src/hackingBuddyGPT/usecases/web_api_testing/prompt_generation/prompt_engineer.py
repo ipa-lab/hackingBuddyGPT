@@ -1,8 +1,8 @@
-from instructor.retry import InstructorRetryException
+from itertools import cycle
 
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
     PromptContext,
-    PromptStrategy,
+    PromptStrategy, PromptPurpose,
 )
 from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import (
     PromptGenerationHelper,
@@ -14,136 +14,114 @@ from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_pla
     ChainOfThoughtPrompt,
     TreeOfThoughtPrompt,
 )
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt
-from hackingBuddyGPT.utils import tool_message
 
 
 class PromptEngineer:
-    """Prompt engineer that creates prompts of different types."""
+    """
+        A class responsible for engineering prompts for web API testing based on different strategies.
+
+        Attributes:
+            _context (PromptContext): Context of the current prompt generation.
+            turn (int): Interaction counter.
+            _prompt_helper (PromptGenerationHelper): Helper for managing prompt-related data and logic.
+            _prompt_func (callable): Strategy-specific prompt generation function.
+            _purpose (PromptPurpose): Current purpose of the prompt strategy.
+        """
 
     def __init__(
-        self,
-        strategy: PromptStrategy = None,
-        history: Prompt = None,
-        handlers=(),
-        context: PromptContext = None,
-        rest_api: str = "",
-        schemas: dict = None,
+            self,
+            strategy: PromptStrategy = None,
+            context: PromptContext = None,
+            open_api_spec: dict = None,
+            prompt_helper: PromptGenerationHelper = None,
+            rest_api_info: tuple = None,
     ):
+
         """
-        Initializes the PromptEngineer with a specific strategy and handlers for LLM and responses.
+        Initialize the PromptEngineer with the given strategy, context, and configuration.
 
         Args:
-            strategy (PromptStrategy): The prompt engineering strategy to use.
-            history (dict, optional): The history of chats. Defaults to None.
-            handlers (tuple): The LLM handler and response handler.
-            context (PromptContext): The context for which prompts are generated.
-            rest_api (str, optional): The REST API endpoint.
-            schemas (dict, optional): Schemas relevant for the context.
+            strategy (PromptStrategy): Strategy for prompt generation.
+            context (PromptContext): Context for prompt generation.
+            open_api_spec (dict): OpenAPI specifications for the API.
+            prompt_helper (PromptGenerationHelper): Utility class for prompt generation.
+            rest_api_info (tuple): Contains token, host, correct endpoints, and categorized endpoints.
         """
-        self.strategy = strategy
-        self.rest_api = rest_api
-        self.llm_handler, self.response_handler = handlers
-        self.prompt_helper = PromptGenerationHelper(response_handler=self.response_handler, schemas=schemas or {})
-        self.context = context
-        self.turn = 0
-        self._prompt_history = history or []
 
-        self.strategies = {
+        token, host, correct_endpoints, categorized_endpoints = rest_api_info
+        self.host = host
+        self._token = token
+        self.prompt_helper = prompt_helper
+        self.prompt_helper.current_test_step = None
+        self.turn = 0
+        self._context = context
+
+        strategies = {
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(
-                context=self.context, prompt_helper=self.prompt_helper
+                context=context, prompt_helper=self.prompt_helper,
             ),
             PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(
-                context=self.context, prompt_helper=self.prompt_helper, rest_api=self.rest_api
+                context=context, prompt_helper=self.prompt_helper
             ),
             PromptStrategy.IN_CONTEXT: InContextLearningPrompt(
-                context=self.context,
+                context=context,
                 prompt_helper=self.prompt_helper,
                 context_information={self.turn: {"content": "initial_prompt"}},
+                open_api_spec=open_api_spec
             ),
         }
 
-        self.purpose = None
+        self._prompt_func = strategies.get(strategy)
+        if self._prompt_func.strategy == PromptStrategy.IN_CONTEXT:
+            self._prompt_func.open_api_spec = open_api_spec
 
-    def generate_prompt(self, turn: int, move_type="explore", hint=""):
+    def generate_prompt(self, turn: int, move_type="explore", prompt_history=None, hint=""):
         """
-        Generates a prompt based on the specified strategy and gets a response.
+        Generates a prompt for a given turn and move type, then processes the response.
 
         Args:
-            turn (int): The current round or step in the process.
-            move_type (str, optional): The type of move for the strategy. Defaults to "explore".
-            hint (str, optional): An optional hint to guide the prompt generation. Defaults to "".
+            turn (int): The current interaction number in the sequence.
+            move_type (str, optional): The type of interaction, defaults to "explore".
+            log (logging.Logger, optional): Logger for debug information, defaults to None.
+            prompt_history (list, optional): History of prompts for tracking, defaults to None.
+            llm_handler (object, optional): Language model handler if different from initialized, defaults to None.
+            hint (str, optional): Optional hint to influence prompt generation, defaults to empty string.
 
         Returns:
-            list: Updated prompt history after generating the prompt and receiving a response.
+            list: Updated prompt history with the new prompt and response included.
 
         Raises:
             ValueError: If an invalid prompt strategy is specified.
         """
-        prompt_func = self.strategies.get(self.strategy)
-        if not prompt_func:
+
+        if prompt_history is None:
+            prompt_history = []
+        if not self._prompt_func:
             raise ValueError("Invalid prompt strategy")
 
-        is_good = False
         self.turn = turn
-        while not is_good:
-            try:
-                prompt = prompt_func.generate_prompt(
-                    move_type=move_type, hint=hint, previous_prompt=self._prompt_history, turn=0
-                )
-                self.purpose = prompt_func.purpose
-                is_good = self.evaluate_response(prompt, "")
-            except InstructorRetryException:
-                hint = f"invalid prompt: {prompt}"
+        if self.host.__contains__("coincap"):
+            hint = "Try as id or other_resoure cryptocurrency names like bitcoin.\n"
+        prompt = self._prompt_func.generate_prompt(
+            move_type=move_type, hint=hint, previous_prompt=prompt_history, turn=0
+        )
+        self._purpose = self._prompt_func.purpose
 
-        self._prompt_history.append({"role": "system", "content": prompt})
-        self.previous_prompt = prompt
+        if self._context == PromptContext.PENTESTING:
+            self.prompt_helper.current_test_step = self._prompt_func.current_step
+            self.prompt_helper.current_sub_step = self._prompt_func.current_sub_step
+
+        prompt_history.append({"role": "system", "content": prompt})
         self.turn += 1
-        return self._prompt_history
+        return prompt_history
 
-    def evaluate_response(self, prompt, response_text):
+    def set_pentesting_information(self, pentesting_information):
         """
-        Evaluates the response to determine if it is acceptable.
+               Sets pentesting-specific information to adjust the prompt generation accordingly.
 
-        Args:
-            prompt (str): The generated prompt.
-            response_text (str): The response text to evaluate.
-
-        Returns:
-            bool: True if the response is acceptable, otherwise False.
+               Args:
+                   pentesting_information (dict): Information specific to penetration testing scenarios.
         """
-        # TODO: Implement a proper evaluation mechanism
-        return True
-
-    def get_purpose(self):
-        """Returns the purpose of the current prompt strategy."""
-        return self.purpose
-
-    def process_step(self, step: str, prompt_history: list) -> tuple[list, str]:
-        """
-        Helper function to process each analysis step with the LLM.
-
-        Args:
-            step (str): The current step to process.
-            prompt_history (list): The history of prompts and responses.
-
-        Returns:
-            tuple: Updated prompt history and the result of the step processing.
-        """
-        print(f"Processing step: {step}")
-        prompt_history.append({"role": "system", "content": step})
-
-        # Call the LLM and handle the response
-        self.prompt_helper.check_prompt(prompt_history, step)
-        response, completion = self.llm_handler.call_llm(prompt_history)
-        message = completion.choices[0].message
-        prompt_history.append(message)
-        tool_call_id = message.tool_calls[0].id
-
-        try:
-            result = response.execute()
-        except Exception as e:
-            result = f"Error executing tool call: {str(e)}"
-        prompt_history.append(tool_message(str(result), tool_call_id))
-
-        return prompt_history, result
+        self.pentesting_information = pentesting_information
+        self._prompt_func.set_pentesting_information(pentesting_information)
+        self._purpose = self.pentesting_information.pentesting_step_list[0]

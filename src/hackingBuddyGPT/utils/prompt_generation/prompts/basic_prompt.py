@@ -1,9 +1,10 @@
+import os.path
 from abc import ABC, abstractmethod
-from typing import Optional
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import (
+from typing import Optional, Any
+from hackingBuddyGPT.utils.prompt_generation.information import (
     PenTestingInformation,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PlanningType,
     PromptContext,
     PromptStrategy, PromptPurpose,
@@ -31,6 +32,7 @@ class BasicPrompt(ABC):
             planning_type: PlanningType = None,
             prompt_helper=None,
             strategy: PromptStrategy = None,
+            prompt_file: Any =None
     ):
         """
         Initializes the BasicPrompt with a specific context, prompt helper, and strategy.
@@ -44,6 +46,9 @@ class BasicPrompt(ABC):
         self.transformed_steps = {}
         self.open_api_spec = {}
         self.context = context
+        if context is None:
+            if os.path.exists(prompt_file):
+                self.prompt_file = prompt_file
         self.planning_type = planning_type
         self.prompt_helper = prompt_helper
         self.strategy = strategy
@@ -176,6 +181,19 @@ class BasicPrompt(ABC):
             sorted_list.append(previous_prompt[i])
         return sorted_list
 
+    def parse_prompt_file(self):
+        with open(self.prompt_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        blocks = content.strip().split('---')
+        prompt_blocks = []
+
+        for block in blocks:
+            block = block.replace("{host}", self.prompt_helper.host).replace("{description}", self.prompt_helper._description)
+            lines = [line.strip() for line in block.strip().splitlines() if line.strip()]
+            if lines:
+                prompt_blocks.append(lines)
+
+        return prompt_blocks
 
     def extract_endpoints_from_prompts(self, step):
         """

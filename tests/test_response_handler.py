@@ -2,8 +2,8 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptContext
+from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import (
     ResponseHandler,
 )

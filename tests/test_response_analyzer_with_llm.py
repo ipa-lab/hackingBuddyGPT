@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import ResponseAnalyzerWithLLM
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
+from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 
 
 class TestResponseAnalyzerWithLLM(unittest.TestCase):

@@ -1,13 +1,13 @@
 import json
 import re
-from typing import Any, Dict, Tuple, List
+from typing import Any, Dict
 from unittest.mock import MagicMock
 
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import (
+from hackingBuddyGPT.utils.prompt_generation.information import (
     PenTestingInformation,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.utils.prompt_generation.information import (
     PromptPurpose,
 )
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler

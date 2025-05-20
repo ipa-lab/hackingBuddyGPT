@@ -1,6 +1,5 @@
 import copy
 import json
-import os.path
 import re
 from collections import Counter
 from itertools import cycle
@@ -12,9 +11,9 @@ from bs4 import BeautifulSoup
 from rich.panel import Panel
 
 from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher import PatternMatcher
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptContext
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.pentesting_information import (
+from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
+from hackingBuddyGPT.utils.prompt_generation.information import (
     PenTestingInformation,
 )
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import (
@@ -510,6 +509,8 @@ class ResponseHandler:
             self.last_path = request_path
 
             status_message = self.check_if_successful(is_successful, request_path, result_dict, result_str, categorized_endpoints)
+            log.console.print(Panel(status_message, title="system"))
+
             prompt_history.append(tool_message(status_message, tool_call_id))
 
         else:
@@ -777,9 +778,6 @@ class ResponseHandler:
         elif self.prompt_helper.current_step == 7 and not self.prompt_helper._get_root_level_endpoints(self.name):
             update_step_and_category()
 
-    import random
-    from urllib.parse import urlencode
-
     def create_common_query_for_endpoint(self, endpoint):
         """
         Constructs complete URLs with one query parameter for each API endpoint.
@@ -948,6 +946,8 @@ class ResponseHandler:
             error_msg = result_dict.get("error", {}).get("message", "unknown error") if isinstance(
                 result_dict.get("error", {}), dict) else result_dict.get("error", "unknown error")
             self.no_new_endpoint_counter +=1
+            if error_msg == "unknown error" and (result_str.startswith("4") or result_str.startswith("5")):
+                error_msg = result_str
 
             if result_str.startswith("400") or result_str.startswith("401") or result_str.startswith("403"):
                 status_message = f"{request_path} is a correct endpoint, but encountered an error: {error_msg}"

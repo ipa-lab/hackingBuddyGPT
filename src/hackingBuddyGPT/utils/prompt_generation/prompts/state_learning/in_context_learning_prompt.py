@@ -1,11 +1,11 @@
 import json
 from typing import Dict, Optional, Any, List
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PromptContext,
     PromptPurpose,
     PromptStrategy,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.state_learning.state_planning_prompt import (
+from hackingBuddyGPT.utils.prompt_generation.prompts.state_learning.state_planning_prompt import (
     StatePlanningPrompt,
 )
 
@@ -28,7 +28,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
     """
 
     def __init__(self, context: PromptContext, prompt_helper, context_information: Dict[int, Dict[str, str]],
-                 open_api_spec: Any) -> None:
+                 open_api_spec: Any, prompt_file : Any=None) -> None:
         """
         Initializes the InContextLearningPrompt with a specific context, prompt helper, and initial prompt.
 
@@ -37,7 +37,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
             context_information (Dict[int, Dict[str, str]]): A dictionary containing the prompts for each round.
         """
-        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.IN_CONTEXT)
+        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.IN_CONTEXT, prompt_file=prompt_file)
         self.prompt: Dict[int, Dict[str, str]] = context_information
         self.purpose: Optional[PromptPurpose] = None
         self.open_api_spec = open_api_spec
@@ -62,8 +62,13 @@ class InContextLearningPrompt(StatePlanningPrompt):
         """
         if self.context == PromptContext.DOCUMENTATION:
             steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt)
-        else:
+        elif self.context == PromptContext.PENTESTING:
             steps = self._get_pentesting_steps(move_type=move_type)
+        else:
+            steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt)
+
+            #steps = self.parse_prompt_file()
+
 
         if hint:
             steps = steps + [hint]
@@ -71,7 +76,6 @@ class InContextLearningPrompt(StatePlanningPrompt):
         return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=steps)
 
     def _get_documentation_steps(self, move_type: str, previous_prompt) -> List[str]:
-        print(f'Move type:{move_type}')
         # Extract properties and example response
         if "endpoints" in self.open_api_spec:
             properties = self.extract_properties()
@@ -100,7 +104,6 @@ class InContextLearningPrompt(StatePlanningPrompt):
                 icl_prompt = ""
         else:
             icl_prompt = ""
-        print(icl_prompt)
 
         if move_type == "explore":
             doc_steps = self.get_documentation_steps()
@@ -114,10 +117,6 @@ class InContextLearningPrompt(StatePlanningPrompt):
         else:
             return self.prompt_helper.get_endpoints_needing_help(
                 info=f"Based on this information :\n{icl_prompt}\n Do the following: ")
-
-
-
-    import json
 
     # Function to extract properties from the schema
 
@@ -161,7 +160,11 @@ class InContextLearningPrompt(StatePlanningPrompt):
     # Function to generate the prompt for In-Context Learning
     def generate_icl_prompt(self, properties, example_response, endpoint):
         # Core information about API
-        prompt = f"# REST API: {example_response.keys()} {endpoint}\n\n"
+        if example_response.keys() != {}:
+            prompt = f"# REST API: {list(example_response.keys())[0].upper()} {endpoint}\n\n"
+        else:
+            prompt = f"# REST API: {endpoint}\n\n"
+
 
         # Add properties to the prompt
         counter = 0
@@ -224,7 +227,6 @@ class InContextLearningPrompt(StatePlanningPrompt):
             "path": test_case.get("path")
         }
 
-        print(f' PHASE: {test_case["objective"]}')
 
         # Process steps in the test case
         counter = 0
@@ -241,7 +243,6 @@ class InContextLearningPrompt(StatePlanningPrompt):
                 else:
                     expected_response_code = test_case["expected_response_code"]
 
-                print(f'COunter: {counter}')
                 token = test_case["token"][counter]
                 path = test_case["path"][counter]
             else:

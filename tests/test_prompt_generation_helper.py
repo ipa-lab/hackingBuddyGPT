@@ -1,5 +1,5 @@
 import unittest
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
 
 
 class TestPromptGenerationHelper(unittest.TestCase):

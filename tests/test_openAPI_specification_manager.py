@@ -3,8 +3,8 @@ import unittest
 from unittest.mock import MagicMock
 
 from hackingBuddyGPT.usecases.web_api_testing.documentation import OpenAPISpecificationHandler
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy, PromptContext
+from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy, PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler

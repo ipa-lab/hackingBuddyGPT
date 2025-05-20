@@ -5,12 +5,12 @@ from unittest.mock import MagicMock
 from openai.types.chat import ChatCompletionMessage
 
 from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
+from hackingBuddyGPT.utils.prompt_generation.information import (
     PromptContext,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import (
+from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import (
     PromptEngineer
 )
 from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler

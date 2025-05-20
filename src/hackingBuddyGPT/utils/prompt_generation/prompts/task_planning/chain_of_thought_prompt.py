@@ -1,11 +1,10 @@
-from gettext import pgettext
-from typing import List, Optional, Any
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from typing import List, Optional
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PromptContext,
     PromptPurpose,
     PromptStrategy,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning.task_planning_prompt import (
+from hackingBuddyGPT.utils.prompt_generation.prompts.task_planning.task_planning_prompt import (
     TaskPlanningPrompt,
 )
 
@@ -24,7 +23,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         explored_steps (List[str]): A list of steps that have already been explored in the chain-of-thought strategy.
     """
 
-    def __init__(self, context: PromptContext, prompt_helper):
+    def __init__(self, context: PromptContext, prompt_helper, prompt_file):
         """
         Initializes the ChainOfThoughtPrompt with a specific context and prompt helper.
 
@@ -32,7 +31,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             context (PromptContext): The context in which prompts are generated.
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         """
-        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
+        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT, prompt_file= prompt_file)
         self.counter = 0
 
     def generate_prompt(
@@ -55,8 +54,12 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             chain_of_thought_steps = [chain_of_thought_steps[0]] + [
                 "Let's think step by step"] + chain_of_thought_steps[1:]
 
-        else:
+        elif self.context == PromptContext.PENTESTING:
             chain_of_thought_steps = self._get_pentesting_steps(move_type,"")
+        else:
+            chain_of_thought_steps = self.parse_prompt_file()
+            chain_of_thought_steps = [chain_of_thought_steps[0]] + [
+                "Let's think step by step"] + chain_of_thought_steps[1:]
         if hint:
             chain_of_thought_steps.append(hint)
 

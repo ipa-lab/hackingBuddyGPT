@@ -1,6 +1,5 @@
-import json
 import unittest
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
+from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer import ResponseAnalyzer
 
 

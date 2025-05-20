@@ -5,7 +5,7 @@ from datetime import datetime
 import yaml
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher import PatternMatcher
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy
+from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy
 from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 

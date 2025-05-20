@@ -1,16 +1,15 @@
-from itertools import cycle
+from typing import Any
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PromptContext,
-    PromptStrategy, PromptPurpose,
-)
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import (
+    PromptStrategy, )
+from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import (
     PromptGenerationHelper,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.state_learning import (
+from hackingBuddyGPT.utils.prompt_generation.prompts.state_learning import (
     InContextLearningPrompt,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning import (
+from hackingBuddyGPT.utils.prompt_generation.prompts.task_planning import (
     ChainOfThoughtPrompt,
     TreeOfThoughtPrompt,
 )
@@ -35,6 +34,7 @@ class PromptEngineer:
             open_api_spec: dict = None,
             prompt_helper: PromptGenerationHelper = None,
             rest_api_info: tuple = None,
+            prompt_file : Any = None
     ):
 
         """
@@ -58,16 +58,17 @@ class PromptEngineer:
 
         strategies = {
             PromptStrategy.CHAIN_OF_THOUGHT: ChainOfThoughtPrompt(
-                context=context, prompt_helper=self.prompt_helper,
+                context=context, prompt_helper=self.prompt_helper, prompt_file = prompt_file
             ),
             PromptStrategy.TREE_OF_THOUGHT: TreeOfThoughtPrompt(
-                context=context, prompt_helper=self.prompt_helper
+                context=context, prompt_helper=self.prompt_helper,  prompt_file = prompt_file
             ),
             PromptStrategy.IN_CONTEXT: InContextLearningPrompt(
                 context=context,
                 prompt_helper=self.prompt_helper,
                 context_information={self.turn: {"content": "initial_prompt"}},
-                open_api_spec=open_api_spec
+                open_api_spec=open_api_spec,
+                prompt_file=prompt_file
             ),
         }
 

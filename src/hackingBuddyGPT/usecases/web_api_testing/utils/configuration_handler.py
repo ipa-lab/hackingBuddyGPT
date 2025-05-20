@@ -1,7 +1,7 @@
 import json
 import os
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PromptStrategy, PromptContext
+from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy
 
 
 class ConfigurationHandler(object):

@@ -49,7 +49,7 @@ class TaskPlanningPrompt(BasicPrompt):
         self.transformed_steps = {}
         self.pentest_steps = None
 
-    def _get_documentation_steps(self, common_steps: List[str], move_type: str) -> List[str]:
+    def _get_documentation_steps(self, common_steps: List[str], move_type: str, steps: Any) -> List[str]:
         """
         Provides the steps for the chain-of-thought strategy when the context is documentation.
 
@@ -61,7 +61,7 @@ class TaskPlanningPrompt(BasicPrompt):
             List[str]: A list of steps for the chain-of-thought strategy in the documentation context.
         """
         if move_type == "explore":
-            doc_steps = self.generate_documentation_steps()
+            doc_steps = self.generate_documentation_steps(steps)
             return self.prompt_helper.get_initial_documentation_steps(
                                                                        strategy_steps= doc_steps)
         else:

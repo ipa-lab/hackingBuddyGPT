@@ -84,27 +84,15 @@ class BasicPrompt(ABC):
         pass
 
     def get_documentation_steps(self):
-        """
-        Returns a predefined list of endpoint exploration steps based on the target API host.
-
-        These steps are used to guide automated documentation of a web API by progressively
-        discovering and querying endpoints using GET requests. The process follows a structured
-        hierarchy from root-level endpoints to more complex nested endpoints and those with query parameters.
-
-        Returns:
-            List[List[str]]: A list of steps, each step being a list of instruction strings.
-        """
-
-        # Define specific documentation steps based on the given strategy
-
         return [
-            [f"Objective: Identify all accessible endpoints via GET requests for {self.prompt_helper.host}. {self.prompt_helper._description}"],
+            [
+                f"Objective: Identify all accessible endpoints via GET requests for {self.prompt_helper.host}. {self.prompt_helper._description}"],
             [
                 f""" Query root-level resource endpoints.
-                               Find root-level endpoints for {self.prompt_helper.host}.
-                               Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
-                               1. Send GET requests to new paths only, avoiding any in the lists above.
-                               2. Do not reuse previously tested paths."""
+                                      Find root-level endpoints for {self.prompt_helper.host}.
+                                      Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
+                                      1. Send GET requests to new paths only, avoiding any in the lists above.
+                                      2. Do not reuse previously tested paths."""
 
             ],
             [
@@ -118,7 +106,6 @@ class BasicPrompt(ABC):
                 "Query Subresource Endpoints",
                 "Identify subresource endpoints of the form `/resource/other_resource`.",
                 "Query these endpoints to check if they return data related to the main resource without requiring an `id` parameter."
-
 
             ],
 
@@ -138,6 +125,7 @@ class BasicPrompt(ABC):
                 "Construct and make GET requests to these endpoints using common query parameters (e.g. `/resource?param1=1&param2=3`) or based on documentation hints, testing until a valid request with query parameters is achieved."
             ]
         ]
+
     def extract_properties(self):
         """
            Extracts example values and data types from the 'Post' schema in the OpenAPI specification.

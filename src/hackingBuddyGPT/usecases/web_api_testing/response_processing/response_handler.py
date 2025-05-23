@@ -960,7 +960,6 @@ class ResponseHandler:
                 if error_msg not in self.prompt_helper.correct_endpoint_but_some_error:
                     self.prompt_helper.correct_endpoint_but_some_error[error_msg] = []
                 self.prompt_helper.correct_endpoint_but_some_error[error_msg].append(request_path)
-                self.prompt_helper.hint_for_next_round = error_msg
             else:
                 self.prompt_helper.unsuccessful_paths.append(request_path)
                 status_message = f"{request_path} is not a correct endpoint; Reason: {error_msg}"

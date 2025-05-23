@@ -162,7 +162,7 @@ class SimpleWebAPIDocumentation(Agent):
 
         self._prompt_engineer = PromptEngineer(
             strategy=self.strategy,
-            context=None,
+            context=PromptContext.DOCUMENTATION,
             prompt_helper=self.prompt_helper,
             open_api_spec=self._documentation_handler.openapi_spec,
             rest_api_info=(token, self.host, self._correct_endpoints, self.categorized_endpoints),

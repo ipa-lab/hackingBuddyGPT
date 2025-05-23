@@ -61,13 +61,14 @@ class InContextLearningPrompt(StatePlanningPrompt):
             str: The generated prompt.
         """
         if self.context == PromptContext.DOCUMENTATION:
-            steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt)
+            steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt, doc_steps=self.get_documentation_steps())
         elif self.context == PromptContext.PENTESTING:
             steps = self._get_pentesting_steps(move_type=move_type)
         else:
-            steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt)
+            steps = self.parse_prompt_file()
+            steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt,
+                                                  doc_steps=steps)
 
-            #steps = self.parse_prompt_file()
 
 
         if hint:
@@ -75,7 +76,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
         return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=steps)
 
-    def _get_documentation_steps(self, move_type: str, previous_prompt) -> List[str]:
+    def _get_documentation_steps(self, move_type: str, previous_prompt, doc_steps: Any) -> List[str]:
         # Extract properties and example response
         if "endpoints" in self.open_api_spec:
             properties = self.extract_properties()
@@ -106,7 +107,6 @@ class InContextLearningPrompt(StatePlanningPrompt):
             icl_prompt = ""
 
         if move_type == "explore":
-            doc_steps = self.get_documentation_steps()
             icl = [[f"Based on this information :\n{icl_prompt}\n" + doc_steps[0][0]]]
             # if self.current_step == 0:
             #   self.current_step == 1
@@ -354,9 +354,5 @@ class InContextLearningPrompt(StatePlanningPrompt):
                 result[key] = {"type": type(value).__name__, "example": value}
 
         return result
-
-
-
-
 
 

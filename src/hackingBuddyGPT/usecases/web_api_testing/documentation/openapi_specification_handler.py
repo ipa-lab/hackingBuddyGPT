@@ -42,7 +42,8 @@ class OpenAPISpecificationHandler(object):
         self.query_params = {}
         self.endpoint_methods = {}
         self.endpoint_examples = {}
-        self.filename = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.yaml"
+        date = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        self.filename = f"{name}_spec.yaml"
         self.openapi_spec = {
             "openapi": "3.0.0",
             "info": {
@@ -57,7 +58,7 @@ class OpenAPISpecificationHandler(object):
         self.llm_handler = llm_handler
         current_path = os.path.dirname(os.path.abspath(__file__))
 
-        self.file_path = os.path.join(current_path, "openapi_spec", str(strategy).split(".")[1].lower(), name.lower())
+        self.file_path = os.path.join(current_path, "openapi_spec", str(strategy).split(".")[1].lower(), name.lower(), date)
         os.makedirs(self.file_path, exist_ok=True)
         self.file = os.path.join(self.file_path, self.filename)
 

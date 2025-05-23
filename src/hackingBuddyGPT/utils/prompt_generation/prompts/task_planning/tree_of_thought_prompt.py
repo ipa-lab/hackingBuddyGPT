@@ -309,4 +309,4 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
         ]
 
     def generate_documentation_steps(self, steps):
-        return self.generate_documentation_steps(steps)
+        return  self.get_documentation_steps()

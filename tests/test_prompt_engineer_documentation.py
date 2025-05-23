@@ -37,15 +37,22 @@ class TestPromptEngineer(unittest.TestCase):
     def test_in_context_learning_no_hint(self):
         prompt_engineer = self.generate_prompt_engineer("icl")
 
-        expected_prompt = """Based on this information :
-
-Objective: Identify all accessible endpoints via GET requests for https://jsonplaceholder.typicode.com/. See https://jsonplaceholder.typicode.com/
- Query root-level resource endpoints.
-                               Find root-level endpoints for https://jsonplaceholder.typicode.com/.
-                               Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
-                               1. Send GET requests to new paths only, avoiding any in the lists above.
-                               2. Do not reuse previously tested paths.
-"""
+        expected_prompt = ('Based on this information :\n'
+ '\n'
+ 'Objective: Identify all accessible endpoints via GET requests for '
+ 'https://jsonplaceholder.typicode.com/. See '
+ 'https://jsonplaceholder.typicode.com/\n'
+ ' Query root-level resource endpoints.\n'
+ '                                      Find root-level endpoints for '
+ 'https://jsonplaceholder.typicode.com/.\n'
+ '                                      Only send GET requests to root-level '
+ 'endpoints with a single path component after the root. This means each path '
+ "should have exactly one '/' followed by a single word (e.g., '/users', "
+ "'/products').  \n"
+ '                                      1. Send GET requests to new paths '
+ 'only, avoiding any in the lists above.\n'
+ '                                      2. Do not reuse previously tested '
+ 'paths.\n')
         actual_prompt = prompt_engineer.generate_prompt(hint="", turn=1)
 
 

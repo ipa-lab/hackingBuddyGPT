@@ -1,9 +1,10 @@
+import os.path
 from abc import ABC, abstractmethod
-from typing import Optional
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import (
+from typing import Optional, Any
+from hackingBuddyGPT.utils.prompt_generation.information import (
     PenTestingInformation,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PlanningType,
     PromptContext,
     PromptStrategy, PromptPurpose,
@@ -31,6 +32,7 @@ class BasicPrompt(ABC):
             planning_type: PlanningType = None,
             prompt_helper=None,
             strategy: PromptStrategy = None,
+            prompt_file: Any =None
     ):
         """
         Initializes the BasicPrompt with a specific context, prompt helper, and strategy.
@@ -44,6 +46,9 @@ class BasicPrompt(ABC):
         self.transformed_steps = {}
         self.open_api_spec = {}
         self.context = context
+        if context is None:
+            if os.path.exists(prompt_file):
+                self.prompt_file = prompt_file
         self.planning_type = planning_type
         self.prompt_helper = prompt_helper
         self.strategy = strategy
@@ -79,27 +84,15 @@ class BasicPrompt(ABC):
         pass
 
     def get_documentation_steps(self):
-        """
-        Returns a predefined list of endpoint exploration steps based on the target API host.
-
-        These steps are used to guide automated documentation of a web API by progressively
-        discovering and querying endpoints using GET requests. The process follows a structured
-        hierarchy from root-level endpoints to more complex nested endpoints and those with query parameters.
-
-        Returns:
-            List[List[str]]: A list of steps, each step being a list of instruction strings.
-        """
-
-        # Define specific documentation steps based on the given strategy
-
         return [
-            [f"Objective: Identify all accessible endpoints via GET requests for {self.prompt_helper.host}. {self.prompt_helper._description}"],
+            [
+                f"Objective: Identify all accessible endpoints via GET requests for {self.prompt_helper.host}. {self.prompt_helper._description}"],
             [
                 f""" Query root-level resource endpoints.
-                               Find root-level endpoints for {self.prompt_helper.host}.
-                               Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
-                               1. Send GET requests to new paths only, avoiding any in the lists above.
-                               2. Do not reuse previously tested paths."""
+                                      Find root-level endpoints for {self.prompt_helper.host}.
+                                      Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
+                                      1. Send GET requests to new paths only, avoiding any in the lists above.
+                                      2. Do not reuse previously tested paths."""
 
             ],
             [
@@ -113,7 +106,6 @@ class BasicPrompt(ABC):
                 "Query Subresource Endpoints",
                 "Identify subresource endpoints of the form `/resource/other_resource`.",
                 "Query these endpoints to check if they return data related to the main resource without requiring an `id` parameter."
-
 
             ],
 
@@ -133,6 +125,7 @@ class BasicPrompt(ABC):
                 "Construct and make GET requests to these endpoints using common query parameters (e.g. `/resource?param1=1&param2=3`) or based on documentation hints, testing until a valid request with query parameters is achieved."
             ]
         ]
+
     def extract_properties(self):
         """
            Extracts example values and data types from the 'Post' schema in the OpenAPI specification.
@@ -176,6 +169,19 @@ class BasicPrompt(ABC):
             sorted_list.append(previous_prompt[i])
         return sorted_list
 
+    def parse_prompt_file(self):
+        with open(self.prompt_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        blocks = content.strip().split('---')
+        prompt_blocks = []
+
+        for block in blocks:
+            block = block.replace("{host}", self.prompt_helper.host).replace("{description}", self.prompt_helper._description)
+            lines = [line.strip() for line in block.strip().splitlines() if line.strip()]
+            if lines:
+                prompt_blocks.append(lines)
+
+        return prompt_blocks
 
     def extract_endpoints_from_prompts(self, step):
         """

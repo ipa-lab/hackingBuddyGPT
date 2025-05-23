@@ -2,6 +2,8 @@ import os
 from dataclasses import field
 from typing import Dict
 
+from rich.panel import Panel
+
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
@@ -9,9 +11,9 @@ from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import \
     OpenAPISpecificationHandler
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation import PromptGenerationHelper
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptContext
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import PromptEngineer
+from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
+from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
@@ -51,6 +53,11 @@ class SimpleWebAPIDocumentation(Agent):
 
     strategy_string: str = parameter(
         desc="strategy string",
+        default="",
+    )
+
+    prompt_file: str = parameter(
+        desc="prompt file name",
         default="",
     )
 
@@ -155,10 +162,11 @@ class SimpleWebAPIDocumentation(Agent):
 
         self._prompt_engineer = PromptEngineer(
             strategy=self.strategy,
-            context=self._prompt_context,
+            context=PromptContext.DOCUMENTATION,
             prompt_helper=self.prompt_helper,
             open_api_spec=self._documentation_handler.openapi_spec,
-            rest_api_info=(token, self.host, self._correct_endpoints, self.categorized_endpoints)
+            rest_api_info=(token, self.host, self._correct_endpoints, self.categorized_endpoints),
+            prompt_file=self.prompt_file
         )
         self._evaluator = Evaluator(config=config)
 
@@ -376,6 +384,8 @@ class SimpleWebAPIDocumentation(Agent):
             prompt = self._prompt_engineer.generate_prompt(turn=turn, move_type=move_type,
                                                            prompt_history=self._prompt_history)
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
+            self.log.console.print(Panel(prompt[-1]["content"], title="system"))
+
             is_good, self._prompt_history, result, result_str = self._response_handler.handle_response(response,
                                                                                                        completion,
                                                                                                        self._prompt_history,

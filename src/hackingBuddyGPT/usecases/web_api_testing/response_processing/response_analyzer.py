@@ -2,7 +2,7 @@ import json
 import re
 from typing import Any, Dict, Optional, Tuple
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
+from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 
 
 class ResponseAnalyzer:

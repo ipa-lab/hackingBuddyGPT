@@ -1,13 +1,13 @@
 from abc import abstractmethod
-from typing import List
+from typing import List, Any
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information import PenTestingInformation
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PlanningType,
     PromptContext,
     PromptStrategy, PromptPurpose,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts import (
+from hackingBuddyGPT.utils.prompt_generation.prompts import (
     BasicPrompt,
 )
 
@@ -26,7 +26,7 @@ class StatePlanningPrompt(BasicPrompt):
         pentesting_information (Optional[PenTestingInformation]): Contains information relevant to pentesting when the context is pentesting.
     """
 
-    def __init__(self, context: PromptContext, prompt_helper, strategy: PromptStrategy):
+    def __init__(self, context: PromptContext, prompt_helper, strategy: PromptStrategy, prompt_file: Any=None):
         """
         Initializes the StatePlanningPrompt with a specific context, prompt helper, and strategy.
 
@@ -40,6 +40,7 @@ class StatePlanningPrompt(BasicPrompt):
             planning_type=PlanningType.STATE_PLANNING,
             prompt_helper=prompt_helper,
             strategy=strategy,
+            prompt_file=prompt_file
         )
         self.explored_steps: List[str] = []
         self.transformed_steps ={}

@@ -1,11 +1,11 @@
 import json
 from typing import Dict, Optional, Any, List
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PromptContext,
     PromptPurpose,
     PromptStrategy,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.state_learning.state_planning_prompt import (
+from hackingBuddyGPT.utils.prompt_generation.prompts.state_learning.state_planning_prompt import (
     StatePlanningPrompt,
 )
 
@@ -28,7 +28,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
     """
 
     def __init__(self, context: PromptContext, prompt_helper, context_information: Dict[int, Dict[str, str]],
-                 open_api_spec: Any) -> None:
+                 open_api_spec: Any, prompt_file : Any=None) -> None:
         """
         Initializes the InContextLearningPrompt with a specific context, prompt helper, and initial prompt.
 
@@ -37,7 +37,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
             context_information (Dict[int, Dict[str, str]]): A dictionary containing the prompts for each round.
         """
-        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.IN_CONTEXT)
+        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.IN_CONTEXT, prompt_file=prompt_file)
         self.prompt: Dict[int, Dict[str, str]] = context_information
         self.purpose: Optional[PromptPurpose] = None
         self.open_api_spec = open_api_spec
@@ -56,22 +56,44 @@ class InContextLearningPrompt(StatePlanningPrompt):
             move_type (str): The type of move to generate.
             hint (Optional[str]): An optional hint to guide the prompt generation.
             previous_prompt (List[Dict[str, str]]): A list of previous prompt entries, each containing a "content" key.
+            turn (Optional[int]): Current turn.
 
         Returns:
             str: The generated prompt.
         """
         if self.context == PromptContext.DOCUMENTATION:
-            steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt)
-        else:
+            steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt, doc_steps=self.get_documentation_steps())
+        elif self.context == PromptContext.PENTESTING:
             steps = self._get_pentesting_steps(move_type=move_type)
+        else:
+            steps = self.parse_prompt_file()
+            steps = self._get_documentation_steps(move_type=move_type, previous_prompt=previous_prompt,
+                                                  doc_steps=steps)
+
+
 
         if hint:
             steps = steps + [hint]
 
         return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=steps)
 
-    def _get_documentation_steps(self, move_type: str, previous_prompt) -> List[str]:
-        print(f'Move type:{move_type}')
+    def _get_documentation_steps(self, move_type: str, previous_prompt, doc_steps: Any) -> List[str]:
+        """
+           Generates documentation steps based on the current API specification, previous prompts,
+           and the intended move type.
+
+           Args:
+               move_type (str): Determines the strategy to apply. Accepted values:
+                                - "explore": Generates initial documentation steps for exploration.
+                                - Any other value: Triggers identification of endpoints needing more help.
+               previous_prompt (Any): A history of previously generated prompts used to determine
+                                      which endpoints have already been addressed.
+               doc_steps (Any): Existing documentation steps that are modified or expanded based on
+                                the selected move_type.
+
+           Returns:
+               List[str]: A list of documentation prompts tailored to the move_type and current context.
+           """
         # Extract properties and example response
         if "endpoints" in self.open_api_spec:
             properties = self.extract_properties()
@@ -100,10 +122,8 @@ class InContextLearningPrompt(StatePlanningPrompt):
                 icl_prompt = ""
         else:
             icl_prompt = ""
-        print(icl_prompt)
 
         if move_type == "explore":
-            doc_steps = self.get_documentation_steps()
             icl = [[f"Based on this information :\n{icl_prompt}\n" + doc_steps[0][0]]]
             # if self.current_step == 0:
             #   self.current_step == 1
@@ -116,14 +136,22 @@ class InContextLearningPrompt(StatePlanningPrompt):
                 info=f"Based on this information :\n{icl_prompt}\n Do the following: ")
 
 
-
-    import json
-
-    # Function to extract properties from the schema
-
-
-    # Function to extract example response from paths
     def extract_example_response(self, api_paths, endpoint, method="get"):
+        """
+           Extracts a representative example response for a specified API endpoint and method
+           from an OpenAPI specification.
+           Args:
+               api_paths (dict): A dictionary representing the paths section of the OpenAPI spec,
+                                 typically `self.open_api_spec["endpoints"]`.
+               endpoint (str): The specific API endpoint to extract the example from (e.g., "/users").
+               method (str, optional): The HTTP method to consider (e.g., "get", "post").
+                                       Defaults to "get".
+
+           Returns:
+               dict: A dictionary with the HTTP method as the key and the extracted example
+                     response as the value. If no suitable example is found, returns an empty dict.
+                     Format: { "get": { "exampleName": exampleData } }
+           """
         example_method = {}
         example_response = {}
         # Ensure that the provided endpoint and method exist in the schema
@@ -160,8 +188,27 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
     # Function to generate the prompt for In-Context Learning
     def generate_icl_prompt(self, properties, example_response, endpoint):
+        """
+           Generates an in-context learning (ICL) prompt to guide a language model in understanding
+           and documenting a REST API endpoint.
+
+           Args:
+               properties (dict): A dictionary of property names to their types and example values.
+                                  Format: { "property_name": {"type": "string", "example": "value"} }
+               example_response (dict): A dictionary containing example API responses, typically extracted
+                                        using `extract_example_response`. Format: { "get": { ...example... } }
+               endpoint (str): The API endpoint path (e.g., "/users").
+
+           Returns:
+               str: A formatted prompt string containing API metadata, property descriptions,
+                    and a JSON-formatted example response.
+           """
         # Core information about API
-        prompt = f"# REST API: {example_response.keys()} {endpoint}\n\n"
+        if len(example_response.keys()) > 0:
+            prompt = f"# REST API: {list(example_response.keys())[0].upper()} {endpoint}\n\n"
+        else:
+            prompt = f"# REST API: {endpoint}\n\n"
+
 
         # Add properties to the prompt
         counter = 0
@@ -183,6 +230,22 @@ class InContextLearningPrompt(StatePlanningPrompt):
         return prompt
 
     def extract_properties_with_examples(self, data):
+        """
+            Extracts and flattens properties from a nested dictionary or list of dictionaries,
+            producing a dictionary of property names along with their inferred types and example values.
+
+            Args:
+                data (dict or list): The input data, usually an example API response. This can be:
+                    - A single dictionary (representing a single API object).
+                    - A list of dictionaries (representing a collection of API objects).
+                    - A special-case dict with a single `None` key, which is unwrapped.
+
+            Returns:
+                dict: A dictionary mapping property names to a dictionary with keys:
+                      - "type": The inferred data type (e.g., "string", "integer").
+                      - "example": A sample value for the property.
+                      Format: { "property_name": {"type": "string", "example": "value"} }
+            """
 
         # Handle nested dictionaries, return flattened properties
 
@@ -224,7 +287,6 @@ class InContextLearningPrompt(StatePlanningPrompt):
             "path": test_case.get("path")
         }
 
-        print(f' PHASE: {test_case["objective"]}')
 
         # Process steps in the test case
         counter = 0
@@ -241,7 +303,6 @@ class InContextLearningPrompt(StatePlanningPrompt):
                 else:
                     expected_response_code = test_case["expected_response_code"]
 
-                print(f'COunter: {counter}')
                 token = test_case["token"][counter]
                 path = test_case["path"][counter]
             else:
@@ -326,7 +387,16 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
         return ''.join(result)
 
-    def get_props(self, data, result ):
+    def get_props(self, data:dict, result:dict ):
+        """
+          Recursively extracts properties from a dictionary, including nested dictionaries and lists,
+          and appends them to the result dictionary with their inferred data types and example values.
+
+          Returns:
+              dict: The updated result dictionary containing all extracted properties, including those
+                    found in nested dictionaries or lists.
+          """
+
         for key, value in data.items():
 
             if isinstance(value, dict):
@@ -353,9 +423,5 @@ class InContextLearningPrompt(StatePlanningPrompt):
                 result[key] = {"type": type(value).__name__, "example": value}
 
         return result
-
-
-
-
 
 

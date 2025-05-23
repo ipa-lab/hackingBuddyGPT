@@ -1,11 +1,10 @@
-from gettext import pgettext
-from typing import List, Optional, Any
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from typing import List, Optional
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PromptContext,
     PromptPurpose,
     PromptStrategy,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts.task_planning.task_planning_prompt import (
+from hackingBuddyGPT.utils.prompt_generation.prompts.task_planning.task_planning_prompt import (
     TaskPlanningPrompt,
 )
 
@@ -24,7 +23,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         explored_steps (List[str]): A list of steps that have already been explored in the chain-of-thought strategy.
     """
 
-    def __init__(self, context: PromptContext, prompt_helper):
+    def __init__(self, context: PromptContext, prompt_helper, prompt_file):
         """
         Initializes the ChainOfThoughtPrompt with a specific context and prompt helper.
 
@@ -32,7 +31,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
             context (PromptContext): The context in which prompts are generated.
             prompt_helper (PromptHelper): A helper object for managing and generating prompts.
         """
-        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT)
+        super().__init__(context=context, prompt_helper=prompt_helper, strategy=PromptStrategy.CHAIN_OF_THOUGHT, prompt_file= prompt_file)
         self.counter = 0
 
     def generate_prompt(
@@ -51,17 +50,78 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         """
         if self.context == PromptContext.DOCUMENTATION:
             self.purpose = PromptPurpose.DOCUMENTATION
-            chain_of_thought_steps = self._get_documentation_steps( [],move_type)
+            chain_of_thought_steps = self._get_documentation_steps([],move_type, self.get_documentation_steps())
             chain_of_thought_steps = [chain_of_thought_steps[0]] + [
                 "Let's think step by step"] + chain_of_thought_steps[1:]
 
-        else:
+        elif self.context == PromptContext.PENTESTING:
             chain_of_thought_steps = self._get_pentesting_steps(move_type,"")
+        else:
+            steps = self.parse_prompt_file()
+            chain_of_thought_steps = self._get_documentation_steps([],move_type, steps)
+
+            chain_of_thought_steps = [chain_of_thought_steps[0]] + [
+                "Let's think step by step"] + chain_of_thought_steps[1:]
         if hint:
             chain_of_thought_steps.append(hint)
 
         return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=chain_of_thought_steps)
 
+    def get_documentation_steps(self):
+        """
+        Returns a predefined list of endpoint exploration steps based on the target API host.
+
+        These steps are used to guide automated documentation of a web API by progressively
+        discovering and querying endpoints using GET requests. The process follows a structured
+        hierarchy from root-level endpoints to more complex nested endpoints and those with query parameters.
+
+        Returns:
+            List[List[str]]: A list of steps, each step being a list of instruction strings.
+        """
+
+        # Define specific documentation steps based on the given strategy
+
+        return [
+            [f"Objective: Identify all accessible endpoints via GET requests for {self.prompt_helper.host}. {self.prompt_helper._description}"],
+            [
+                f""" Query root-level resource endpoints.
+                               Find root-level endpoints for {self.prompt_helper.host}.
+                               Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
+                               1. Send GET requests to new paths only, avoiding any in the lists above.
+                               2. Do not reuse previously tested paths."""
+
+            ],
+            [
+                "Query Instance-level resource endpoint with id",
+                "Look for Instance-level resource endpoint : Identify endpoints of type `/resource/id` where id is the parameter for the id.",
+                "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
+                "Ids can be integers, longs or base62."
+
+            ],
+            [
+                "Query Subresource Endpoints",
+                "Identify subresource endpoints of the form `/resource/other_resource`.",
+                "Query these endpoints to check if they return data related to the main resource without requiring an `id` parameter."
+
+
+            ],
+
+            [
+                "Query for related resource endpoints",
+                "Identify related resource endpoints that match the format `/resource/id/other_resource`: "
+                f"First, scan for the follwoing endpoints where an `id` in the middle position and follow them by another resource identifier.",
+                "Second, look for other endpoints and query these endpoints with appropriate `id` values to determine their behavior and document responses or errors."
+            ],
+            [
+                "Query multi-level resource endpoints",
+                "Search for multi-level endpoints of type `/resource/other_resource/another_resource`: Identify any endpoints in the format with three resource identifiers.",
+                "Test requests to these endpoints, adjusting resource identifiers as needed, and analyze responses to understand any additional parameters or behaviors."
+            ],
+            [
+                "Query endpoints with query parameters",
+                "Construct and make GET requests to these endpoints using common query parameters (e.g. `/resource?param1=1&param2=3`) or based on documentation hints, testing until a valid request with query parameters is achieved."
+            ]
+        ]
 
 
     def transform_into_prompt_structure(self, test_case, purpose):
@@ -170,11 +230,12 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         Creates a chain of thought prompt to guide the model through the API documentation process.
 
         Args:
-            use_token (str): A string indicating whether authentication is required.
-            endpoints (list): A list of endpoints to exclude from testing.
+        steps (list): A list of steps, where each step is a list. The first element
+                      of each inner list is the step title, followed by its sub-steps or details.
 
-        Returns:
-            str: A structured chain of thought prompt for documentation.
+    Returns:
+        list: A transformed list where each step (except the first) is prefixed with
+              "Step X:" headers and includes its associated sub-steps.
         """
 
         transformed_steps = [steps[0]]

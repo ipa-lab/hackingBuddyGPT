@@ -1,12 +1,12 @@
 from abc import abstractmethod
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PlanningType,
     PromptContext,
     PromptStrategy,
     PromptPurpose,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompts import (
+from hackingBuddyGPT.utils.prompt_generation.prompts import (
     BasicPrompt,
 )
 
@@ -27,7 +27,7 @@ class TaskPlanningPrompt(BasicPrompt):
         pentesting_information (Optional[PenTestingInformation]): Contains information relevant to pentesting when the context is pentesting.
     """
 
-    def __init__(self, context: PromptContext, prompt_helper, strategy: PromptStrategy):
+    def __init__(self, context: PromptContext, prompt_helper, strategy: PromptStrategy, prompt_file : Any=None):
         """
         Initializes the TaskPlanningPrompt with a specific context, prompt helper, and strategy.
 
@@ -41,6 +41,7 @@ class TaskPlanningPrompt(BasicPrompt):
             planning_type=PlanningType.TASK_PLANNING,
             prompt_helper=prompt_helper,
             strategy=strategy,
+            prompt_file= prompt_file
         )
         self.explored_steps: List[str] = []
         self.purpose: Optional[PromptPurpose] = None
@@ -48,19 +49,20 @@ class TaskPlanningPrompt(BasicPrompt):
         self.transformed_steps = {}
         self.pentest_steps = None
 
-    def _get_documentation_steps(self, common_steps: List[str], move_type: str) -> List[str]:
+    def _get_documentation_steps(self, common_steps: List[str], move_type: str, steps: Any) -> List[str]:
         """
-        Provides the steps for the chain-of-thought strategy when the context is documentation.
+        Provides the steps for the task learning prompt when the context is documentation.
 
         Args:
             common_steps (List[str]): A list of common steps for generating prompts.
             move_type (str): The type of move to generate.
+            steps (Any): steps that are transformed into task planning prompt
 
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the documentation context.
         """
         if move_type == "explore":
-            doc_steps = self.generate_documentation_steps(self.get_documentation_steps())
+            doc_steps = self.generate_documentation_steps(steps)
             return self.prompt_helper.get_initial_documentation_steps(
                                                                        strategy_steps= doc_steps)
         else:

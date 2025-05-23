@@ -51,11 +51,12 @@ class TaskPlanningPrompt(BasicPrompt):
 
     def _get_documentation_steps(self, common_steps: List[str], move_type: str, steps: Any) -> List[str]:
         """
-        Provides the steps for the chain-of-thought strategy when the context is documentation.
+        Provides the steps for the task learning prompt when the context is documentation.
 
         Args:
             common_steps (List[str]): A list of common steps for generating prompts.
             move_type (str): The type of move to generate.
+            steps (Any): steps that are transformed into task planning prompt
 
         Returns:
             List[str]: A list of steps for the chain-of-thought strategy in the documentation context.

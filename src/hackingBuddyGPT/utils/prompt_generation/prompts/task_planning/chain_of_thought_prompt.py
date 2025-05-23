@@ -230,11 +230,12 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
         Creates a chain of thought prompt to guide the model through the API documentation process.
 
         Args:
-            use_token (str): A string indicating whether authentication is required.
-            endpoints (list): A list of endpoints to exclude from testing.
+        steps (list): A list of steps, where each step is a list. The first element
+                      of each inner list is the step title, followed by its sub-steps or details.
 
-        Returns:
-            str: A structured chain of thought prompt for documentation.
+    Returns:
+        list: A transformed list where each step (except the first) is prefixed with
+              "Step X:" headers and includes its associated sub-steps.
         """
 
         transformed_steps = [steps[0]]

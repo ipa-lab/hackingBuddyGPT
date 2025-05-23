@@ -56,6 +56,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
             move_type (str): The type of move to generate.
             hint (Optional[str]): An optional hint to guide the prompt generation.
             previous_prompt (List[Dict[str, str]]): A list of previous prompt entries, each containing a "content" key.
+            turn (Optional[int]): Current turn.
 
         Returns:
             str: The generated prompt.
@@ -77,6 +78,22 @@ class InContextLearningPrompt(StatePlanningPrompt):
         return self.prompt_helper._check_prompt(previous_prompt=previous_prompt, steps=steps)
 
     def _get_documentation_steps(self, move_type: str, previous_prompt, doc_steps: Any) -> List[str]:
+        """
+           Generates documentation steps based on the current API specification, previous prompts,
+           and the intended move type.
+
+           Args:
+               move_type (str): Determines the strategy to apply. Accepted values:
+                                - "explore": Generates initial documentation steps for exploration.
+                                - Any other value: Triggers identification of endpoints needing more help.
+               previous_prompt (Any): A history of previously generated prompts used to determine
+                                      which endpoints have already been addressed.
+               doc_steps (Any): Existing documentation steps that are modified or expanded based on
+                                the selected move_type.
+
+           Returns:
+               List[str]: A list of documentation prompts tailored to the move_type and current context.
+           """
         # Extract properties and example response
         if "endpoints" in self.open_api_spec:
             properties = self.extract_properties()
@@ -118,11 +135,23 @@ class InContextLearningPrompt(StatePlanningPrompt):
             return self.prompt_helper.get_endpoints_needing_help(
                 info=f"Based on this information :\n{icl_prompt}\n Do the following: ")
 
-    # Function to extract properties from the schema
 
-
-    # Function to extract example response from paths
     def extract_example_response(self, api_paths, endpoint, method="get"):
+        """
+           Extracts a representative example response for a specified API endpoint and method
+           from an OpenAPI specification.
+           Args:
+               api_paths (dict): A dictionary representing the paths section of the OpenAPI spec,
+                                 typically `self.open_api_spec["endpoints"]`.
+               endpoint (str): The specific API endpoint to extract the example from (e.g., "/users").
+               method (str, optional): The HTTP method to consider (e.g., "get", "post").
+                                       Defaults to "get".
+
+           Returns:
+               dict: A dictionary with the HTTP method as the key and the extracted example
+                     response as the value. If no suitable example is found, returns an empty dict.
+                     Format: { "get": { "exampleName": exampleData } }
+           """
         example_method = {}
         example_response = {}
         # Ensure that the provided endpoint and method exist in the schema
@@ -159,8 +188,23 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
     # Function to generate the prompt for In-Context Learning
     def generate_icl_prompt(self, properties, example_response, endpoint):
+        """
+           Generates an in-context learning (ICL) prompt to guide a language model in understanding
+           and documenting a REST API endpoint.
+
+           Args:
+               properties (dict): A dictionary of property names to their types and example values.
+                                  Format: { "property_name": {"type": "string", "example": "value"} }
+               example_response (dict): A dictionary containing example API responses, typically extracted
+                                        using `extract_example_response`. Format: { "get": { ...example... } }
+               endpoint (str): The API endpoint path (e.g., "/users").
+
+           Returns:
+               str: A formatted prompt string containing API metadata, property descriptions,
+                    and a JSON-formatted example response.
+           """
         # Core information about API
-        if example_response.keys() != {}:
+        if len(example_response.keys()) > 0:
             prompt = f"# REST API: {list(example_response.keys())[0].upper()} {endpoint}\n\n"
         else:
             prompt = f"# REST API: {endpoint}\n\n"
@@ -186,6 +230,22 @@ class InContextLearningPrompt(StatePlanningPrompt):
         return prompt
 
     def extract_properties_with_examples(self, data):
+        """
+            Extracts and flattens properties from a nested dictionary or list of dictionaries,
+            producing a dictionary of property names along with their inferred types and example values.
+
+            Args:
+                data (dict or list): The input data, usually an example API response. This can be:
+                    - A single dictionary (representing a single API object).
+                    - A list of dictionaries (representing a collection of API objects).
+                    - A special-case dict with a single `None` key, which is unwrapped.
+
+            Returns:
+                dict: A dictionary mapping property names to a dictionary with keys:
+                      - "type": The inferred data type (e.g., "string", "integer").
+                      - "example": A sample value for the property.
+                      Format: { "property_name": {"type": "string", "example": "value"} }
+            """
 
         # Handle nested dictionaries, return flattened properties
 
@@ -327,7 +387,16 @@ class InContextLearningPrompt(StatePlanningPrompt):
 
         return ''.join(result)
 
-    def get_props(self, data, result ):
+    def get_props(self, data:dict, result:dict ):
+        """
+          Recursively extracts properties from a dictionary, including nested dictionaries and lists,
+          and appends them to the result dictionary with their inferred data types and example values.
+
+          Returns:
+              dict: The updated result dictionary containing all extracted properties, including those
+                    found in nested dictionaries or lists.
+          """
+
         for key, value in data.items():
 
             if isinstance(value, dict):

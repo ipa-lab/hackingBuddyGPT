@@ -28,7 +28,7 @@ classifiers = [
 dependencies = [
     'fabric == 3.2.2',
     'Mako == 1.3.2',
-    'requests == 2.32.3',
+    'requests == 2.32.4',
     'rich == 13.7.1',
     'tiktoken == 0.8.0',
     'instructor == 1.7.2',

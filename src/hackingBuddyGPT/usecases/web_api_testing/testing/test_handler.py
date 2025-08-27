@@ -80,8 +80,7 @@ class GenerationTestHandler:
         Returns:
             tuple: Test case description, test case dictionary, and updated prompt history.
         """
-        prompt_text = f"""
-           Based on the following analysis of the API response, generate a detailed test case:
+        prompt_text = f"""Based on the following analysis of the API response, generate a detailed test case:
 
            Analysis: {analysis}
 
@@ -93,14 +92,13 @@ class GenerationTestHandler:
            - Example input data in JSON format.
            - Expected result or assertion based on method and endpoint call.
 
-           Format:
+           return a PythonTestCase object that should look like this :
+            Format:
            {{
                "description": "Test case for {method} {endpoint}",
                "input": {body},
                "expected_output": {{"expected_body": body, "expected_status_code": status_code}}
-           }}
-
-           return a PythonTestCase object
+           }},
         """
         prompt_history.append({"role": "system", "content": prompt_text})
         response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt_history,

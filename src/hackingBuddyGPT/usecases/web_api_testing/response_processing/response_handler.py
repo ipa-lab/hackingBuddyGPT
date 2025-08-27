@@ -505,7 +505,8 @@ class ResponseHandler:
 
             # Check response success
             is_successful = result_str.startswith("200")
-            prompt_history.append(message)
+            msg = {"role": message.role, "content": message.content, "tool_calls": message.tool_calls}
+            prompt_history.append(msg)
             self.last_path = request_path
 
             status_message = self.check_if_successful(is_successful, request_path, result_dict, result_str, categorized_endpoints)
@@ -910,7 +911,9 @@ class ResponseHandler:
             return response
 
     def check_if_successful(self, is_successful, request_path, result_dict, result_str, categorized_endpoints):
+        self.prompt_helper.new_endpoint_found = False
         if is_successful:
+            self.prompt_helper.new_endpoint_found =True
             if "?" in request_path and request_path not in self.prompt_helper.found_query_endpoints:
                 self.prompt_helper.found_query_endpoints.append(request_path)
             ep = request_path.split("?")[0]

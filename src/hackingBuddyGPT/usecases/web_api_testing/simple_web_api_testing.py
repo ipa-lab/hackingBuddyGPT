@@ -528,16 +528,15 @@ class SimpleWebAPITesting(Agent):
         tool_call_id: str = message.tool_calls[0].id
         command: str = pydantic_core.to_json(response).decode()
         self.log.console.print(Panel(command, title="assistant"))
-        self._prompt_history.append(message)
-
+        msg = {"role": message.role, "content": message.content, "tool_calls": message.tool_calls}
+        self._prompt_history.append(msg)
         result: Any = response.execute()
         self.log.console.print(Panel(result, title="tool"))
         if not isinstance(result, str):
             endpoint: str = str(response.action.path).split("/")[1]
             self._report_handler.write_endpoint_to_report(endpoint)
 
-        self._prompt_history.append(
-            tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
+        self._prompt_history.append(tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
         self.adjust_user(result)
         return result

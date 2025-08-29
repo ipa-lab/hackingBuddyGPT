@@ -1,9 +1,11 @@
-from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.usecases.base import use_case
 from hackingBuddyGPT.usecases.command_strategy import CommandStrategy
 from hackingBuddyGPT.utils import SSHConnection
 
 from mako.template import Template
+
+from src.hackingBuddyGPT.capabilities.psexec_run_command import PSExecRunCommand
+from src.hackingBuddyGPT.capabilities.psexec_test_credential import PSExecTestCredential
 
 TEMPLATE = """
 You are a low-privilege user ${conn.username} with password ${conn.password}
@@ -25,8 +27,8 @@ Do not repeat already tried escalation attacks.
 Give your command. Do not add any explanation or add an initial `$`.
 """
 
-@use_case("Minimal Strategy-based Linux Priv-Escalation")
-class MinimalPrivEscLinux(CommandStrategy):
+@use_case("Strategy-based Windows Priv-Escalation")
+class PrivEscWindows(CommandStrategy):
     conn: SSHConnection = None
 
     def init(self):
@@ -34,12 +36,12 @@ class MinimalPrivEscLinux(CommandStrategy):
 
         self._template = Template(TEMPLATE)
 
-        self._capabilities.add_capability(SSHRunCommand(conn=self.conn), default=True)
-        self._capabilities.add_capability(SSHTestCredential(conn=self.conn))
+        self.add_capability(PSExecRunCommand(conn=self.conn), default=True)
+        self.add_capability(PSExecTestCredential(conn=self.conn))        
 
         self._template_params.update({
-            "system": "Linux",
-            "target_user": "root",
+            "system": "Windows",
+            "target_user": "Administrator",
             "conn": self.conn
         })
 

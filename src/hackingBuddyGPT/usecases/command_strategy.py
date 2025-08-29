@@ -165,6 +165,12 @@ class CommandStrategy(UseCase, abc.ABC):
     def after_run(self):
         pass
 
+    def after_round(self, cmd, result, got_root):
+        pass
+
+    def get_space_for_history(self):
+        pass
+
     def init(self):
         super().init()
 
@@ -172,11 +178,6 @@ class CommandStrategy(UseCase, abc.ABC):
 
         self._sliding_history = SlidingCliHistory(self.llm)
         self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(template_next_cmd.source)
-
-        self._template_params.update({
-            "system": self.system
-        })
-
 
     @log_conversation("Asking LLM for a new command...", start_section=True)
     def get_next_command(self) -> tuple[str, int]:
@@ -273,7 +274,6 @@ class CommandStrategy(UseCase, abc.ABC):
 @use_case("Minimal Strategy-based Linux Priv-Escalation")
 class MinimalPrivEscLinux(CommandStrategy):
     conn: SSHConnection = None
-    system: str = "Linux"
 
     def init(self):
         super().init()
@@ -284,7 +284,7 @@ class MinimalPrivEscLinux(CommandStrategy):
         self._capabilities.add_capability(SSHTestCredential(conn=self.conn))
 
         self._template_params.update({
-            "system": self.system,
+            "system": "Linux",
             "conn": self.conn
         })
 
@@ -295,7 +295,6 @@ class MinimalPrivEscLinux(CommandStrategy):
 class PrivEscLinux(CommandStrategy):
     conn: SSHConnection = None
     hints: str = ''
-    system: str = "Linux"
 
     enable_update_state: bool = False
 
@@ -310,7 +309,7 @@ class PrivEscLinux(CommandStrategy):
         self._capabilities.add_capability(SSHTestCredential(conn=self.conn))
 
         self._template_params.update({
-            "system": self.system,
+            "system": "Linux",
             "conn": self.conn,
             "update_state": self.enable_update_state,
             "state": self._state,

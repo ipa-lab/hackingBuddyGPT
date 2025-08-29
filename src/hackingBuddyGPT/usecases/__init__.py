@@ -4,3 +4,4 @@ from .web import *
 from .web_api_testing import *
 from .viewer import *
 from .rag import *
+from .command_strategy import *

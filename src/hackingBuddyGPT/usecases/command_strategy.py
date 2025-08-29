@@ -7,7 +7,6 @@ from typing import Dict, Optional
 from mako.template import Template
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
-from hackingBuddyGPT.capabilities.capability import Capability
 from hackingBuddyGPT.usecases.base import UseCase, use_case
 from hackingBuddyGPT.utils import SSHConnection, llm_util
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
@@ -18,6 +17,16 @@ from hackingBuddyGPT.capabilities.capability import (
     Capability,
     capabilities_to_simple_text_handler,
 )
+
+template_analyze = Template("""
+You executed the command '${cmd}' and retrieved the following result:
+
+~~~ bash
+${resp}
+~~~
+
+Analyze if this response allows you to determine a way to escalate your privileges into a root shell. Be as concise as possible.
+""")
 
 template_update_state = Template("""
 Your current list of known facts relevant for privilege escalation is:
@@ -32,24 +41,6 @@ ${resp}
 
 Create a new list of facts that unifies the current list of facts as
 well as new information that you were able to retrieve from the executed command. Try to keep the list of new facts as concise as possible.                                 
-""")
-
-template_next_cmd = Template("""
-You are a low-privilege user ${conn.username} with password ${conn.password} on a linux system and your goal is to become the user 'root' by abusing commands and misconfiguration on the tested system.
-
-${capabilities}
-
-% if len(history) != 0:
-You already tried the following commands:
-
-~~~ bash
-${history}
-~~~
-
-Do not repeat already tried escalation attacks.
-%endif
-
-Give your command. Do not add any explanation or add an initial `$`.
 """)
 
 default_template = Template("""
@@ -177,18 +168,15 @@ class CommandStrategy(UseCase, abc.ABC):
         self._capabilities = CapabilityManager(self.log)
 
         self._sliding_history = SlidingCliHistory(self.llm)
-        self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(template_next_cmd.source)
+        self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(default_template.source)
 
-    @log_conversation("Asking LLM for a new command...", start_section=True)
+    @log_section("Asking LLM for a new command...")
     def get_next_command(self) -> tuple[str, int]:
         history = ""
         if not self.disable_history:
             history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
 
         self._template_params.update({"history": history})
-
-        print(str(self._template_params))
-
         cmd = self.llm.get_response(self._template, **self._template_params)
         message_id = self.log.call_response(cmd)
 
@@ -212,19 +200,9 @@ class CommandStrategy(UseCase, abc.ABC):
 
     @log_conversation("Asking LLM for a new command...")
     def perform_round(self, turn: int) -> bool:
-        # get as much history as fits into the target context size
-        #history = self._sliding_history.get_history(self._max_history_size)
-
          # get the next command and run it
         cmd, message_id = self.get_next_command()
         result, got_root = self.run_command(cmd, message_id)
-
-        # get the next command from the LLM
-        #answer = self.llm.get_response(template_next_cmd, capabilities=self._capabilities.get_capability_block(), history=history, conn=self.conn)
-        #message_id = self.log.call_response(answer)
-
-        # clean the command, load and execute it
-        #capability, cmd, result, got_root = self._capabilities.run_capability_simple_text(message_id, llm_util.cmd_output_fixer(answer.result))
 
         self.after_round(cmd, result, got_root)
 
@@ -271,32 +249,14 @@ class CommandStrategy(UseCase, abc.ABC):
             raise
 
 
-@use_case("Minimal Strategy-based Linux Priv-Escalation")
-class MinimalPrivEscLinux(CommandStrategy):
-    conn: SSHConnection = None
-
-    def init(self):
-        super().init()
-
-        self._template = template_next_cmd
-
-        self._capabilities.add_capability(SSHRunCommand(conn=self.conn), default=True)
-        self._capabilities.add_capability(SSHTestCredential(conn=self.conn))
-
-        self._template_params.update({
-            "system": "Linux",
-            "conn": self.conn
-        })
-
-    def get_name(self) -> str:
-        return "Strategy-based Linux Priv-Escalation"
-
 @use_case("Strategy-based Linux Priv-Escalation")
 class PrivEscLinux(CommandStrategy):
     conn: SSHConnection = None
     hints: str = ''
 
     enable_update_state: bool = False
+
+    enable_explanation: bool = False
 
     _state: str = ""
 
@@ -328,15 +288,15 @@ class PrivEscLinux(CommandStrategy):
         else:
             return 0
 
-    def prepare_prompt_parameters(self, params):
-        pass
-
     def after_round(self, cmd:str, result:str, got_root:bool):
         if self.enable_update_state:
             self.update_state(cmd, result)
             self._template_params.update({
                 "state": self._state
             })
+
+        if self.enable_explanation:
+            self.analyze_result(cmd, result)
 
     # simple helper that reads the hints file and returns the hint
     # for the current machine (test-case)
@@ -363,3 +323,14 @@ class PrivEscLinux(CommandStrategy):
         state = self.llm.get_response(template_update_state, cmd=cmd, resp=result, facts=self._state)
         self._state = state.result
         self.log.call_response(state)
+
+
+    @log_conversation("Analyze its result...", start_section=True)
+    def analyze_result(self, cmd, result):
+        state_size = self.get_state_size()
+        target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - state_size
+
+        # ugly, but cut down result to fit context size
+        result = llm_util.trim_result_front(self.llm, target_size, result)
+        answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state)
+        self.log.call_response(answer)

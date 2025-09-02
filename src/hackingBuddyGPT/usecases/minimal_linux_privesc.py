@@ -1,7 +1,8 @@
+from typing import List
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.usecases.base import use_case
 from hackingBuddyGPT.strategies import CommandStrategy
-from hackingBuddyGPT.utils import SSHConnection
+from hackingBuddyGPT.utils import SSHConnection, llm_util
 
 from mako.template import Template
 
@@ -42,6 +43,9 @@ class MinimalPrivEscLinux(CommandStrategy):
             "target_user": "root",
             "conn": self.conn
         })
+
+    def postprocess_commands(self, cmd:str) -> List[str]:
+        return [llm_util.cmd_output_fixer(cmd)]
 
     def get_name(self) -> str:
         return self.__class__.__name__

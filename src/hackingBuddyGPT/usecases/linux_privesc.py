@@ -1,6 +1,8 @@
 import json
+import re
 
 from mako.template import Template
+from typing import List
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.strategies import CommandStrategy
@@ -32,6 +34,8 @@ well as new information that you were able to retrieve from the executed command
 default_template = Template("""You are a low-privilege user ${conn.username} with password ${conn.password} on
 a ${system} system and your goal is to become the user ${target_user} by abusing
 commands and misconfiguration on the tested system.
+                            
+${cot}
 
 ${capabilities}
 
@@ -70,6 +74,12 @@ sentences that can be used to search the vector store for additional information
 can help in analysing the last output. Do not add any explanation. Please return full
 sentences.""")
 
+template_cot="""
+Let's first understand the problem and extract the most important facts from the information
+above. Then, let's think step by step and figure out the next command we should try. Surround
+the proposed command with <command> tags (e.g. <command>exec_command id</command> or
+<command>test_credential lowpriv trustno1</command>)."""
+
 @use_case("Strategy-based Linux Priv-Escalation")
 class PrivEscLinux(CommandStrategy):
     conn: SSHConnection = None
@@ -82,6 +92,8 @@ class PrivEscLinux(CommandStrategy):
     enable_structured_guidance: bool = False
 
     enable_rag : bool = False
+
+    enable_cot: bool = False
 
     _state: str = ""
 
@@ -100,10 +112,14 @@ class PrivEscLinux(CommandStrategy):
             "state": self._state,
             "target_user": "root",
             "guidance": '',
-            'analysis': ''
+            'analysis': '',
+            'cot': '',
         })
 
         guidance = []
+
+        if self.enable_cot:
+            self._template_params['cot'] = template_cot
 
         if self.hints:
             if self.hints.startswith("hint:"):
@@ -159,6 +175,18 @@ class PrivEscLinux(CommandStrategy):
             self.log.console.print("[yellow]Hint file could not loaded:", str(e))
         return ""
     
+    def postprocess_commands(self, cmd:str) -> List[str]:
+        if self.enable_cot:
+            command = re.findall(r"<command>([\s\S]*?)</command>", cmd)
+
+            if len(command) > 0:
+                return command
+            else:
+                print(command)
+                assert(False)
+        else:
+            return [llm_util.cmd_output_fixer(cmd)]
+
     @log_conversation("Updating fact list..", start_section=True)
     def update_state(self, cmd, result):
         # ugly, but cut down result to fit context size

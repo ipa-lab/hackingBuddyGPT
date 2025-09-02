@@ -1,6 +1,6 @@
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
-from hackingBuddyGPT.utils import SSHConnection
+from hackingBuddyGPT.utils import SSHConnection, llm_util
 import json
 
 from .common import ThesisPrivescPrototype

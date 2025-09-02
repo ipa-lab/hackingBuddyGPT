@@ -1,7 +1,7 @@
 import abc
 from dataclasses import dataclass
 import datetime
-from typing import Optional
+from typing import List, Optional
 import re
 
 from mako.template import Template
@@ -65,7 +65,7 @@ class CommandStrategy(UseCase, abc.ABC):
         cmd = self.llm.get_response(self._template, **self._template_params)
         message_id = self.log.call_response(cmd)
 
-        return llm_util.cmd_output_fixer(cmd.result), message_id
+        return cmd.result, message_id
 
     @log_section("Executing that command...")
     def run_command(self, cmd, message_id) -> tuple[Optional[str], bool]:
@@ -89,12 +89,17 @@ class CommandStrategy(UseCase, abc.ABC):
         last_line = ansi_escape.sub("", last_line)
         return got_root(self.conn.hostname, last_line)
 
+    def postprocess_commands(self, cmd:str) -> List[str]:
+        return [cmd]
 
     @log_conversation("Asking LLM for a new command...")
     def perform_round(self, turn: int) -> bool:
          # get the next command and run it
         cmd, message_id = self.get_next_command()
-        result, task_successful = self.run_command(cmd, message_id)
+
+        cmds = self.postprocess_commands(cmd)
+        for cmd in cmds:
+            result, task_successful = self.run_command(cmd, message_id)
 
         # maybe move the 'got root' detection here?
         # TODO: also can I use llm-as-judge for that? or do I have to do this

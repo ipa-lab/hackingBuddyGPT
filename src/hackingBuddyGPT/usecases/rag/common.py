@@ -11,7 +11,7 @@ from langchain_core.vectorstores import VectorStoreRetriever
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_handler
 from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.rag import rag_utility as rag_util
+from hackingBuddyGPT.utils import rag as rag_util
 from hackingBuddyGPT.utils.logging import log_section, log_conversation
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory

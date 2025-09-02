@@ -241,11 +241,11 @@ class ReportHandler:
         unsuccessful_msg = conditions.get('if_unsuccessful', "Vulnerability found.")
 
         success = any(
+            isinstance(expected, str) and
             str(status_code).strip() == str(expected.split()[0]).strip()
             and expected.split()[0].strip().isdigit()
-            for expected in expected_codes if expected.strip()
+            for expected in expected_codes if isinstance(expected, str) and expected.strip()
         )
-
 
         if not success:
             self.vulnerabilities_counter += 1

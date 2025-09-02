@@ -28,6 +28,7 @@ class PromptGenerationHelper(object):
         self.counter = 0
         self.uuid =uuid.uuid4()
         self.bad_request_endpoints = []
+        self.new_endpoint_found = False
         self.endpoint_examples = {}
         self.name = ""
         if "coin" in host.lower():

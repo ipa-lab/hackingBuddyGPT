@@ -2,7 +2,7 @@ import re
 from typing import Any, Dict, List
 
 import openai
-from instructor.exceptions import IncompleteOutputException
+from instructor.exceptions import IncompleteOutputException, InstructorRetryException
 
 from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
 
@@ -52,7 +52,8 @@ class LLMHandler:
             """Helper function to make the API call with the adjusted prompt."""
             if isinstance(prompt, list):
                 if isinstance(prompt[0], list):
-                    prompt = prompt[0]
+                    adjusted_prompt = prompt[0]
+                    prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
 
             return self.llm.instructor.chat.completions.create_with_completion(
                 model=self.llm.model,
@@ -65,12 +66,14 @@ class LLMHandler:
 
         try:
             if isinstance(prompt, list) and len(prompt) >= 10:
-                prompt = prompt[-10:]
+                adjusted_prompt = prompt[-10:]
+                prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
+
             if isinstance(prompt, str):
                 prompt = [prompt]
             return call_model(prompt)
 
-        except (openai.BadRequestError, IncompleteOutputException) as e:
+        except (openai.BadRequestError, IncompleteOutputException, InstructorRetryException) as e:
 
             try:
                 # First adjustment attempt based on prompt length
@@ -79,15 +82,13 @@ class LLMHandler:
                     adjusted_prompt = self.adjust_prompt(prompt, num_prompts=1)
                     adjusted_prompt = self._ensure_that_tool_messages_are_correct(adjusted_prompt, prompt)
                     prompt= adjusted_prompt
-                if isinstance(prompt, str):
-                    adjusted_prompt = [prompt]
-                    prompt= adjusted_prompt
+
 
 
 
                 return call_model(prompt)
 
-            except (openai.BadRequestError, IncompleteOutputException) as e:
+            except (openai.BadRequestError, IncompleteOutputException, InstructorRetryException) as e:
                 # Second adjustment based on token size if the first attempt fails
                 adjusted_prompt = self.adjust_prompt(prompt)
                 if isinstance(adjusted_prompt, str):
@@ -122,24 +123,15 @@ class LLMHandler:
                 response_model=capabilities_to_action_model(capability),
                 #max_tokens=1000  # adjust as needed
             )
-
-        # Helper to adjust the prompt based on its length.
-        def adjust_prompt_based_on_length(prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-            if self.adjusting_counter == 2:
-                num_prompts = 10
-                self.adjusting_counter = 0
-            else:
-                num_prompts = int(
-                    len(prompt) - 0.5 * len(prompt) if len(prompt) >= 20 else len(prompt) - 0.3 * len(prompt))
-            return self.adjust_prompt(prompt, num_prompts=num_prompts)
-
         try:
             # First adjustment attempt based on prompt length
             if len(prompt) >= 10:
-                prompt = prompt[-10:]
+                shortened_prompt = prompt[-10:]
+                prompt = self._ensure_that_tool_messages_are_correct(shortened_prompt, prompt)
+
             return call_model(prompt, capability)
 
-        except (openai.BadRequestError, IncompleteOutputException) as e:
+        except (openai.BadRequestError, IncompleteOutputException, InstructorRetryException) as e:
 
             try:
                 # Second adjustment based on token size if the first attempt fails
@@ -150,7 +142,7 @@ class LLMHandler:
                 adjusted_prompt =  call_model(adjusted_prompt, capability)
                 return adjusted_prompt
 
-            except (openai.BadRequestError, IncompleteOutputException) as e:
+            except (openai.BadRequestError, IncompleteOutputException, InstructorRetryException) as e:
 
                 # Final fallback with the smallest prompt size
                 shortened_prompt = self.adjust_prompt(prompt)
@@ -180,6 +172,8 @@ class LLMHandler:
         # Ensure not to exceed the available prompts
         adjusted_prompt = prompt[-num_prompts:]
         adjusted_prompt = adjusted_prompt[:len(adjusted_prompt) - len(adjusted_prompt) % 2]
+
+
         if adjusted_prompt == []:
             return prompt
 
@@ -202,13 +196,17 @@ class LLMHandler:
         # Ensure adjusted_prompt items are valid dicts and follow `tool` message constraints
         validated_prompt = []
         last_item = None
+        if adjusted_prompt[0].get("role") == "tool":
+            adjusted_prompt.remove(adjusted_prompt[0])
         adjusted_prompt.reverse()
-
+        # TODO: Fix this logic
         for item in adjusted_prompt:
             if isinstance(item, dict):
                 # Remove `tool` messages without a preceding `tool_calls` message
-                if item.get("role") == "tool" and (last_item is None or last_item.get("role") != "tool_calls"):
+                if item.get("role") == "assistant" and "tool_calls" not in last_item:
+                    validated_prompt.remove(last_item)
                     continue
+
 
                 # Track valid items
                 validated_prompt.append(item)
@@ -219,7 +217,7 @@ class LLMHandler:
             validated_prompt.reverse()
         if validated_prompt == []:
             validated_prompt = [prompt[-1]]
-        if isinstance(validated_prompt, object):
+        if isinstance(validated_prompt, str):
             validated_prompt = [validated_prompt]
         return validated_prompt
 

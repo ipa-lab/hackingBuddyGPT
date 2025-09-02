@@ -1,0 +1,33 @@
+{
+  "token": "your_api_token_here",
+  "name": "fake_api",
+  "host": "https://dummyjson.com",
+  "description": "API for managing users, including auth, filtering, sorting, and relations like carts/posts/todos.",
+  "correct_endpoints": [
+    "/users",
+    "/users/{id}",
+    "/users/search",
+    "/users/filter",
+    "/user/login",
+    "/user/me",
+    "/users/add"
+  ],
+  "query_params": {
+    "/users": [
+      "limit",
+      "skip",
+      "select",
+      "sortBy",
+      "order"
+    ],
+    "/users/search": [
+      "q"
+    ],
+    "/users/filter": [
+      "key",
+      "value"
+    ]
+  },
+  "password_file": "",
+  "csv_file": ""
+}

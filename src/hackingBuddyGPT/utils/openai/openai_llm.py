@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import requests
 import tiktoken
+from urllib.parse import urlparse
 
 from hackingBuddyGPT.utils.configurable import configurable, parameter
 from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
@@ -20,7 +21,7 @@ class OpenAIConnection(LLM):
     show you, that you did not specialize yet.
     """
 
-    api_key: str = parameter(desc="OpenAI API Key")
+    api_key: str = parameter(desc="OpenAI API Key", secret=True)
     model: str = parameter(desc="OpenAI model name")
     context_size: int = parameter(
         desc="Maximum context size for the model, only used internally for things like trimming to the context size"
@@ -31,14 +32,20 @@ class OpenAIConnection(LLM):
     api_backoff: int = parameter(desc="Backoff time in seconds when running into rate-limits", default=60)
     api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=3)
 
-    def get_response(self, prompt, *, retry: int = 0, **kwargs) -> LLMResult:
+    def get_response(self, prompt, *, retry: int = 0,azure_retry: int = 0, **kwargs) -> LLMResult:
         if retry >= self.api_retries:
             raise Exception("Failed to get response from OpenAI API")
 
         if hasattr(prompt, "render"):
             prompt = prompt.render(**kwargs)
 
-        headers = {"Authorization": f"Bearer {self.api_key}"}
+        if urlparse(self.api_url).hostname and urlparse(self.api_url).hostname.endswith(".azure.com"):
+            # azure ai header
+            headers = {"api-key": f"{self.api_key}"}
+        else:
+            # normal header
+            headers = {"Authorization": f"Bearer {self.api_key}"}
+
         data = {"model": self.model, "messages": [{"role": "user", "content": prompt}]}
 
         try:
@@ -50,8 +57,15 @@ class OpenAIConnection(LLM):
                 time.sleep(self.api_backoff)
                 return self.get_response(prompt, retry=retry + 1)
 
+            if response.status_code == 408:
+                if azure_retry < self.api_retries:
+                    print("Received 408 Status Code, trying again.")
+                    return self.get_response(prompt, azure_retry = azure_retry + 1)
+                else:
+                    raise Exception(f"Error from Gateway ({response.status_code})")
+
             if response.status_code != 200:
-                raise Exception(f"Error from OpenAI Gateway ({response.status_code}")
+                raise Exception(f"Error from OpenAI Gateway ({response.status_code})")
 
         except requests.exceptions.ConnectionError:
             print("Connection error! Retrying in 5 seconds..")

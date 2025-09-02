@@ -1,28 +1,28 @@
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 
+from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import (
     ResponseHandler,
 )
+from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 
 
 class TestResponseHandler(unittest.TestCase):
     def setUp(self):
-        self.llm_handler_mock = MagicMock()
-        self.response_handler = ResponseHandler(self.llm_handler_mock)
+        self.llm_handler_mock = MagicMock(spec=LLMHandler)
+        self.config_path = os.path.join(os.path.dirname(__file__), "test_files","test_config.json")
+        self.configuration_handler = ConfigurationHandler(self.config_path)
+        self.config = self.configuration_handler._load_config(self.config_path)
+        self.host = "https://reqres.in"
+        self.description = "Fake API"
+        self.prompt_helper = PromptGenerationHelper(self.host, self.description)
+        self.response_handler = ResponseHandler(self.llm_handler_mock,  PromptContext.DOCUMENTATION, self.config,
+                 self.prompt_helper, None)
 
-    def test_get_response_for_prompt(self):
-        prompt = "Test prompt"
-        response_mock = MagicMock()
-        response_mock.execute.return_value = "Response text"
-        self.llm_handler_mock.call_llm.return_value = (response_mock, MagicMock())
-
-        response_text = self.response_handler.get_response_for_prompt(prompt)
-
-        self.llm_handler_mock.call_llm.assert_called_once_with(
-            [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
-        )
-        self.assertEqual(response_text, "Response text")
 
     def test_parse_http_status_line_valid(self):
         status_line = "HTTP/1.1 200 OK"

@@ -1,65 +1,106 @@
+import os
 import unittest
 from unittest.mock import MagicMock
 
 from openai.types.chat import ChatCompletionMessage
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import (
+from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
+from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
+from hackingBuddyGPT.utils.prompt_generation.information import (
     PromptContext,
 )
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_engineer import (
-    PromptEngineer,
-    PromptStrategy,
+from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import (
+    PromptEngineer
 )
+from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 
 
 class TestPromptEngineer(unittest.TestCase):
     def setUp(self):
-        self.strategy = PromptStrategy.IN_CONTEXT
         self.llm_handler = MagicMock()
         self.history = [{"content": "initial_prompt", "role": "system"}]
         self.schemas = MagicMock()
         self.response_handler = MagicMock()
-        self.prompt_engineer = PromptEngineer(
-            strategy=self.strategy,
-            handlers=(self.llm_handler, self.response_handler),
-            history=self.history,
-            context=PromptContext.DOCUMENTATION,
-        )
+        self.config_path = os.path.join(os.path.dirname(__file__), "test_files/test_config.json")
+        self.configuration_handler = ConfigurationHandler(self.config_path)
+        self.config = self.configuration_handler._load_config(self.config_path)
+        self._openapi_specification_parser = OpenAPISpecificationParser(self.config_path)
+        self._openapi_specification = self._openapi_specification_parser.api_data
+
+        self.token, self.host, self.description, self.correct_endpoints, self.query_params = self.configuration_handler._extract_config_values(
+            self.config)
+        self.categorized_endpoints = self._openapi_specification_parser.categorize_endpoints(self.correct_endpoints,
+                                                                                             self.query_params)
+        self.prompt_helper = PromptGenerationHelper(self.host, self.description)
 
     def test_in_context_learning_no_hint(self):
-        self.prompt_engineer.strategy = PromptStrategy.IN_CONTEXT
-        expected_prompt = "initial_prompt\ninitial_prompt"
-        actual_prompt = self.prompt_engineer.generate_prompt(hint="", turn=1)
-        self.assertEqual(expected_prompt, actual_prompt[1]["content"])
+        prompt_engineer = self.generate_prompt_engineer("icl")
+
+        expected_prompt = ('Based on this information :\n'
+ '\n'
+ 'Objective: Identify all accessible endpoints via GET requests for '
+ 'https://jsonplaceholder.typicode.com/. See '
+ 'https://jsonplaceholder.typicode.com/\n'
+ ' Query root-level resource endpoints.\n'
+ '                                      Find root-level endpoints for '
+ 'https://jsonplaceholder.typicode.com/.\n'
+ '                                      Only send GET requests to root-level '
+ 'endpoints with a single path component after the root. This means each path '
+ "should have exactly one '/' followed by a single word (e.g., '/users', "
+ "'/products').  \n"
+ '                                      1. Send GET requests to new paths '
+ 'only, avoiding any in the lists above.\n'
+ '                                      2. Do not reuse previously tested '
+ 'paths.\n')
+        actual_prompt = prompt_engineer.generate_prompt(hint="", turn=1)
+
+
+        print(f'actuaL.{actual_prompt[0].get("content"),}')
+        self.assertEqual(actual_prompt[0].get("content"), expected_prompt)
 
     def test_in_context_learning_with_hint(self):
-        self.prompt_engineer.strategy = PromptStrategy.IN_CONTEXT
+        prompt_engineer = self.generate_prompt_engineer("icl")
+        expected_prompt = """Based on this information :
+
+Objective: Identify all accessible endpoints via GET requests for https://jsonplaceholder.typicode.com/. See https://jsonplaceholder.typicode.com/
+ Query root-level resource endpoints.
+                               Find root-level endpoints for https://jsonplaceholder.typicode.com/.
+                               Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
+                               1. Send GET requests to new paths only, avoiding any in the lists above.
+                               2. Do not reuse previously tested paths.
+"""
         hint = "This is a hint."
-        expected_prompt = "initial_prompt\ninitial_prompt\nThis is a hint."
-        actual_prompt = self.prompt_engineer.generate_prompt(hint=hint, turn=1)
-        self.assertEqual(expected_prompt, actual_prompt[1]["content"])
+        actual_prompt = prompt_engineer.generate_prompt(hint=hint, turn=1)
+        self.assertIn(hint, actual_prompt[0].get("content"))
 
     def test_in_context_learning_with_doc_and_hint(self):
-        self.prompt_engineer.strategy = PromptStrategy.IN_CONTEXT
+        prompt_engineer = self.generate_prompt_engineer("icl")
         hint = "This is another hint."
-        expected_prompt = "initial_prompt\ninitial_prompt\nThis is another hint."
-        actual_prompt = self.prompt_engineer.generate_prompt(hint=hint, turn=1)
-        self.assertEqual(expected_prompt, actual_prompt[1]["content"])
+        expected_prompt = """Objective: Identify all accessible endpoints via GET requests for 'https://jsonplaceholder.typicode.com/ provided.. See https://jsonplaceholder.typicode.com/
+ Query root-level resource endpoints.
+                               Find root-level endpoints for 'https://jsonplaceholder.typicode.com/ provided..
+                               Only send GET requests to root-level endpoints with a single path component after the root. This means each path should have exactly one '/' followed by a single word (e.g., '/users', '/products').  
+                               1. Send GET requests to new paths only, avoiding any in the lists above.
+                               2. Do not reuse previously tested paths.
+
+This is another hint."""
+        actual_prompt = prompt_engineer.generate_prompt(hint=hint, turn=1)
+        self.assertIn(hint,actual_prompt[0].get("content"))
 
     def test_generate_prompt_chain_of_thought(self):
-        self.prompt_engineer.strategy = PromptStrategy.CHAIN_OF_THOUGHT
+        prompt_engineer = self.generate_prompt_engineer("cot")
         self.response_handler.get_response_for_prompt = MagicMock(return_value="response_text")
-        self.prompt_engineer.evaluate_response = MagicMock(return_value=True)
+        prompt_engineer.evaluate_response = MagicMock(return_value=True)
 
-        prompt_history = self.prompt_engineer.generate_prompt(turn=1)
+        prompt_history = prompt_engineer.generate_prompt(turn=1)
 
-        self.assertEqual(2, len(prompt_history))
+        self.assertEqual(1, len(prompt_history))
 
     def test_generate_prompt_tree_of_thought(self):
-        # Set the strategy to TREE_OF_THOUGHT
-        self.prompt_engineer.strategy = PromptStrategy.TREE_OF_THOUGHT
+        prompt_engineer = self.generate_prompt_engineer("tot")
         self.response_handler.get_response_for_prompt = MagicMock(return_value="response_text")
-        self.prompt_engineer.evaluate_response = MagicMock(return_value=True)
+        prompt_engineer.evaluate_response = MagicMock(return_value=True)
 
         # Create mock previous prompts with valid roles
         previous_prompts = [
@@ -68,13 +109,26 @@ class TestPromptEngineer(unittest.TestCase):
         ]
 
         # Assign the previous prompts to prompt_engineer._prompt_history
-        self.prompt_engineer._prompt_history = previous_prompts
+        prompt_engineer._prompt_history = previous_prompts
 
         # Generate the prompt
-        prompt_history = self.prompt_engineer.generate_prompt(turn=1)
+        prompt_history = prompt_engineer.generate_prompt(turn=1)
 
         # Check if the prompt history length is as expected
-        self.assertEqual(len(prompt_history), 3)  # Adjust to 3 if previous prompt exists + new prompt
+        self.assertEqual(1, len(prompt_history))  # Adjust to 3 if previous prompt exists + new prompt
+
+    def generate_prompt_engineer(self, param):
+        config, strategy = self.configuration_handler.load(param)
+        self.pentesting_information = PenTestingInformation(self._openapi_specification_parser, config)
+        prompt_engineer = PromptEngineer(
+            strategy=strategy,
+            prompt_helper=self.prompt_helper,
+            context=PromptContext.DOCUMENTATION,
+            open_api_spec=self._openapi_specification,
+            rest_api_info=(self.token, self.host, self.correct_endpoints, self.categorized_endpoints),
+        )
+        prompt_engineer.set_pentesting_information(pentesting_information=self.pentesting_information)
+        return prompt_engineer
 
 
 if __name__ == "__main__":

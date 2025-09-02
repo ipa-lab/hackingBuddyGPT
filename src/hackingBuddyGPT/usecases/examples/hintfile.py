@@ -8,8 +8,8 @@ from hackingBuddyGPT.usecases.privesc.linux import LinuxPrivesc
 class ExPrivEscLinuxHintFileUseCase(AutonomousAgentUseCase[LinuxPrivesc]):
     hints: str = None
 
-    def init(self, configuration):
-        super().init(configuration)
+    def init(self):
+        super().init()
         self.agent.hint = self.read_hint()
 
     # simple helper that reads the hints file and returns the hint

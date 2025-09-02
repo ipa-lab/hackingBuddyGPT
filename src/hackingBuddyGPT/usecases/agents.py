@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from mako.template import Template
 from typing import Dict
 
-from hackingBuddyGPT.utils.logging import log_conversation, GlobalLogger
+from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param
 from hackingBuddyGPT.capabilities.capability import (
     Capability,
     capabilities_to_simple_text_handler,
@@ -15,14 +15,14 @@ from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 @dataclass
 class Agent(ABC):
-    log: GlobalLogger = None
+    log: Logger = log_param
 
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _default_capability: Capability = None
 
     llm: OpenAIConnection = None
 
-    async def init(self):  # noqa: B027
+    def init(self):  # noqa: B027
         pass
 
     async def before_run(self):  # noqa: B027
@@ -81,9 +81,6 @@ class TemplatedAgent(Agent):
     _state: AgentWorldview = None
     _template: Template = None
     _template_size: int = 0
-
-    async def init(self):
-        await super().init()
 
     def set_initial_state(self, initial_state: AgentWorldview):
         self._state = initial_state

@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from hackingBuddyGPT.utils.logging import Logger
+from hackingBuddyGPT.utils.logging import LocalLogger
 from hackingBuddyGPT.usecases.examples.agent import (
     ExPrivEscLinux,
     ExPrivEscLinuxUseCase,
@@ -81,7 +81,7 @@ def test_linuxprivesc():
 
     log_db.init()
 
-    log = Logger(
+    log = LocalLogger(
         log_db=log_db,
         console=console,
         tag="integration_test_linuxprivesc",
@@ -99,8 +99,8 @@ def test_linuxprivesc():
         max_turns=len(llm.responses),
     )
 
-    priv_esc.init({})
-    result = priv_esc.run()
+    priv_esc.init()
+    result = priv_esc.run({})
     assert result is True
 
 
@@ -112,7 +112,7 @@ def test_minimal_agent():
 
     log_db.init()
 
-    log = Logger(
+    log = LocalLogger(
         log_db=log_db,
         console=console,
         tag="integration_test_minimallinuxprivesc",
@@ -123,8 +123,8 @@ def test_minimal_agent():
         max_turns=len(llm.responses)
     )
 
-    priv_esc.init({})
-    result = priv_esc.run()
+    priv_esc.init()
+    result = priv_esc.run({})
     assert result is True
 
 
@@ -136,7 +136,7 @@ def test_minimal_agent_state():
 
     log_db.init()
 
-    log = Logger(
+    log = LocalLogger(
         log_db=log_db,
         console=console,
         tag="integration_test_linuxprivesc",
@@ -147,6 +147,6 @@ def test_minimal_agent_state():
         max_turns=len(llm.responses)
     )
 
-    priv_esc.init({})
-    result = priv_esc.run()
+    priv_esc.init()
+    result = priv_esc.run({})
     assert result is True

@@ -27,7 +27,7 @@ from hackingBuddyGPT.utils.configurable import parameter
 @configurable("openai-lib", "OpenAI Library based connection")
 @dataclass
 class OpenAILib(LLM):
-    api_key: str = parameter(desc="OpenAI API Key")
+    api_key: str = parameter(desc="OpenAI API Key", secret=True)
     model: str = parameter(desc="OpenAI model name")
     context_size: int = parameter(desc="OpenAI model context size")
     api_url: str = parameter(desc="URL of the OpenAI API", default="https://api.openai.com/v1")
@@ -114,6 +114,7 @@ class OpenAILib(LLM):
                     print("WARNING: Got an error that the model does not support streaming, falling back to non-streaming")
                     self._can_stream = False
                     return self.stream_response(prompt, console, capabilities, get_individual_updates)
+                raise e
 
         else:
             result = self.get_response(prompt, capabilities=capabilities, console=console)

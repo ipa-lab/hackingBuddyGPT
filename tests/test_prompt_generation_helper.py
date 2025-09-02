@@ -1,24 +1,42 @@
 import unittest
-from unittest.mock import MagicMock
-
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.prompt_generation_helper import (
-    PromptGenerationHelper,
-)
+from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
 
 
-class TestPromptHelper(unittest.TestCase):
+class TestPromptGenerationHelper(unittest.TestCase):
     def setUp(self):
-        self.response_handler = MagicMock()
-        self.prompt_helper = PromptGenerationHelper(self.response_handler)
+        self.host = "https://reqres.in"
+        self.description = "Fake API"
+        self.prompt_helper = PromptGenerationHelper(self.host, self.description)
 
-    def test_check_prompt(self):
-        self.response_handler.get_response_for_prompt = MagicMock(return_value="shortened_prompt")
-        prompt = self.prompt_helper.check_prompt(
-            previous_prompt="previous_prompt",
-            steps=["step1", "step2", "step3", "step4", "step5", "step6"],
-            max_tokens=2,
-        )
-        self.assertEqual("shortened_prompt", prompt)
+    def test_get_user_from_prompt(self):
+        step = {
+            "step": "Create a new user with user: {'email': 'eve.holt@reqres.in', 'password': 'pistol'}.\n"
+        }
+        accounts = [
+            {"email": "eve.holt@reqres.in", "password": "pistol"}
+        ]
+
+        user_info = self.prompt_helper.get_user_from_prompt(step, accounts)
+
+        self.assertEqual(user_info["email"], "eve.holt@reqres.in")
+        self.assertEqual(user_info["password"], "pistol")
+        self.assertIn("x", user_info)
+        self.assertEqual(user_info["x"], "")
+
+    def test_get_user_from_prompt_with_sql_injection(self):
+        step = {
+            "step": "Create user with user: {'email': \"' or 1=1--\", 'password': 'pistol'}.\n"
+        }
+        accounts = [
+            {"email": "' or 1=1--", "password": "pistol"}
+        ]
+
+        user_info = self.prompt_helper.get_user_from_prompt(step, accounts)
+
+        self.assertEqual(user_info["email"], " or 1=1--")
+        self.assertEqual(user_info["password"], "pistol")
+        self.assertIn("x", user_info)
+        self.assertEqual(user_info["x"], "")
 
 
 if __name__ == "__main__":

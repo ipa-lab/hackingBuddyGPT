@@ -39,8 +39,8 @@ class WebTestingWithExplanation(Agent):
     _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_flags_found: bool = False
 
-    async def init(self):
-        await super().init()
+    def init(self):
+        super().init()
         self._context["host"] = self.host
         self.add_capability(SubmitFlag(self.flag_format_description, set(self.flag_template.format(flag=flag) for flag in self.flags.split(",")), success_function=self.all_flags_found))
         self.add_capability(HTTPRequest(self.host))
@@ -67,7 +67,7 @@ class WebTestingWithExplanation(Agent):
 
         result_stream: Iterable[Union[ChoiceDelta, LLMResult]] = self.llm.stream_response(prompt, self.log.console, capabilities=self._capabilities, get_individual_updates=True)
         result: Optional[LLMResult] = None
-        stream_output = self.log.stream_message("assistant")  # TODO: do not hardcode the role
+        stream_output = await self.log.stream_message("assistant")  # TODO: do not hardcode the role
         for delta in result_stream:
             if isinstance(delta, LLMResult):
                 result = delta

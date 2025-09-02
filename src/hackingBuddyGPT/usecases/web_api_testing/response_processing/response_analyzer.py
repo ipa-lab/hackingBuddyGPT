@@ -2,7 +2,7 @@ import json
 import re
 from typing import Any, Dict, Optional, Tuple
 
-from hackingBuddyGPT.usecases.web_api_testing.prompt_generation.information.prompt_information import PromptPurpose
+from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 
 
 class ResponseAnalyzer:
@@ -49,8 +49,12 @@ class ResponseAnalyzer:
 
         if body != {} and bool(body and not body.isspace()):
             body = json.loads(body)[0]
-        else:
-            body = "Empty"
+
+        if body == "":
+            for line in header_lines:
+                if line.startswith("{") or line.startswith("["):
+                    body = line
+                    body = json.loads(body)
 
         status_line = header_lines[0].strip()
         headers = {
@@ -77,7 +81,7 @@ class ResponseAnalyzer:
         return self.analyze_parsed_response(status_code, headers, body)
 
     def analyze_parsed_response(
-        self, status_code: Optional[int], headers: Dict[str, str], body: str
+            self, status_code: Optional[int], headers: Dict[str, str], body: str
     ) -> Optional[Dict[str, Any]]:
         """
         Analyzes the parsed HTTP response based on the purpose, invoking the appropriate method.
@@ -91,7 +95,7 @@ class ResponseAnalyzer:
             Optional[Dict[str, Any]]: The analysis results based on the purpose.
         """
         analysis_methods = {
-            PromptPurpose.AUTHENTICATION_AUTHORIZATION: self.analyze_authentication_authorization(
+            PromptPurpose.AUTHENTICATION: self.analyze_authentication_authorization(
                 status_code, headers, body
             ),
             PromptPurpose.INPUT_VALIDATION: self.analyze_input_validation(status_code, headers, body),
@@ -99,7 +103,7 @@ class ResponseAnalyzer:
         return analysis_methods.get(self.purpose)
 
     def analyze_authentication_authorization(
-        self, status_code: Optional[int], headers: Dict[str, str], body: str
+            self, status_code: Optional[int], headers: Dict[str, str], body: str
     ) -> Dict[str, Any]:
         """
         Analyzes the HTTP response with a focus on authentication and authorization.
@@ -134,7 +138,7 @@ class ResponseAnalyzer:
         return analysis
 
     def analyze_input_validation(
-        self, status_code: Optional[int], headers: Dict[str, str], body: str
+            self, status_code: Optional[int], headers: Dict[str, str], body: str
     ) -> Dict[str, Any]:
         """
         Analyzes the HTTP response with a focus on input validation.
@@ -176,12 +180,12 @@ class ResponseAnalyzer:
             return "Unexpected"
 
     def document_findings(
-        self,
-        status_code: Optional[int],
-        headers: Dict[str, str],
-        body: str,
-        expected_behavior: str,
-        actual_behavior: str,
+            self,
+            status_code: Optional[int],
+            headers: Dict[str, str],
+            body: str,
+            expected_behavior: str,
+            actual_behavior: str,
     ) -> Dict[str, Any]:
         """
         Documents the findings from the analysis, comparing expected and actual behavior.
@@ -203,9 +207,7 @@ class ResponseAnalyzer:
             "Expected Behavior": expected_behavior,
             "Actual Behavior": actual_behavior,
         }
-        print("Documenting Findings:")
-        print(json.dumps(document, indent=4))
-        print("-" * 50)
+
         return document
 
     def report_issues(self, document: Dict[str, Any]) -> None:

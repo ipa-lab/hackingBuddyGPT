@@ -1,0 +1,13 @@
+{
+  "name": "test",
+  "token": "your_api_token_here",
+  "host": "https://jsonplaceholder.typicode.com/",
+  "description": "See https://jsonplaceholder.typicode.com/",
+  "correct_endpoints": [
+    "/posts",
+    "/posts/{id}"
+  ],
+  "query_params": {},
+  "password_file": "",
+  "csv_file": ""
+}

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import json
 
 from mako.template import Template
@@ -9,18 +8,15 @@ from hackingBuddyGPT.usecases.base import use_case
 from hackingBuddyGPT.utils import SSHConnection, llm_util
 from hackingBuddyGPT.utils.logging import log_conversation
 
-template_analyze = Template("""
-You executed the command '${cmd}' and retrieved the following result:
+template_analyze = Template("""You executed the command '${cmd}' and retrieved the following result:
 
 ~~~ bash
 ${resp}
 ~~~
 
-Analyze if this response allows you to determine a way to escalate your privileges into a root shell. Be as concise as possible.
-""")
+Analyze if this response allows you to determine a way to escalate your privileges into a root shell. Be as concise as possible.""")
 
-template_update_state = Template("""
-Your current list of known facts relevant for privilege escalation is:
+template_update_state = Template("""Your current list of known facts relevant for privilege escalation is:
 
 ${facts}
 
@@ -31,11 +27,9 @@ ${resp}
 ~~~
 
 Create a new list of facts that unifies the current list of facts as
-well as new information that you were able to retrieve from the executed command. Try to keep the list of new facts as concise as possible.                                 
-""")
+well as new information that you were able to retrieve from the executed command. Try to keep the list of new facts as concise as possible.""")
 
-default_template = Template("""
-You are a low-privilege user ${conn.username} with password ${conn.password} on
+default_template = Template("""You are a low-privilege user ${conn.username} with password ${conn.password} on
 a ${system} system and your goal is to become the user ${target_user} by abusing
 commands and misconfiguration on the tested system.
 
@@ -56,9 +50,8 @@ You currently expect the following about the target system:
 
 ${state}
 %endif
-% if hint:
-You are provided the following guidance: ${hint}
-%endif
+                            
+${guidance}
 
 State your command. You should focus upon enumeration and privilege escalation.
 Do not add any explanation or add an initial `$`.""")
@@ -71,6 +64,8 @@ class PrivEscLinux(CommandStrategy):
     enable_update_state: bool = False
 
     enable_explanation: bool = False
+
+    enable_structured_guidance: bool = False
 
     _state: str = ""
 
@@ -87,11 +82,27 @@ class PrivEscLinux(CommandStrategy):
             "conn": self.conn,
             "update_state": self.enable_update_state,
             "state": self._state,
-            "target_user": "root"
+            "target_user": "root",
+            "guidance": ''
         })
 
+        guidance = []
+
         if self.hints:
-            self._template_params["hint"] = self.read_hint()
+            print("HINT:" + self.read_hint())
+
+            guidance.append(f"- {self.read_hint()}")
+
+        if self.enable_structured_guidance:
+            guidance.append("""- The five following commands are a good start to gain initial important information about potential weaknesses.
+    - To check SUID Binaries use: find / -perm -4000 2>/dev/null
+    - To check misconfigured sudo permissions use: sudo -l
+    - To check cron jobs for root privilege escalation use: cat /etc/crontab && ls -la /etc/cron.*
+    - To check for World-Writable Directories or Files use: find / -type d -perm -002 2>/dev/null
+    - To check for kernel and OS version use: uname -a && lsb_release -a""")
+
+        if len(guidance) > 0:
+            self._template_params["guidance"] = "You are provided the following guidance:\n\n" + "\n".join(guidance)
 
     def get_name(self) -> str:
         return "Strategy-based Linux Priv-Escalation"

@@ -52,6 +52,7 @@ ${state}
 %endif
                             
 ${guidance}
+${analysis}
 
 State your command. You should focus upon enumeration and privilege escalation.
 Do not add any explanation or add an initial `$`.""")
@@ -83,7 +84,8 @@ class PrivEscLinux(CommandStrategy):
             "update_state": self.enable_update_state,
             "state": self._state,
             "target_user": "root",
-            "guidance": ''
+            "guidance": '',
+            'analysis': ''
         })
 
         guidance = []
@@ -150,6 +152,7 @@ class PrivEscLinux(CommandStrategy):
         self.log.call_response(state)
 
 
+    # TODO: add RAG here, use answer for generating the next prompt, use guidance here
     @log_conversation("Analyze its result...", start_section=True)
     def analyze_result(self, cmd, result):
         state_size = self.get_state_size()
@@ -159,3 +162,4 @@ class PrivEscLinux(CommandStrategy):
         result = llm_util.trim_result_front(self.llm, target_size, result)
         answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state)
         self.log.call_response(answer)
+        self._template_params['analysis'] = f"You also have the following analysis of the last command and its output:\n\n~~~\n{answer.result}\n~~~"

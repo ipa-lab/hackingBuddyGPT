@@ -1,5 +1,5 @@
 from hackingBuddyGPT.usecases.base import use_case
-from hackingBuddyGPT.usecases.command_strategy import CommandStrategy
+from hackingBuddyGPT.strategies import CommandStrategy
 from hackingBuddyGPT.utils import SSHConnection
 
 from mako.template import Template

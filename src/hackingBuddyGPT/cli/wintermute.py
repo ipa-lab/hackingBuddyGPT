@@ -6,12 +6,6 @@ from hackingBuddyGPT.usecases.base import use_cases
 from hackingBuddyGPT.utils.configurable import CommandMap, InvalidCommand, Parseable, instantiate
 
 
-async def run_instance(instance, configuration):
-    await instance.init(configuration=configuration)
-    await instance.run()
-
-
-
 def main():
     use_case_parsers: CommandMap = {
         name: Parseable(use_case, description=use_case.description)

@@ -1,7 +1,0 @@
-Create a list of up to ${number} attack classes that you would try on a linux system (to achieve root level privileges) given the following output:
-
-~~~ bash
-${lse_output}
-~~~
-
-only output the list of attack classes, for each attack class only output a single short sentence.

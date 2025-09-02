@@ -57,6 +57,19 @@ ${analysis}
 State your command. You should focus upon enumeration and privilege escalation.
 Do not add any explanation or add an initial `$`.""")
 
+template_rag = Template("""You are a linux security expert. Your goal is to gain access to a
+root shell. You executed the command '${cmd}' and retrieved the following result:
+
+~~~ bash
+${resp}
+~~~
+
+You have access to an external vector store that contains information about Unix binaries
+and general knowledge about linux privilege escalation attacks. Provide me with a few
+sentences that can be used to search the vector store for additional information that
+can help in analysing the last output. Do not add any explanation. Please return full
+sentences.""")
+
 @use_case("Strategy-based Linux Priv-Escalation")
 class PrivEscLinux(CommandStrategy):
     conn: SSHConnection = None
@@ -67,6 +80,8 @@ class PrivEscLinux(CommandStrategy):
     enable_explanation: bool = False
 
     enable_structured_guidance: bool = False
+
+    enable_rag : bool = False
 
     _state: str = ""
 
@@ -91,9 +106,14 @@ class PrivEscLinux(CommandStrategy):
         guidance = []
 
         if self.hints:
-            print("HINT:" + self.read_hint())
+            if self.hints.startswith("hint:"):
+                hint = self.hints[5:]
+            else:
+                hint = self.read_hint()
 
-            guidance.append(f"- {self.read_hint()}")
+            print("HINT:" + hint)
+
+            guidance.append(f"- {hint}")
 
         if self.enable_structured_guidance:
             guidance.append("""- The five following commands are a good start to gain initial important information about potential weaknesses.
@@ -151,10 +171,26 @@ class PrivEscLinux(CommandStrategy):
         self._state = state.result
         self.log.call_response(state)
 
+    @log_conversation("Asking LLM for a search query...", start_section=True)
+    def get_rag_query(self, cmd, result):
+        ctx = self.llm.context_size
+        template_size = self.llm.count_tokens(template_rag.source)
+        target_size = ctx - llm_util.SAFETY_MARGIN - template_size
+        result = llm_util.trim_result_front(self.llm, target_size, result)
 
-    # TODO: add RAG here, use answer for generating the next prompt, use guidance here
+        result = self.llm.get_response(template_rag, cmd=cmd, resp=result)
+        self.log.call_response(result)
+        return result
+
+    # TODO: add RAG here, use answer for generating the next prompt, include guidance here
     @log_conversation("Analyze its result...", start_section=True)
     def analyze_result(self, cmd, result):
+
+        if self.enable_rag:
+            # TODO: do the RAG query here and add it to the prompt
+            queries = self.get_rag_query(cmd, result)
+            print("QUERIES: " + queries.result)
+
         state_size = self.get_state_size()
         target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - state_size
 

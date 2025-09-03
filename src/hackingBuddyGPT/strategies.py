@@ -15,6 +15,7 @@ from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param, l
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
 from hackingBuddyGPT.utils.shell_root_detection import got_root
 
+# TODO: Implement History Compression
 @dataclass
 class CommandStrategy(UseCase, abc.ABC):
 
@@ -35,6 +36,8 @@ class CommandStrategy(UseCase, abc.ABC):
     log: Logger = log_param
 
     disable_history: bool = False
+
+    enable_compressed_history: bool = False
 
     def before_run(self):
         pass
@@ -59,7 +62,10 @@ class CommandStrategy(UseCase, abc.ABC):
     def get_next_command(self) -> tuple[str, int]:
         history = ""
         if not self.disable_history:
-            history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
+            if self.enable_compressed_history:
+                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size())
+            else:
+                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
 
         self._template_params.update({"history": history})
         cmd = self.llm.get_response(self._template, **self._template_params)
@@ -111,7 +117,10 @@ class CommandStrategy(UseCase, abc.ABC):
 
         # store the results in our local history
         if not self.disable_history:
-            self._sliding_history.add_command(cmd, result)
+            if self.enable_compressed_history:
+                self._sliding_history.add_command_only(cmds, result)
+            else:
+                self._sliding_history.add_command(cmds, result)
 
         # signal if we were successful in our task
         return task_successful

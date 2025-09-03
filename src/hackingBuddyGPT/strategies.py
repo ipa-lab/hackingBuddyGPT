@@ -1,11 +1,9 @@
 import abc
-from dataclasses import dataclass
 import datetime
-from typing import List, Optional
 import re
 
+from dataclasses import dataclass
 from mako.template import Template
-
 from hackingBuddyGPT.capability import capabilities_to_simple_text_handler
 from hackingBuddyGPT.usecases.base import UseCase
 from hackingBuddyGPT.utils import llm_util
@@ -14,6 +12,7 @@ from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param, log_section
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
 from hackingBuddyGPT.utils.shell_root_detection import got_root
+from typing import List, Optional
 
 
 @dataclass
@@ -44,8 +43,8 @@ class CommandStrategy(UseCase, abc.ABC):
     def after_round(self, cmd, result, got_root):
         pass
 
-    def get_space_for_history(self):
-        pass
+    def get_token_overhead(self) -> int:
+        return 0
 
     def init(self):
         super().init()
@@ -65,8 +64,7 @@ class CommandStrategy(UseCase, abc.ABC):
         history = self._history.get_text_representation()
 
         # calculate max history size
-        # TODO: need to incorporate state, etc.
-        max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(self._template.source)
+        max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(self._template.source) - self.get_token_overhead()
         history = llm_util.trim_result_front(self.llm, max_history_size, history)
 
         self._template_params.update({"history": history})

@@ -7,9 +7,10 @@ from typing import List
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.strategies import CommandStrategy
 from hackingBuddyGPT.usecases.base import use_case
-from hackingBuddyGPT.utils import SSHConnection, llm_util
+from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.logging import log_conversation
 from hackingBuddyGPT.utils.rag import RagBackground
+from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 
 template_analyze = Template("""Your task is to analyze the result of an executed command to determina 
 a way to escalate your privileges into a root shell. Describe your findings including all needed

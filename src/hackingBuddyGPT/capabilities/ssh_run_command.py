@@ -5,7 +5,7 @@ from typing import Tuple
 
 from invoke import Responder
 
-from hackingBuddyGPT.utils import SSHConnection
+from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 from hackingBuddyGPT.utils.shell_root_detection import got_root
 
 from ..capability import Capability

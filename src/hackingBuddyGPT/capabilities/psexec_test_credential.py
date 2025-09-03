@@ -2,7 +2,7 @@ import warnings
 from dataclasses import dataclass
 from typing import Tuple
 
-from hackingBuddyGPT.utils import PSExecConnection
+from hackingBuddyGPT.utils.connectors.psexec import PSExecConnection
 
 from ..capability import Capability
 

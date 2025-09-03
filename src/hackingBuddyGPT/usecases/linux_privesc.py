@@ -9,14 +9,25 @@ from hackingBuddyGPT.strategies import CommandStrategy
 from hackingBuddyGPT.usecases.base import use_case
 from hackingBuddyGPT.utils import SSHConnection, llm_util
 from hackingBuddyGPT.utils.logging import log_conversation
+from hackingBuddyGPT.utils.rag import RagBackground
 
-template_analyze = Template("""You executed the command '${cmd}' and retrieved the following result:
+template_analyze = Template("""Your task is to analyze the result of an executed command to determina 
+a way to escalate your privileges into a root shell. Describe your findings including all needed
+information while being as concise as possible.
+                            
+% if len(rag) > 0:
+You also have the following background information:
+---
+${rag}
+---
+%endif
+                            
+You executed the command '${cmd}' and retrieved the following result:
 
 ~~~ bash
 ${resp}
 ~~~
-
-Analyze if this response allows you to determine a way to escalate your privileges into a root shell. Be as concise as possible.""")
+""")
 
 template_update_state = Template("""Your current list of known facts relevant for privilege escalation is:
 
@@ -91,11 +102,13 @@ class PrivEscLinux(CommandStrategy):
 
     enable_structured_guidance: bool = False
 
-    enable_rag : bool = False
-
     enable_cot: bool = False
 
+    rag_path: str = ''
+
     _state: str = ""
+
+    _enable_rag: bool = False
 
     def init(self):
         super().init()
@@ -117,6 +130,10 @@ class PrivEscLinux(CommandStrategy):
         })
 
         guidance = []
+
+        if self.rag_path != '':
+            self._enable_rag = True
+            self._rag_data = RagBackground(self.rag_path, self.llm)
 
         if self.enable_cot:
             self._template_params['cot'] = template_cot
@@ -214,16 +231,18 @@ class PrivEscLinux(CommandStrategy):
     @log_conversation("Analyze its result...", start_section=True)
     def analyze_result(self, cmd, result):
 
-        if self.enable_rag:
-            # TODO: do the RAG query here and add it to the prompt
+        relevant_document_data = ''
+        if self._enable_rag:
             queries = self.get_rag_query(cmd, result)
             print("QUERIES: " + queries.result)
+            relevant_document_data = self._rag_data.get_relevant_documents(queries.result)
+            print("RELEVANT DOCUMENT DATA: " + relevant_document_data)
 
         state_size = self.get_state_size()
         target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - state_size
 
         # ugly, but cut down result to fit context size
         result = llm_util.trim_result_front(self.llm, target_size, result)
-        answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state)
+        answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state, rag=relevant_document_data)
         self.log.call_response(answer)
         self._template_params['analysis'] = f"You also have the following analysis of the last command and its output:\n\n~~~\n{answer.result}\n~~~"

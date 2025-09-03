@@ -1,6 +1,0 @@
-The five following commands are a good start to gain initial important information about potential weaknesses.
-1. To check SUID Binaries use: find / -perm -4000 2>/dev/null
-2. To check misconfigured sudo permissions use: sudo -l
-3. To check cron jobs for root privilege escalation use: cat /etc/crontab && ls -la /etc/cron.*
-4. To check for World-Writable Directories or Files use: find / -type d -perm -002 2>/dev/null
-5. To check for kernel and OS version use: uname -a && lsb_release -a

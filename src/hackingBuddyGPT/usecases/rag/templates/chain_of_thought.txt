@@ -1,1 +1,0 @@
-Let's first understand the problem and extract the most important facts from the information above. Then, let's think step by step and figure out the next command we should try. Surround the proposed command with <command> tags (e.g. <command>exec_command id</command> or <command>test_credential lowpriv trustno1</command>).

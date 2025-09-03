@@ -1,16 +1,14 @@
 import os
 from dataclasses import field
-from typing import Dict
 
 from rich.panel import Panel
 
-from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
-from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
+from hackingBuddyGPT.usecases.base import AutonomousUseCase, use_case
 from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import \
     OpenAPISpecificationHandler
+from hackingBuddyGPT.utils.capability_manager import CapabilityManager
 from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
@@ -23,7 +21,8 @@ from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
-class SimpleWebAPIDocumentation(Agent):
+@use_case("Minimal implementation of a web API testing use case")
+class SimpleWebAPIDocumentation(AutonomousUseCase):
     """
          SimpleWebAPIDocumentation is an agent class for automating REST API documentation.
 
@@ -41,10 +40,10 @@ class SimpleWebAPIDocumentation(Agent):
             found_all_http_methods (bool): Flag indicating whether all HTTP methods have been found.
             all_steps_done (bool): Flag to indicate whether the full documentation process is complete.
         """
-    llm: OpenAILib
+    llm: OpenAILib = None
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
-    _capabilities: Dict[str, Capability] = field(default_factory=dict)
+    _capabilities: CapabilityManager = None
     _all_http_methods_found: bool = False
     config_path: str = parameter(
         desc="Configuration file path",
@@ -75,6 +74,8 @@ class SimpleWebAPIDocumentation(Agent):
         default="GET,POST,PUT,PATCH,DELETE",
     )
 
+    def get_name(self) -> str:
+        return self.__class__.__name__
 
     def init(self):
         """Initialize the agent with configurations, capabilities, and handlers."""
@@ -90,7 +91,11 @@ class SimpleWebAPIDocumentation(Agent):
 
         self.categorized_endpoints = self.categorize_endpoints(self._correct_endpoints, query_params)
 
-        self._setup_capabilities()
+        # setup capabilities
+        self._capabilities.init()
+        self._capabilities.add_capability(HTTPRequest(self.host))
+        self._capabilities.add_capability(RecordNote(self._context["notes"]))
+
         self._prompt_context = PromptContext.DOCUMENTATION
         name, initial_prompt = self._setup_initial_prompt(description=description)
         self._initialize_handlers(config=config, description=description, token=token, name=name,
@@ -150,7 +155,7 @@ class SimpleWebAPIDocumentation(Agent):
            """
         self.all_capabilities = {
                                  "http_request": HTTPRequest(self.host)}
-        self._llm_handler = LLMHandler(self.llm, self._capabilities,  all_possible_capabilities=self.all_capabilities)
+        self._llm_handler = LLMHandler(self.llm, self._capabilities._capabilities,  all_possible_capabilities=self.all_capabilities)
 
         self._response_handler = ResponseHandler(llm_handler=self._llm_handler, prompt_context=self._prompt_context,
                                                  prompt_helper=self.prompt_helper, config=config)
@@ -224,25 +229,6 @@ class SimpleWebAPIDocumentation(Agent):
             "query": query.values(),
             "related_resource": related_resource,
             "multi-level_resource": multi_level_resource,
-        }
-
-
-
-    def _setup_capabilities(self):
-        """
-           Initializes the LLM agent's capabilities for interacting with the API.
-
-           This sets up tool wrappers that the language model can call, such as:
-           - `http_request`: For performing HTTP calls against the target API.
-           - `record_note`: For storing observations, notes, or documentation artifacts.
-
-           Side Effects:
-               - Populates `self._capabilities` with callable tools used during exploration and documentation.
-           """
-        """Initializes agent's capabilities for API documentation."""
-        self._capabilities = {
-            "http_request": HTTPRequest(self.host),
-            "record_note": RecordNote(self._context["notes"])
         }
 
     def all_http_methods_found(self, turn: int) -> bool:
@@ -442,9 +428,3 @@ class SimpleWebAPIDocumentation(Agent):
                 file_path=self._documentation_handler.file.split(".yaml")[0] + ".txt")
 
         self.all_http_methods_found(turn)
-
-
-@use_case("Minimal implementation of a web API testing use case")
-class SimpleWebAPIDocumentationUseCase(AutonomousAgentUseCase[SimpleWebAPIDocumentation]):
-    """Use case for the SimpleWebAPIDocumentation agent."""
-    pass

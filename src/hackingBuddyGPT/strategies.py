@@ -15,7 +15,6 @@ from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param, l
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
 from hackingBuddyGPT.utils.shell_root_detection import got_root
 
-# TODO: Implement History Compression
 @dataclass
 class CommandStrategy(UseCase, abc.ABC):
 

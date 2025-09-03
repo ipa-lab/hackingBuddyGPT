@@ -8,17 +8,16 @@ from typing import Any, Dict, List
 import pydantic_core
 from rich.panel import Panel
 
-from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.parsed_information import ParsedInformation
 from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
-from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
+from hackingBuddyGPT.usecases.base import AutonomousUseCase, use_case
+from hackingBuddyGPT.utils.capability_manager import CapabilityManager
 from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
-from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
+from hackingBuddyGPT.utils.openapi.openapi_parser import OpenAPISpecificationParser
 from hackingBuddyGPT.usecases.web_api_testing.documentation.report_handler import ReportHandler
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
@@ -36,8 +35,8 @@ from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 # OpenAPI specification file path
 
-
-class SimpleWebAPITesting(Agent):
+@use_case("Minimal implementation of a web API testing use case")
+class SimpleWebAPITesting(AutonomousUseCase):
     """
     SimpleWebAPITesting is an agent class for automating web API testing.
 
@@ -53,7 +52,7 @@ class SimpleWebAPITesting(Agent):
         _all_test_cases_run (bool): Flag indicating if all HTTP methods have been found.
     """
 
-    llm: OpenAILib
+    llm: OpenAILib = None
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     config_path: str = parameter(
         desc="Configuration file path",
@@ -71,7 +70,7 @@ class SimpleWebAPITesting(Agent):
     )
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list(), "parsed": list()})
-    _capabilities: Dict[str, Capability] = field(default_factory=dict)
+    _capabilities: CapabilityManager = None
     _all_test_cases_run: bool = False
 
     def init(self):
@@ -85,6 +84,9 @@ class SimpleWebAPITesting(Agent):
         self._setup_handlers()
         self._setup_initial_prompt()
         self.last_prompt = ""
+
+    def get_name(self) -> str:
+        return self.__class__.__name__
 
     def _load_openapi_specification(self):
         """
@@ -108,6 +110,11 @@ class SimpleWebAPITesting(Agent):
            - Setting the prompt context to `PromptContext.PENTESTING`.
            """
         self._context["host"] = self.host
+
+        # setup capabilities
+        self._capabilities = CapabilityManager(self.log)
+        self._capabilities.add_capability(HTTPRequest(self.host))
+
         self._setup_capabilities()
         self.categorized_endpoints = self._openapi_specification_parser.categorize_endpoints(self.correct_endpoints,
                                                                                              self.query_params)
@@ -128,7 +135,7 @@ class SimpleWebAPITesting(Agent):
 
             If username and password are not found in the config, defaults are used.
             """
-        self._llm_handler = LLMHandler(self.llm, self._capabilities, all_possible_capabilities=self.all_capabilities)
+        self._llm_handler = LLMHandler(self.llm, self._capabilities._capabilities, all_possible_capabilities=self.all_capabilities)
         self.prompt_helper = PromptGenerationHelper(self.host, self.description)
         if "username" in self.config.keys() and "password" in self.config.keys():
             username = self.config.get("username")
@@ -194,8 +201,6 @@ class SimpleWebAPITesting(Agent):
         test_cases = self._context["test_cases"]
         self.python_test_case_capability = {"python_test_case": PythonTestCase(test_cases)}
         self.parse_capacity = {"parse": ParsedInformation(test_cases)}
-        self._capabilities = {
-            "http_request": HTTPRequest(self.host)}
         self.all_capabilities = {"python_test_case": PythonTestCase(test_cases), "parse": ParsedInformation(test_cases),
                                  "http_request": HTTPRequest(self.host),
                                  "record_note": RecordNote(notes)}
@@ -540,13 +545,3 @@ class SimpleWebAPITesting(Agent):
 
         self.adjust_user(result)
         return result
-
-
-@use_case("Minimal implementation of a web API testing use case")
-class SimpleWebAPITestingUseCase(AutonomousAgentUseCase[SimpleWebAPITesting]):
-    """
-    A use case for the SimpleWebAPITesting agent, encapsulating the setup and execution
-    of the web API testing scenario.
-    """
-
-    pass

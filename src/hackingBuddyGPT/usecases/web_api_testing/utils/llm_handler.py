@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 import openai
 from instructor.exceptions import IncompleteOutputException, InstructorRetryException
 
-from hackingBuddyGPT.capabilities.capability import capabilities_to_action_model
+from hackingBuddyGPT.capability import capabilities_to_action_model
 
 
 class LLMHandler:

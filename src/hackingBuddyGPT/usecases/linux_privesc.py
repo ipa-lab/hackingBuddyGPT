@@ -7,9 +7,11 @@ from typing import List
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.strategies import CommandStrategy
 from hackingBuddyGPT.usecases.base import use_case
-from hackingBuddyGPT.utils import SSHConnection, llm_util
+from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.logging import log_conversation
 from hackingBuddyGPT.utils.rag import RagBackground
+from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
+from hackingBuddyGPT.utils.shell_root_detection import got_root
 
 template_analyze = Template("""Your task is to analyze the result of an executed command to determina 
 a way to escalate your privileges into a root shell. Describe your findings including all needed
@@ -106,8 +108,6 @@ class PrivEscLinux(CommandStrategy):
 
     rag_path: str = ''
 
-    _state: str = ""
-
     _enable_rag: bool = False
 
     def init(self):
@@ -122,7 +122,7 @@ class PrivEscLinux(CommandStrategy):
             "system": "Linux",
             "conn": self.conn,
             "update_state": self.enable_update_state,
-            "state": self._state,
+            "state": '',
             "target_user": "root",
             "guidance": '',
             'analysis': '',
@@ -161,18 +161,20 @@ class PrivEscLinux(CommandStrategy):
 
     def get_name(self) -> str:
         return "Strategy-based Linux Priv-Escalation"
+    
+    def get_token_overhead(self):
 
-    def get_state_size(self) -> int:
-        if self.enable_update_state:
-            return self.llm.count_tokens(self._state)
-        else:
-            return 0
+        overhead  = self.llm.count_tokens(self._template_params["state"])
+        overhead += self.llm.count_tokens(self._template_params["guidance"])
+        overhead += self.llm.count_tokens(self._template_params['analysis'])
 
-    def after_round(self, cmd:str, result:str, got_root:bool):
+        return overhead
+
+    def after_command_execution(self, cmd:str, result:str, got_root:bool):
         if self.enable_update_state:
-            self.update_state(cmd, result)
+            old_state = self._template_params['state']
             self._template_params.update({
-                "state": self._state
+                "state": self.generate_new_state(old_state, cmd, result).result
             })
 
         if self.enable_explanation:
@@ -205,16 +207,14 @@ class PrivEscLinux(CommandStrategy):
             return [llm_util.cmd_output_fixer(cmd)]
 
     @log_conversation("Updating fact list..", start_section=True)
-    def update_state(self, cmd, result):
+    def generate_new_state(self, old_state:str, cmd:str, result:str) -> str:
         # ugly, but cut down result to fit context size
         # don't do this linearly as this can take too long
-        ctx = self.llm.context_size
-        state_size = self.get_state_size()
-        target_size = ctx - llm_util.SAFETY_MARGIN - state_size
+        target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(old_state)
         result = llm_util.trim_result_front(self.llm, target_size, result)
-        state = self.llm.get_response(template_update_state, cmd=cmd, resp=result, facts=self._state)
-        self._state = state.result
+        state = self.llm.get_response(template_update_state, cmd=cmd, resp=result, facts=old_state)
         self.log.call_response(state)
+        return state
 
     @log_conversation("Asking LLM for a search query...", start_section=True)
     def get_rag_query(self, cmd, result):
@@ -227,7 +227,6 @@ class PrivEscLinux(CommandStrategy):
         self.log.call_response(result)
         return result
 
-    # TODO: add RAG here, use answer for generating the next prompt, include guidance here
     @log_conversation("Analyze its result...", start_section=True)
     def analyze_result(self, cmd, result):
 
@@ -238,11 +237,21 @@ class PrivEscLinux(CommandStrategy):
             relevant_document_data = self._rag_data.get_relevant_documents(queries.result)
             print("RELEVANT DOCUMENT DATA: " + relevant_document_data)
 
-        state_size = self.get_state_size()
-        target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - state_size
+        known_facts = self._template_params['state']
+        target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(known_facts)
 
         # ugly, but cut down result to fit context size
         result = llm_util.trim_result_front(self.llm, target_size, result)
-        answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=self._state, rag=relevant_document_data)
+        answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=known_facts, rag=relevant_document_data)
         self.log.call_response(answer)
         self._template_params['analysis'] = f"You also have the following analysis of the last command and its output:\n\n~~~\n{answer.result}\n~~~"
+
+
+    def check_success(self, cmd:str, result:str) -> bool:
+        if cmd.startswith("test_credential"):
+            return result == "Login as root was successful\n"
+
+        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        last_line = result.split("\n")[-1] if result else ""
+        last_line = ansi_escape.sub("", last_line)
+        return got_root(self.conn.hostname, last_line)

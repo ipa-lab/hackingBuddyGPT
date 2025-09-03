@@ -2,7 +2,7 @@ import datetime
 from typing import Dict
 from hackingBuddyGPT.utils.logging import Logger
 
-from hackingBuddyGPT.capabilities.capability import (
+from hackingBuddyGPT.capability import (
     Capability,
     capabilities_to_simple_text_handler,
 )

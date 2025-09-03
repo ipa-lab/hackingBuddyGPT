@@ -2,7 +2,7 @@ from mako.template import Template
 
 from hackingBuddyGPT.capabilities import SSHRunCommand
 from hackingBuddyGPT.usecases.base import UseCase, use_case
-from hackingBuddyGPT.utils import SSHConnection
+from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 from .linux_privesc import PrivEscLinux
@@ -61,7 +61,7 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
                 return True
 
     def run_using_usecases(self, hint, turns_per_hint):
-        # TODO: init usecase
+        # init usecase
         linux_privesc = PrivEscLinux(
             conn=self.conn,
             enable_explanation=self.enable_explanation,

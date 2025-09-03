@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Tuple
 
 from hackingBuddyGPT.capabilities import Capability
-from hackingBuddyGPT.utils.local_shell import LocalShellConnection
+from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
 
 
 @dataclass

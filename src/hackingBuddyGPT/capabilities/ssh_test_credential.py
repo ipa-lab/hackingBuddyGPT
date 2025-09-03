@@ -5,7 +5,7 @@ import paramiko
 
 from hackingBuddyGPT.utils import SSHConnection
 
-from .capability import Capability
+from ..capability import Capability
 
 
 @dataclass

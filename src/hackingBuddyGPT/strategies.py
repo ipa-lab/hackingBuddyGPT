@@ -6,7 +6,7 @@ import re
 
 from mako.template import Template
 
-from hackingBuddyGPT.capabilities.capability import capabilities_to_simple_text_handler
+from hackingBuddyGPT.capability import capabilities_to_simple_text_handler
 from hackingBuddyGPT.usecases.base import UseCase
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
@@ -14,6 +14,14 @@ from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param, log_section
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
 from hackingBuddyGPT.utils.shell_root_detection import got_root
+
+
+class History(abc.ABC):
+    def append(self, cmd:str, result:str):
+        pass
+
+    def get_text_representation(self, size:int) -> str:
+        pass
 
 @dataclass
 class CommandStrategy(UseCase, abc.ABC):

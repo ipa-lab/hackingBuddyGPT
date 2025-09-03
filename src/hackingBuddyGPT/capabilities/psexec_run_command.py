@@ -3,7 +3,7 @@ from typing import Tuple
 
 from hackingBuddyGPT.utils import PSExecConnection
 
-from .capability import Capability
+from ..capability import Capability
 
 
 @dataclass

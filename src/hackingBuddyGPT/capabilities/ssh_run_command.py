@@ -8,7 +8,7 @@ from invoke import Responder
 from hackingBuddyGPT.utils import SSHConnection
 from hackingBuddyGPT.utils.shell_root_detection import got_root
 
-from .capability import Capability
+from ..capability import Capability
 
 
 @dataclass

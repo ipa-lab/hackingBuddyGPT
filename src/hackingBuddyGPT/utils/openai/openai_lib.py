@@ -18,7 +18,7 @@ from openai.types.chat.chat_completion_message_tool_call import Function
 from rich.console import Console
 
 from hackingBuddyGPT.capabilities import Capability
-from hackingBuddyGPT.capabilities.capability import capabilities_to_tools
+from hackingBuddyGPT.capability import capabilities_to_tools
 from hackingBuddyGPT.utils import LLM, LLMResult, configurable
 from hackingBuddyGPT.utils.configurable import parameter
 

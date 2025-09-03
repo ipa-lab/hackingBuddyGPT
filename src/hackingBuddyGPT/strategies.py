@@ -9,28 +9,17 @@ from mako.template import Template
 from hackingBuddyGPT.capability import capabilities_to_simple_text_handler
 from hackingBuddyGPT.usecases.base import UseCase
 from hackingBuddyGPT.utils import llm_util
-from hackingBuddyGPT.utils.cli_history import SlidingCliHistory
+from hackingBuddyGPT.utils.histories import HistoryCmdOnly, HistoryFull, HistoryNone
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param, log_section
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
 from hackingBuddyGPT.utils.shell_root_detection import got_root
 
 
-class History(abc.ABC):
-    def append(self, cmd:str, result:str):
-        pass
-
-    def get_text_representation(self, size:int) -> str:
-        pass
-
 @dataclass
 class CommandStrategy(UseCase, abc.ABC):
 
     _capabilities: CapabilityManager = None
-
-    _sliding_history: SlidingCliHistory = None
-
-    _max_history_size: int = 0
 
     _template: Template = None
 
@@ -63,16 +52,22 @@ class CommandStrategy(UseCase, abc.ABC):
 
         self._capabilities = CapabilityManager(self.log)
 
-        self._sliding_history = SlidingCliHistory(self.llm)
+        if self.disable_history:
+            self._history = HistoryNone()
+        else:
+            if self.enable_compressed_history:
+                self._history = HistoryCmdOnly()
+            else:
+                self._history = HistoryFull()
 
     @log_section("Asking LLM for a new command...")
     def get_next_command(self) -> tuple[str, int]:
-        history = ""
-        if not self.disable_history:
-            if self.enable_compressed_history:
-                history = self._sliding_history.get_commands_and_last_output(self._max_history_size - self.get_state_size())
-            else:
-                history = self._sliding_history.get_history(self._max_history_size - self.get_state_size())
+        history = self._history.get_text_representation()
+
+        # calculate max history size
+        # TODO: need to incorporate state, etc.
+        max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(self._template.source)
+        history = llm_util.trim_result_front(self.llm, max_history_size, history)
 
         self._template_params.update({"history": history})
         cmd = self.llm.get_response(self._template, **self._template_params)
@@ -113,6 +108,8 @@ class CommandStrategy(UseCase, abc.ABC):
         cmds = self.postprocess_commands(cmd)
         for cmd in cmds:
             result, task_successful = self.run_command(cmd, message_id)
+            # store the results in our local history
+            self._history.append(cmd, result)
 
         # maybe move the 'got root' detection here?
         # TODO: also can I use llm-as-judge for that? or do I have to do this
@@ -121,13 +118,6 @@ class CommandStrategy(UseCase, abc.ABC):
         assert(task_successful == task_successful2)
 
         self.after_round(cmd, result, task_successful)
-
-        # store the results in our local history
-        if not self.disable_history:
-            if self.enable_compressed_history:
-                self._sliding_history.add_command_only(cmds, result)
-            else:
-                self._sliding_history.add_command(cmds, result)
 
         # signal if we were successful in our task
         return task_successful
@@ -139,10 +129,6 @@ class CommandStrategy(UseCase, abc.ABC):
         self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
 
         self._template_params["capabilities"] = self._capabilities.get_capability_block()
-
-
-        # calculate sizes
-        self._max_history_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(self._template.source)
 
         self.before_run()
 

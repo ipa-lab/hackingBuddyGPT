@@ -11,6 +11,7 @@ from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.logging import log_conversation
 from hackingBuddyGPT.utils.rag import RagBackground
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
+from hackingBuddyGPT.utils.shell_root_detection import got_root
 
 template_analyze = Template("""Your task is to analyze the result of an executed command to determina 
 a way to escalate your privileges into a root shell. Describe your findings including all needed
@@ -169,7 +170,7 @@ class PrivEscLinux(CommandStrategy):
 
         return overhead
 
-    def after_round(self, cmd:str, result:str, got_root:bool):
+    def after_command_execution(self, cmd:str, result:str, got_root:bool):
         if self.enable_update_state:
             old_state = self._template_params['state']
             self._template_params.update({
@@ -244,3 +245,13 @@ class PrivEscLinux(CommandStrategy):
         answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=known_facts, rag=relevant_document_data)
         self.log.call_response(answer)
         self._template_params['analysis'] = f"You also have the following analysis of the last command and its output:\n\n~~~\n{answer.result}\n~~~"
+
+
+    def check_success(self, cmd:str, result:str) -> bool:
+        if cmd.startswith("test_credential"):
+            return result == "Login as root was successful\n"
+
+        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        last_line = result.split("\n")[-1] if result else ""
+        last_line = ansi_escape.sub("", last_line)
+        return got_root(self.conn.hostname, last_line)

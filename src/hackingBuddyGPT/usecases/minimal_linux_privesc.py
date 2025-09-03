@@ -1,3 +1,4 @@
+import re
 from typing import List
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.usecases.base import use_case
@@ -6,6 +7,8 @@ from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 
 from mako.template import Template
+
+from hackingBuddyGPT.utils.shell_root_detection import got_root
 
 TEMPLATE = """
 You are a low-privilege user ${conn.username} with password ${conn.password}
@@ -50,3 +53,12 @@ class MinimalPrivEscLinux(CommandStrategy):
 
     def get_name(self) -> str:
         return self.__class__.__name__
+
+    def check_success(self, cmd:str, result:str) -> bool:
+        if cmd.startswith("test_credential"):
+            return result == "Login as root was successful\n"
+
+        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        last_line = result.split("\n")[-1] if result else ""
+        last_line = ansi_escape.sub("", last_line)
+        return got_root(self.conn.hostname, last_line)

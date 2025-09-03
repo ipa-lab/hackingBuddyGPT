@@ -1,6 +1,5 @@
 import warnings
 from dataclasses import dataclass
-from typing import Tuple
 
 from hackingBuddyGPT.utils.connectors.psexec import PSExecConnection
 
@@ -17,7 +16,7 @@ class PSExecTestCredential(Capability):
     def get_name(self) -> str:
         return "test_credential"
 
-    def __call__(self, username: str, password: str) -> Tuple[str, bool]:
+    def __call__(self, username: str, password: str) -> str:
         try:
             test_conn = self.conn.new_with(username=username, password=password)
             test_conn.init()
@@ -25,6 +24,6 @@ class PSExecTestCredential(Capability):
                 message="full credential testing is not implemented yet for psexec, we have logged in, but do not know who we are, returning True for now",
                 stacklevel=1,
             )
-            return "Login as root was successful\n", True
+            return "Login as root was successful\n"
         except Exception:
-            return "Authentication error, credentials are wrong\n", False
+            return "Authentication error, credentials are wrong\n"

@@ -1,6 +1,5 @@
 import abc
 import datetime
-import re
 
 from dataclasses import dataclass
 from mako.template import Template
@@ -11,8 +10,7 @@ from hackingBuddyGPT.utils.histories import HistoryCmdOnly, HistoryFull, History
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param, log_section
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
-from hackingBuddyGPT.utils.shell_root_detection import got_root
-from typing import List, Optional
+from typing import List
 
 
 @dataclass
@@ -37,10 +35,7 @@ class CommandStrategy(UseCase, abc.ABC):
     def before_run(self):
         pass
 
-    def after_run(self):
-        pass
-
-    def after_round(self, cmd, result, got_root):
+    def after_command_execution(self, cmd, result, got_root):
         pass
 
     def get_token_overhead(self) -> int:
@@ -51,6 +46,7 @@ class CommandStrategy(UseCase, abc.ABC):
 
         self._capabilities = CapabilityManager(self.log)
 
+        # TODO: make this more beautiful by just configuring a History-Instance
         if self.disable_history:
             self._history = HistoryNone()
         else:
@@ -58,6 +54,55 @@ class CommandStrategy(UseCase, abc.ABC):
                 self._history = HistoryCmdOnly()
             else:
                 self._history = HistoryFull()
+    
+    @log_conversation("Starting run...")
+    def run(self, configuration):
+
+        self.configuration = configuration
+        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
+
+        self._template_params["capabilities"] = self._capabilities.get_capability_block()
+
+        self.before_run()
+
+        task_successful = False
+        turn = 1
+        try:
+            while turn <= self.max_turns and not task_successful:
+                with self.log.section(f"round {turn}"):
+                    self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
+                    task_successful = self.perform_round(turn)
+                    turn += 1
+        except Exception:
+            import traceback
+            self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
+            raise
+
+        # write the final result to the database and console
+        if task_successful:
+            self.log.run_was_success()
+        else:
+            self.log.run_was_failure("maximum turn number reached")
+        return task_successful
+    
+    @log_conversation("Asking LLM for a new command(s)...")
+    def perform_round(self, turn: int) -> bool:
+         # get the next command and run it
+        cmd, message_id = self.get_next_command()
+
+        cmds = self.postprocess_commands(cmd)
+        for cmd in cmds:
+            result = self.run_command(cmd, message_id)
+            # store the results in our local history
+            self._history.append(cmd, result)
+
+            task_successful = self.check_success(cmd, result)
+            self.after_command_execution(cmd, result, task_successful)
+            if task_successful:
+                return True
+
+        # signal if we were successful in our task
+        return False
 
     @log_section("Asking LLM for a new command...")
     def get_next_command(self) -> tuple[str, int]:
@@ -74,84 +119,24 @@ class CommandStrategy(UseCase, abc.ABC):
         return cmd.result, message_id
 
     @log_section("Executing that command...")
-    def run_command(self, cmd, message_id) -> tuple[Optional[str], bool]:
+    def run_command(self, cmd, message_id) -> str:
         _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities._capabilities, default_capability=self._capabilities._default_capability)
         start_time = datetime.datetime.now()
         success, *output = parser(cmd)
         if not success:
             self.log.add_tool_call(message_id, tool_call_id=0, function_name="", arguments=cmd, result_text=output[0], duration=0)
-            return output[0], False
+            return output[0]
 
         assert len(output) == 1
-        capability, cmd, (result, got_root) = output[0]
+        capability, cmd, result = output[0]
         duration = datetime.datetime.now() - start_time
         self.log.add_tool_call(message_id, tool_call_id=0, function_name=capability, arguments=cmd, result_text=result, duration=duration)
 
-        return result, got_root
-    
-    def check_success(self, cmd, result) -> bool:
-        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-        last_line = result.split("\n")[-1] if result else ""
-        last_line = ansi_escape.sub("", last_line)
-        return got_root(self.conn.hostname, last_line)
+        return result
+
+    @abc.abstractmethod  
+    def check_success(self, cmd:str, result:str) -> bool:
+        return False
 
     def postprocess_commands(self, cmd:str) -> List[str]:
         return [cmd]
-
-    @log_conversation("Asking LLM for a new command...")
-    def perform_round(self, turn: int) -> bool:
-         # get the next command and run it
-        cmd, message_id = self.get_next_command()
-
-        cmds = self.postprocess_commands(cmd)
-        for cmd in cmds:
-            result, task_successful = self.run_command(cmd, message_id)
-            # store the results in our local history
-            self._history.append(cmd, result)
-
-        # maybe move the 'got root' detection here?
-        # TODO: also can I use llm-as-judge for that? or do I have to do this
-        #       on a per-action base (maybe add a .task_successful(cmd, result, options) -> boolean to the action?
-        task_successful2 = self.check_success(cmd, result)
-        assert(task_successful == task_successful2)
-
-        self.after_round(cmd, result, task_successful)
-
-        # signal if we were successful in our task
-        return task_successful
-
-    @log_conversation("Starting run...")
-    def run(self, configuration):
-
-        self.configuration = configuration
-        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
-
-        self._template_params["capabilities"] = self._capabilities.get_capability_block()
-
-        self.before_run()
-
-        got_root = False
-
-        turn = 1
-        try:
-            while turn <= self.max_turns and not got_root:
-                with self.log.section(f"round {turn}"):
-                    self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
-
-                    got_root = self.perform_round(turn)
-
-                    turn += 1
-
-            self.after_run()
-
-            # write the final result to the database and console
-            if got_root:
-                self.log.run_was_success()
-            else:
-                self.log.run_was_failure("maximum turn number reached")
-
-            return got_root
-        except Exception:
-            import traceback
-            self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
-            raise

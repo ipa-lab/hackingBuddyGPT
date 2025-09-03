@@ -1,12 +1,9 @@
-from dataclasses import dataclass
-from typing import Tuple
-from paramiko.ssh_exception import SSHException
 import paramiko
 
+from dataclasses import dataclass
+from hackingBuddyGPT.capability import Capability
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
-
-from ..capability import Capability
-
+from paramiko.ssh_exception import SSHException
 
 @dataclass
 class SSHTestCredential(Capability):
@@ -18,7 +15,7 @@ class SSHTestCredential(Capability):
     def get_name(self):
         return "test_credential"
 
-    def __call__(self, username: str, password: str) -> Tuple[str, bool]:
+    def __call__(self, username: str, password: str) -> str:
         test_conn = self.conn.new_with(username=username, password=password)
         try:
             for attempt in range(10):
@@ -26,7 +23,7 @@ class SSHTestCredential(Capability):
                     test_conn.init()
                     break;
                 except paramiko.ssh_exception.AuthenticationException:
-                    return "Authentication error, credentials are wrong\n", False
+                    return f"Authentication error, credentials {username}:{password} are wrong\n"
                 except SSHException as e:
                     if attempt == 9:
                         raise
@@ -38,9 +35,9 @@ class SSHTestCredential(Capability):
 
             user = test_conn.run("whoami")[0].strip("\n\r ")
             if user == "root":
-                return "Login as root was successful\n", True
+                return f"Login as root was successful\n"
             else:
-                return "Authentication successful, but user is not root\n", False
+                return f"Authentication successful, but user {user} is not root\n"
 
         except paramiko.ssh_exception.AuthenticationException:
-            return "Authentication error, credentials are wrong\n", False
+            return "Authentication error, credentials are wrong\n"

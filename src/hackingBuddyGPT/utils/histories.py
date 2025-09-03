@@ -1,5 +1,12 @@
 import abc
 
+# TODO: make the configuration for different histories easier
+# Logger = Union[GlobalRemoteLogger, GlobalLocalLogger]
+# log_param = parameter(desc="choice of logging backend", default="local_logger")
+#@dataclass
+#class Agent(ABC):
+#    log: Logger = log_param
+
 class History(abc.ABC):
     @abc.abstractmethod
     def append(self, cmd:str, result:str):

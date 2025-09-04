@@ -46,12 +46,6 @@ dependencies = [
     'websockets == 13.1',
     'faker',
     'fpdf',
-    'langchain_core',
-    'langchain_community',
-    'langchain_chroma',
-    'langchain_openai',
-    'markdown',
-    'chromadb',
 ]
 
 [project.urls]
@@ -70,17 +64,26 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = "src"
 addopts = ["--import-mode=importlib"]
+
 [project.optional-dependencies]
-testing = ['pytest', 'pytest-mock', 'pandas', 'faker',     'langchain_core']
+testing = [
+	'pytest',
+	'pytest-mock',
+	'faker',
+	'langchain_core'
+]
+
 dev = [
 	'ruff',
 ]
-rag-usecase = [
-    'langchain-community',
+
+rag = [
+	'langchain_core',
+	'langchain-community',
+	'langchain-chroma',
 	'langchain-openai',
 	'markdown',
 	'chromadb',
-	'langchain-chroma',
 ]
 
 [project.scripts]

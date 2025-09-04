@@ -9,9 +9,12 @@ from hackingBuddyGPT.strategies import CommandStrategy
 from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.logging import log_conversation
-from hackingBuddyGPT.utils.rag import RagBackground
+from hackingBuddyGPT.utils.rag import has_langchain
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 from hackingBuddyGPT.utils.shell_root_detection import got_root
+
+if has_langchain():
+    from hackingBuddyGPT.utils.rag import RagBackground
 
 template_analyze = Template("""Your task is to analyze the result of an executed command to determina 
 a way to escalate your privileges into a root shell. Describe your findings including all needed
@@ -132,6 +135,10 @@ class PrivEscLinux(CommandStrategy):
         guidance = []
 
         if self.rag_path != '':
+            if not has_langchain():
+                self.log.console.print("[red]RAG path provided but langchain is not installed. Please install langchain to use RAG functionality, e.g., through `pip install -e .\[rag]`.[/red]")
+                raise ImportError("langchain is not installed")
+
             self._enable_rag = True
             self._rag_data = RagBackground(self.rag_path, self.llm)
 

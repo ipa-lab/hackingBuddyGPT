@@ -1,17 +1,13 @@
 import json
-from logging import config
 import os
+
 from dataclasses import field
-
-from rich.panel import Panel
-
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
-from hackingBuddyGPT.usecases.base import AutonomousUseCase, use_case
+from hackingBuddyGPT.strategies import SimpleStrategy
+from hackingBuddyGPT.usecases.base import use_case
 from hackingBuddyGPT.usecases.web_api_documentation.openapi_specification_handler import \
     OpenAPISpecificationHandler
-from hackingBuddyGPT.utils.capability_manager import CapabilityManager
-from hackingBuddyGPT.utils.logging import Logger, log_param
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import PromptStrategy
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
@@ -21,11 +17,11 @@ from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api_documentation.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
+from rich.panel import Panel
 
 
 @use_case("Minimal implementation of a web API testing use case")
-class SimpleWebAPIDocumentation(AutonomousUseCase):
+class SimpleWebAPIDocumentation(SimpleStrategy):
     """
          SimpleWebAPIDocumentation is an agent class for automating REST API documentation.
 
@@ -42,11 +38,8 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
             found_all_http_methods (bool): Flag indicating whether all HTTP methods have been found.
             all_steps_done (bool): Flag to indicate whether the full documentation process is complete.
         """
-    llm: OpenAILib = None
-    log: Logger = log_param
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
-    _capabilities: CapabilityManager = None
     _all_http_methods_found: bool = False
     config_path: str = parameter(
         desc="Configuration file path",
@@ -113,7 +106,6 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
         self.categorized_endpoints = self.categorize_endpoints(self._correct_endpoints, query_params)
 
         # setup capabilities
-        self._capabilities = CapabilityManager(self.log)
         self._capabilities.add_capability(HTTPRequest(self.host))
         self._capabilities.add_capability(RecordNote(self._context["notes"]))
 

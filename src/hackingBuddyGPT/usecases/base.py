@@ -1,12 +1,11 @@
 import abc
 import json
-import argparse
 from dataclasses import dataclass
 
 from hackingBuddyGPT.utils.logging import Logger, log_param
-from typing import Dict, Type, TypeVar, Generic
+from typing import Dict, Type
 
-from hackingBuddyGPT.utils.configurable import Transparent, configurable
+from hackingBuddyGPT.utils.configurable import configurable
 
 @dataclass
 class UseCase(abc.ABC):
@@ -49,97 +48,7 @@ class UseCase(abc.ABC):
         """
         pass
 
-
-# this runs the main loop for a bounded amount of turns or until root was achieved
-@dataclass
-class AutonomousUseCase(UseCase, abc.ABC):
-    max_turns: int = 10
-
-    _got_root: bool = False
-
-    @abc.abstractmethod
-    def perform_round(self, turn: int):
-        pass
-
-    def before_run(self):
-        pass
-
-    def after_run(self):
-        pass
-
-    def run(self, configuration):
-        self.configuration = configuration
-        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
-
-        self.before_run()
-
-        turn = 1
-        try:
-            while turn <= self.max_turns and not self._got_root:
-                with self.log.section(f"round {turn}"):
-                    self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
-
-                    self._got_root = self.perform_round(turn)
-
-                    turn += 1
-
-            self.after_run()
-
-            # write the final result to the database and console
-            if self._got_root:
-                self.log.run_was_success()
-            else:
-                self.log.run_was_failure("maximum turn number reached")
-
-            return self._got_root
-        except Exception:
-            import traceback
-            self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
-            raise
-
-
 use_cases: Dict[str, configurable] = dict()
-
-
-T = TypeVar("T", bound=type)
-
-
-class AutonomousAgentUseCase(AutonomousUseCase, Generic[T]):
-    agent: T = None
-
-    def perform_round(self, turn: int):
-        raise ValueError("Do not use AutonomousAgentUseCase without supplying an agent type as generic")
-
-    def get_name(self) -> str:
-        raise ValueError("Do not use AutonomousAgentUseCase without supplying an agent type as generic")
-
-    @classmethod
-    def __class_getitem__(cls, item):
-        item = dataclass(item)
-
-        class AutonomousAgentUseCase(AutonomousUseCase):
-            agent: Transparent(item) = None
-
-            def init(self):
-                super().init()
-                self.agent.init()
-
-            def get_name(self) -> str:
-                return self.__class__.__name__
-
-            def before_run(self):
-                return self.agent.before_run()
-
-            def after_run(self):
-                return self.agent.after_run()
-
-            def perform_round(self, turn: int):
-                return self.agent.perform_round(turn)
-
-        constructed_class = dataclass(AutonomousAgentUseCase)
-
-        return constructed_class
-
 
 def use_case(description):
     def inner(cls):

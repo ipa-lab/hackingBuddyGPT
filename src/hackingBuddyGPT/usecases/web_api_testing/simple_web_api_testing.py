@@ -12,8 +12,8 @@ from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.parsed_information import ParsedInformation
 from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
-from hackingBuddyGPT.usecases.base import AutonomousUseCase, use_case
-from hackingBuddyGPT.utils.capability_manager import CapabilityManager
+from hackingBuddyGPT.strategies import SimpleStrategy
+from hackingBuddyGPT.usecases.base import use_case
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import PromptStrategy
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
@@ -30,13 +30,12 @@ from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
 # OpenAPI specification file path
 
 @use_case("Minimal implementation of a web API testing use case")
-class SimpleWebAPITesting(AutonomousUseCase):
+class SimpleWebAPITesting(SimpleStrategy):
     """
     SimpleWebAPITesting is an agent class for automating web API testing.
 
@@ -52,7 +51,6 @@ class SimpleWebAPITesting(AutonomousUseCase):
         _all_test_cases_run (bool): Flag indicating if all HTTP methods have been found.
     """
 
-    llm: OpenAILib = None
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     config_path: str = parameter(
         desc="Configuration file path",
@@ -70,7 +68,6 @@ class SimpleWebAPITesting(AutonomousUseCase):
     )
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list(), "parsed": list()})
-    _capabilities: CapabilityManager = None
     _all_test_cases_run: bool = False
 
     def get_strategy(self, strategy_string):
@@ -132,7 +129,6 @@ class SimpleWebAPITesting(AutonomousUseCase):
         self._context["host"] = self.host
 
         # setup capabilities
-        self._capabilities = CapabilityManager(self.log)
         self._capabilities.add_capability(HTTPRequest(self.host))
 
         self._setup_capabilities()

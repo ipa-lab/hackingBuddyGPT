@@ -10,7 +10,7 @@ from hackingBuddyGPT.utils.prompt_generation.information import (
 from hackingBuddyGPT.utils.prompt_generation.information import (
     PromptPurpose,
 )
-from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
+from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils import tool_message
 
 

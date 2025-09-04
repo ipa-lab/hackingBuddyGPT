@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import (
+from hackingBuddyGPT.utils.web_api.response_handler import (
     ResponseHandler,
 )
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler

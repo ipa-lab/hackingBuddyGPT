@@ -1,3 +1,5 @@
+import json
+from logging import config
 import os
 from dataclasses import field
 
@@ -6,17 +8,18 @@ from rich.panel import Panel
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.base import AutonomousUseCase, use_case
-from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import \
+from hackingBuddyGPT.usecases.web_api_documentation.openapi_specification_handler import \
     OpenAPISpecificationHandler
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
-from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.logging import Logger, log_param
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import PromptStrategy
+from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
-from hackingBuddyGPT.usecases.web_api_testing.utils.evaluator import Evaluator
+from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
+from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
+from hackingBuddyGPT.usecases.web_api_documentation.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
@@ -30,7 +33,6 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
             llm (OpenAILib): The language model interface used for prompt execution.
             _prompt_history (Prompt): Internal history of prompts exchanged with the LLM.
             _context (Context): Context information used by capabilities (e.g., notes).
-            _capabilities (Dict[str, Capability]): Dictionary of active tool capabilities (HTTP requests, notes, etc.).
             config_path (str): Path to the configuration file for the API under test.
             strategy_string (str): Serialized string representing the documentation strategy to apply.
             _http_method_description (str): Description for identifying HTTP methods in responses.
@@ -41,6 +43,7 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
             all_steps_done (bool): Flag to indicate whether the full documentation process is complete.
         """
     llm: OpenAILib = None
+    log: Logger = log_param
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
     _capabilities: CapabilityManager = None
@@ -76,6 +79,15 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
 
     def get_name(self) -> str:
         return self.__class__.__name__
+    
+    def get_strategy(self, strategy_string):
+
+        strategies = {
+            "cot": PromptStrategy.CHAIN_OF_THOUGHT,
+            "tot": PromptStrategy.TREE_OF_THOUGHT,
+            "icl": PromptStrategy.IN_CONTEXT
+        }
+        return strategies.get(strategy_string, PromptStrategy.IN_CONTEXT)
 
     def init(self):
         """Initialize the agent with configurations, capabilities, and handlers."""
@@ -84,15 +96,24 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
         self.found_all_http_methods = False
         self.all_steps_done = False
 
+        # load config file
+        self.strategy = self.get_strategy(self.strategy_string)
 
-        config_handler = ConfigurationHandler(self.config_path, self.strategy_string)
-        config, self.strategy = config_handler.load()
-        token, self.host, description, self._correct_endpoints, query_params = config_handler._extract_config_values(config)
+        """Loads JSON configuration from the specified path."""
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError(f"Configuration file not found at {self.config_path}")
+        with open(self.config_path, 'r') as file:
+            config = json.load(file)
+            token = config.get("token")
+            self.host = config.get("host")
+            description = config.get("description")
+            self._correct_endpoints = config.get("correct_endpoints", {})
+            query_params = config.get("query_params", {})
 
         self.categorized_endpoints = self.categorize_endpoints(self._correct_endpoints, query_params)
 
         # setup capabilities
-        self._capabilities.init()
+        self._capabilities = CapabilityManager(self.log)
         self._capabilities.add_capability(HTTPRequest(self.host))
         self._capabilities.add_capability(RecordNote(self._context["notes"]))
 
@@ -160,7 +181,7 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
         self._response_handler = ResponseHandler(llm_handler=self._llm_handler, prompt_context=self._prompt_context,
                                                  prompt_helper=self.prompt_helper, config=config)
         self._documentation_handler = OpenAPISpecificationHandler(
-            self._llm_handler, self._response_handler, self.strategy, self.host, description, name
+            self._llm_handler, self.strategy, self.host, description, name
         )
 
         self._prompt_history.append(initial_prompt)

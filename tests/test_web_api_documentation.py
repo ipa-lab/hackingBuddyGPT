@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from hackingBuddyGPT.utils.logging import LocalLogger
-from hackingBuddyGPT.usecases.web_api_testing.simple_openapi_documentation import (
+from hackingBuddyGPT.usecases.web_api_documentation.simple_openapi_documentation import (
     SimpleWebAPIDocumentation,
     SimpleWebAPIDocumentationUseCase,
 )

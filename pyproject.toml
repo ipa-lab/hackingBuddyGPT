@@ -41,7 +41,6 @@ dependencies = [
     'nltk',
     'fastapi == 0.114.0',
     'fastapi-utils == 0.7.0',
-    'jinja2 == 3.1.6',
     'uvicorn[standard] == 0.30.6',
     'dataclasses_json == 0.6.7',
     'websockets == 13.1',

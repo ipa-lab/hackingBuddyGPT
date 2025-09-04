@@ -6,7 +6,7 @@ from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
 from hackingBuddyGPT.strategies import SimpleStrategy
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils import LLMResult, tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 

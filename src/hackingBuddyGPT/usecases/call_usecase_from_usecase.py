@@ -1,7 +1,7 @@
 from mako.template import Template
 
 from hackingBuddyGPT.capabilities import SSHRunCommand
-from hackingBuddyGPT.usecases.base import UseCase, use_case
+from hackingBuddyGPT.usecases.usecase import UseCase, use_case
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 

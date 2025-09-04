@@ -4,7 +4,7 @@ import datetime
 from dataclasses import dataclass
 from mako.template import Template
 from hackingBuddyGPT.capability import capabilities_to_simple_text_handler
-from hackingBuddyGPT.usecases.base import UseCase
+from hackingBuddyGPT.usecases.usecase import UseCase
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.histories import HistoryCmdOnly, HistoryFull, HistoryNone
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib

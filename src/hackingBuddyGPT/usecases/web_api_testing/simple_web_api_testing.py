@@ -13,7 +13,7 @@ from hackingBuddyGPT.capabilities.parsed_information import ParsedInformation
 from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.strategies import SimpleStrategy
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import PromptStrategy
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation

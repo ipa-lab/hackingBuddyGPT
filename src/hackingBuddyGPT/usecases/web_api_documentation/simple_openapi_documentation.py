@@ -5,7 +5,7 @@ from dataclasses import field
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.strategies import SimpleStrategy
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.usecases.web_api_documentation.openapi_specification_handler import \
     OpenAPISpecificationHandler
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import PromptStrategy

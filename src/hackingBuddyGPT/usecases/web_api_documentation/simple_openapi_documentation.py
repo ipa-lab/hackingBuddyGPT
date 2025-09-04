@@ -161,7 +161,7 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
         self._response_handler = ResponseHandler(llm_handler=self._llm_handler, prompt_context=self._prompt_context,
                                                  prompt_helper=self.prompt_helper, config=config)
         self._documentation_handler = OpenAPISpecificationHandler(
-            self._llm_handler, self._response_handler, self.strategy, self.host, description, name
+            self._llm_handler, self.strategy, self.host, description, name
         )
 
         self._prompt_history.append(initial_prompt)

@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 
+# TODO: why is this not used by anyone? can this be removed?
 
 class ResponseAnalyzer:
     """

@@ -1,9 +1,8 @@
-import copy
 import json
 import re
 from collections import Counter
 from itertools import cycle
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 import random
 from urllib.parse import urlencode
 import pydantic_core
@@ -195,77 +194,6 @@ class ResponseHandler:
             return json.loads(result_text)
         return None
 
-    def parse_http_response_to_openapi_example(
-            self, openapi_spec: Dict[str, Any], http_response: str, path: str, method: str
-    ) -> Tuple[Optional[Dict[str, Any]], Optional[str], Dict[str, Any]]:
-        """
-        Parses an HTTP response to generate an OpenAPI example.
-
-        Args:
-            openapi_spec (Dict[str, Any]): The OpenAPI specification to update.
-            http_response (str): The HTTP response to parse.
-            path (str): The API path.
-            method (str): The HTTP method.
-
-        Returns:
-            Tuple[Optional[Dict[str, Any]], Optional[str], Dict[str, Any]]: A tuple containing the entry dictionary, reference, and updated OpenAPI specification.
-        """
-
-        headers, body = http_response.split("\r\n\r\n", 1)
-        try:
-            body_dict = json.loads(body)
-        except json.decoder.JSONDecodeError:
-            return None, None, openapi_spec
-
-        reference, object_name, openapi_spec = self.parse_http_response_to_schema(openapi_spec, body_dict, path)
-        entry_dict = {}
-        old_body_dict = copy.deepcopy(body_dict)
-
-        if len(body_dict) == 1 and "data" not in body_dict:
-            entry_dict["id"] = body_dict
-            self.llm_handler._add_created_object(entry_dict, object_name)
-        else:
-            if "data" in body_dict:
-                body_dict = body_dict["data"]
-                if isinstance(body_dict, list) and len(body_dict) > 0:
-                    body_dict = body_dict[0]
-                    if isinstance(body_dict, list):
-                        for entry in body_dict:
-                            key = entry.get("title") or entry.get("name") or entry.get("id")
-                            entry_dict[key] = {"value": entry}
-                            self.llm_handler._add_created_object(entry_dict[key], object_name)
-                            if len(entry_dict) > 3:
-                                break
-
-
-            if isinstance(body_dict, list) and len(body_dict) > 0:
-                body_dict = body_dict[0]
-                if isinstance(body_dict, list):
-
-                    for entry in body_dict:
-                        key = entry.get("title") or entry.get("name") or entry.get("id")
-                        entry_dict[key] = entry
-                        self.llm_handler._add_created_object(entry_dict[key], object_name)
-                        if len(entry_dict) > 3:
-                            break
-            else:
-                if isinstance(body_dict, list) and len(body_dict) == 0:
-                    entry_dict = ""
-                elif isinstance(body_dict, dict) and "data" in body_dict.keys():
-                    entry_dict = body_dict["data"]
-                    if isinstance(entry_dict, list) and len(entry_dict) > 0:
-                        entry_dict = entry_dict[0]
-                else:
-                    entry_dict= body_dict
-                self.llm_handler._add_created_object(entry_dict, object_name)
-        if isinstance(old_body_dict, dict) and len(old_body_dict.keys()) > 0 and "data" in old_body_dict.keys() and isinstance(old_body_dict, dict) \
-                and isinstance(entry_dict, dict):
-            old_body_dict.pop("data")
-            entry_dict = {**entry_dict, **old_body_dict}
-
-
-        return entry_dict, reference, openapi_spec
-
     def extract_description(self, note: Any) -> str:
         """
         Extracts the description from a note.
@@ -277,48 +205,6 @@ class ResponseHandler:
             str: The extracted description.
         """
         return note.action.content
-
-    def parse_http_response_to_schema(
-            self, openapi_spec: Dict[str, Any], body_dict: Dict[str, Any], path: str
-    ) -> Tuple[str, str, Dict[str, Any]]:
-        """
-        Parses an HTTP response body to generate an OpenAPI schema.
-
-        Args:
-            openapi_spec (Dict[str, Any]): The OpenAPI specification to update.
-            body_dict (Dict[str, Any]): The HTTP response body as a dictionary or list.
-            path (str): The API path.
-
-        Returns:
-            Tuple[str, str, Dict[str, Any]]: A tuple containing the reference, object name, and updated OpenAPI specification.
-        """
-        if "/" not in path:
-            return None, None, openapi_spec
-
-        object_name = path.split("/")[1].capitalize().rstrip("s")
-        properties_dict = {}
-
-        # Handle different structures of `body_dict`
-        if isinstance(body_dict, dict):
-            for key, value in body_dict.items():
-                # If it's a nested dictionary, extract keys recursively
-                properties_dict = self.extract_keys(key, value, properties_dict)
-
-        elif isinstance(body_dict, list) and len(body_dict) > 0:
-            first_item = body_dict[0]
-            if isinstance(first_item, dict):
-                for key, value in first_item.items():
-                    properties_dict = self.extract_keys(key, value, properties_dict)
-
-        # Create the schema object for this response
-        object_dict = {"type": "object", "properties": properties_dict}
-
-        # Add the schema to OpenAPI spec if not already present
-        if object_name not in openapi_spec["components"]["schemas"]:
-            openapi_spec["components"]["schemas"][object_name] = object_dict
-
-        reference = f"#/components/schemas/{object_name}"
-        return reference, object_name, openapi_spec
 
     def read_yaml_to_string(self, filepath: str) -> Optional[str]:
         """
@@ -364,29 +250,6 @@ class ResponseHandler:
                 required_endpoints[endpoint] = [method]
 
         return required_endpoints
-
-    def extract_keys(self, key: str, value: Any, properties_dict: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Extracts and formats the keys and values from a dictionary to generate OpenAPI properties.
-
-        Args:
-            key (str): The key in the dictionary.
-            value (Any): The value associated with the key.
-            properties_dict (Dict[str, Any]): The dictionary to store the extracted properties.
-
-        Returns:
-            Dict[str, Any]: The updated properties dictionary.
-        """
-        if key == "id":
-            properties_dict[key] = {
-                "type": str(type(value).__name__),
-                "format": "uuid",
-                "example": str(value),
-            }
-        else:
-            properties_dict[key] = {"type": str(type(value).__name__), "example": str(value)}
-
-        return properties_dict
 
     def evaluate_result(self, result: Any, prompt_history: Prompt, analysis_context: Any) -> Any:
         """

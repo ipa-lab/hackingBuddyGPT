@@ -4,9 +4,10 @@ import datetime
 from dataclasses import dataclass
 from mako.template import Template
 from hackingBuddyGPT.capability import capabilities_to_simple_text_handler
-from hackingBuddyGPT.usecases.base import UseCase
+from hackingBuddyGPT.usecases.usecase import UseCase
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.histories import HistoryCmdOnly, HistoryFull, HistoryNone
+from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param, log_section
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
@@ -140,3 +141,59 @@ class CommandStrategy(UseCase, abc.ABC):
 
     def postprocess_commands(self, cmd:str) -> List[str]:
         return [cmd]
+
+@dataclass
+class SimpleStrategy(UseCase, abc.ABC):
+    max_turns: int = 10
+
+    llm: OpenAILib = None
+
+    log: Logger = log_param
+
+    _got_root: bool = False
+
+    _capabilities: CapabilityManager = None
+
+    def init(self):
+        super().init()
+        self._capabilities = CapabilityManager(self.log)
+
+    @abc.abstractmethod
+    def perform_round(self, turn: int):
+        pass
+
+    def before_run(self):
+        pass
+
+    def after_run(self):
+        pass
+
+    def run(self, configuration):
+        self.configuration = configuration
+        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
+
+        self.before_run()
+
+        turn = 1
+        try:
+            while turn <= self.max_turns and not self._got_root:
+                with self.log.section(f"round {turn}"):
+                    self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
+
+                    self._got_root = self.perform_round(turn)
+
+                    turn += 1
+
+            self.after_run()
+
+            # write the final result to the database and console
+            if self._got_root:
+                self.log.run_was_success()
+            else:
+                self.log.run_was_failure("maximum turn number reached")
+
+            return self._got_root
+        except Exception:
+            import traceback
+            self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
+            raise

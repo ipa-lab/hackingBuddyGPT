@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
-from hackingBuddyGPT.usecases.base import UseCase, use_case
+from hackingBuddyGPT.usecases.usecase import UseCase, use_case
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.db_storage import DbStorage
 from hackingBuddyGPT.utils.db_storage.db_storage import (

@@ -1,7 +1,7 @@
 import re
 from typing import List
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.strategies import CommandStrategy
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection

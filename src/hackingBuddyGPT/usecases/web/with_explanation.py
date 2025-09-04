@@ -1,24 +1,20 @@
 from dataclasses import field
-from typing import List, Any, Union, Dict, Iterable, Optional
-
+from typing import List, Any, Union,  Iterable, Optional
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
 
-from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
-from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
+from hackingBuddyGPT.strategies import SimpleStrategy
+from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils import LLMResult, tool_message
 from hackingBuddyGPT.utils.configurable import parameter
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
-
-class WebTestingWithExplanation(Agent):
-    llm: OpenAILib
+@use_case("Minimal implementation of a web testing use case while allowing the llm to 'talk'")
+class WebTestingWithExplanation(SimpleStrategy):
     host: str = parameter(desc="The host to test", default="http://localhost")
     flag_format_description: str = parameter(
         desc="Description of the flag provided to the LLM",
@@ -35,14 +31,16 @@ class WebTestingWithExplanation(Agent):
 
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
-    _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_flags_found: bool = False
 
     def init(self):
         super().init()
         self._context["host"] = self.host
-        self.add_capability(SubmitFlag(self.flag_format_description, set(self.flag_template.format(flag=flag) for flag in self.flags.split(",")), success_function=self.all_flags_found))
-        self.add_capability(HTTPRequest(self.host))
+        self._capabilities.add_capability(SubmitFlag(self.flag_format_description, set(self.flag_template.format(flag=flag) for flag in self.flags.split(",")), success_function=self.all_flags_found))
+        self._capabilities.add_capability(HTTPRequest(self.host))
+
+    def get_name(self) -> str:
+        return self.__class__.__name__
 
     def before_run(self):
         system_message = (
@@ -64,7 +62,7 @@ class WebTestingWithExplanation(Agent):
     def perform_round(self, turn: int):
         prompt = self._prompt_history  # TODO: in the future, this should do some context truncation
 
-        result_stream: Iterable[Union[ChoiceDelta, LLMResult]] = self.llm.stream_response(prompt, self.log.console, capabilities=self._capabilities, get_individual_updates=True)
+        result_stream: Iterable[Union[ChoiceDelta, LLMResult]] = self.llm.stream_response(prompt, self.log.console, capabilities=self._capabilities._capabilities, get_individual_updates=True)
         result: Optional[LLMResult] = None
         stream_output = self.log.stream_message("assistant")  # TODO: do not hardcode the role
         for delta in result_stream:
@@ -83,12 +81,7 @@ class WebTestingWithExplanation(Agent):
 
         if message.tool_calls is not None:
             for tool_call in message.tool_calls:
-                tool_result = self.run_capability_json(message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments)
+                tool_result = self._capabilities.run_capability_json(message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments)
                 self._prompt_history.append(tool_message(tool_result, tool_call.id))
 
         return self._all_flags_found
-
-
-@use_case("Minimal implementation of a web testing use case while allowing the llm to 'talk'")
-class WebTestingWithExplanationUseCase(AutonomousAgentUseCase[WebTestingWithExplanation]):
-    pass

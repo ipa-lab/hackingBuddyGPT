@@ -1,4 +1,4 @@
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.strategies import CommandStrategy
 from hackingBuddyGPT.utils import SSHConnection
 

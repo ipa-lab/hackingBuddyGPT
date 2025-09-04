@@ -6,7 +6,7 @@ from typing import List
 
 from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
 from hackingBuddyGPT.strategies import CommandStrategy
-from hackingBuddyGPT.usecases.base import use_case
+from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.logging import log_conversation
 from hackingBuddyGPT.utils.rag import RagBackground

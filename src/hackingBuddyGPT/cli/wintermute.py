@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from hackingBuddyGPT.usecases.base import use_cases
+from hackingBuddyGPT.usecases.usecase import use_cases
 from hackingBuddyGPT.utils.configurable import CommandMap, InvalidCommand, Parseable, instantiate
 
 

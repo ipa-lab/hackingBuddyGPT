@@ -13,7 +13,7 @@ from hackingBuddyGPT.utils.logging import Logger, log_param
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt

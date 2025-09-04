@@ -15,7 +15,7 @@ from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.information import (
     PenTestingInformation,
 )
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import (
+from hackingBuddyGPT.usecases.web_api_testing.utils.response_analyzer_with_llm import (
     ResponseAnalyzerWithLLM,
 )
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler

@@ -21,9 +21,9 @@ from hackingBuddyGPT.utils.openapi.openapi_parser import OpenAPISpecificationPar
 from hackingBuddyGPT.usecases.web_api_testing.report_handler import ReportHandler
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import \
+from hackingBuddyGPT.usecases.web_api_testing.utils.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.test_handler import GenerationTestHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt

@@ -3,7 +3,6 @@ import os
 
 from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy
 
-
 class ConfigurationHandler(object):
 
     def __init__(self, config_file, strategy_string=None):
@@ -11,17 +10,7 @@ class ConfigurationHandler(object):
         self.strategy_string = strategy_string
 
     def load(self, strategy_string=None):
-        if self.config_path != "":
-            if self.config_path != "":
-                current_file_path = os.path.dirname(os.path.abspath(__file__))
-                self.config_path = os.path.join(current_file_path, "configs", self.config_path)
         config = self._load_config()
-
-        if "spotify" in self.config_path:
-            os.environ['SPOTIPY_CLIENT_ID'] = config['client_id']
-            os.environ['SPOTIPY_CLIENT_SECRET'] = config['client_secret']
-            os.environ['SPOTIPY_REDIRECT_URI'] = config['redirect_uri']
-
         return config, self.get_strategy(strategy_string)
 
     def get_strategy(self, strategy_string=None):
@@ -44,9 +33,6 @@ class ConfigurationHandler(object):
             raise FileNotFoundError(f"Configuration file not found at {config_path}")
         with open(config_path, 'r') as file:
             return json.load(file)
-
-
-
 
     def _extract_config_values(self, config):
         token = config.get("token")

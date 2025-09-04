@@ -10,8 +10,8 @@ import pydantic_core
 from bs4 import BeautifulSoup
 from rich.panel import Panel
 
-from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher import PatternMatcher
-from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
+from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.information import (
     PenTestingInformation,

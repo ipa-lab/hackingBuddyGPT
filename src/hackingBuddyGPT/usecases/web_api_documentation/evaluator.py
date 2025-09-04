@@ -1,7 +1,6 @@
 import copy
-from itertools import chain
 
-from hackingBuddyGPT.usecases.web_api_testing.documentation.pattern_matcher import PatternMatcher
+from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
 
 
 class Evaluator:

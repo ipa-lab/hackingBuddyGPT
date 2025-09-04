@@ -6,17 +6,18 @@ from rich.panel import Panel
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.base import AutonomousUseCase, use_case
-from hackingBuddyGPT.usecases.web_api_testing.documentation.openapi_specification_handler import \
+from hackingBuddyGPT.usecases.web_api_documentation.openapi_specification_handler import \
     OpenAPISpecificationHandler
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
-from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.logging import Logger, log_param
+from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
-from hackingBuddyGPT.usecases.web_api_testing.utils.evaluator import Evaluator
+from hackingBuddyGPT.usecases.web_api_documentation.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
@@ -30,7 +31,6 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
             llm (OpenAILib): The language model interface used for prompt execution.
             _prompt_history (Prompt): Internal history of prompts exchanged with the LLM.
             _context (Context): Context information used by capabilities (e.g., notes).
-            _capabilities (Dict[str, Capability]): Dictionary of active tool capabilities (HTTP requests, notes, etc.).
             config_path (str): Path to the configuration file for the API under test.
             strategy_string (str): Serialized string representing the documentation strategy to apply.
             _http_method_description (str): Description for identifying HTTP methods in responses.
@@ -41,6 +41,7 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
             all_steps_done (bool): Flag to indicate whether the full documentation process is complete.
         """
     llm: OpenAILib = None
+    log: Logger = log_param
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
     _capabilities: CapabilityManager = None
@@ -92,7 +93,7 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
         self.categorized_endpoints = self.categorize_endpoints(self._correct_endpoints, query_params)
 
         # setup capabilities
-        self._capabilities.init()
+        self._capabilities = CapabilityManager(self.log)
         self._capabilities.add_capability(HTTPRequest(self.host))
         self._capabilities.add_capability(RecordNote(self._context["notes"]))
 

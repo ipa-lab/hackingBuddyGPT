@@ -14,17 +14,17 @@ from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.base import AutonomousUseCase, use_case
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
-from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 from hackingBuddyGPT.utils.openapi.openapi_parser import OpenAPISpecificationParser
-from hackingBuddyGPT.usecases.web_api_testing.documentation.report_handler import ReportHandler
+from hackingBuddyGPT.usecases.web_api_testing.report_handler import ReportHandler
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
 from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
-from hackingBuddyGPT.usecases.web_api_testing.testing.test_handler import GenerationTestHandler
+from hackingBuddyGPT.usecases.web_api_testing.test_handler import GenerationTestHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler

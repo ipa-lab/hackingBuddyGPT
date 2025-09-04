@@ -26,9 +26,10 @@ scripts/mac_ansible_id_rsa
 scripts/mac_ansible_id_rsa.pub
 .aider*
 
-src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/
 src/hackingBuddyGPT/usecases/web_api_testing/documentation/reports/
 src/hackingBuddyGPT/usecases/web_api_testing/retrieve_spotify_token.py
 config/my_configs/*
 config/configs/*
 config/configs/
+
+src/hackingBuddyGPT/usecases/web_api_documentation/openapi_spec/

@@ -38,21 +38,13 @@ dependencies = [
     'pydantic == 2.8.2',
     'openai == 1.65.2',
     'BeautifulSoup4',
-    'nltk',
     'fastapi == 0.114.0',
     'fastapi-utils == 0.7.0',
     'uvicorn[standard] == 0.30.6',
     'dataclasses_json == 0.6.7',
     'websockets == 13.1',
-    'pandas',
     'faker',
     'fpdf',
-    'langchain_core',
-    'langchain_community',
-    'langchain_chroma',
-    'langchain_openai',
-    'markdown',
-    'chromadb',
 ]
 
 [project.urls]
@@ -71,17 +63,26 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = "src"
 addopts = ["--import-mode=importlib"]
+
 [project.optional-dependencies]
-testing = ['pytest', 'pytest-mock', 'pandas', 'faker',     'langchain_core']
+testing = [
+	'pytest',
+	'pytest-mock',
+	'faker',
+	'langchain_core'
+]
+
 dev = [
 	'ruff',
 ]
-rag-usecase = [
-    'langchain-community',
+
+rag = [
+	'langchain_core',
+	'langchain-community',
+	'langchain-chroma',
 	'langchain-openai',
 	'markdown',
 	'chromadb',
-	'langchain-chroma',
 ]
 
 [project.scripts]

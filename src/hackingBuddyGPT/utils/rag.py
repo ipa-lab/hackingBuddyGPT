@@ -1,7 +1,15 @@
-from langchain_community.document_loaders import DirectoryLoader, TextLoader
-from langchain_chroma import Chroma
-from langchain_openai import OpenAIEmbeddings
-from langchain_text_splitters import MarkdownTextSplitter
+try:
+    from langchain_community.document_loaders import DirectoryLoader, TextLoader
+    from langchain_chroma import Chroma
+    from langchain_openai import OpenAIEmbeddings
+    from langchain_text_splitters import MarkdownTextSplitter
+except ImportError:
+    _has_langchain = False
+else:
+    _has_langchain = True
+
+def has_langchain():
+    return _has_langchain
 
 class RagBackground:
 

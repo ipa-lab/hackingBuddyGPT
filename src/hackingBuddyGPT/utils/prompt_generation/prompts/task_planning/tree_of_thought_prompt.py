@@ -8,7 +8,7 @@ from hackingBuddyGPT.utils.prompt_generation.information.prompt_information impo
 from hackingBuddyGPT.utils.prompt_generation.prompts.task_planning import (
     TaskPlanningPrompt,
 )
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt
+from hackingBuddyGPT.utils.web_api.custom_datatypes import Prompt
 
 
 class TreeOfThoughtPrompt(TaskPlanningPrompt):

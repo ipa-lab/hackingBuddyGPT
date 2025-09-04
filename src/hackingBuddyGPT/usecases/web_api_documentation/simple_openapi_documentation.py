@@ -1,3 +1,5 @@
+import json
+from logging import config
 import os
 from dataclasses import field
 
@@ -10,13 +12,13 @@ from hackingBuddyGPT.usecases.web_api_documentation.openapi_specification_handle
     OpenAPISpecificationHandler
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
 from hackingBuddyGPT.utils.logging import Logger, log_param
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import PromptStrategy
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
-from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
+from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
+from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api_documentation.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
@@ -77,6 +79,15 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
 
     def get_name(self) -> str:
         return self.__class__.__name__
+    
+    def get_strategy(self, strategy_string):
+
+        strategies = {
+            "cot": PromptStrategy.CHAIN_OF_THOUGHT,
+            "tot": PromptStrategy.TREE_OF_THOUGHT,
+            "icl": PromptStrategy.IN_CONTEXT
+        }
+        return strategies.get(strategy_string, PromptStrategy.IN_CONTEXT)
 
     def init(self):
         """Initialize the agent with configurations, capabilities, and handlers."""
@@ -85,10 +96,19 @@ class SimpleWebAPIDocumentation(AutonomousUseCase):
         self.found_all_http_methods = False
         self.all_steps_done = False
 
+        # load config file
+        self.strategy = self.get_strategy(self.strategy_string)
 
-        config_handler = ConfigurationHandler(self.config_path, self.strategy_string)
-        config, self.strategy = config_handler.load()
-        token, self.host, description, self._correct_endpoints, query_params = config_handler._extract_config_values(config)
+        """Loads JSON configuration from the specified path."""
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError(f"Configuration file not found at {self.config_path}")
+        with open(self.config_path, 'r') as file:
+            config = json.load(file)
+            token = config.get("token")
+            self.host = config.get("host")
+            description = config.get("description")
+            self._correct_endpoints = config.get("correct_endpoints", {})
+            query_params = config.get("query_params", {})
 
         self.categorized_endpoints = self.categorize_endpoints(self._correct_endpoints, query_params)
 

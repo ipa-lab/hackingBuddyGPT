@@ -9,7 +9,7 @@ import yaml
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy
-from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
+from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 
 
 class OpenAPISpecificationHandler(object):

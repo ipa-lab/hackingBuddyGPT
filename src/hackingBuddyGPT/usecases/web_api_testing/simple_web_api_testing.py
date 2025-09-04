@@ -14,6 +14,7 @@ from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.usecases.base import AutonomousUseCase, use_case
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import PromptStrategy
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
@@ -21,13 +22,12 @@ from hackingBuddyGPT.utils.openapi.openapi_parser import OpenAPISpecificationPar
 from hackingBuddyGPT.usecases.web_api_testing.report_handler import ReportHandler
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
-from hackingBuddyGPT.usecases.web_api_testing.utils.response_analyzer_with_llm import \
+from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
-from hackingBuddyGPT.usecases.web_api_testing.utils.response_handler import ResponseHandler
+from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.test_handler import GenerationTestHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
-from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
+from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
+from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
@@ -73,12 +73,32 @@ class SimpleWebAPITesting(AutonomousUseCase):
     _capabilities: CapabilityManager = None
     _all_test_cases_run: bool = False
 
+    def get_strategy(self, strategy_string):
+
+        strategies = {
+            "cot": PromptStrategy.CHAIN_OF_THOUGHT,
+            "tot": PromptStrategy.TREE_OF_THOUGHT,
+            "icl": PromptStrategy.IN_CONTEXT
+        }
+        return strategies.get(strategy_string, PromptStrategy.IN_CONTEXT)
+
     def init(self):
         super().init()
-        configuration_handler = ConfigurationHandler(self.config_path, self.strategy_string)
-        self.config, self.strategy = configuration_handler.load()
-        self.token, self.host, self.description, self.correct_endpoints, self.query_params = configuration_handler._extract_config_values(
-            self.config)
+
+        # load config file
+        self.strategy = self.get_strategy(self.strategy_string)
+
+        """Loads JSON configuration from the specified path."""
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError(f"Configuration file not found at {self.config_path}")
+        with open(self.config_path, 'r') as file:
+            self.config = json.load(file)
+            self.token = self.config.get("token")
+            self.host = self.config.get("host")
+            self.description = self.config.get("description")
+            self.correct_endpoints = self.config.get("correct_endpoints", {})
+            self.query_params = self.config.get("query_params", {})
+
         self._load_openapi_specification()
         self._setup_environment()
         self._setup_handlers()

@@ -12,14 +12,10 @@ from rich.panel import Panel
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
-from hackingBuddyGPT.utils.prompt_generation.information import (
-    PenTestingInformation,
-)
-from hackingBuddyGPT.usecases.web_api_testing.utils.response_analyzer_with_llm import (
-    ResponseAnalyzerWithLLM,
-)
-from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Prompt
+from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
+from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import ResponseAnalyzerWithLLM
+from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.utils.web_api.custom_datatypes import Prompt
 from hackingBuddyGPT.utils import tool_message
 
 

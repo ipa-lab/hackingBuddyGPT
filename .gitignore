@@ -32,3 +32,6 @@ src/hackingBuddyGPT/usecases/web_api_testing/retrieve_spotify_token.py
 config/my_configs/*
 config/configs/*
 config/configs/
+
+.DS_Store
+*.zip

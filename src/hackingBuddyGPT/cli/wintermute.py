@@ -1,14 +1,17 @@
-import argparse
+import tracemalloc
+
+tracemalloc.start()
+
 import sys
+import asyncio
 
 from hackingBuddyGPT.usecases.base import use_cases
 from hackingBuddyGPT.utils.configurable import CommandMap, InvalidCommand, Parseable, instantiate
 
 
 def main():
-    use_case_parsers: CommandMap = {
-        name: Parseable(use_case, description=use_case.description)
-        for name, use_case in use_cases.items()
+    use_case_parsers: CommandMap[...] = {
+        name: Parseable(use_case, description=use_case.description) for name, use_case in use_cases.items()
     }
     try:
         instance, configuration = instantiate(sys.argv, use_case_parsers)
@@ -17,7 +20,7 @@ def main():
             print(e)
         print(e.usage)
         sys.exit(1)
-    instance.run(configuration)
+    asyncio.run(instance.run(configuration))
 
 
 if __name__ == "__main__":

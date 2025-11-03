@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 import time
-from typing import Optional, Union
+from typing import Optional, Union, override
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
@@ -206,6 +206,7 @@ class Viewer(UseCase):
     TODOs:
     - [ ] This server needs to be as async as possible to allow good performance, but the database accesses are not yet, might be an issue?
     """
+
     log: GlobalLocalLogger = None
     log_db: DbStorage = None
     log_server_address: str = "127.0.0.1:4444"
@@ -232,7 +233,8 @@ class Viewer(UseCase):
         with open(file_path, "a") as f:
             f.write(ReplayMessage(datetime.datetime.now(), message).to_json() + "\n")
 
-    def run(self, config):
+    @override
+    async def run(self, configuration):
         @asynccontextmanager
         async def lifespan(app: FastAPI):
             app.state.db = self.log_db
@@ -259,7 +261,7 @@ class Viewer(UseCase):
         templates = Jinja2Templates(directory=TEMPLATE_DIR)
         app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-        @app.get('/favicon.ico')
+        @app.get("/favicon.ico")
         async def favicon():
             return FileResponse(STATIC_DIR + "/favicon.ico", headers={"Cache-Control": "public, max-age=31536000"})
 
@@ -281,23 +283,63 @@ class Viewer(UseCase):
                     if message_type == MessageType.RUN:
                         if message.id is None:
                             message.started_at = datetime.datetime.now()
-                            message.id = app.state.db.create_run(message.model, message.tag, message.started_at, message.configuration)
-                            data["data"]["id"] = message.id  # set the id also in the raw data, so we can properly serialize it to replays
+                            message.id = app.state.db.create_run(
+                                message.model, message.tag, message.started_at, message.configuration
+                            )
+                            data["data"]["id"] = (
+                                message.id
+                            )  # set the id also in the raw data, so we can properly serialize it to replays
                         else:
-                            app.state.db.update_run(message.id, message.model, message.state, message.tag, message.started_at, message.stopped_at, message.configuration)
+                            app.state.db.update_run(
+                                message.id,
+                                message.model,
+                                message.state,
+                                message.tag,
+                                message.started_at,
+                                message.stopped_at,
+                                message.configuration,
+                            )
                         await websocket.send_text(message.to_json())
 
                     elif message_type == MessageType.MESSAGE:
-                        app.state.db.add_or_update_message(message.run_id, message.id, message.conversation, message.role, message.content, message.reasoning, message.tokens_query, message.tokens_response, message.tokens_reasoning, message.duration)
+                        app.state.db.add_or_update_message(
+                            message.run_id,
+                            message.id,
+                            message.conversation,
+                            message.role,
+                            message.content,
+                            message.reasoning,
+                            message.tokens_query,
+                            message.tokens_response,
+                            message.tokens_reasoning,
+                            message.duration,
+                        )
 
                     elif message_type == MessageType.MESSAGE_STREAM_PART:
-                        app.state.db.handle_message_update(message.run_id, message.message_id, message.action, message.content, message.reasoning)
+                        app.state.db.handle_message_update(
+                            message.run_id, message.message_id, message.action, message.content, message.reasoning
+                        )
 
                     elif message_type == MessageType.TOOL_CALL:
-                        app.state.db.add_tool_call(message.run_id, message.message_id, message.id, message.function_name, message.arguments, message.result_text, message.duration)
+                        app.state.db.add_tool_call(
+                            message.run_id,
+                            message.message_id,
+                            message.id,
+                            message.function_name,
+                            message.arguments,
+                            message.result_text,
+                            message.duration,
+                        )
 
                     elif message_type == MessageType.SECTION:
-                        app.state.db.add_section(message.run_id, message.id, message.name, message.from_message, message.to_message, message.duration)
+                        app.state.db.add_section(
+                            message.run_id,
+                            message.id,
+                            message.name,
+                            message.from_message,
+                            message.to_message,
+                            message.duration,
+                        )
 
                     else:
                         print("UNHANDLED ingress", message)
@@ -309,6 +351,7 @@ class Viewer(UseCase):
 
             except WebSocketDisconnect as e:
                 import traceback
+
                 traceback.print_exc()
                 print("Ingress WebSocket disconnected")
 
@@ -337,6 +380,7 @@ class Viewer(UseCase):
                 print("Egress WebSocket disconnected")
 
         import uvicorn
+
         listen_parts = self.log_server_address.split(":", 1)
         if len(listen_parts) != 2:
             if listen_parts[0].startswith("http://"):
@@ -344,14 +388,19 @@ class Viewer(UseCase):
             elif listen_parts[0].startswith("https://"):
                 listen_parts.append("443")
             else:
-                raise ValueError(f"Invalid log server address (does not contain http/https or a port): {self.log_server_address}")
+                raise ValueError(
+                    f"Invalid log server address (does not contain http/https or a port): {self.log_server_address}"
+                )
 
         listen_host, listen_port = listen_parts[0], int(listen_parts[1])
         if listen_host.startswith("http://"):
-            listen_host = listen_host[len("http://"):]
+            listen_host = listen_host[len("http://") :]
         elif listen_host.startswith("https://"):
-            listen_host = listen_host[len("https://"):]
-        uvicorn.run(app, host=listen_host, port=listen_port)
+            listen_host = listen_host[len("https://") :]
+
+        config = uvicorn.Config(app, host=listen_host, port=listen_port)
+        server = uvicorn.Server(config)
+        await server.serve()
 
     def get_name(self) -> str:
         return "log_viewer"
@@ -402,8 +451,12 @@ class Replayer(UseCase):
             else:
                 raise ValueError("Message has no run_id", msg.message.data)
 
-            if self.pause_on_message and msg.message.type == MessageType.MESSAGE \
-               or self.pause_on_tool_calls and msg.message.type == MessageType.TOOL_CALL:
+            if (
+                self.pause_on_message
+                and msg.message.type == MessageType.MESSAGE
+                or self.pause_on_tool_calls
+                and msg.message.type == MessageType.TOOL_CALL
+            ):
                 input("Paused, press Enter to continue")
                 replay_start = datetime.datetime.now() - (msg.at - recording_start)
 

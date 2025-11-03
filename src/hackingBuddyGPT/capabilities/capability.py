@@ -1,6 +1,6 @@
 import abc
 import inspect
-from typing import Any, Callable, Dict, Iterable, Type, Union
+from typing import Any, Callable, Dict, Iterable, Type, Union, Awaitable
 
 import openai
 from openai.types.chat import ChatCompletionToolParam
@@ -35,7 +35,7 @@ class Capability(abc.ABC):
         return type(self).__name__
 
     @abc.abstractmethod
-    def __call__(self, *args, **kwargs):
+    async def __call__(self, *args, **kwargs) -> str:
         """
         The actual execution of a capability, please make sure, that the parameters and return type of your
         implementation are well typed, as this is used to properly support function calling.
@@ -59,8 +59,8 @@ class Capability(abc.ABC):
         }
         model_type = create_model(self.__class__.__name__, __doc__=self.describe(), **fields)
 
-        def execute(model):
-            return self(**model.dict())
+        async def execute(model):
+            return await self(**model.dict())
 
         model_type.execute = execute
 

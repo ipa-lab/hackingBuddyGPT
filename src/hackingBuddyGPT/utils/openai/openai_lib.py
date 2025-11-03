@@ -1,9 +1,8 @@
 import datetime
 import httpx
 from dataclasses import dataclass
-from typing import Dict, Iterable, Optional, Union, TypeAlias
+from typing import Iterable, Optional, Union, TypeAlias
 
-import json
 import instructor
 import openai
 import tiktoken
@@ -28,9 +27,11 @@ from hackingBuddyGPT.utils.configurable import parameter
 
 class ChatCompletionMessage(OpenAIChatCompletionMessage):
     # this mirrors what OpenRouter returns under the hood
-    reasoning: Optional[str] =  None
+    reasoning: str | None = None
+
 
 ChatCompletionMessageParam: TypeAlias = Union[OpenAIChatCompletionMessageParam, ChatCompletionMessage]
+
 
 @configurable("openai-lib", "OpenAI Library based connection")
 @dataclass
@@ -41,10 +42,14 @@ class OpenAILib(LLM):
     api_url: str = parameter(desc="URL of the OpenAI API", default="https://api.openai.com/v1")
     api_timeout: int = parameter(desc="Timeout for the API request", default=60)
     api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=3)
-    provider: Optional[str] = parameter(desc="OpenRouter provider, only useful if using OpenRouter, otherwise this might make the requests fail", default="")
-    proxy: Optional[str] = parameter(desc="Proxy URL for the API calls", default="")
+    provider: str | None = parameter(
+        desc="OpenRouter provider, only useful if using OpenRouter, otherwise this might make the requests fail",
+        default="",
+    )
+    proxy: str | None = parameter(desc="Proxy URL for the API calls", default="")
 
     _client: openai.OpenAI = None
+    _can_stream: bool = True
 
     def init(self):
         if self.proxy == "":
@@ -72,8 +77,10 @@ class OpenAILib(LLM):
     def instructor(self) -> instructor.Instructor:
         return instructor.from_openai(self.client)
 
-    def get_response(self, prompt, *, capabilities: Optional[Dict[str, Capability] ] = None, **kwargs) -> LLMResult:
-        """  # TODO: re-enable compatibility layer
+    def get_response(
+        self, prompt, *, capabilities: dict[str, Capability] | None = None, console: Console | None = None, **kwargs
+    ) -> LLMResult:
+        """# TODO: re-enable compatibility layer
         if isinstance(prompt, str) or hasattr(prompt, "render"):
             prompt = {"role": "user", "content": prompt}
 
@@ -105,6 +112,14 @@ class OpenAILib(LLM):
         duration = datetime.datetime.now() - tic
         message = response.choices[0].message
 
+        if console:
+            console.print("\n\n[bold blue]ASSISTANT:[/bold blue]")
+            console.print(message.content)
+
+            for tool_call in message.tool_calls or []:
+                console.print(f"\n\n[bold red]TOOL CALL - {tool_call.function.name}:[/bold red]")
+                console.print(tool_call.function.arguments)
+
         return LLMResult(
             message,
             str(prompt),
@@ -112,21 +127,46 @@ class OpenAILib(LLM):
             duration,
             response.usage.prompt_tokens,
             response.usage.completion_tokens,
-            response.usage.completion_tokens_details.reasoning_tokens if response.usage.completion_tokens_details else 0,
+            response.usage.completion_tokens_details.reasoning_tokens
+            if response.usage.completion_tokens_details
+            else 0,
         )
 
-    def stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None, get_individual_updates=False) -> Union[LLMResult, Iterable[Union[ChoiceDelta, LLMResult]]]:
-        #res = self.get_response(prompt, capabilities=capabilities)
-        #return [ChoiceDelta(content=res.answer), res]
+    def stream_response(
+        self,
+        prompt: Iterable[ChatCompletionMessageParam],
+        console: Console,
+        capabilities: dict[str, Capability] | None = None,
+        get_individual_updates: bool = False,
+    ) -> LLMResult | Iterable[ChoiceDelta | LLMResult]:
+        if not self._can_stream:
+            result = self.get_response(prompt, capabilities=capabilities, console=console)
+            if get_individual_updates:
+                return [result]
+            return result
 
-        generator = self._stream_response(prompt, console, capabilities)
+        try:
+            generator = self._stream_response(prompt, console, capabilities)
 
-        if get_individual_updates:
-            return generator
+            if get_individual_updates:
+                return generator
 
-        return list(generator)[-1]
+            return list(generator)[-1]
 
-    def _stream_response(self, prompt: Iterable[ChatCompletionMessageParam], console: Console, capabilities: Dict[str, Capability] = None) -> Iterable[Union[ChoiceDelta, LLMResult]]:
+        except openai.BadRequestError as e:
+            if "'stream' does not support true with this model" in str(e):
+                print("WARNING: Got an error that the model does not support streaming, falling back to non-streaming")
+                self._can_stream = False
+                return self.stream_response(prompt, console, capabilities, get_individual_updates)
+
+            raise e
+
+    def _stream_response(
+        self,
+        prompt: Iterable[ChatCompletionMessageParam],
+        console: Console,
+        capabilities: dict[str, Capability] | None = None,
+    ) -> Iterable[ChoiceDelta | LLMResult]:
         tools = None
         if capabilities:
             tools = capabilities_to_tools(capabilities)
@@ -162,7 +202,7 @@ class OpenAILib(LLM):
                     console.print(delta.content, end="")
                     outputs += 1
 
-                if hasattr(delta, 'reasoning') and delta.reasoning is not None and len(delta.reasoning) > 0:
+                if hasattr(delta, "reasoning") and delta.reasoning is not None and len(delta.reasoning) > 0:
                     if message.reasoning is None:
                         message.reasoning = ""
                     message.reasoning += delta.reasoning
@@ -229,7 +269,7 @@ class OpenAILib(LLM):
             toc - tic,
             usage.prompt_tokens,
             usage.completion_tokens,
-            usage.completion_tokens_details.reasoning_tokens if usage.completion_tokens_details else 0
+            usage.completion_tokens_details.reasoning_tokens if usage.completion_tokens_details else 0,
         )
 
     def encode(self, query) -> list[int]:

@@ -344,7 +344,7 @@ class LocalLogger(ALogger):
     async def stream_message(self, role: str) -> "MessageStreamLogger":
         message_id = self._last_message_id
         self._last_message_id += 1
-        logger = MessageStreamLogger(self, message_id, self._current_conversation, role)
+        logger = MessageStreamLogger(self, message_id, self._current_conversation, role, local_output=True)
         await logger.init()
         return logger
 
@@ -534,7 +534,7 @@ class RemoteLogger(ALogger):
 
     @override
     async def run_was_failure(self, reason: str, details: Optional[str] = None) -> int:
-        full_reason = reason + ("" if details is None else f": {details}")
+        full_reason = (reason if reason is not None else "") + ("" if details is None else f": {details}")
         message_id = await self.status_message(f"Run failed: {full_reason}")
         self.run.stopped_at = datetime.datetime.now()
         self.run.state = reason
@@ -568,7 +568,7 @@ class RemoteLogger(ALogger):
         message_id = self._last_message_id
         self._last_message_id += 1
 
-        logger = MessageStreamLogger(self, message_id, self._current_conversation, role)
+        logger = MessageStreamLogger(self, message_id, self._current_conversation, role, local_output=self.local_output)
         await logger.init()
         return logger
 
@@ -635,8 +635,11 @@ class MessageStreamLogger:
     message_id: int
     conversation: Optional[str]
     role: str
+    local_output: bool
 
     _completed: bool = False
+    _started_reasoning: bool = False
+    _printed_role: bool = False
 
     async def init(self):
         await self.logger._add_or_update_message(
@@ -650,9 +653,24 @@ class MessageStreamLogger:
             )
             # TODO: re-add? self.finalize(0, 0, 0, datetime.timedelta(0))
 
-    async def append(self, content: str, reasoning: Optional[str] = None):
+    async def append(self, content: str, reasoning: str | None = None):
         if self._completed:
             raise ValueError("MessageStreamLogger already finalized")
+        if self.local_output:
+            if reasoning is not None:
+                if self._printed_role:
+                    pass  # TODO: all bets are off
+                elif not self._started_reasoning:
+                    self.logger.console.print("\n\n[bold blue]REASONING:[/bold blue]")
+                    self._started_reasoning = True
+                self.logger.console.print(reasoning, end="")
+
+            if content is not None and len(content) > 0:
+                if not self._printed_role:
+                    self.logger.console.print("\n\n[bold blue]ASSISTANT:[/bold blue]")
+                    self._printed_role = True
+                self.logger.console.print(content, end="")
+
         await self.logger.add_message_update(self.message_id, "append", content, reasoning)
 
     async def finalize(
@@ -688,4 +706,8 @@ class MessageStreamLogger:
                 tokens_reasoning,
                 duration,
             )
+
+        if self.local_output:
+            self.logger.console.print()
+
         return self.message_id

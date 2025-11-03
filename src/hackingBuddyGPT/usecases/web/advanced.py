@@ -90,7 +90,7 @@ def stream_response(
                 delta.content, delta.reasoning if hasattr(delta, "reasoning") else None
             )  # TODO: reasoning is theoretically not defined on the model
     if result is None:
-        log.error_message("No result from the LLM")
+        log.status_message("No result from the LLM")
         return False
     message_id = stream_output.finalize(
         result.tokens_query, result.tokens_response, result.tokens_reasoning, result.duration

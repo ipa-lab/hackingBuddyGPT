@@ -9,16 +9,12 @@ import tiktoken
 from dataclasses import dataclass
 from openai.types import CompletionUsage
 from openai.types.chat import (
-    ChatCompletionChunk,
     ChatCompletionMessage as OpenAIChatCompletionMessage,
     ChatCompletionMessageParam as OpenAIChatCompletionMessageParam,
     ChatCompletionMessageToolCall,
 )
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from openai.types.chat.chat_completion_message_tool_call import Function
-from rich.console import Console
-from pydantic import Field
-
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_tools
 from hackingBuddyGPT.utils import LLM, LLMResult, configurable
@@ -30,7 +26,7 @@ class ChatCompletionMessage(OpenAIChatCompletionMessage):
     reasoning: str | None = None
 
 
-ChatCompletionMessageParam: TypeAlias = Union[OpenAIChatCompletionMessageParam, ChatCompletionMessage]
+ChatCompletionMessageParam: TypeAlias = OpenAIChatCompletionMessageParam | ChatCompletionMessage
 
 
 @configurable("openai-lib", "OpenAI Library based connection")
@@ -77,9 +73,7 @@ class OpenAILib(LLM):
     def instructor(self) -> instructor.Instructor:
         return instructor.from_openai(self.client)
 
-    def get_response(
-        self, prompt, *, capabilities: dict[str, Capability] | None = None, console: Console | None = None, **kwargs
-    ) -> LLMResult:
+    def get_response(self, prompt, *, capabilities: dict[str, Capability] | None = None, **kwargs) -> LLMResult:
         """# TODO: re-enable compatibility layer
         if isinstance(prompt, str) or hasattr(prompt, "render"):
             prompt = {"role": "user", "content": prompt}
@@ -112,14 +106,6 @@ class OpenAILib(LLM):
         duration = datetime.datetime.now() - tic
         message = response.choices[0].message
 
-        if console:
-            console.print("\n\n[bold blue]ASSISTANT:[/bold blue]")
-            console.print(message.content)
-
-            for tool_call in message.tool_calls or []:
-                console.print(f"\n\n[bold red]TOOL CALL - {tool_call.function.name}:[/bold red]")
-                console.print(tool_call.function.arguments)
-
         return LLMResult(
             message,
             str(prompt),
@@ -135,18 +121,17 @@ class OpenAILib(LLM):
     def stream_response(
         self,
         prompt: Iterable[ChatCompletionMessageParam],
-        console: Console,
         capabilities: dict[str, Capability] | None = None,
         get_individual_updates: bool = False,
     ) -> LLMResult | Iterable[ChoiceDelta | LLMResult]:
         if not self._can_stream:
-            result = self.get_response(prompt, capabilities=capabilities, console=console)
+            result = self.get_response(prompt, capabilities=capabilities)
             if get_individual_updates:
                 return [result]
             return result
 
         try:
-            generator = self._stream_response(prompt, console, capabilities)
+            generator = self._stream_response(prompt, capabilities)
 
             if get_individual_updates:
                 return generator
@@ -157,14 +142,13 @@ class OpenAILib(LLM):
             if "'stream' does not support true with this model" in str(e):
                 print("WARNING: Got an error that the model does not support streaming, falling back to non-streaming")
                 self._can_stream = False
-                return self.stream_response(prompt, console, capabilities, get_individual_updates)
+                return self.stream_response(prompt, capabilities, get_individual_updates)
 
             raise e
 
     def _stream_response(
         self,
         prompt: Iterable[ChatCompletionMessageParam],
-        console: Console,
         capabilities: dict[str, Capability] | None = None,
     ) -> Iterable[ChoiceDelta | LLMResult]:
         tools = None
@@ -180,12 +164,10 @@ class OpenAILib(LLM):
             stream_options={"include_usage": True},
         )
 
-        state = None
         message = ChatCompletionMessage(role="assistant", content="", tool_calls=[])
         usage: Optional[CompletionUsage] = None
 
         for chunk in chunks:
-            outputs = 0
             if len(chunk.choices) > 0:
                 if len(chunk.choices) > 1:
                     print("WARNING: Got more than one choice in the stream response")
@@ -196,25 +178,13 @@ class OpenAILib(LLM):
 
                 if delta.content is not None and len(delta.content) > 0:
                     message.content += delta.content
-                    if state != "content":
-                        state = "content"
-                        console.print("\n\n[bold blue]ASSISTANT:[/bold blue]")
-                    console.print(delta.content, end="")
-                    outputs += 1
 
                 if hasattr(delta, "reasoning") and delta.reasoning is not None and len(delta.reasoning) > 0:
                     if message.reasoning is None:
                         message.reasoning = ""
                     message.reasoning += delta.reasoning
-                    if state != "reasoning":
-                        state = "reasoning"
-                        console.print("\n\n[bold blue]REASONING:[/bold blue]")
-                    console.print(delta.reasoning, end="")
-                    outputs += 1
 
                 if delta.tool_calls is not None and len(delta.tool_calls) > 0:
-                    if state != "tool_call":
-                        state = "tool_call"
                     for tool_call in delta.tool_calls:
                         if len(message.tool_calls) <= tool_call.index:
                             if len(message.tool_calls) != tool_call.index:
@@ -228,7 +198,6 @@ class OpenAILib(LLM):
                             if tool_call.function.arguments is None:
                                 print(f"WARNING: Got a tool call with no arguments")
                                 continue
-                            console.print(f"\n\n[bold red]TOOL CALL - {tool_call.function.name}:[/bold red]")
 
                             message.tool_calls.append(
                                 ChatCompletionMessageToolCall(
@@ -241,18 +210,12 @@ class OpenAILib(LLM):
                             )
                         else:
                             message.tool_calls[tool_call.index].function.arguments += tool_call.function.arguments
-                        console.print(tool_call.function.arguments, end="")
-                        outputs += 1
 
                 yield delta
 
             if chunk.usage is not None:
                 usage = chunk.usage
 
-            if outputs > 1:
-                print("WARNING: Got more than one output in the stream response")
-
-        console.print()
         if usage is None:
             print("WARNING: Did not get usage information in the stream response")
             usage = CompletionUsage(completion_tokens=0, prompt_tokens=0, total_tokens=0)

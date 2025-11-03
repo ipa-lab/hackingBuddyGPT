@@ -91,7 +91,7 @@ class WebTestingWithExplanation(Agent):
         prompt = self._prompt_history  # TODO: in the future, this should do some context truncation
 
         result_stream: Iterable[Union[ChoiceDelta, LLMResult]] = self.llm.stream_response(
-            prompt, self.log.console, capabilities=self._capabilities, get_individual_updates=True
+            prompt, capabilities=self._capabilities, get_individual_updates=True
         )
         result: Optional[LLMResult] = None
         stream_output = await self.log.stream_message("assistant")  # TODO: do not hardcode the role
@@ -104,7 +104,7 @@ class WebTestingWithExplanation(Agent):
                     delta.content, delta.reasoning if hasattr(delta, "reasoning") else None
                 )  # TODO: reasoning is theoretically not defined on the model
         if result is None:
-            await self.log.error_message("No result from the LLM")
+            await self.log.status_message("No result from the LLM")
             return  # TODO: do we want to abort here or do we just continue?
 
         message_id = await stream_output.finalize(
@@ -135,7 +135,7 @@ class WebTestingWithExplanation(Agent):
 
                 traceback.print_exc()
 
-                await self.log.error_message(f"Error during tool call: {e}")
+                await self.log.status_message(f"Error during tool call: {e}")
 
 
 @use_case("Minimal implementation of a web testing use case while allowing the llm to 'talk'")

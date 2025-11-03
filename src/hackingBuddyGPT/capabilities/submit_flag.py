@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Callable, Awaitable, override
+from typing import Callable, Awaitable, Set, override
 
 from . import Capability
 

@@ -61,6 +61,7 @@ class OpenAPISpecificationHandler(object):
         self.file_path = os.path.join(current_path, "openapi_spec", str(strategy).split(".")[1].lower(), name.lower(), date)
         os.makedirs(self.file_path, exist_ok=True)
         self.file = os.path.join(self.file_path, self.filename)
+        print(f'self.file: {self.file}')
 
         self._capabilities = {"yaml": YAMLFile()}
         self.unsuccessful_paths = []
@@ -250,7 +251,7 @@ class OpenAPISpecificationHandler(object):
             # Write to YAML file
             with open(self.file, "w") as yaml_file:
                 yaml.dump(openapi_data, yaml_file, allow_unicode=True, default_flow_style=False)
-            print(f"OpenAPI specification written to {self.filename}.")
+                print(f"OpenAPI specification written to {self.file}.")
         except Exception as e:
             raise Exception(f"Error writing YAML file: {e}") from e
 
@@ -277,7 +278,7 @@ class OpenAPISpecificationHandler(object):
         if result_str is None:
             return prompt_engineer
         endpoints = self.update_openapi_spec(response, result, prompt_engineer)
-        if prompt_engineer.prompt_helper.found_endpoints != endpoints and endpoints != [] and len(endpoints) != 1:
+        if prompt_engineer.prompt_helper.new_endpoint_found:
             self.write_openapi_to_yaml()
             prompt_engineer.prompt_helper.schemas = self.schemas
 

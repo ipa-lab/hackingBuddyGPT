@@ -188,8 +188,10 @@ class ResponseAnalyzerWithLLM:
         # Call the LLM and handle the response
         response, completion = self.llm_handler.execute_prompt_with_specific_capability(prompt_history, capability)
         message = completion.choices[0].message
-        prompt_history.append(message)
         tool_call_id = message.tool_calls[0].id
+
+        msg = {"role": message.role, "content": message.content, "tool_calls": message.tool_calls}
+        prompt_history.append(msg)
 
         # Execute any tool call results and handle outputs
         try:
@@ -197,6 +199,7 @@ class ResponseAnalyzerWithLLM:
         except Exception as e:
             result = f"Error executing tool call: {str(e)}"
         prompt_history.append(tool_message(str(result), tool_call_id))
+
 
         return prompt_history, result
 

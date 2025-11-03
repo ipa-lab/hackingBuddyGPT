@@ -73,32 +73,6 @@ class Agent(ABC):
         await self.log.add_tool_call(message_id, tool_call_id, capability_name, arguments, result, duration)
         return result
 
-    def run_capability_simple_text(self, message_id: int, cmd: str) -> tuple[str, str, str, bool]:
-        _capability_descriptions, parser = capabilities_to_simple_text_handler(
-            self._capabilities, default_capability=self._default_capability
-        )
-
-        tic = datetime.datetime.now()
-        try:
-            success, output = parser(cmd)
-        except Exception as e:
-            success = False
-            output = f"EXCEPTION: {e}"
-        duration = datetime.datetime.now() - tic
-
-        if not success:
-            self.log.add_tool_call(
-                message_id, tool_call_id=0, function_name="", arguments=cmd, result_text=output[0], duration=0
-            )
-            return "", "", output, False
-
-        capability, cmd, (result, got_root) = output
-        self.log.add_tool_call(
-            message_id, tool_call_id=0, function_name=capability, arguments=cmd, result_text=result, duration=duration
-        )
-
-        return capability, cmd, result, got_root
-
     def get_capability_block(self) -> str:
         capability_descriptions, _parser = capabilities_to_simple_text_handler(self._capabilities)
         return "You can either\n\n" + "\n".join(f"- {description}" for description in capability_descriptions.values())

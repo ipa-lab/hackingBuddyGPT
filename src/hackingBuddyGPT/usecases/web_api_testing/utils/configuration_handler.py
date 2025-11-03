@@ -7,14 +7,14 @@ from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy
 class ConfigurationHandler(object):
 
     def __init__(self, config_file, strategy_string=None):
-        self.config_file = config_file
+        self.config_path = config_file
         self.strategy_string = strategy_string
 
     def load(self, strategy_string=None):
-        if self.config_file != "":
-            if self.config_file != "":
+        if self.config_path != "":
+            if self.config_path != "":
                 current_file_path = os.path.dirname(os.path.abspath(__file__))
-                self.config_path = os.path.join(current_file_path, "configs", self.config_file)
+                self.config_path = os.path.join(current_file_path, "configs", self.config_path)
         config = self._load_config()
 
         if "spotify" in self.config_path:

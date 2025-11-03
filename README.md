@@ -9,6 +9,11 @@
 
 HackingBuddyGPT helps security researchers use LLMs to discover new attack vectors and save the world (or earn bug bounties) in 50 lines of code or less. In the long run, we hope to make the world a safer place by empowering security  professionals to get more hacking done by using AI. The more testing they can do, the safer all of us will get.
 
+**🆕 New Feature**: hackingBuddyGPT now supports both SSH connections to remote targets and local shell execution for easier testing and development!
+
+**⚠️ WARNING**: This software will execute commands on live environments. When using local shell mode, commands will be executed on your local system, which could potentially lead to data loss, system modification, or security vulnerabilities. Always use appropriate precautions and consider using isolated environments or virtual machines for testing.
+
+
 We aim to become **THE go-to framework for security researchers** and pen-testers interested in using LLMs or LLM-based autonomous agents for security testing. To aid their experiments, we also offer re-usable [linux priv-esc benchmarks](https://github.com/ipa-lab/benchmark-privesc-linux) and publish all our findings as open-access reports.
 
 If you want to use hackingBuddyGPT and need help selecting the best LLM for your tasks, [we have a paper comparing multiple LLMs](https://arxiv.org/abs/2310.11409).
@@ -65,13 +70,14 @@ Our initial forays were focused upon evaluating the efficiency of LLMs for [linu
 privilege escalation attacks](https://arxiv.org/abs/2310.11409) and we are currently breaching out into evaluation
 the use of LLMs for web penetration-testing and web api testing.
 
-| Name                                                                         | Description                                                                                                                                                                                                                                                                                   | Screenshot                                                                                                                                                                                                                                                  |
-|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [minimal](https://docs.hackingbuddy.ai/docs/dev-guide/dev-quickstart)        | A minimal 50 LoC Linux Priv-Esc example. This is the usecase from [Build your own Agent/Usecase](#build-your-own-agentusecase)                                                                                                                                                                | ![A very minimal run](https://docs.hackingbuddy.ai/run_archive/2024-04-29_minimal.png)                                                                                                                                                                      |
-| [linux-privesc](https://docs.hackingbuddy.ai/docs/usecases/linux-priv-esc)   | Given an SSH-connection for a low-privilege user, task the LLM to become the root user. This would be a typical Linux privilege escalation attack. We published two academic papers about this: [paper #1](https://arxiv.org/abs/2308.00121) and [paper #2](https://arxiv.org/abs/2310.11409) | ![Example wintermute run](https://docs.hackingbuddy.ai/run_archive/2024-04-06_linux.png)                                                                                                                                                                    |
-| [web-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web)          | Directly hack a webpage. Currently in heavy development and pre-alpha stage.                                                                                                                                                                                                                  | ![Test Run for a simple Blog Page](https://docs.hackingbuddy.ai/run_archive/2024-05-03_web.png)                                                                                                                                                             |
-| [web-api-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web-api)  | Directly test a REST API. Currently in heavy development and pre-alpha stage. (Documentation and testing of REST API.)                                                                                                                                                                        | Documentation:![web_api_documentation.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api_documentation.png) Testing:![web_api_testing.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api.png)                                   |
+| Name                                                                         | Description                                                                                                                                                                                                                                                                                   | Screenshot                                                                                                                                                                                                                              |
+|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [minimal](https://docs.hackingbuddy.ai/docs/dev-guide/dev-quickstart)        | A minimal 50 LoC Linux Priv-Esc example. This is the usecase from [Build your own Agent/Usecase](#build-your-own-agentusecase)                                                                                                                                                                | ![A very minimal run](https://docs.hackingbuddy.ai/run_archive/2024-04-29_minimal.png)                                                                                                                                                  |
+| [linux-privesc](https://docs.hackingbuddy.ai/docs/usecases/linux-priv-esc)   | Given a connection (SSH or local shell) for a low-privilege user, task the LLM to become the root user. This would be a typical Linux privilege escalation attack. We published two academic papers about this: [paper #1](https://arxiv.org/abs/2308.00121) and [paper #2](https://arxiv.org/abs/2310.11409) | ![Example wintermute run](https://docs.hackingbuddy.ai/run_archive/2024-04-06_linux.png)                                                                                                                                                |
+| [web-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web)          | Directly hack a webpage. Currently in heavy development and pre-alpha stage.                                                                                                                                                                                                                  | ![Test Run for a simple Blog Page](https://docs.hackingbuddy.ai/run_archive/2024-05-03_web.png)                                                                                                                                         |
+| [web-api-pentest (WIP)](https://docs.hackingbuddy.ai/docs/usecases/web-api)  | Directly test a REST API. Currently in heavy development and pre-alpha stage. (Documentation and testing of REST API.)                                                                                                                                                                        | Documentation:![web_api_documentation.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api_documentation.png) Testing:![web_api_testing.png](https://docs.hackingbuddy.ai/run_archive/2024-05-15_web-api.png)               |
 | [extended linux-privesc](https://docs.hackingbuddy.ai/docs/usecases/extended-linux-privesc) | This usecases extends linux-privesc with additional features such as retrieval augmented generation (RAG) or chain-of-thought (CoT)                                                                                                                                                           | ![Extended Linux Privilege Escalation Run](https://docs.hackingbuddy.ai/run_archive/2025-4-14_extended_privesc_usecase_1.png) ![Extended Linux Privilege Escalation Run](https://docs.hackingbuddy.ai/run_archive/2025-4-14_extended_privesc_usecase_2.png) |
+
 ## Build your own Agent/Usecase
 
 So you want to create your own LLM hacking agent? We've got you covered and taken care of the tedious groundwork.
@@ -79,7 +85,7 @@ So you want to create your own LLM hacking agent? We've got you covered and take
 Create a new usecase and implement `perform_round` containing all system/LLM interactions. We provide multiple helper and base classes so that a new experiment can be implemented in a few dozen lines of code. Tedious tasks, such as
 connecting to the LLM, logging, etc. are taken care of by our framework. Check our [developer quickstart quide](https://docs.hackingbuddy.ai/docs/dev-guide/dev-quickstart) for more information.
 
-The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and can connect to a linux target over SSH for fully-autonomous command execution (as well as password guessing).
+The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and can connect to a target system either locally or over SSH for fully-autonomous command execution (as well as password guessing).
 
 ~~~ python
 template_dir = pathlib.Path(__file__).parent
@@ -155,7 +161,9 @@ We try to keep our python dependencies as light as possible. This should allow f
 
 1. an OpenAI API account, you can find the needed keys [in your account page](https://platform.openai.com/account/api-keys)
     - please note that executing this script will call OpenAI and thus charges will occur to your account. Please keep track of those.
-2. a potential target that is accessible over SSH. You can either use a deliberately vulnerable machine such as [Lin.Security.1](https://www.vulnhub.com/entry/) or a security benchmark such as our [linux priv-esc benchmark](https://github.com/ipa-lab/benchmark-privesc-linux).
+2. a target environment to test against. You have two options:
+    - **Local Shell**: Use your local system (useful for testing and development)
+    - **SSH Target**: A remote machine accessible over SSH. You can use a deliberately vulnerable machine such as [Lin.Security.1](https://www.vulnhub.com/entry/) or a security benchmark such as our [linux priv-esc benchmark](https://github.com/ipa-lab/benchmark-privesc-linux).
 
 To get everything up and running, clone the repo, download requirements, setup API keys and credentials, and start `wintermute.py`:
 
@@ -229,11 +237,45 @@ usage: src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc [--help] [--config con
     --conn.port='2222'     (default from .env file, alternatives: 22 from builtin)
 ```
 
-### Provide a Target Machine over SSH
+### Connection Options: Local Shell vs SSH
 
-The next important part is having a machine that we can run our agent against. In our case, the target machine will be situated at `192.168.122.151`.
+hackingBuddyGPT now supports two connection modes:
 
-We are using vulnerable Linux systems running in Virtual Machines for this. Never run this against real systems.
+#### Local Shell Mode
+Use your local system for testing and development. This is useful for quick experimentation without needing a separate target machine.
+
+**Setup Steps:**
+1. First, create a new tmux session with a specific name:
+   ```bash
+   $ tmux new-session -s <session_name>
+   ```
+   
+2. Once you have the tmux shell running, use hackingBuddyGPT to interact with it:
+   ```bash
+   # Local shell with tmux session
+   $ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --conn=local_shell --conn.tmux_session=<session_name>
+   ```
+
+**Example:**
+```bash
+# Step 1: Create tmux session named "hacking_session"
+$ tmux new-session -s hacking_session
+
+# Step 2: In another terminal, run hackingBuddyGPT
+$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --conn=local_shell --conn.tmux_session=hacking_session
+```
+
+#### SSH Mode  
+Connect to a remote target machine over SSH. This is the traditional mode for testing against vulnerable VMs.
+
+```bash
+# SSH connection (note the updated format with --conn=ssh)
+$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --conn=ssh --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1
+```
+
+When using SSH mode, the target machine should be situated at your specified IP address (e.g., `192.168.122.151` in the example above).
+
+We are using vulnerable Linux systems running in Virtual Machines for SSH testing. Never run this against real production systems.
 
 > 💡 **We also provide vulnerable machines!**
 >
@@ -277,9 +319,13 @@ Finally we can run hackingBuddyGPT against our provided test VM. Enjoy!
 With that out of the way, let's look at an example hackingBuddyGPT run. Each run is structured in rounds. At the start of each round, hackingBuddyGPT asks a LLM for the next command to execute (e.g., `whoami`) for the first round. It then executes that command on the virtual machine, prints its output and starts a new round (in which it also includes the output of prior rounds) until it reaches step number 10 or becomes root:
 
 ```bash
-# start wintermute, i.e., attack the configured virtual machine
-$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...ChangeMeToYourOpenAiApiKey --llm.model=gpt-4-turbo --llm.context_size=8192 --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
+# Example 1: Using local shell with tmux session
+# First create the tmux session: tmux new-session -s hacking_session
+# Then run hackingBuddyGPT:
+$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...ChangeMeToYourOpenAiApiKey --llm.model=gpt-4-turbo --llm.context_size=8192 --conn=local_shell --conn.tmux_session=hacking_session
 
+# Example 2: Using SSH connection (updated format)
+$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...ChangeMeToYourOpenAiApiKey --llm.model=gpt-4-turbo --llm.context_size=8192 --conn=ssh --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
 
 # install dependencies for testing if you want to run the tests
 $ pip install '.[testing]'

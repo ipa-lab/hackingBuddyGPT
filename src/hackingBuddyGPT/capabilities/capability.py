@@ -72,8 +72,8 @@ class Capability(abc.ABC):
 class Action(BaseModel):
     action: BaseModel
 
-    def execute(self):
-        return self.action.execute()
+    async def execute(self):
+        return await self.action.execute()
 
 
 def capabilities_to_action_model(capabilities: Dict[str, Capability]) -> Type[Action]:

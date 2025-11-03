@@ -25,7 +25,7 @@ scripts/mac_ansible_hosts.ini
 scripts/mac_ansible_id_rsa
 scripts/mac_ansible_id_rsa.pub
 .aider*
-
+*.bak
 src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/
 src/hackingBuddyGPT/usecases/web_api_testing/documentation/reports/
 src/hackingBuddyGPT/usecases/web_api_testing/retrieve_spotify_token.py

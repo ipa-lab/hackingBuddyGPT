@@ -85,7 +85,7 @@ class AutonomousUseCase(UseCase, abc.ABC):
 
             await self.after_run()
 
-            if (reason := limits.reason()) is None:
+            if (reason := limits.reason()) is not None:
                 await self.log.run_was_failure(reason)
             else:
                 await self.log.run_was_success()

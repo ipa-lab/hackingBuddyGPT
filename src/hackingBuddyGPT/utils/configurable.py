@@ -320,6 +320,8 @@ class ParameterDefinition(Generic[C]):
             value = get_at(collection, self.name)
             if value is None:
                 raise ParameterError(f"Missing required parameter '--{'.'.join(self.name)}'", self.name)
+            if self.type is bool:
+                value = value.lower() in ["true", "yes", "on"]
             self._instance = self.type(value)
         return self._instance
 

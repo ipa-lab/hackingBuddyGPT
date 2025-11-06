@@ -117,6 +117,8 @@ class ALogger(ABC):
         tokens_query: int,
         tokens_response: int,
         tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
         duration: datetime.timedelta,
     ) -> int:
         pass
@@ -132,6 +134,8 @@ class ALogger(ABC):
         tokens_query: int,
         tokens_response: int,
         tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
         duration: datetime.timedelta,
     ):
         pass
@@ -231,6 +235,8 @@ class LocalLogger(ALogger):
         tokens_query: int,
         tokens_response: int,
         tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
         duration: datetime.timedelta,
     ) -> int:
         message_id = self._last_message_id
@@ -246,6 +252,8 @@ class LocalLogger(ALogger):
             tokens_query,
             tokens_response,
             tokens_reasoning,
+            usage_details,
+            cost,
             duration,
         )
         self.console.print(
@@ -268,6 +276,8 @@ class LocalLogger(ALogger):
         tokens_query: int,
         tokens_response: int,
         tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
         duration: datetime.timedelta,
     ):
         self.log_db.add_or_update_message(
@@ -280,6 +290,8 @@ class LocalLogger(ALogger):
             tokens_query,
             tokens_response,
             tokens_reasoning,
+            usage_details,
+            cost,
             duration,
         )
 
@@ -321,11 +333,11 @@ class LocalLogger(ALogger):
 
     @override
     async def status_message(self, message: str) -> int:
-        return await self.add_message("status", message, "", 0, 0, 0, datetime.timedelta(0))
+        return await self.add_message("status", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
 
     @override
     async def system_message(self, message: str) -> int:
-        return await self.add_message("system", message, "", 0, 0, 0, datetime.timedelta(0))
+        return await self.add_message("system", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
 
     @override
     async def call_response(self, llm_result: LLMResult) -> int:
@@ -336,7 +348,9 @@ class LocalLogger(ALogger):
             llm_result.reasoning,
             llm_result.tokens_query,
             llm_result.tokens_response,
-            llm_results.tokens_reasoning,
+            llm_result.tokens_reasoning,
+            llm_result.usage_details,
+            llm_result.cost,
             llm_result.duration,
         )
 
@@ -441,6 +455,8 @@ class RemoteLogger(ALogger):
         tokens_query: int,
         tokens_response: int,
         tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
         duration: datetime.timedelta,
     ) -> int:
         message_id = self._last_message_id
@@ -458,6 +474,8 @@ class RemoteLogger(ALogger):
             tokens_query=tokens_query,
             tokens_response=tokens_response,
             tokens_reasoning=tokens_reasoning,
+            usage_details=usage_details,
+            cost=cost,
         )
         await self.send(MessageType.MESSAGE, msg)
         if self.local_output:
@@ -481,6 +499,8 @@ class RemoteLogger(ALogger):
         tokens_query: int,
         tokens_response: int,
         tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
         duration: datetime.timedelta,
     ):
         msg = Message(
@@ -495,6 +515,8 @@ class RemoteLogger(ALogger):
             tokens_query=tokens_query,
             tokens_response=tokens_response,
             tokens_reasoning=tokens_reasoning,
+            usage_details=usage_details,
+            cost=cost,
         )
         await self.send(MessageType.MESSAGE, msg)
 
@@ -544,11 +566,11 @@ class RemoteLogger(ALogger):
 
     @override
     async def status_message(self, message: str) -> int:
-        return await self.add_message("status", message, "", 0, 0, 0, datetime.timedelta(0))
+        return await self.add_message("status", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
 
     @override
     async def system_message(self, message: str) -> int:
-        return await self.add_message("system", message, "", 0, 0, 0, datetime.timedelta(0))
+        return await self.add_message("system", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
 
     @override
     async def call_response(self, llm_result: LLMResult) -> int:
@@ -559,7 +581,9 @@ class RemoteLogger(ALogger):
             llm_result.reasoning,
             llm_result.tokens_query,
             llm_result.tokens_response,
-            llm_results.tokens_reasoning,
+            llm_result.tokens_reasoning,
+            llm_result.usage_details,
+            llm_result.cost,
             llm_result.duration,
         )
 
@@ -643,7 +667,7 @@ class MessageStreamLogger:
 
     async def init(self):
         await self.logger._add_or_update_message(
-            self.message_id, self.conversation, self.role, "", "", 0, 0, 0, datetime.timedelta(0)
+            self.message_id, self.conversation, self.role, "", "", 0, 0, 0, "", 0, datetime.timedelta(0)
         )
 
     def __del__(self):
@@ -678,6 +702,8 @@ class MessageStreamLogger:
         tokens_query: int,
         tokens_response: int,
         tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
         duration: datetime.timedelta,
         overwrite_finished_message: str | None = None,
     ):
@@ -692,6 +718,8 @@ class MessageStreamLogger:
                 tokens_query,
                 tokens_response,
                 tokens_reasoning,
+                usage_details,
+                cost,
                 duration,
             )
         else:
@@ -704,6 +732,8 @@ class MessageStreamLogger:
                 tokens_query,
                 tokens_response,
                 tokens_reasoning,
+                usage_details,
+                cost,
                 duration,
             )
 

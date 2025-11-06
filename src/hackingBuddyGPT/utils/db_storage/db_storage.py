@@ -7,9 +7,14 @@ from typing import Literal, Optional, Union
 from hackingBuddyGPT.utils.configurable import Global, configurable, parameter
 
 
-timedelta_metadata = config(encoder=lambda td: td.total_seconds(), decoder=lambda seconds: datetime.timedelta(seconds=seconds))
+timedelta_metadata = config(
+    encoder=lambda td: td.total_seconds(), decoder=lambda seconds: datetime.timedelta(seconds=seconds)
+)
 datetime_metadata = config(encoder=lambda dt: dt.isoformat(), decoder=lambda iso: datetime.datetime.fromisoformat(iso))
-optional_datetime_metadata = config(encoder=lambda dt: dt.isoformat() if dt else None, decoder=lambda iso: datetime.datetime.fromisoformat(iso) if iso else None)
+optional_datetime_metadata = config(
+    encoder=lambda dt: dt.isoformat() if dt else None,
+    decoder=lambda iso: datetime.datetime.fromisoformat(iso) if iso else None,
+)
 
 
 StreamAction = Literal["append"]
@@ -52,6 +57,8 @@ class Message:
     tokens_query: int
     tokens_response: int
     tokens_reasoning: int
+    usage_details: str
+    cost: float  # TODO: this is probably bad, but I am not sure if we can even avoid it, since the number is initially decoded as float...
 
 
 @dataclass_json
@@ -97,7 +104,10 @@ LogTypes = Union[Run, Section, Message, MessageStreamPart, ToolCall, ToolCallStr
 @configurable("db_storage", "Stores the results of the experiments in a SQLite database")
 class RawDbStorage:
     def __init__(
-        self, connection_string: str = parameter(desc="sqlite3 database connection string for logs", default="wintermute.sqlite3")
+        self,
+        connection_string: str = parameter(
+            desc="sqlite3 database connection string for logs", default="wintermute.sqlite3"
+        ),
     ):
         self.connection_string = connection_string
 
@@ -148,6 +158,8 @@ class RawDbStorage:
                 tokens_query INTEGER,
                 tokens_response INTEGER,
                 tokens_reasoning INTEGER,
+                usage_details VARCHAR,
+                cost REAL,
                 PRIMARY KEY (run_id, id),
                 FOREIGN KEY (run_id) REFERENCES runs (id)
             )
@@ -212,26 +224,91 @@ class RawDbStorage:
         )
         return self.cursor.lastrowid
 
-    def add_message(self, run_id: int, message_id: int, conversation: Optional[str], role: str, content: str, reasoning: str, tokens_query: int, tokens_response: int, tokens_reasoning: int, duration: datetime.timedelta):
+    def add_message(
+        self,
+        run_id: int,
+        message_id: int,
+        conversation: Optional[str],
+        role: str,
+        content: str,
+        reasoning: str,
+        tokens_query: int,
+        tokens_response: int,
+        tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
+        duration: datetime.timedelta,
+    ):
         self.cursor.execute(
-            "INSERT INTO messages (run_id, conversation, id, role, content, reasoning, tokens_query, tokens_response, tokens_reasoning, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (run_id, conversation, message_id, role, content, reasoning, tokens_query, tokens_response, tokens_reasoning, duration.total_seconds())
+            "INSERT INTO messages (run_id, conversation, id, role, content, reasoning, tokens_query, tokens_response, tokens_reasoning, usage_details, cost, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                run_id,
+                conversation,
+                message_id,
+                role,
+                content,
+                reasoning,
+                tokens_query,
+                tokens_response,
+                tokens_reasoning,
+                usage_details,
+                cost,
+                duration.total_seconds(),
+            ),
         )
 
-    def add_or_update_message(self, run_id: int, message_id: int, conversation: Optional[str], role: str, content: str, reasoning: str, tokens_query: int, tokens_response: int, tokens_reasoning: int, duration: datetime.timedelta):
+    def add_or_update_message(
+        self,
+        run_id: int,
+        message_id: int,
+        conversation: Optional[str],
+        role: str,
+        content: str,
+        reasoning: str,
+        tokens_query: int,
+        tokens_response: int,
+        tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
+        duration: datetime.timedelta,
+    ):
         self.cursor.execute(
             "SELECT COUNT(*) FROM messages WHERE run_id = ? AND id = ?",
             (run_id, message_id),
         )
         if self.cursor.fetchone()[0] == 0:
             self.cursor.execute(
-                "INSERT INTO messages (run_id, conversation, id, role, content, reasoning, tokens_query, tokens_response, tokens_reasoning, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (run_id, conversation, message_id, role, content, reasoning, tokens_query, tokens_response, tokens_reasoning, duration.total_seconds()),
+                "INSERT INTO messages (run_id, conversation, id, role, content, reasoning, tokens_query, tokens_response, tokens_reasoning, usage_details, cost, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    run_id,
+                    conversation,
+                    message_id,
+                    role,
+                    content,
+                    reasoning,
+                    tokens_query,
+                    tokens_response,
+                    tokens_reasoning,
+                    usage_details,
+                    cost,
+                    duration.total_seconds(),
+                ),
             )
         else:
             self.cursor.execute(
-                "UPDATE messages SET conversation = ?, role = ?, tokens_query = ?, tokens_response = ?, tokens_reasoning = ?, duration = ? WHERE run_id = ? AND id = ?",
-                (conversation, role, tokens_query, tokens_response, tokens_reasoning, duration.total_seconds(), run_id, message_id),
+                "UPDATE messages SET conversation = ?, role = ?, tokens_query = ?, tokens_response = ?, tokens_reasoning = ?, usage_details = ?, cost = ?, duration = ? WHERE run_id = ? AND id = ?",
+                (
+                    conversation,
+                    role,
+                    tokens_query,
+                    tokens_response,
+                    tokens_reasoning,
+                    usage_details,
+                    cost,
+                    duration.total_seconds(),
+                    run_id,
+                    message_id,
+                ),
             )
             if len(content) > 0:
                 self.cursor.execute(
@@ -244,19 +321,32 @@ class RawDbStorage:
                     (reasoning, run_id, message_id),
                 )
 
-    def add_section(self, run_id: int, section_id: int, name: str, from_message: int, to_message: int, duration: datetime.timedelta):
+    def add_section(
+        self, run_id: int, section_id: int, name: str, from_message: int, to_message: int, duration: datetime.timedelta
+    ):
         self.cursor.execute(
             "INSERT OR REPLACE INTO sections (run_id, id, name, from_message, to_message, duration) VALUES (?, ?, ?, ?, ?, ?)",
-            (run_id, section_id, name, from_message, to_message, duration.total_seconds())
+            (run_id, section_id, name, from_message, to_message, duration.total_seconds()),
         )
 
-    def add_tool_call(self, run_id: int, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration: datetime.timedelta):
+    def add_tool_call(
+        self,
+        run_id: int,
+        message_id: int,
+        tool_call_id: str,
+        function_name: str,
+        arguments: str,
+        result_text: str,
+        duration: datetime.timedelta,
+    ):
         self.cursor.execute(
             "INSERT INTO tool_calls (run_id, message_id, id, function_name, arguments, result_text, duration) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (run_id, message_id, tool_call_id, function_name, arguments, result_text, duration.total_seconds()),
         )
 
-    def handle_message_update(self, run_id: int, message_id: int, action: StreamAction, content: str, reasoning: Optional[str] = None):
+    def handle_message_update(
+        self, run_id: int, message_id: int, action: StreamAction, content: str, reasoning: Optional[str] = None
+    ):
         if action != "append":
             raise ValueError("unsupported action" + action)
         self.cursor.execute(
@@ -269,10 +359,31 @@ class RawDbStorage:
                 (reasoning, run_id, message_id),
             )
 
-    def finalize_message(self, run_id: int, message_id: int, tokens_query: int, tokens_response: int, tokens_reasoning: int, duration: datetime.timedelta, overwrite_finished_message: Optional[str] = None, overwrite_finished_reasoning: Optional[str] = None):
+    def finalize_message(
+        self,
+        run_id: int,
+        message_id: int,
+        tokens_query: int,
+        tokens_response: int,
+        tokens_reasoning: int,
+        usage_details: str,
+        cost: float,
+        duration: datetime.timedelta,
+        overwrite_finished_message: Optional[str] = None,
+        overwrite_finished_reasoning: Optional[str] = None,
+    ):
         self.cursor.execute(
-            "UPDATE messages SET tokens_query = ?, tokens_response = ?, tokens_reasoning = ?, duration = ? WHERE run_id = ? AND id = ?",
-            (tokens_query, tokens_response, tokens_reasoning, duration.total_seconds(), run_id, message_id),
+            "UPDATE messages SET tokens_query = ?, tokens_response = ?, tokens_reasoning = ?, usage_details = ?, cost = ?, duration = ? WHERE run_id = ? AND id = ?",
+            (
+                tokens_query,
+                tokens_response,
+                tokens_reasoning,
+                usage_details,
+                cost,
+                duration.total_seconds(),
+                run_id,
+                message_id,
+            ),
         )
         if overwrite_finished_message:
             self.cursor.execute(
@@ -285,7 +396,16 @@ class RawDbStorage:
                 (overwrite_finished_reasoning, run_id, message_id),
             )
 
-    def update_run(self, run_id: int, model: str, state: str, tag: str, started_at: datetime.datetime, stopped_at: datetime.datetime, configuration: str):
+    def update_run(
+        self,
+        run_id: int,
+        model: str,
+        state: str,
+        tag: str,
+        started_at: datetime.datetime,
+        stopped_at: datetime.datetime,
+        configuration: str,
+    ):
         self.cursor.execute(
             "UPDATE runs SET model = ?, state = ?, tag = ?, started_at = ?, stopped_at = ?, configuration = ? WHERE id = ?",
             (model, state, tag, started_at, stopped_at, configuration, run_id),

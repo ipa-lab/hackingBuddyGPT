@@ -3,6 +3,7 @@ import httpx
 from dataclasses import dataclass
 from typing import Iterable, Optional, Union, TypeAlias
 
+import json
 import instructor
 import openai
 import tiktoken
@@ -106,16 +107,34 @@ class OpenAILib(LLM):
         duration = datetime.datetime.now() - tic
         message = response.choices[0].message
 
+        tokens_reasoning = 0
+        if response.usage.completion_tokens_details:
+            tokens_reasoning = response.usage.completion_tokens_details.reasoning_tokens
+
+        usage_details = ""
+        try:
+            usage_details = response.usage.model_dump_json()
+        except Exception:
+            try:
+                usage_details = json.dumps(response.usage)
+            except Exception:
+                pass
+
+        cost = 0
+        if hasattr(response.usage, "cost"):
+            cost = response.usage.cost
+
         return LLMResult(
             message,
             str(prompt),
             message.content,
+            message.reasoning,
             duration,
             response.usage.prompt_tokens,
             response.usage.completion_tokens,
-            response.usage.completion_tokens_details.reasoning_tokens
-            if response.usage.completion_tokens_details
-            else 0,
+            tokens_reasoning,
+            usage_details,
+            cost,
         )
 
     def stream_response(
@@ -223,6 +242,23 @@ class OpenAILib(LLM):
         if len(message.tool_calls) == 0:  # the openAI API does not like getting empty tool call lists
             message.tool_calls = None
 
+        reasoning_tokens = 0
+        if usage.completion_tokens_details:
+            reasoning_tokens = usage.completion_tokens_details.reasoning_tokens
+
+        usage_details = ""
+        try:
+            usage_details = usage.model_dump_json()
+        except Exception:
+            try:
+                usage_details = json.dumps(usage)
+            except Exception:
+                pass
+
+        cost = 0
+        if hasattr(usage, "cost"):
+            cost = usage.cost
+
         toc = datetime.datetime.now()
         yield LLMResult(
             message,
@@ -232,7 +268,9 @@ class OpenAILib(LLM):
             toc - tic,
             usage.prompt_tokens,
             usage.completion_tokens,
-            usage.completion_tokens_details.reasoning_tokens if usage.completion_tokens_details else 0,
+            reasoning_tokens,
+            usage_details,
+            cost,
         )
 
     def encode(self, query) -> list[int]:

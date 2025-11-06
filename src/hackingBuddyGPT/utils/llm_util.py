@@ -26,6 +26,8 @@ class LLMResult:
     tokens_query: int = 0
     tokens_response: int = 0
     tokens_reasoning: int = 0
+    usage_details: str = ""
+    cost: float = 0.0
 
 
 class LLM(abc.ABC):

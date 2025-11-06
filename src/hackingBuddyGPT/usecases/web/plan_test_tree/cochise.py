@@ -40,7 +40,13 @@ async def stream_llm(
     for delta in result_stream:
         if isinstance(delta, LLMResult):
             message_id = await stream_output.finalize(
-                delta.tokens_query, delta.tokens_response, delta.duration, overwrite_finished_message=delta.answer
+                delta.tokens_query,
+                delta.tokens_response,
+                delta.tokens_reasoning,
+                delta.usage_details,
+                delta.cost,
+                delta.duration,
+                overwrite_finished_message=delta.answer,
             )
             return message_id, delta
         if delta.content is not None:

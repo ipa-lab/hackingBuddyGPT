@@ -111,6 +111,8 @@ class WebTestingWithExplanation(Agent):
             result.tokens_query,
             result.tokens_response,
             result.tokens_reasoning,
+            result.usage_details,
+            result.cost,
             result.duration,
             overwrite_finished_message=result.answer,
         )

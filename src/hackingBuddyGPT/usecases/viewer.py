@@ -312,6 +312,8 @@ class Viewer(UseCase):
                             message.tokens_query,
                             message.tokens_response,
                             message.tokens_reasoning,
+                            message.usage_details,
+                            message.cost,
                             message.duration,
                         )
 

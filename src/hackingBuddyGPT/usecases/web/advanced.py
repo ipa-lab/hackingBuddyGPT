@@ -93,7 +93,12 @@ def stream_response(
         log.status_message("No result from the LLM")
         return False
     message_id = stream_output.finalize(
-        result.tokens_query, result.tokens_response, result.tokens_reasoning, result.duration
+        result.tokens_query,
+        result.tokens_response,
+        result.tokens_reasoning,
+        result.usage_details,
+        result.cost,
+        result.duration,
     )
 
     return result, message_id

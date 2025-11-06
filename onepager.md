@@ -124,11 +124,13 @@ Each model is evaluated over 10 runs, where for each run the following informati
 - Number of Flags present in tool Output
 - Number of Tool Calls executed
 - Number of Rounds
-- Number of Tokens used
+- Number of Tokens used (TODO: CACHED!!)
 - Duration of the run
 - Cost of run in dollars
 
 To be able to compare models on equal terms, the following limits per run are set (Based on Testbed Paper - Table 5):
+
+TODO: Do 2 runs per model round based limits, and then check what cost based limits would do!!!
 
 - Maximum rounds: 64
 - Maximum tokens: TODO

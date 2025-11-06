@@ -77,8 +77,9 @@ class AutonomousUseCase(UseCase, abc.ABC):
         try:
             while not limits.reached():
                 async with self.log.section(f"round {limits.rounds}"):
-                    # TODO: raw console log
-                    self.log.console.log(f"[yellow]Starting turn {limits.rounds} of {limits.max_rounds}")
+                    self.log.console.log(
+                        f"[yellow]Starting turn {limits.rounds} of {limits.max_rounds}"
+                    )  # TODO: raw console log
 
                     await self.perform_round(limits)
                     limits.register_round()

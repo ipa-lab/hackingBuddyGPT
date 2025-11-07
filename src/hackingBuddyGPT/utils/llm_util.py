@@ -29,6 +29,10 @@ class LLMResult:
     usage_details: str = ""
     cost: float = 0.0
 
+    @property
+    def total_tokens(self):
+        return self.tokens_query + self.tokens_response + self.tokens_reasoning
+
 
 class LLM(abc.ABC):
     @abc.abstractmethod

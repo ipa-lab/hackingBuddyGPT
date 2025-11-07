@@ -297,7 +297,7 @@ class AdvancedWebTesting(Agent):
 
     @override
     async def perform_round(self, limits: Limits):
-        self._prompt_history.append({"role": "system", "content": f"{turn} turns left"})
+        self._prompt_history.append({"role": "system", "content": f"{limits.rounds_remaining()} turns left"})
         # TODO: in the future, this should do some context truncation
         res = stream_response(self.llm, "assistant", self._prompt_history, self._capabilities, self.log)
         if not res:

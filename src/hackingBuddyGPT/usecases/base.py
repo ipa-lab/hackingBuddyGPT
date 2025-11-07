@@ -22,6 +22,7 @@ class UseCase(abc.ABC):
     """
 
     log: Logger = log_param
+    limits: Limits = None
 
     async def init(self):
         """
@@ -40,8 +41,9 @@ class UseCase(abc.ABC):
         The run method is the main method of the UseCase. It is used to run the UseCase, and should contain the main
         logic. It is recommended to have only the main llm loop in here, and call out to other methods for the
         functionalities of each step.
+        You should include a call to self.limits.start(), to make proper time based limit tracking work.
         """
-        pass
+        self.limits.start()
 
     @abc.abstractmethod
     def get_name(self) -> str:
@@ -54,13 +56,11 @@ class UseCase(abc.ABC):
 # this runs the main loop for a bounded amount of turns or until root was achieved
 @dataclass
 class AutonomousUseCase(UseCase, abc.ABC):
-    max_turns: int = 10
-
     @abc.abstractmethod
-    async def perform_round(self, limits: Limits):
+    async def perform_round(self):
         pass
 
-    async def before_run(self, limits: Limits):
+    async def before_run(self):
         pass
 
     async def after_run(self):
@@ -68,26 +68,26 @@ class AutonomousUseCase(UseCase, abc.ABC):
 
     @override
     async def run(self, configuration):
+        self.limits.start()
+
         self.configuration = configuration
         await self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
 
-        limits = Limits(max_rounds=self.max_turns)
-
-        await self.before_run(limits)
+        await self.before_run()
         try:
-            while not limits.reached():
-                async with self.log.section(f"round {limits.rounds}"):
+            while not self.limits.reached():
+                async with self.log.section(f"round {self.limits._rounds}"):
                     self.log.console.log(
-                        f"[yellow]Starting turn {limits.rounds} of {limits.max_rounds}"
+                        f"[yellow]Starting turn {self.limits._rounds} of {self.limits.max_rounds}"
                     )  # TODO: raw console log
 
-                    await self.perform_round(limits)
-                    limits.register_round()
+                    await self.perform_round()
+                    self.limits.register_round()
 
             await self.after_run()
 
-            if (reason := limits.reason()) is not None:
-                await self.log.run_was_failure(reason)
+            if self.limits.reason is not None:
+                await self.log.run_was_failure(self.limits.reason)
             else:
                 await self.log.run_was_success()
 
@@ -108,7 +108,7 @@ class AutonomousAgentUseCase(AutonomousUseCase, Generic[T], abc.ABC):
     agent: T = None
 
     @override
-    async def perform_round(self, limits: Limits):
+    async def perform_round(self):
         raise ValueError("Do not use AutonomousAgentUseCase without supplying an agent type as generic")
 
     @override
@@ -132,16 +132,16 @@ class AutonomousAgentUseCase(AutonomousUseCase, Generic[T], abc.ABC):
                 return self.__class__.__name__
 
             @override
-            async def before_run(self, limits: Limits):
-                return await self.agent.before_run(limits)
+            async def before_run(self):
+                return await self.agent.before_run(self.limits)
 
             @override
             async def after_run(self):
                 return await self.agent.after_run()
 
             @override
-            async def perform_round(self, limits: Limits):
-                return await self.agent.perform_round(limits)
+            async def perform_round(self):
+                return await self.agent.perform_round(self.limits)
 
         constructed_class = dataclass(AutonomousAgentUseCase)
 

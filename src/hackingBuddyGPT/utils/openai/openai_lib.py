@@ -1,21 +1,25 @@
 import datetime
-import httpx
-from dataclasses import dataclass
-from typing import Iterable, Optional, Union, TypeAlias
-
 import json
+from dataclasses import dataclass
+from typing import Iterable, Optional, TypeAlias, Union
+
+import httpx
 import instructor
 import openai
 import tiktoken
-from dataclasses import dataclass
 from openai.types import CompletionUsage
 from openai.types.chat import (
     ChatCompletionMessage as OpenAIChatCompletionMessage,
+)
+from openai.types.chat import (
     ChatCompletionMessageParam as OpenAIChatCompletionMessageParam,
+)
+from openai.types.chat import (
     ChatCompletionMessageToolCall,
 )
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from openai.types.chat.chat_completion_message_tool_call import Function
+
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.capability import capabilities_to_tools
 from hackingBuddyGPT.utils import LLM, LLMResult, configurable
@@ -212,17 +216,14 @@ class OpenAILib(LLM):
                                 )
                                 return
                             if tool_call.function.name is None:
-                                print(f"WARNING: Got a tool call with no function name")
-                                continue
-                            if tool_call.function.arguments is None:
-                                print(f"WARNING: Got a tool call with no arguments")
+                                print("WARNING: Got a tool call with no function name:", tool_call)
                                 continue
 
                             message.tool_calls.append(
                                 ChatCompletionMessageToolCall(
                                     id=tool_call.id,
                                     function=Function(
-                                        name=tool_call.function.name, arguments=tool_call.function.arguments
+                                        name=tool_call.function.name, arguments=tool_call.function.arguments or ""
                                     ),
                                     type="function",
                                 )

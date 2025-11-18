@@ -1,12 +1,11 @@
 import abc
 import json
 from dataclasses import dataclass
-
-from hackingBuddyGPT.utils.limits import Limits
-from hackingBuddyGPT.utils.logging import Logger, log_param
-from typing import Dict, Type, TypeVar, Generic, override
+from typing import Dict, Generic, Type, TypeVar, override
 
 from hackingBuddyGPT.utils.configurable import Transparent, configurable
+from hackingBuddyGPT.utils.limits import Limits
+from hackingBuddyGPT.utils.logging import Logger, log_param
 
 
 @dataclass
@@ -75,14 +74,16 @@ class AutonomousUseCase(UseCase, abc.ABC):
 
         await self.before_run()
         try:
+            round = 1
             while not self.limits.reached():
-                async with self.log.section(f"round {self.limits._rounds}"):
+                async with self.log.section(f"round {round}"):
                     self.log.console.log(
-                        f"[yellow]Starting turn {self.limits._rounds} of {self.limits.max_rounds}"
+                        f"[yellow]Starting turn {round} ({self.limits._rounds}/{self.limits.max_rounds})"
                     )  # TODO: raw console log
 
                     await self.perform_round()
-                    self.limits.register_round()
+
+                round += 1
 
             await self.after_run()
 

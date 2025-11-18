@@ -2,8 +2,8 @@ import tracemalloc
 
 tracemalloc.start()
 
-import sys
 import asyncio
+import sys
 
 from hackingBuddyGPT.usecases.base import use_cases
 from hackingBuddyGPT.utils.configurable import CommandMap, InvalidCommand, Parseable, instantiate
@@ -20,7 +20,11 @@ def main():
             print(e)
         print(e.usage)
         sys.exit(1)
-    asyncio.run(instance.run(configuration))
+    try:
+        asyncio.run(instance.run(configuration))
+    except KeyboardInterrupt:
+        print("Interrupted")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

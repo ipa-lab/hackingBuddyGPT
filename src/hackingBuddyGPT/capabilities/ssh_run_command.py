@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass
 from io import StringIO
-from typing import Tuple
+from typing import override
 
 from invoke import Responder
 
@@ -15,14 +15,22 @@ from .capability import Capability
 class SSHRunCommand(Capability):
     conn: SSHConnection
     timeout: int = 10
+    additional_description: str = ""
 
+    @override
     def describe(self) -> str:
-        return "give a command to be executed and I will respond with the terminal output when running this command over SSH on the linux machine. The given command must not require user interaction. Do not use quotation marks in front and after your command."
+        desc = "Give a command to be executed in a linux shell."
+        if self.conn.banner:
+            desc += f"\nThe banner of the machine you're running on is:\n{self.conn.banner}"
+        desc = "The environment you're in is persistent, but only for your current session."
+        return desc + self.additional_description
 
+    @override
     def get_name(self):
-        return "exec_command"
+        return "execute_bash_command"
 
-    def __call__(self, command: str) -> Tuple[str, bool]:
+    @override
+    async def __call__(self, command: str) -> str:
         if command.startswith(self.get_name()):
             cmd_parts = command.split(" ", 1)
             if len(cmd_parts) == 1:
@@ -54,4 +62,4 @@ class SSHRunCommand(Capability):
         ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
         last_line = ansi_escape.sub("", last_line)
 
-        return tmp, got_root(self.conn.hostname, last_line)
+        return tmp

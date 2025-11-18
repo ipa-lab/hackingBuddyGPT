@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Callable, Set
+from typing import Callable, Set, override
 
 from . import Capability
 
@@ -11,6 +11,7 @@ class EndRun(Capability):
     def describe(self) -> str:
         return "Ends the current run, should only be called when you think that there is no hope of success. The run will terminated automatically when all goals are achieved."
 
-    def __call__(self) -> str:
+    @override
+    async def __call__(self) -> str:
         self.end_function()
         return "Run has been aborted"

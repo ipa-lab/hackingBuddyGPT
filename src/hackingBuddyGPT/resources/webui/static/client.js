@@ -147,60 +147,169 @@
         return sectionDiv;
       }
 
+      let sectionStorage = {};
       let sectionColumns = [];
 
-      function handleSectionMessage(section) {
-        console.log("handling section message", section);
-        section.from_message += 1;
-        if (section.to_message === null) {
-          section.to_message = 99999;
-        }
-        section.to_message += 1;
+      // treat null as +infinity for comparisons
+      const toOrInf = (x) => (x == null ? Number.POSITIVE_INFINITY : x);
 
-        let sectionDiv = document.getElementById(`section-${section.id}`);
-        if (!!sectionDiv) {
-          let columnNumber = sectionDiv.getAttribute("columnNumber");
-          let columnPosition = sectionDiv.getAttribute("columnPosition");
-          sectionColumns[columnNumber].splice(columnPosition - 1, 1);
-          sectionDiv.remove();
-        }
-        sectionDiv = addSectionDiv(section.id);
-        sectionDiv.querySelector(".section-name").textContent = `${section.name} ${section.duration.toFixed(3)}s`;
+      function rebuildSectionLayout() {
+        // reset columns
+        sectionColumns = [];
 
-        let columnNumber = 0;
-        let columnPosition = 0;
+        // collect all current sections from storage
+        const sections = Object.values(sectionStorage)
+          .map((s) => s.section)
+          .filter(Boolean);
 
-        // loop over the existing section Columns (format is a list of lists, whereby the inner list is [from_message, from_message], with end_message possibly being None)
-        let found = false;
-        for (let i = 0; i < sectionColumns.length; i++) {
-          const column = sectionColumns[i];
-          let columnFits = true;
-          for (let j = 0; j < column.length; j++) {
-            const [from_message, to_message] = column[j];
-            if (section.from_message < to_message && from_message < section.to_message) {
-              columnFits = false;
+        // sort so parents are processed before children:
+        //  - by from_message ascending
+        //  - then by to_message descending (longer span first)
+        sections.sort((a, b) => {
+          if (a.from_message !== b.from_message) {
+            return a.from_message - b.from_message;
+          }
+          return b.to_message - a.to_message;
+        });
+
+        // id -> { column, position }
+        const layout = {};
+
+        for (const s of sections) {
+          const sFrom = s.from_message;
+          const sTo = toOrInf(s.to_message);
+
+          // --- 1) find minimum allowed column because of parents ---
+          let minCol = 0;
+
+          for (let i = 0; i < sectionColumns.length; i++) {
+            const column = sectionColumns[i];
+            for (const other of column) {
+              const oFrom = other.from_message;
+              const oTo = toOrInf(other.to_message);
+
+              // other is a parent if it fully contains s
+              if (oFrom <= sFrom && sTo <= oTo) {
+                minCol = Math.max(minCol, i + 1); // must be strictly to the right
+              }
+            }
+          }
+
+          // --- 2) place section into first non-overlapping column >= minCol ---
+          let chosenCol = -1;
+          for (let i = minCol; i < sectionColumns.length; i++) {
+            const column = sectionColumns[i];
+            let fits = true;
+
+            for (const other of column) {
+              const oFrom = other.from_message;
+              const oTo = toOrInf(other.to_message);
+
+              // standard interval overlap check
+              if (sFrom < oTo && oFrom < sTo) {
+                fits = false;
+                break;
+              }
+            }
+
+            if (fits) {
+              chosenCol = i;
+              column.push(s);
               break;
             }
           }
-          if (!columnFits) {
-            continue;
+
+          // no existing column fits → create a new one
+          if (chosenCol === -1) {
+            chosenCol = sectionColumns.length;
+            sectionColumns.push([s]);
           }
 
-          column.push([section.from_message, section.to_message]);
-          columnNumber = i;
-          columnPosition = column.length;
-          found = true;
-          break;
-        }
-        if (!found) {
-          sectionColumns.push([[section.from_message, section.to_message]]);
-          document.documentElement.style.setProperty("--section-column-count", sectionColumns.length);
-          console.log("added section column", sectionColumns.length, sectionColumns);
+          const position = sectionColumns[chosenCol].length;
+          // +1 for CSS grid columns (1-based)
+          layout[s.id] = { column: chosenCol + 1, position };
         }
 
-        sectionDiv.style = `grid-column: ${columnNumber}; grid-row: ${section.from_message} / ${section.to_message};`;
-        sectionDiv.setAttribute("columnNumber", columnNumber);
-        sectionDiv.setAttribute("columnPosition", columnPosition);
+        // update CSS var with column count
+        document.documentElement.style.setProperty(
+          "--section-column-count",
+          sectionColumns.length.toString()
+        );
+
+        // --- 3) apply layout to DOM & wire click handlers ---
+        for (const s of sections) {
+          const { column, position } = layout[s.id];
+
+          let sectionDiv = document.getElementById(`section-${s.id}`);
+          if (!sectionDiv) {
+            sectionDiv = addSectionDiv(s.id);
+          }
+
+          sectionDiv.querySelector(".section-name").textContent = `${s.name}`;
+
+          // grid position
+          sectionDiv.style.gridColumn = column;
+          sectionDiv.style.gridRow = `${s.from_message} / ${s.to_message}`;
+          sectionDiv.setAttribute("columnNumber", column);
+          sectionDiv.setAttribute("columnPosition", position);
+
+          const storage = sectionStorage[s.id] || (sectionStorage[s.id] = {});
+
+          // preserve open/closed if we had it before, default to open
+          const open =
+            storage.open ??
+            (sectionDiv.getAttribute("opened") !== "false"); // default true
+          storage.open = open;
+          sectionDiv.setAttribute("opened", open.toString());
+
+          // helper to sync all messages in the section with current open state
+          const syncMessages = () => {
+            for (let i = s.from_message; i <= s.to_message; i++) {
+              const messageDiv = document.getElementById(`message-${i}`);
+              if (messageDiv) {
+                if (storage.open) {
+                  messageDiv.setAttribute("open", "");
+                } else {
+                  messageDiv.removeAttribute("open");
+                }
+              }
+            }
+          };
+          syncMessages();
+
+          // (re)attach click handler
+          if (storage.openingFunction) {
+            sectionDiv.removeEventListener("click", storage.openingFunction);
+          }
+
+          storage.openingFunction = () => {
+            storage.open = !storage.open;
+            sectionDiv.setAttribute("opened", storage.open.toString());
+            syncMessages();
+          };
+
+          sectionDiv.addEventListener("click", storage.openingFunction);
+        }
+      }
+
+      function handleSectionMessage(section) {
+        console.log("handling section message", section);
+
+        // normalise *a copy* of the incoming section
+        const normalized = { ...section };
+        normalized.from_message += 1;
+        if (normalized.to_message === null) {
+          normalized.to_message = 99999;
+        }
+        normalized.to_message += 1;
+
+        if (!sectionStorage[normalized.id]) {
+          sectionStorage[normalized.id] = {};
+        }
+        sectionStorage[normalized.id].section = normalized;
+
+        // recompute layout for all sections
+        rebuildSectionLayout();
       }
 
       function addMessageDiv(messageId, role) {
@@ -210,7 +319,7 @@
 
         messageDiv.id = `message-${messageId}`;
         messageDiv.style = `grid-row: ${messageId + 1};`;
-        if (role === "system") {
+        if (role === "system" || role === "limit") {
           messageDiv.removeAttribute("open");
         }
         messageDiv.querySelector(".tool-calls").id = `message-${messageId}-tool-calls`;
@@ -222,15 +331,6 @@
         let messageDiv = document.getElementById(`message-${message.id}`);
         if (!messageDiv) {
           messageDiv = addMessageDiv(message.id, message.role);
-        }
-        if (message.content && message.content.length > 0) {
-          messageDiv.querySelector(".message-text").textContent = message.content;
-        }
-        if (message.reasoning && message.reasoning.length > 0) {
-          const reasoningDiv = messageDiv.querySelector(".reasoning");
-          reasoningDiv.style.display = "block";
-          const reasoningTextDiv = reasoningDiv.querySelector(".reasoning-text");
-          reasoningTextDiv.textContent = message.reasoning;
         }
         messageDiv.querySelector(".role").textContent = message.role;
         if (message.duration > 0) {
@@ -251,6 +351,18 @@
         }
         if (tokens_ctr == 2) {
           messageDiv.querySelector(".tokens-separator").textContent = " - ";
+        }
+        if (message.content && message.content.length > 0) {
+          if (message.role === "limit" && message.tokens_query <= 0) {
+            messageDiv.querySelector(".tokens-query").textContent = message.content.split(":", 2)[1];
+          }
+          messageDiv.querySelector(".message-text").textContent = message.content;
+        }
+        if (message.reasoning && message.reasoning.length > 0) {
+          const reasoningDiv = messageDiv.querySelector(".reasoning");
+          reasoningDiv.style.display = "block";
+          const reasoningTextDiv = reasoningDiv.querySelector(".reasoning-text");
+          reasoningTextDiv.textContent = message.reasoning;
         }
       }
 
@@ -315,6 +427,7 @@
 
         document.getElementById("messages").innerHTML = "";
         sectionColumns = [];
+        sectionStorage = {};
         document.documentElement.style.setProperty("--section-column-count", 0);
         send("MessageRequest", { follow_run: runId });
         currentRun = runId;

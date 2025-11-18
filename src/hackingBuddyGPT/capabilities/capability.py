@@ -1,11 +1,26 @@
 import abc
+import copy
+from functools import partial, wraps
 import inspect
-from typing import Any, Callable, Dict, Iterable, Type, Union, Awaitable
+from typing import Any, Callable, Dict, Iterable, TypeVar, ParamSpec, Type, Union, Awaitable, override
 
 import openai
 from openai.types.chat import ChatCompletionToolParam
 from openai.types.chat.completion_create_params import Function
 from pydantic import BaseModel, create_model
+from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
+
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def awaitable(func: Callable[P, R]) -> Callable[P, Awaitable[R]]:
+    @wraps(func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 class Capability(abc.ABC):
@@ -42,7 +57,7 @@ class Capability(abc.ABC):
         """
         pass
 
-    def to_model(self) -> BaseModel:
+    def to_model(self) -> type[BaseModel]:
         """
         Converts the parameters of the `__call__` function of the capability to a pydantic model, that can be used to
         interface with an LLM using eg the openAI function calling API.
@@ -76,7 +91,82 @@ class Action(BaseModel):
         return await self.action.execute()
 
 
-def capabilities_to_action_model(capabilities: Dict[str, Capability]) -> Type[Action]:
+class OptimizedSchemaGenerator(GenerateJsonSchema):
+    def generate(
+        self,
+        schema: Any,
+        mode: str = "validation",
+    ) -> JsonSchemaValue:
+        data = super().generate(schema, mode=mode)
+        self._strip_private_fields(data)
+        defs = data.get("$defs")
+        if defs:
+            self._inline_refs(data, defs, seen=set())
+            # if you want *all* refs inlined, you can safely drop $defs now
+            data.pop("$defs", None)
+        return data
+
+    def _strip_private_fields(self, schema: Any) -> None:
+        if isinstance(schema, dict):
+            # Drop properties starting with "_"
+            props = schema.get("properties")
+            if isinstance(props, dict):
+                for name in list(props.keys()):
+                    if name.startswith("_"):
+                        del props[name]
+
+            # Recurse into nested dicts/lists
+            for v in schema.values():
+                self._strip_private_fields(v)
+
+        elif isinstance(schema, list):
+            for item in schema:
+                self._strip_private_fields(item)
+
+    def _inline_refs(self, node: Any, defs: dict[str, Any], seen: set[str]) -> None:
+        if isinstance(node, dict):
+            ref = node.get("$ref")
+            if isinstance(ref, str) and ref.startswith("#/$defs/"):
+                key = ref.split("/")[-1]
+                target = defs.get(key)
+                if target is not None:
+                    # naive cycle guard: if we’ve already inlined this key on the path, bail
+                    if key in seen:
+                        return  # leave the $ref to avoid infinite recursion
+                    new_seen = set(seen)
+                    new_seen.add(key)
+
+                    inlined = copy.deepcopy(target)
+                    self._inline_refs(inlined, defs, new_seen)
+
+                    node.clear()
+                    node.update(inlined)
+                return  # important: don't also walk children of this dict-as-it-was
+
+            # no direct $ref: recurse into children
+            for v in list(node.values()):
+                self._inline_refs(v, defs, seen)
+
+        elif isinstance(node, list):
+            for item in node:
+                self._inline_refs(item, defs, seen)
+
+
+def capability_list_to_dict(capabilities: list[Capability]) -> dict[str, Capability]:
+    duplicates: list[str] = []
+    result: dict[str, Capability] = {}
+    for capability in capabilities:
+        capability_name = capability.get_name()
+        if capability_name in result:
+            duplicates.append(capability_name)
+        else:
+            result[capability_name] = capability
+    if duplicates:
+        raise ValueError(f"Duplicate capabilities: {', '.join(duplicates)}")
+    return result
+
+
+def capabilities_to_action_model(capabilities: dict[str, Capability]) -> type[Action]:
     """
     When one of multiple capabilities should be used, then an action model can be created with this function.
     This action model is a pydantic model, where all possible capabilities are represented by their respective models in
@@ -199,7 +289,11 @@ def capabilities_to_functions(
     parameters of the respective capabilities.
     """
     return [
-        Function(name=name, description=capability.describe(), parameters=capability.to_model().model_json_schema())
+        Function(
+            name=name,
+            description=capability.describe(),
+            parameters=capability.to_model().model_json_schema(schema_generator=OptimizedSchemaGenerator),
+        )
         for name, capability in capabilities.items()
     ]
 
@@ -217,8 +311,46 @@ def capabilities_to_tools(
             function=Function(
                 name=name,
                 description=capability.describe(),
-                parameters=capability.to_model().model_json_schema(),
+                parameters=capability.to_model().model_json_schema(schema_generator=OptimizedSchemaGenerator),
             ),
         )
         for name, capability in capabilities.items()
     ]
+
+
+def function_call_capability(
+    function: Callable[..., Awaitable[str]], description: str, name: str | None = None, bind_self: Any | None = None
+) -> Capability:
+    class FunctionCapability(Capability):
+        @override
+        def describe(self) -> str:
+            return description
+
+        @override
+        async def __call__(self, *args, **kwargs) -> str:
+            raise NotImplementedError("Internal Error: Could not assign function call capability")
+
+    if name is None:
+        name = function.__name__
+
+    if bind_self is not None:
+        function = partial(function, bind_self)
+
+    orig_sig = inspect.signature(function)
+    new_params = (
+        inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        *orig_sig.parameters.values(),
+    )
+    new_sig = inspect.Signature(parameters=new_params, return_annotation=orig_sig.return_annotation)
+
+    async def __call__(self, *args, **kwargs) -> str:
+        return await function(*args, **kwargs)
+
+    __call__: Callable[..., Awaitable[str]] = wraps(function)(__call__)
+    __call__.__signature__ = new_sig
+
+    FunctionCapability.__name__ = name
+    FunctionCapability.__qualname__ = name
+    FunctionCapability.__call__ = __call__
+
+    return FunctionCapability()

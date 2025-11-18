@@ -1,24 +1,26 @@
 import datetime
 from abc import ABC, abstractmethod
-from enum import Enum
+from collections.abc import Iterable
 from dataclasses import dataclass, field
+from enum import Enum
 from functools import wraps
 from typing import Optional, Union, override
 
 from dataclasses_json.api import dataclass_json
-
-from hackingBuddyGPT.utils import Console, DbStorage, LLMResult, configurable, parameter
-from hackingBuddyGPT.utils.db_storage.db_storage import StreamAction
-from hackingBuddyGPT.utils.configurable import Global
+from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from rich.console import Group
 from rich.panel import Panel
-from websockets.sync.client import ClientConnection, connect as ws_connect
+from websockets.sync.client import ClientConnection
+from websockets.sync.client import connect as ws_connect
 
+from hackingBuddyGPT.utils import Console, DbStorage, LLMResult, configurable, parameter
+from hackingBuddyGPT.utils.configurable import Global
 from hackingBuddyGPT.utils.db_storage.db_storage import (
-    Run,
-    Section,
     Message,
     MessageStreamPart,
+    Run,
+    Section,
+    StreamAction,
     ToolCall,
     ToolCallStreamPart,
 )
@@ -160,21 +162,38 @@ class ALogger(ABC):
     async def run_was_failure(self, reason: str, details: Optional[str] = None) -> int:
         pass
 
-    @abstractmethod
     async def status_message(self, message: str) -> int:
-        pass
+        return await self.add_message("status", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
 
-    @abstractmethod
+    async def limit_message(self, message: str) -> int:
+        return await self.add_message("limit", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
+
     async def system_message(self, message: str) -> int:
-        pass
+        return await self.add_message("system", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
 
-    @abstractmethod
     async def call_response(self, llm_result: LLMResult) -> int:
-        pass
+        _ = await self.system_message(llm_result.prompt)
+        return await self.add_message(
+            "assistant",
+            llm_result.answer,
+            llm_result.reasoning,
+            llm_result.tokens_query,
+            llm_result.tokens_response,
+            llm_result.tokens_reasoning,
+            llm_result.usage_details,
+            llm_result.cost,
+            llm_result.duration,
+        )
 
     @abstractmethod
     async def stream_message(self, role: str) -> "MessageStreamLogger":
         pass
+
+    async def stream_message_from(
+        self, role: str, stream: Iterable[ChoiceDelta | LLMResult]
+    ) -> tuple[int, LLMResult] | None:
+        log_stream = await self.stream_message(role)
+        return await log_stream.consume(stream)
 
     @abstractmethod
     async def add_message_update(
@@ -330,29 +349,6 @@ class LocalLogger(ALogger):
         message_id = await self.status_message(f"Run failed: {full_reason}")
         self.log_db.run_was_failure(self.run.id, reason)
         return message_id
-
-    @override
-    async def status_message(self, message: str) -> int:
-        return await self.add_message("status", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
-
-    @override
-    async def system_message(self, message: str) -> int:
-        return await self.add_message("system", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
-
-    @override
-    async def call_response(self, llm_result: LLMResult) -> int:
-        _ = await self.system_message(llm_result.prompt)
-        return await self.add_message(
-            "assistant",
-            llm_result.answer,
-            llm_result.reasoning,
-            llm_result.tokens_query,
-            llm_result.tokens_response,
-            llm_result.tokens_reasoning,
-            llm_result.usage_details,
-            llm_result.cost,
-            llm_result.duration,
-        )
 
     @override
     async def stream_message(self, role: str) -> "MessageStreamLogger":
@@ -565,29 +561,6 @@ class RemoteLogger(ALogger):
         return message_id
 
     @override
-    async def status_message(self, message: str) -> int:
-        return await self.add_message("status", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
-
-    @override
-    async def system_message(self, message: str) -> int:
-        return await self.add_message("system", message, "", 0, 0, 0, "", 0, datetime.timedelta(0))
-
-    @override
-    async def call_response(self, llm_result: LLMResult) -> int:
-        _ = await self.system_message(llm_result.prompt)
-        return await self.add_message(
-            "assistant",
-            llm_result.answer,
-            llm_result.reasoning,
-            llm_result.tokens_query,
-            llm_result.tokens_response,
-            llm_result.tokens_reasoning,
-            llm_result.usage_details,
-            llm_result.cost,
-            llm_result.duration,
-        )
-
-    @override
     async def stream_message(self, role: str) -> "MessageStreamLogger":
         message_id = self._last_message_id
         self._last_message_id += 1
@@ -676,6 +649,34 @@ class MessageStreamLogger:
                 f"streamed message was not finalized ({self.logger.run.id}, {self.message_id}), please make sure to call finalize() on MessageStreamLogger objects"
             )
             # TODO: re-add? self.finalize(0, 0, 0, datetime.timedelta(0))
+
+    async def consume(self, stream: Iterable[ChoiceDelta | LLMResult]) -> tuple[int, LLMResult] | None:
+        result: LLMResult | None = None
+
+        for delta in stream:
+            if isinstance(delta, LLMResult):
+                result = delta
+                break
+            if delta.content is not None:
+                await self.append(
+                    delta.content, delta.reasoning if hasattr(delta, "reasoning") else None
+                )  # TODO: reasoning is theoretically not defined on the model
+
+        if result is None:
+            await self.logger.status_message("No result from the LLM")
+            return None
+
+        message_id = await self.finalize(
+            result.tokens_query,
+            result.tokens_response,
+            result.tokens_reasoning,
+            result.usage_details,
+            result.cost,
+            result.duration,
+            overwrite_finished_message=result.answer,
+        )
+
+        return message_id, result
 
     async def append(self, content: str, reasoning: str | None = None):
         if self._completed:

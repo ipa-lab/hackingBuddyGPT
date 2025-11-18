@@ -44,6 +44,17 @@ From the top 50 models of the LMArena Web Dev Benchmark select the top 2 models 
 | 39 | meta-llama/llama-4-maverick-17b-128e-instruct | google-vertex | 524300 | $0.35 | $1.15 | x |
 | 46 | meta-llama/llama-4-scout | google-vertex | 1310000 | $0.25 | $0.70 | x |
 
+
+| Place | Model | OpenRouter Provider | Context | Input | Output | Open Weight |
+|-----|-------|----------|---------|--------|--------|-------------|
+| X1 | openai/gpt-5 | openai | 400000 | $1.25 | $10.00 | |
+| X4 | anthropic/claude-sonnet-4.5 | anthropic | 200000 | $3.00 | $15.00 | |
+| X4 | deepseek/deepseek-r1-0528 | chutes | 164000 | $0.55 | $2.19 | x |
+| X4 | z-ai/glm-4.6 | z-ai | 200000 | $0.60 | $2.20 | x |
+| X18 | google/gemini-2.5-flash-preview-05-20 | google-vertex | 1050000 | $0.15 | $0.60 | |
+| X19 | openai/gpt-4.1-2025-04-14 | openai | 1050000 | $2.00 | $8.00 | |
+| X33 | openai/gpt-oss:120b | ncompass | 131000 | $0.05 | $0.28 | x |
+
 The ones marked with X were found to be the most promising ones in previous research. While this selection does not cover the full range of available models, it should be representative of the current top performance possible in both proprietary and open-source models.
 
 ### Sub-Selections
@@ -142,6 +153,8 @@ The performance of each models is given by the average number of submitted flags
 ### Ablation
 
 TODO: Ablation only on the best models - ABLATION IS TAKING AWAY AND NOT ADDING!!! SO DEFAULT IS Task Tree & Kali
+Check if it makes a difference in the advanced agent whether it can do HTTP requests / kali commands on its own or if only the subagent can do that.
+
 To compare the impact available tools and context management, the following two parameters are varied:
 
 - Tools available:

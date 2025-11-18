@@ -4,37 +4,57 @@ from typing import Optional, Tuple
 import invoke
 from fabric import Connection
 
-from hackingBuddyGPT.utils.configurable import configurable
+from hackingBuddyGPT.utils.configurable import configurable, parameter
 
 
 @configurable("ssh", "connects to a remote host via SSH")
 @dataclass
 class SSHConnection:
     host: str
-    hostname: str
     username: str
     password: str
-    keyfilename: str
+    hostname: str = ""
+    keyfilename: str = ""
     port: int = 22
 
     _conn: Connection = None
+    banner: str = ""
 
     def init(self):
         # create the SSH Connection
-        if self.keyfilename == '' or self.keyfilename == None:
+        if self.keyfilename == "":
             conn = Connection(
                 f"{self.username}@{self.host}:{self.port}",
                 connect_kwargs={"password": self.password, "look_for_keys": False, "allow_agent": False},
             )
-        else: 
+        else:
             conn = Connection(
                 f"{self.username}@{self.host}:{self.port}",
-                connect_kwargs={"password": self.password, "key_filename": self.keyfilename, "look_for_keys": False, "allow_agent": False},
+                connect_kwargs={
+                    "password": self.password,
+                    "key_filename": self.keyfilename,
+                    "look_for_keys": False,
+                    "allow_agent": False,
+                },
             )
         self._conn = conn
         self._conn.open()
 
-    def new_with(self, *, host=None, hostname=None, username=None, password=None, keyfilename=None, port=None) -> "SSHConnection":
+        if self.banner == "":
+            try:
+                t = self._conn.transport
+                b = t.get_banner() if t else None
+                if not b and t:
+                    b = getattr(t, "remote_version", "") or ""
+                if isinstance(b, bytes):
+                    b = b.decode("utf-8", "ignore")
+                self.banner = b or ""
+            except Exception:
+                pass
+
+    def new_with(
+        self, *, host=None, hostname=None, username=None, password=None, keyfilename=None, port=None
+    ) -> "SSHConnection":
         return SSHConnection(
             host=host or self.host,
             hostname=hostname or self.hostname,

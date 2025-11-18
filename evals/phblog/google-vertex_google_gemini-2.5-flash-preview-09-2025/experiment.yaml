@@ -2,7 +2,7 @@ experiment_name: google-vertex-gemini-2.5-flash-preview-09-2025
 eval_count: 1  # 40
 parallel_evals: 5
 coord:
-  image: ghcr.io/neverbolt/hackingbuddygpt/evals-thesis:20251118141433
+  image: ghcr.io/neverbolt/hackingbuddygpt/evals-thesis:20251118170540
   hostname: viewer
   command: ["Viewer"]
   environment:
@@ -14,7 +14,7 @@ coord:
     - "4444:4444"
 
 eval:
-  image: ghcr.io/neverbolt/hackingbuddygpt/evals-thesis:20251118141433
+  image: ghcr.io/neverbolt/hackingbuddygpt/evals-thesis:20251118170540
   command: ["WebTestingWithExplanation"]
   environment:
     # model

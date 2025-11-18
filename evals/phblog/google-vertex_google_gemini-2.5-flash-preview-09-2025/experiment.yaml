@@ -6,7 +6,7 @@ coord:
   hostname: viewer
   command: ["Viewer", "--log_db.connection_string=/app/results.sqlite3", "--log_server_address=0.0.0.0:4444"]
   volumes:
-    - "./results.sqlite3:/app/results.sqlite3"
+    - "./gemini.sqlite3:/app/results.sqlite3"
   ports:
     - "4444:4444"
 eval:

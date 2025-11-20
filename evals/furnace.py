@@ -5,32 +5,28 @@ loading settings from a YAML config file. Logs for all containers per eval insta
 Supports limiting simultaneous parallel eval runs via `parallel_evals` config, and includes error checking on Docker API calls.
 
 Install dependencies:
-    pip install docker pyyaml
+    pip install docker pyyaml cryptography
+
+Needs cryaml.py
 
 Usage:
     ./run_evals_dockerpy.py path/to/config.yaml
 """
+
 import argparse
-import sys
 import os
-import yaml
-import docker
-import time
-import threading
 import signal
+import sys
+import threading
+import time
 from datetime import datetime, timezone
-from docker.errors import NotFound, APIError, DockerException
+
+import cryaml
+import docker
+import yamlbase
+from docker.errors import APIError, DockerException, NotFound
 
 interrupt_count = 0  # module-level interrupt counter
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Spawn coordination container + parallel eval runs with configured services."
-    )
-    parser.add_argument('config', help='Path to YAML configuration file')
-    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
-    return parser.parse_args()
 
 
 def debug(*msg):
@@ -39,13 +35,25 @@ def debug(*msg):
         print(*msg, file=sys.stderr)
 
 
-def load_config(path):
+def load_config(path) -> dict:
+    cfg: dict | None = None
     try:
-        with open(path, 'r') as f:
-            return yaml.safe_load(f)
+        cfg = yamlbase.load(path)
     except Exception as e:
         print(f"Error loading config file {path}: {e}", file=sys.stderr)
         sys.exit(1)
+
+    if cfg is None:
+        print(f"Config file {path} is empty", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        cfg = cryaml.process_config_secrets(cfg)
+    except ValueError as exc:
+        print(f"Error processing secrets in {path}: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    return cfg
 
 
 def ensure_network(client, name):
@@ -85,42 +93,42 @@ def ensure_container(client, name, cfg, network):
         sys.exit(1)
 
     # Build run kwargs and bash command
-    run_kwargs = {'name': name, 'network': network.name, 'detach': True}
+    run_kwargs = {"name": name, "network": network.name, "detach": True}
     bash_parts = ["docker run -d", f"--name {name}", f"--network {network.name}"]
-    if cfg.get('hostname'):
-        run_kwargs['hostname'] = cfg['hostname']
+    if cfg.get("hostname"):
+        run_kwargs["hostname"] = cfg["hostname"]
         bash_parts.append(f"--hostname {cfg['hostname']}")
-    if cfg.get('environment'):
-        run_kwargs['environment'] = cfg['environment']
-        for k, v in cfg['environment'].items():
+    if cfg.get("environment"):
+        run_kwargs["environment"] = cfg["environment"]
+        for k, v in cfg["environment"].items():
             bash_parts.append(f"-e {k}={v}")
     volume_dict = {}
-    for vol in cfg.get('volumes', []) or []:
-        host_path, container_path, *mode = vol.split(':')
+    for vol in cfg.get("volumes", []) or []:
+        host_path, container_path, *mode = vol.split(":")
         if not os.path.isabs(host_path):
             host_path = os.path.abspath(host_path)
-        m = mode[0] if mode else 'rw'
-        volume_dict[host_path] = {'bind': container_path, 'mode': m}
+        m = mode[0] if mode else "rw"
+        volume_dict[host_path] = {"bind": container_path, "mode": m}
         bash_parts.append(f"-v {host_path}:{container_path}:{m}")
     if volume_dict:
-        run_kwargs['volumes'] = volume_dict
+        run_kwargs["volumes"] = volume_dict
     port_map = {}
-    for p in cfg.get('ports', []) or []:
-        host_p, cont_p = p.split(':')
+    for p in cfg.get("ports", []) or []:
+        host_p, cont_p = p.split(":")
         port_map[int(cont_p)] = int(host_p)
         bash_parts.append(f"-p {p}")
     if port_map:
-        run_kwargs['ports'] = port_map
-    if cfg.get('command'):
-        run_kwargs['command'] = cfg['command']
-        bash_parts.append(' '.join(cfg['command']))
-    bash_parts.insert(len(bash_parts)-1, cfg['image'])
-    bash_cmd = ' '.join(bash_parts)
+        run_kwargs["ports"] = port_map
+    if cfg.get("command"):
+        run_kwargs["command"] = cfg["command"]
+        bash_parts.append(" ".join(cfg["command"]))
+    bash_parts.insert(len(bash_parts) - 1, cfg["image"])
+    bash_cmd = " ".join(bash_parts)
 
     try:
         debug(f"Creating container '{name}' (image={cfg['image']})")
         debug(f"Equivalent bash: {bash_cmd}")
-        container = client.containers.run(cfg['image'], **run_kwargs)
+        container = client.containers.run(cfg["image"], **run_kwargs)
         return container
     except APIError as e:
         print(f"Docker API error creating container '{name}': {e}", file=sys.stderr)
@@ -134,8 +142,8 @@ def stream_logs(container, logfile):
     try:
         for line in container.logs(stream=True, follow=True):
             ts = datetime.now(timezone.utc).isoformat()
-            with open(logfile, 'a') as f:
-                f.write(f"[{ts}] {container.name}: {line.decode(errors='replace')}\n")
+            with open(logfile, "a") as f:
+                f.write(f"[{ts}] {container.name}: {line.decode(errors='replace')}")
     except APIError as e:
         print(f"Error streaming logs for '{container.name}': {e}", file=sys.stderr)
 
@@ -143,7 +151,7 @@ def stream_logs(container, logfile):
 def cleanup_instance(client, experiment, idx, services):
     prefix = f"{experiment}_eval_{idx}"
     for svc in services:
-        for j in range(1, svc.get('count', 1) + 1):
+        for j in range(1, svc.get("count", 1) + 1):
             cname = f"{prefix}_{svc['name']}_{j}"
             try:
                 c = client.containers.get(cname)
@@ -173,19 +181,15 @@ def cleanup_instance(client, experiment, idx, services):
         print(f"Error removing network '{netname}': {e}", file=sys.stderr)
 
 
-def main():
-    global output_debug
-    args = parse_args()
-    output_debug = args.debug
+def run_config(config_path: str):
+    cfg = load_config(config_path)
 
-    cfg = load_config(args.config)
-
-    experiment = cfg['experiment_name']
-    total = cfg['eval_count']
-    parallel = cfg.get('parallel_evals', total)
-    coord_cfg = cfg['coord']
-    eval_cfg = cfg['eval']
-    services = cfg.get('tests', [])
+    experiment = cfg["experiment_name"]
+    total = cfg["eval_count"]
+    parallel = cfg.get("parallel_evals", total)
+    coord_cfg = cfg["coord"]
+    eval_cfg = cfg["eval"]
+    services = cfg.get("tests", [])
 
     client = docker.from_env()
     coord_net = ensure_network(client, f"{experiment}_coord_net")
@@ -205,8 +209,8 @@ def main():
             print("\nSecond Ctrl+C: stopping all running experiments. Next Ctrl+C will exit immediately.")
             for i, info in list(active.items()):
                 try:
-                    info['ctr'].stop()
-                    info['ctr'].remove()
+                    info["ctr"].stop()
+                    info["ctr"].remove()
                     print(f"Stopped and removed running eval #{i}")
                 except Exception as e:
                     print(f"Error stopping eval #{i}: {e}", file=sys.stderr)
@@ -229,9 +233,9 @@ def main():
             ts = datetime.fromtimestamp(mtime).strftime("%Y%m%d_%H%M%S")
             archive = f"{logdir}/{experiment}_eval_{i}_{ts}.log"
             os.rename(logfile, archive)
-        open(logfile, 'w').close()
+        open(logfile, "w").close()
         for svc in services:
-            for j in range(1, svc.get('count', 1) + 1):
+            for j in range(1, svc.get("count", 1) + 1):
                 cname = f"{experiment}_eval_{i}_{svc['name']}_{j}"
                 svc_ctr = ensure_container(client, cname, svc, net)
                 threading.Thread(target=stream_logs, args=(svc_ctr, logfile), daemon=True).start()
@@ -242,7 +246,7 @@ def main():
         except APIError as e:
             print(f"Error connecting '{name}' to network: {e}", file=sys.stderr)
         threading.Thread(target=stream_logs, args=(ctr, logfile), daemon=True).start()
-        active[i] = {'ctr': ctr, 'start': datetime.now(timezone.utc)}
+        active[i] = {"ctr": ctr, "start": datetime.now(timezone.utc)}
         print(f"Launched eval #{i}")
 
     print(f"Starting up to {parallel} evals concurrently...")
@@ -253,13 +257,13 @@ def main():
         to_remove = []
         for i, info in list(active.items()):
             try:
-                info['ctr'].reload()
+                info["ctr"].reload()
             except APIError as e:
                 print(f"Error reloading container '{i}': {e}", file=sys.stderr)
                 to_remove.append(i)
                 continue
-            if info['ctr'].status != 'running':
-                duration = datetime.now(timezone.utc) - info['start']
+            if info["ctr"].status != "running":
+                duration = datetime.now(timezone.utc) - info["start"]
                 print(f"Eval #{i} finished in {duration}")
                 cleanup_instance(client, experiment, i, services)
                 to_remove.append(i)
@@ -271,9 +275,10 @@ def main():
 
     print("All eval instances complete.")
     resp = input("Stop and remove coordination container and network? [y/N]: ")
-    if resp.lower().startswith('y'):
+    if resp.lower().startswith("y"):
         try:
-            coord_ctr.stop(); coord_ctr.remove()
+            coord_ctr.stop()
+            coord_ctr.remove()
         except APIError as e:
             print(f"Error removing coordination container: {e}", file=sys.stderr)
         debug(f"Removing network {experiment}_coord_net")
@@ -286,7 +291,21 @@ def main():
         debug(f"Equivalent bash: docker rm -f {experiment}_coordination")
         debug(f"Equivalent bash: docker network rm {experiment}_coord_net")
 
-if __name__ == '__main__':
+
+def main():
+    global output_debug
+    parser = argparse.ArgumentParser(
+        description="Spawn coordination container + parallel eval runs with configured services."
+    )
+    parser.add_argument("config", help="Path to YAML configuration file")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    args = parser.parse_args()
+
+    output_debug = args.debug
+    run_config(args.config)
+
+
+if __name__ == "__main__":
     try:
         main()
     except APIError as e:

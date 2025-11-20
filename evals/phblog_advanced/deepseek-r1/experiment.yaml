@@ -1,0 +1,12 @@
+$base: ../phblog_advanced.yaml
+experiment_name: phblog_advanced_deepseek-r1
+
+coord:
+  volumes:
+    - "./phblog_advanced_deepseek-r1.sqlite3:/app/results.sqlite3"
+
+eval:
+  command: ["AdvancedWebTesting", "--log=remote_logger"]
+  environment:
+    llm.model: deepseek/deepseek-r1-0528
+    llm.provider: chutes

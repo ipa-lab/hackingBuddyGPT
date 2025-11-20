@@ -244,9 +244,10 @@ Therefore, you need to specify what exactly the subagent should be reporting bac
         self,
         system_prompt: str,
         max_rounds: int,
-        max_tokens: int,
         max_cost: float,
-        max_duration: int,
+        # commented out because in runs this seems to just make things more complicated
+        # max_tokens: int,
+        # max_duration: int,
         capabilities: list[str],
     ) -> str:
         _result: str | None = None
@@ -331,7 +332,10 @@ Therefore, you need to specify what exactly the subagent should be reporting bac
 
         try:
             limits = self.parent_limits.sub_limit(
-                max_rounds=max_rounds, max_tokens=max_tokens, max_cost=max_cost, max_duration=max_duration
+                max_rounds=max_rounds,
+                max_cost=max_cost,
+                max_tokens=0,  # max_tokens,
+                max_duration=0,  # max_duration,
             )
         except ValueError as e:
             return f"Could not allocate limits: {e}"

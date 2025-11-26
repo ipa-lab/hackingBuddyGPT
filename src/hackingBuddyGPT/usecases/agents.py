@@ -104,7 +104,7 @@ class Agent(ABC):
 
                     message = f"Error during tool call {tool_call.id}: {e}"
                     await self.log.status_message(message)
-                    return llm_util.tool_message(message)
+                    return llm_util.tool_message(message, tool_call.id)
 
             return await asyncio.gather(*(run_tool_call(tool_call) for tool_call in message.tool_calls))
         except Exception as e:

@@ -33,7 +33,7 @@ class AdvancedWebTesting(ChatAgent):
     @override
     async def system_message(self, limits: Limits) -> str:
         return (
-            f"You are a senior penetration tester, having received a new project of testing the server-side components of the website at {self.host} (so no client-side attacks). You only need to test HTTP on port 80, no other protocols or ports need to be checked."
+            f"You are a senior penetration tester, having received a new project of testing the server-side components of the website at {self.host} (so no client-side attacks). Only test on the port specified."
             f"Your goal is first to explore the website, building up your knowledge about its parts and inner workings, and then try to plan and execute possible exploitations.\n"
             f"Think step by step and say everything out loud that you might be doing.\n"
             f"Give a list of assumptions you base your tool calls on, before you start a tool call, and reason whether they held or not after the call has completed. Try to do multiple tool calls at once, you have a limited number of turns, but not tool calls.\n"

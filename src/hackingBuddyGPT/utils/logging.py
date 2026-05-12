@@ -1,21 +1,33 @@
 import datetime
-from enum import Enum
+import threading
 import time
 from dataclasses import dataclass, field
+from enum import Enum
 from functools import wraps
 from typing import Optional, Union
-import threading
 
 from dataclasses_json.api import dataclass_json
-
-from hackingBuddyGPT.utils import Console, DbStorage, LLMResult, configurable, parameter
-from hackingBuddyGPT.utils.db_storage.db_storage import StreamAction
-from hackingBuddyGPT.utils.configurable import Global, Transparent
 from rich.console import Group
 from rich.panel import Panel
-from websockets.sync.client import ClientConnection, connect as ws_connect
+from rich.text import Text
+from websockets.sync.client import ClientConnection
+from websockets.sync.client import connect as ws_connect
 
-from hackingBuddyGPT.utils.db_storage.db_storage import Run, Section, Message, MessageStreamPart, ToolCall, ToolCallStreamPart
+from hackingBuddyGPT.utils import Console, DbStorage, LLMResult, configurable, parameter
+from hackingBuddyGPT.utils.configurable import Global, Transparent
+from hackingBuddyGPT.utils.db_storage.db_storage import (
+    Message,
+    MessageStreamPart,
+    Run,
+    Section,
+    StreamAction,
+    ToolCall,
+    ToolCallStreamPart,
+)
+
+
+def plain_text(value) -> Text:
+    return Text("" if value is None else str(value))
 
 
 def log_section(name: str, logger_field_name: str = "log"):
@@ -120,7 +132,7 @@ class LocalLogger:
         self._last_message_id += 1
 
         self.log_db.add_message(self.run.id, message_id, self._current_conversation, role, content, tokens_query, tokens_response, duration)
-        self.console.print(Panel(content, title=(("" if self._current_conversation is None else f"{self._current_conversation} - ") + role)))
+        self.console.print(Panel(plain_text(content), title=(("" if self._current_conversation is None else f"{self._current_conversation} - ") + role)))
 
         return message_id
 
@@ -130,8 +142,8 @@ class LocalLogger:
     def add_tool_call(self, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration: datetime.timedelta):
         self.console.print(Panel(
             Group(
-                Panel(arguments, title="arguments"),
-                Panel(result_text, title="result"),
+                Panel(plain_text(arguments), title="arguments"),
+                Panel(plain_text(result_text), title="result"),
             ),
             title=f"Tool Call: {function_name}"))
         self.log_db.add_tool_call(self.run.id, message_id, tool_call_id, function_name, arguments, result_text, duration)
@@ -231,7 +243,7 @@ class RemoteLogger:
 
         msg = Message(self.run.id, message_id, version=1, conversation=self._current_conversation, role=role, content=content, duration=duration, tokens_query=tokens_query, tokens_response=tokens_response)
         self.send(MessageType.MESSAGE, msg)
-        self.console.print(Panel(content, title=(("" if self._current_conversation is None else f"{self._current_conversation} - ") + role)))
+        self.console.print(Panel(plain_text(content), title=(("" if self._current_conversation is None else f"{self._current_conversation} - ") + role)))
 
         return message_id
 
@@ -242,8 +254,8 @@ class RemoteLogger:
     def add_tool_call(self, message_id: int, tool_call_id: str, function_name: str, arguments: str, result_text: str, duration: datetime.timedelta):
         self.console.print(Panel(
             Group(
-                Panel(arguments, title="arguments"),
-                Panel(result_text, title="result"),
+                Panel(plain_text(arguments), title="arguments"),
+                Panel(plain_text(result_text), title="result"),
             ),
             title=f"Tool Call: {function_name}"))
         tc = ToolCall(self.run.id, message_id, tool_call_id, 0, function_name, arguments, "success", result_text, duration)

@@ -1,7 +1,7 @@
 from dataclasses import field
-from typing import List, Any, Union, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
 
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
+from openai.types.chat import ChatCompletionMessage, ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
 
 from hackingBuddyGPT.capabilities import Capability
@@ -32,6 +32,10 @@ class WebTestingWithExplanation(Agent):
         desc="A comma (,) separated list of flags to find",
         default="hostname,dir,username,rootfile,secretfile,adminpass",
     )
+    accept_any_flag: bool = parameter(
+        desc="Accept any submitted flag and stop the run. Disable this to require one of the configured flags.",
+        default=True,
+    )
 
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list()})
@@ -41,7 +45,7 @@ class WebTestingWithExplanation(Agent):
     def init(self):
         super().init()
         self._context["host"] = self.host
-        self.add_capability(SubmitFlag(self.flag_format_description, set(self.flag_template.format(flag=flag) for flag in self.flags.split(",")), success_function=self.all_flags_found))
+        self.add_capability(SubmitFlag(self.flag_format_description, set(self.flag_template.format(flag=flag) for flag in self.flags.split(",")), success_function=self.all_flags_found, accept_any_flag=self.accept_any_flag))
         self.add_capability(HTTPRequest(self.host))
 
     def before_run(self):

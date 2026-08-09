@@ -48,6 +48,10 @@ class OpenAILib(LLM):
         default="",
     )
     proxy: str | None = parameter(desc="Proxy URL for the API calls", default="")
+    proxy_insecure: bool = parameter(
+        desc="Disable TLS certificate verification for the proxy (only for intercepting proxies like Burp/mitmproxy)",
+        default=False,
+    )
 
     _client: openai.OpenAI = None
     _can_stream: bool = True
@@ -60,7 +64,9 @@ class OpenAILib(LLM):
 
         http_client = None
         if self.proxy:
-            http_client = httpx.Client(proxy=self.proxy, verify=False)
+            # TLS verification stays on by default; only an explicit opt-in disables it,
+            # which is sometimes needed to route traffic through an intercepting proxy.
+            http_client = httpx.Client(proxy=self.proxy, verify=not self.proxy_insecure)
 
         self._client = openai.OpenAI(
             api_key=self.api_key,

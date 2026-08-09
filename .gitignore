@@ -36,3 +36,7 @@ config/configs/
 .DS_Store
 *.zip
 src/hackingBuddyGPT/usecases/web_api_documentation/openapi_spec/
+# generated test/run artifacts for the web_api_testing use-case
+src/hackingBuddyGPT/usecases/web_api_testing/reports/
+src/hackingBuddyGPT/usecases/web_api_testing/vulnerabilities/
+src/hackingBuddyGPT/usecases/web_api_testing/tests/

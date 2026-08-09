@@ -1,13 +1,13 @@
+import json
 import os
 import unittest
 from unittest.mock import MagicMock
 
-from hackingBuddyGPT.usecases.web_api_testing.documentation import OpenAPISpecificationHandler
-from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.usecases.web_api_documentation.openapi_specification_handler import OpenAPISpecificationHandler
+from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy, PromptContext
-from hackingBuddyGPT.usecases.web_api_testing.response_processing import ResponseHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
+from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
+from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 
 
 class TestOpenAPISpecificationHandler(unittest.TestCase):
@@ -21,8 +21,8 @@ class TestOpenAPISpecificationHandler(unittest.TestCase):
         self.name = "JSON Placeholder API"
         self.llm_handler_mock = MagicMock(spec=LLMHandler)
         self.config_path = os.path.join(os.path.dirname(__file__), "test_files", "test_config.json")
-        self.configuration_handler = ConfigurationHandler(self.config_path)
-        self.config = self.configuration_handler._load_config(self.config_path)
+        with open(self.config_path) as f:
+            self.config = json.load(f)
         self.host = "https://jsonplaceholder.typicode.com/"
         self.description = "JSON Placeholder API"
         self.prompt_helper = PromptGenerationHelper(self.host, self.description)
@@ -30,7 +30,6 @@ class TestOpenAPISpecificationHandler(unittest.TestCase):
                                                 self.prompt_helper, None)
         self.openapi_handler = OpenAPISpecificationHandler(
             llm_handler=self.llm_handler,
-            response_handler=self.response_handler,
             strategy=self.strategy,
             url=self.url,
             description=self.description,

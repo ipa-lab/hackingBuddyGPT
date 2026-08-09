@@ -1,11 +1,11 @@
+import asyncio
 import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from hackingBuddyGPT.utils.logging import LocalLogger
 from hackingBuddyGPT.usecases.web_api_documentation.simple_openapi_documentation import (
     SimpleWebAPIDocumentation,
-    SimpleWebAPIDocumentationUseCase,
 )
 from hackingBuddyGPT.utils import Console, DbStorage
 
@@ -29,10 +29,6 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         self.agent = SimpleWebAPIDocumentation(llm=self.mock_llm, log=log, config_path=config_path,
                                                strategy_string="cot")
         self.agent.init()
-        self.simple_api_testing = SimpleWebAPIDocumentationUseCase(
-            agent=self.agent
-        )
-        self.simple_api_testing.init()
 
     def test_initial_prompt(self):
         # Test if the initial prompt is set correctly
@@ -76,13 +72,13 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
             '{"page":1,"per_page":6,"total":12,"total_pages":2,"data":[{"id":1,"name":"cerulean"}]}'
         )
 
-        mock_response.execute.return_value = real_http_response
+        mock_response.execute = AsyncMock(return_value=real_http_response)
 
         mock_response.action.path = "/posts/"
 
         self.agent.prompt_helper.found_endpoints = ["/users/"]
         # Perform the round
-        result = self.agent.perform_round(1)
+        result = asyncio.run(self.agent.perform_round(1))
 
 
         # Assertions

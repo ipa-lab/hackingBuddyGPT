@@ -4,7 +4,7 @@ from unittest.mock import mock_open, patch
 
 import yaml
 
-from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import (
+from hackingBuddyGPT.utils.openapi.openapi_parser import (
     OpenAPISpecificationParser,
 )
 

@@ -297,23 +297,6 @@ def capabilities_to_simple_text_handler(
     return capability_descriptions, resolved_parser
 
 
-def capabilities_to_functions(
-    capabilities: Dict[str, Capability],
-) -> Iterable[dict]:
-    """
-    Convert capabilities to OpenAI/litellm-style function definitions (plain dicts, so this
-    stays independent of any provider SDK).
-    """
-    return [
-        {
-            "name": name,
-            "description": capability.describe(),
-            "parameters": capability.to_model().model_json_schema(schema_generator=OptimizedSchemaGenerator),
-        }
-        for name, capability in capabilities.items()
-    ]
-
-
 def capabilities_to_tools(
     capabilities: Dict[str, Capability],
 ) -> Iterable[dict]:

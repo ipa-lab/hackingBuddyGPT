@@ -9,6 +9,11 @@ from rich.panel import Panel
 
 from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
+from hackingBuddyGPT.utils.web_api.target_quirks import (
+    has_named_resource_ids,
+    is_ballardtide,
+    is_owasp_api,
+)
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
@@ -200,7 +205,7 @@ class ResponseHandler:
         # Add Authorization header if token is available
         if self.token:
                 response.action.headers = {"Authorization": f"Bearer {self.token}"}
-        if self.name.__contains__("ballardtide"):
+        if is_ballardtide(self.name):
                 response.action.headers = {"Authorization": f"{self.token}"}
 
         # Convert response to JSON and display it
@@ -300,7 +305,7 @@ class ResponseHandler:
             if path is None:
                 l = self.common_endpoints_categorized[self.prompt_helper.current_step]
                 return random.choice(l)
-            if ("Coin" in self.name or "gbif" in self.name)and self.prompt_helper.current_step == 2:
+            if has_named_resource_ids(self.name) and self.prompt_helper.current_step == 2:
                 id = self.prompt_helper.get_possible_id_for_instance_level_ep(path)
                 if id:
                     path = path.replace("1", f"{id}")
@@ -308,7 +313,7 @@ class ResponseHandler:
                 path = path.replace("{id}", "1")
 
             # Keep the OWASP API naming convention if needed
-            if "OWASP API" in self.name:
+            if is_owasp_api(self.name):
                 path = path.capitalize()
 
             return path
@@ -357,7 +362,7 @@ class ResponseHandler:
                             return self.finalize_path(ep)
 
                         if path in self.prompt_helper.found_endpoints and len(parts) == 1:
-                            if "Coin" in self.name or "gbif" in self.name:
+                            if has_named_resource_ids(self.name):
                                 id =  self.prompt_helper.get_possible_id_for_instance_level_ep(path)
                                 if id:
                                     path = path.replace("1", f"{id}")

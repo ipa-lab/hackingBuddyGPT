@@ -1,6 +1,7 @@
 import copy
 
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
+from hackingBuddyGPT.utils.web_api.target_quirks import CRYPTO_NAMES
 
 
 class Evaluator:
@@ -174,8 +175,7 @@ class Evaluator:
                """
         # Default list of cryptos to detect
         routes_found = list(set(routes_found))
-        cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
-                       "cardano", "solana", "binance", "polkadot", "tezos",]
+        cryptos = CRYPTO_NAMES
 
         # Convert to lowercase for the match, but preserve the original path for reconstruction if you prefer
         lower_path = path.lower()

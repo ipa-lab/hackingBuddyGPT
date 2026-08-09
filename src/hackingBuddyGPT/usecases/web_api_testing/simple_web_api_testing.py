@@ -28,6 +28,7 @@ from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.test_handler import GenerationTestHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.utils.web_api.target_quirks import auth_header_for
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 
@@ -498,14 +499,7 @@ class SimpleWebAPITesting(SimpleStrategy):
                     token = account["token"]
                     break
         if token and (token != "" or token is not None):
-            if self.config.get("name") == "vAPI":
-                response.action.headers = {"Authorization-Token": f"{token}"}
-            elif self.config.get("name") == "crapi":
-                response.action.headers = {"Authorization": f"Bearer {token}"}
-
-            else:
-
-                response.action.headers = {"Authorization-Token": f"Bearer {token}"}
+            response.action.headers = auth_header_for(self.config.get("name"), token)
 
         if response.action.path != self.prompt_helper.current_sub_step.get("path"):
             response.action.path = self.prompt_helper.current_sub_step.get("path")

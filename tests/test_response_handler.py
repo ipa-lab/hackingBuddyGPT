@@ -34,23 +34,6 @@ class TestResponseHandler(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.response_handler.parse_http_status_line(status_line)
 
-    def test_extract_response_example(self):
-        html_content = """
-        <html>
-            <body>
-                <code id="example">{"example": "test"}</code>
-                <code id="result">{"key": "value"}</code>
-            </body>
-        </html>
-        """
-        result = self.response_handler.extract_response_example(html_content)
-        self.assertEqual(result, {"key": "value"})
-
-    def test_extract_response_example_invalid(self):
-        html_content = "<html><body>No code tags</body></html>"
-        result = self.response_handler.extract_response_example(html_content)
-        self.assertIsNone(result)
-
     @patch(
         "hackingBuddyGPT.usecases.web_api_testing.response_processing.ResponseHandler.parse_http_response_to_openapi_example"
     )
@@ -69,12 +52,6 @@ class TestResponseHandler(unittest.TestCase):
         self.assertEqual(reference, "Test")
         self.assertEqual(updated_spec, openapi_spec)
         self.assertIn("Test", entry_dict)
-
-    def test_extract_description(self):
-        note = MagicMock()
-        note.action.content = "Test description"
-        description = self.response_handler.extract_description(note)
-        self.assertEqual(description, "Test description")
 
     from unittest.mock import patch
 
@@ -104,23 +81,6 @@ class TestResponseHandler(unittest.TestCase):
         self.assertIn("Test", updated_spec["components"]["schemas"])
         self.assertIn("id", updated_spec["components"]["schemas"]["Test"]["properties"])
         self.assertIn("name", updated_spec["components"]["schemas"]["Test"]["properties"])
-
-    @patch("builtins.open", new_callable=unittest.mock.mock_open, read_data="yaml_content")
-    def test_read_yaml_to_string(self, mock_open):
-        filepath = "test.yaml"
-        result = self.response_handler.read_yaml_to_string(filepath)
-        mock_open.assert_called_once_with(filepath, "r")
-        self.assertEqual(result, "yaml_content")
-
-    def test_read_yaml_to_string_file_not_found(self):
-        filepath = "nonexistent.yaml"
-        result = self.response_handler.read_yaml_to_string(filepath)
-        self.assertIsNone(result)
-
-    def test_extract_endpoints(self):
-        note = "1. GET /test\n"
-        result = self.response_handler.extract_endpoints(note)
-        self.assertEqual({"/test": ["GET"]}, result)
 
     def test_extract_keys(self):
         key = "name"

@@ -67,41 +67,6 @@ class OpenAPISpecificationHandler(object):
 
         self.pattern_matcher = PatternMatcher()
 
-    def is_partial_match(self, element, string_list):
-        """
-            Checks if the given path `element` partially matches any path in `string_list`,
-            treating path parameters (e.g., `{id}`) as wildcards.
-
-            A partial match is defined as:
-            - Having the same number of path segments.
-            - Matching all static segments (segments not wrapped in `{}`).
-
-            This is useful when comparing generalized OpenAPI paths with actual request paths.
-
-            Args:
-                element (str): The path to check for partial matches (e.g., "/users/123").
-                string_list (List[str]): A list of known paths (e.g., ["/users/{id}", "/posts/{postId}"]).
-
-            Returns:
-                bool: True if a partial match is found, False otherwise.
-            """
-        element_parts = element.split("/")
-
-        for string in string_list:
-            string_parts = string.split("/")
-            if len(element_parts) != len(string_parts):
-                continue  # Skip if structure differs
-
-            for e_part, s_part in zip(element_parts, string_parts):
-                if s_part.startswith("{") and s_part.endswith("}"):
-                    continue  # Skip placeholders
-                if e_part != s_part:
-                    break  # No match
-            else:
-                return True  # All static parts matched
-
-        return False
-
     def parse_http_response_to_openapi_example(
             self, openapi_spec: Dict[str, Any], http_response: str, path: str, method: str
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str], Dict[str, Any]]:
@@ -513,42 +478,6 @@ class OpenAPISpecificationHandler(object):
             return status_code, status_message
         else:
             return None, None
-
-    def replace_crypto_with_id(self, path):
-        """
-    Replaces any known cryptocurrency name in a URL path with a placeholder `{id}`.
-
-    Useful for generalizing dynamic paths when generating or matching OpenAPI specs.
-
-    Args:
-        path (str): The URL path to process.
-
-    Returns:
-        str: The path with any matching cryptocurrency name replaced by `{id}`.
-    """
-
-        # Default list of cryptos to detect
-        cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
-                   "cardano", "solana"]
-
-        # Convert to lowercase for the match, but preserve the original path for reconstruction if you prefer
-        lower_path = path.lower()
-
-        for crypto in cryptos:
-            if crypto in lower_path:
-                # Example approach: split by '/' and replace the segment that matches crypto
-                parts = path.split('/')
-                replaced_any = False
-                for i, segment in enumerate(parts):
-                    if segment.lower() == crypto:
-                        parts[i] = "{id}"
-                        if segment.lower() == crypto:
-                            parts[i] = "{id}"
-                            replaced_any = True
-                            if replaced_any:
-                                return "/".join(parts)
-
-        return path
 
     def replace_id_with_placeholder(self, path, prompt_engineer):
         """

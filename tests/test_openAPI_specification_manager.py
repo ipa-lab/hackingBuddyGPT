@@ -137,16 +137,6 @@ class TestOpenAPISpecificationHandler(unittest.TestCase):
     def test_get_type_string(self):
         self.assertEqual(self.openapi_handler.get_type("hello"), "string")
 
-    def test_replace_crypto_with_id_found(self):
-        path = "/currency/bitcoin/prices"
-        replaced = self.openapi_handler.replace_crypto_with_id(path)
-        self.assertIn("{id}", replaced)
-
-    def test_replace_crypto_with_id_not_found(self):
-        path = "/currency/euro/prices"
-        replaced = self.openapi_handler.replace_crypto_with_id(path)
-        self.assertEqual(replaced, path)
-
     def test_replace_id_with_placeholder_basic(self):
         path = "/user/1/orders"
         mock_prompt_engineer = MagicMock()
@@ -160,12 +150,6 @@ class TestOpenAPISpecificationHandler(unittest.TestCase):
         mock_prompt_engineer.prompt_helper.current_step = 2
         result = self.openapi_handler.replace_id_with_placeholder(path, mock_prompt_engineer)
         self.assertTrue(result.startswith("user"))
-
-    def test_is_partial_match_true(self):
-        self.assertTrue(self.openapi_handler.is_partial_match("/users/1", ["/users/{id}"]))
-
-    def test_is_partial_match_false(self):
-        self.assertFalse(self.openapi_handler.is_partial_match("/admin", ["/users/{id}", "/posts"]))
 
     if __name__ == "__main__":
         unittest.main()

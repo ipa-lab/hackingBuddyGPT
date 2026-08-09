@@ -194,7 +194,7 @@ class ReportHandler:
                 with open(self.vul_report_name, "a", encoding="utf-8") as f:
                     f.write(report_line)
 
-            elif "Access-Control Allow-Origin *"or "Access-Control Allow-Credentials: true" in headers:
+            elif "Access-Control Allow-Origin *" in headers or "Access-Control Allow-Credentials: true" in headers:
                 report_line = (
                     f"Test Purpose: {test_case_purpose}\n"
                     f"Test Name: {test_case_name}\n"

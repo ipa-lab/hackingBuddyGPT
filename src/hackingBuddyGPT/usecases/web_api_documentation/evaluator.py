@@ -86,18 +86,6 @@ class Evaluator:
 
         return len(false_positives)
 
-    def extract_query_params_from_response_data(self, response):
-        """
-        Extract query parameters from the actual response data.
-
-        Args:
-            response (dict): The response data.
-
-        Returns:
-            list: A list of query parameter names found in the response.
-        """
-        return response.get("query_params", [])
-
     def all_query_params_found(self, path, response):
         """
         Count the number of documented query parameters found in a response.
@@ -131,19 +119,6 @@ class Evaluator:
                     if param not in self.query_params_found[ep]:
                         self.query_params_found[ep].append(param)
         self.results["query_params_found"] = self.query_params_found
-
-    def extract_query_params_from_response(self, path):
-        """
-        Extract query parameters from the response in a specific turn.
-
-        Args:
-            turn (int): The current turn number for the documentation process.
-
-        Returns:
-            list: A list of query parameter names found in the response.
-        """
-        # Placeholder code: Replace this with actual extraction logic
-        return self._pattern_matcher.extract_query_params(path).keys()
 
     def calculate_match_percentage(self, documented, result):
         total_keys = len(documented)

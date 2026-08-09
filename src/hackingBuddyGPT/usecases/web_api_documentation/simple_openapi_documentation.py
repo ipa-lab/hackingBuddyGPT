@@ -260,7 +260,6 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
            """
 
         found_count = sum(len(endpoints) for endpoints in self._documentation_handler.endpoint_methods.values())
-        expected_count = len(self._documentation_handler.endpoint_methods.keys()) * 4
         if found_count >= len(self._correct_endpoints) and self.all_steps_done:
             self.found_all_http_methods = True
         return self.found_all_http_methods
@@ -337,32 +336,6 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
         while self._prompt_engineer.prompt_helper.get_endpoints_needing_help():
             await self.run_documentation(turn, "exploit")
             self._prompt_engineer.open_api_spec = self._documentation_handler.openapi_spec
-
-    async def _single_exploit_run(self, turn: int) -> None:
-        """
-           Performs a single exploit pass to extract more precise documentation
-           for endpoints or parameters that may have been incompletely parsed.
-
-           Args:
-               turn (int): Current step number for context.
-
-           """
-        await self.run_documentation(turn, "exploit")
-        self._prompt_engineer.open_api_spec = self._documentation_handler.openapi_spec
-
-    def has_no_numbers(self, path: str) -> bool:
-        """
-            Checks whether a given API path contains any numeric characters.
-
-            This is useful for detecting generic vs. instance-level paths (e.g., `/users` vs. `/users/123`).
-
-            Args:
-                path (str): The API path to analyze.
-
-            Returns:
-                bool: True if the path contains no digits, False otherwise.
-            """
-        return not any(char.isdigit() for char in path)
 
     async def run_documentation(self, turn: int, move_type: str) -> None:
         """

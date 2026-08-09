@@ -1,4 +1,3 @@
-import re
 from typing import Any, Dict, List
 
 import openai
@@ -29,7 +28,6 @@ class LLMHandler:
         self.llm = llm
         self._capabilities = capabilities
         self.created_objects: Dict[str, List[Any]] = {}
-        self._re_word_boundaries = re.compile(r"\b")
         self.adjusting_counter = 0
         self.all_possible_capabilities = all_possible_capabilities
 
@@ -242,49 +240,3 @@ class LLMHandler:
             Dict[str, List[Any]]: The dictionary of created objects.
         """
         return self.created_objects
-
-    def adjust_prompt_based_on_token(self, prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        if not isinstance(prompt, str):
-            prompt.reverse()
-
-        last_item = None
-        tokens = 0
-        max_tokens = 100
-        last_action = ""
-        removed_item = 0
-        for item in prompt:
-            if tokens > max_tokens:
-                if not isinstance(last_item, dict):
-                    prompt.remove(item)
-                else:
-                    prompt.remove(item)
-                last_action = "remove"
-                removed_item = removed_item + 1
-            else:
-
-                if last_action == "remove":
-                    if isinstance(last_item, dict) and last_item.get('role') == 'tool':
-                        prompt.remove(item)
-                last_action = ""
-                if isinstance(item, dict):
-                    new_token_count = tokens + self.get_num_tokens(item["content"])
-                    tokens = new_token_count
-                else:
-                    new_token_count = tokens + 100
-                    tokens = new_token_count
-
-            last_item = item
-
-        if removed_item == 0:
-            counter = 5
-            for item in prompt:
-                prompt.remove(item)
-                counter = counter + 1
-        if not isinstance(prompt, str):
-            prompt.reverse()
-        return prompt
-
-    def get_num_tokens(self, content: str) -> int:
-        if not isinstance(content, str):
-            content = str(content)
-        return len(self._re_word_boundaries.findall(content)) >> 1

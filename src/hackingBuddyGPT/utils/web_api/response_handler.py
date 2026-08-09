@@ -1,12 +1,10 @@
 import json
 import re
-from collections import Counter
 from itertools import cycle
 from typing import Any, Dict, Optional
 import random
 from urllib.parse import urlencode
 import pydantic_core
-from bs4 import BeautifulSoup
 from rich.panel import Panel
 
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
@@ -133,20 +131,6 @@ class ResponseHandler:
     }
 
 
-    def get_response_for_prompt(self, prompt: str) -> object:
-        """
-        Sends a prompt to the LLM's API and retrieves the response.
-
-        Args:
-            prompt (str): The prompt to be sent to the API.
-
-        Returns:
-            str: The response from the API.
-        """
-        messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
-        response, completion = self.llm_handler.execute_prompt(messages)
-        return response, completion
-
     def parse_http_status_line(self, status_line: str) -> str:
         """
         Parses an HTTP status line and returns the status code and message.
@@ -170,82 +154,6 @@ class ResponseHandler:
             return f"{status_code} {status_message}"
         else:
             raise ValueError(f"{status_line} is an invalid HTTP status line")
-
-    def extract_response_example(self, html_content: str) -> Optional[Dict[str, Any]]:
-        """
-        Extracts the JavaScript example code and result placeholder from HTML content.
-
-        Args:
-            html_content (str): The HTML content containing the example code.
-
-        Returns:
-            Optional[Dict[str, Any]]: The extracted response example as a dictionary, or None if extraction fails.
-        """
-        soup = BeautifulSoup(html_content, "html.parser")
-        example_code = soup.find("code", {"id": "example"})
-        result_code = soup.find("code", {"id": "result"})
-        if example_code and result_code:
-            example_text = example_code.get_text()
-            result_text = result_code.get_text()
-            return json.loads(result_text)
-        return None
-
-    def extract_description(self, note: Any) -> str:
-        """
-        Extracts the description from a note.
-
-        Args:
-            note (Any): The note containing the description.
-
-        Returns:
-            str: The extracted description.
-        """
-        return note.action.content
-
-    def read_yaml_to_string(self, filepath: str) -> Optional[str]:
-        """
-        Reads a YAML file and returns its contents as a string.
-
-        Args:
-            filepath (str): The path to the YAML file.
-
-        Returns:
-            Optional[str]: The contents of the YAML file, or None if an error occurred.
-        """
-        try:
-            with open(filepath, "r") as file:
-                return file.read()
-        except FileNotFoundError:
-            print(f"Error: The file {filepath} does not exist.")
-            return None
-        except IOError as e:
-            print(f"Error reading file {filepath}: {e}")
-            return None
-
-    def extract_endpoints(self, note: str) -> Dict[str, list]:
-        """
-        Extracts API endpoints from a note using regular expressions.
-
-        Args:
-            note (str): The note containing endpoint definitions.
-
-        Returns:
-            Dict[str, list]: A dictionary with endpoints as keys and HTTP methods as values.
-        """
-        required_endpoints = {}
-        pattern = r"(\d+\.\s+GET)\s(/[\w{}]+)"
-        matches = re.findall(pattern, note)
-
-        for match in matches:
-            method, endpoint = match
-            method = method.split()[1]
-            if endpoint in required_endpoints:
-                if method not in required_endpoints[endpoint]:
-                    required_endpoints[endpoint].append(method)
-            else:
-                required_endpoints[endpoint] = [method]
-
-        return required_endpoints
 
     async def evaluate_result(self, result: Any, prompt_history: Prompt, analysis_context: Any) -> Any:
         """
@@ -310,23 +218,6 @@ class ResponseHandler:
             return await self.handle_http_response(response, prompt_history, log, completion, message, categorized_endpoints,
                                              tool_call_id, move_type)
 
-    def normalize_path(self, path):
-        # Use regex to strip trailing digits
-        return re.sub(r'\d+$', '', path)
-
-    def check_path_variants(self, path, paths):
-        # Normalize the paths
-        normalized_paths = [self.normalize_path(path) for path in paths]
-
-        # Count each normalized path
-        path_counts = Counter(normalized_paths)
-
-        # Extract paths that have more than one variant
-        variants = {path: count for path, count in path_counts.items() if count > 1}
-        if len(variants) != 0:
-            return True
-        return False
-
     async def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any,
                              categorized_endpoints, tool_call_id, move_type) -> Any:
 
@@ -387,14 +278,6 @@ class ResponseHandler:
 
         return extracted_params
 
-    def get_next_key(self, current_key, dictionary):
-        keys = list(dictionary.keys())  # Convert keys to a list
-        try:
-            current_index = keys.index(current_key)  # Find the index of the current key
-            return keys[current_index + 1]  # Return the next key
-        except (ValueError, IndexError):
-            return None  # Return None if the current key is not found or there is no next key
-
     def extract_json(self, response: str) -> dict:
         try:
             # Find the start of the JSON body by locating the first '{' character
@@ -407,16 +290,6 @@ class ResponseHandler:
         except (ValueError, json.JSONDecodeError) as e:
             print(f"Error extracting JSON: {e}")
             return {}
-
-    def generate_variants_of_found_endpoints(self, type_of_variant):
-        for endpoint in self.prompt_helper.found_endpoints:
-            if endpoint + "/1" in self.variants_of_found_endpoints:
-                self.variants_of_found_endpoints.remove(endpoint + "/1")
-            if "id" not in endpoint and endpoint + "/{id}" not in self.prompt_helper.found_endpoints and endpoint.endswith(
-                    's'):
-                self.variants_of_found_endpoints.append(endpoint + "/1")
-            if "/1" not in self.variants_of_found_endpoints or self.prompt_helper.found_endpoints:
-                self.variants_of_found_endpoints.append("/1")
 
     def get_next_path(self, path):
         counter = 0
@@ -600,44 +473,6 @@ class ResponseHandler:
         if path not in self.prompt_helper.saved_endpoints:
             self.prompt_helper.saved_endpoints.append(path)
 
-    def get_saved_endpoint(self):
-        # First check if there are any saved endpoints for the current step
-        if self.prompt_helper.current_step in self.saved_endpoints and self.saved_endpoints[
-            self.prompt_helper.current_step]:
-            # Get the first endpoint in the list for the current step
-            saved_endpoint = self.saved_endpoints[self.prompt_helper.current_step][0]
-            saved_endpoint = saved_endpoint.replace("{id}", "1")
-
-            # Check if this endpoint has not been found or unsuccessfully tried
-            if saved_endpoint not in self.prompt_helper.found_endpoints and saved_endpoint not in self.prompt_helper.unsuccessful_paths:
-                # If it is a valid endpoint, delete it from saved endpoints to avoid reuse
-                del self.saved_endpoints[self.prompt_helper.current_step][0]
-                if not saved_endpoint.endswith("s") and not saved_endpoint.endswith("1"):
-                    saved_endpoint = saved_endpoint + "s"
-                return saved_endpoint
-
-        # Return None or raise an exception if no valid endpoint is found
-        return None
-
-    def adjust_counter(self, categorized_endpoints):
-        # Helper function to handle the increment and reset actions
-        def update_step_and_category():
-            if self.prompt_helper.current_step != 6:
-                self.prompt_helper.current_step += 1
-                self.prompt_helper.current_category = self.get_next_key(self.prompt_helper.current_category,
-                                                                    categorized_endpoints)
-                self.query_counter = 0
-
-        # Check for step-specific conditions or query count thresholds
-        if (self.prompt_helper.current_step == 1 and self.query_counter > 150):
-            update_step_and_category()
-        elif self.prompt_helper.current_step == 2 and not self.prompt_helper._get_instance_level_endpoints(self.name):
-            update_step_and_category()
-        elif self.prompt_helper.current_step > 2 and self.query_counter > 30:
-            update_step_and_category()
-        elif self.prompt_helper.current_step == 7 and not self.prompt_helper._get_root_level_endpoints(self.name):
-            update_step_and_category()
-
     def create_common_query_for_endpoint(self, endpoint):
         """
         Constructs complete URLs with one query parameter for each API endpoint.
@@ -787,7 +622,6 @@ class ResponseHandler:
 
             self.prompt_helper.query_endpoints_params.setdefault(ep, [])
             self.prompt_helper.tried_endpoints_with_params.setdefault(ep, [])
-           # ep = self.check_if_crypto(ep)
             if ep not in self.prompt_helper.found_endpoints:
                 if "?" not in ep and ep not in self.prompt_helper.found_endpoints:
                     self.prompt_helper.found_endpoints.append(ep)
@@ -831,33 +665,4 @@ class ResponseHandler:
             for key in self.extract_params(request_path):
                 self.prompt_helper.tried_endpoints_with_params[ep].append(key)
 
-       # self.adjust_counter(categorized_endpoints)
-
         return status_message
-
-    def check_if_crypto(self, path):
-
-        # Default list of cryptos to detect
-        cryptos = ["bitcoin", "ethereum", "litecoin", "dogecoin",
-                       "cardano", "solana"]
-
-        # Convert to lowercase for the match, but preserve the original path for reconstruction if you prefer
-        lower_path = path.lower()
-
-
-        for crypto in cryptos:
-            if crypto in lower_path:
-                # Example approach: split by '/' and replace the segment that matches crypto
-                parts = path.split('/')
-                replaced_any = False
-                for i, segment in enumerate(parts):
-                    if segment.lower() == crypto:
-                        parts[i] = "{id}"
-                        if segment.lower() == crypto:
-                            parts[i] = "{id}"
-                            replaced_any = True
-                            if replaced_any:
-                                return "/".join(parts)
-
-
-        return path

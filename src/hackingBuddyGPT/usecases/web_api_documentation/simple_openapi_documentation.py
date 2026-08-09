@@ -8,7 +8,7 @@ from hackingBuddyGPT.strategies import SimpleStrategy
 from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.usecases.web_api_documentation.openapi_specification_handler import \
     OpenAPISpecificationHandler
-from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import PromptStrategy
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import strategy_from_string
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
@@ -73,15 +73,6 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
 
     def get_name(self) -> str:
         return self.__class__.__name__
-    
-    def get_strategy(self, strategy_string):
-
-        strategies = {
-            "cot": PromptStrategy.CHAIN_OF_THOUGHT,
-            "tot": PromptStrategy.TREE_OF_THOUGHT,
-            "icl": PromptStrategy.IN_CONTEXT
-        }
-        return strategies.get(strategy_string, PromptStrategy.IN_CONTEXT)
 
     def init(self):
         """Initialize the agent with configurations, capabilities, and handlers."""
@@ -91,7 +82,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
         self.all_steps_done = False
 
         # load config file
-        self.strategy = self.get_strategy(self.strategy_string)
+        self.strategy = strategy_from_string(self.strategy_string)
 
         """Loads JSON configuration from the specified path."""
         if not os.path.exists(self.config_path):

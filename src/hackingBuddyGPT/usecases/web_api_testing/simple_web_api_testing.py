@@ -14,7 +14,7 @@ from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.strategies import SimpleStrategy
 from hackingBuddyGPT.usecases.usecase import use_case
-from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import PromptStrategy
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import strategy_from_string
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
@@ -71,20 +71,11 @@ class SimpleWebAPITesting(SimpleStrategy):
     _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list(), "parsed": list()})
     _all_test_cases_run: bool = False
 
-    def get_strategy(self, strategy_string):
-
-        strategies = {
-            "cot": PromptStrategy.CHAIN_OF_THOUGHT,
-            "tot": PromptStrategy.TREE_OF_THOUGHT,
-            "icl": PromptStrategy.IN_CONTEXT
-        }
-        return strategies.get(strategy_string, PromptStrategy.IN_CONTEXT)
-
     def init(self):
         super().init()
 
         # load config file
-        self.strategy = self.get_strategy(self.strategy_string)
+        self.strategy = strategy_from_string(self.strategy_string)
 
         """Loads JSON configuration from the specified path."""
         if not os.path.exists(self.config_path):

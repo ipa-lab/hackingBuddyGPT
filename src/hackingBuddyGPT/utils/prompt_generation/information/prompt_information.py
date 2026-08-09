@@ -16,6 +16,20 @@ class PromptStrategy(Enum):
     TREE_OF_THOUGHT = 3
 
 
+def strategy_from_string(strategy_string: str) -> "PromptStrategy":
+    """Map a short strategy string to a :class:`PromptStrategy`.
+
+    ``"cot"`` -> chain-of-thought, ``"tot"`` -> tree-of-thought, ``"icl"`` ->
+    in-context; anything else (including an empty string) defaults to in-context.
+    """
+    strategies = {
+        "cot": PromptStrategy.CHAIN_OF_THOUGHT,
+        "tot": PromptStrategy.TREE_OF_THOUGHT,
+        "icl": PromptStrategy.IN_CONTEXT,
+    }
+    return strategies.get(strategy_string, PromptStrategy.IN_CONTEXT)
+
+
 class PromptContext(Enum):
     """
     Enumeration for general contexts in which prompts are generated.

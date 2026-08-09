@@ -8,6 +8,7 @@ import pydantic_core
 from rich.panel import Panel
 
 from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
+from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.utils.web_api.target_quirks import (
     has_named_resource_ids,
@@ -184,7 +185,7 @@ class ResponseHandler:
 
         if self.repeat_counter == 3:
             self.repeat_counter = 0
-            if self.prompt_helper.current_step == 2:
+            if self.prompt_helper.current_step == ExploreStep.INSTANCE:
                 adjusted_path = self.adjust_path_if_necessary(response.action.path)
                 self.prompt_helper.hint_for_next_round = f'Try this endpoint in the next round {adjusted_path}'
                 self.no_action_counter += 1
@@ -273,7 +274,7 @@ class ResponseHandler:
 
     def get_next_path(self, path):
         counter = 0
-        if self.prompt_helper.current_step >= 6:
+        if self.prompt_helper.current_step >= ExploreStep.QUERY:
             new_path = self.create_common_query_for_endpoint(path)
             if path == "params":
                 return path
@@ -305,7 +306,7 @@ class ResponseHandler:
             if path is None:
                 l = self.common_endpoints_categorized[self.prompt_helper.current_step]
                 return random.choice(l)
-            if has_named_resource_ids(self.name) and self.prompt_helper.current_step == 2:
+            if has_named_resource_ids(self.name) and self.prompt_helper.current_step == ExploreStep.INSTANCE:
                 id = self.prompt_helper.get_possible_id_for_instance_level_ep(path)
                 if id:
                     path = path.replace("1", f"{id}")
@@ -320,8 +321,21 @@ class ResponseHandler:
 
     def adjust_path_if_necessary(self, path: str) -> str:
             """
-            Adjusts the given path based on the current step in self.prompt_helper and certain conditions.
-            Always replaces '1' with 'bitcoin', no matter what self.name is.
+            Steer the next request path according to the current exploration step.
+
+            The body is a ladder over ``self.prompt_helper.current_step`` (see
+            :class:`ExploreStep`): each step picks the next candidate path of the
+            matching shape, falling back to a fresh instance/sub/related/multi-level
+            endpoint (or a random common endpoint) when the current path has already
+            been tried. Steps:
+
+            - ``ROOT``: prefer the root of a multi-part path, else advance.
+            - ``INSTANCE``: build/keep a ``/{id}`` instance path.
+            - ``SUBRESOURCE`` / ``RELATED`` / ``MULTI_LEVEL``: derive the deeper
+              endpoint via the corresponding prompt-helper builder.
+            - ``QUERY``: append a query parameter to the endpoint.
+
+            The result is finalized by :meth:`finalize_path`.
             """
             # Ensure path starts with a slash
             if not path.startswith("/"):
@@ -339,7 +353,7 @@ class ResponseHandler:
             if parts:
                 root_path = '/' + parts[0]
 
-                if self.prompt_helper.current_step == 1:
+                if self.prompt_helper.current_step == ExploreStep.ROOT:
                     if len(parts) > 1:
                         if root_path not in (
                                 self.prompt_helper.found_endpoints or self.prompt_helper.unsuccessful_paths):
@@ -355,7 +369,7 @@ class ResponseHandler:
                                 path == self.last_path):
                             return self.finalize_path(self.get_next_path(path))
 
-                elif self.prompt_helper.current_step == 2:
+                elif self.prompt_helper.current_step == ExploreStep.INSTANCE:
                     if len(parts) != 2:
                         if path in self.prompt_helper.unsuccessful_paths:
                             ep = self.prompt_helper._get_instance_level_endpoint(self.name)
@@ -373,7 +387,7 @@ class ResponseHandler:
                         ep = self.prompt_helper._get_instance_level_endpoint(self.name)
                         return self.finalize_path(ep)
 
-                elif self.prompt_helper.current_step == 3:
+                elif self.prompt_helper.current_step == ExploreStep.SUBRESOURCE:
                     if path in self.prompt_helper.unsuccessful_paths:
                         ep = self.prompt_helper._get_sub_resource_endpoint(
                             random.choice(self.prompt_helper.found_endpoints),
@@ -384,7 +398,7 @@ class ResponseHandler:
                     ep = self.prompt_helper._get_sub_resource_endpoint(path, self.common_endpoints, self.name)
                     return self.finalize_path(ep)
 
-                elif self.prompt_helper.current_step == 4:
+                elif self.prompt_helper.current_step == ExploreStep.RELATED:
                     if path in self.prompt_helper.unsuccessful_paths:
                         ep = self.prompt_helper._get_related_resource_endpoint(
                             random.choice(self.prompt_helper.found_endpoints),
@@ -396,7 +410,7 @@ class ResponseHandler:
                     ep = self.prompt_helper._get_related_resource_endpoint(path, self.common_endpoints, self.name)
                     return self.finalize_path(ep)
 
-                elif self.prompt_helper.current_step == 5:
+                elif self.prompt_helper.current_step == ExploreStep.MULTI_LEVEL:
                     if path in self.prompt_helper.unsuccessful_paths:
                         ep = self.prompt_helper._get_multi_level_resource_endpoint(
                             random.choice(self.prompt_helper.found_endpoints),
@@ -407,7 +421,7 @@ class ResponseHandler:
                         ep = self.prompt_helper._get_multi_level_resource_endpoint(path, self.common_endpoints, self.name)
                     return self.finalize_path(ep)
 
-                elif (self.prompt_helper.current_step == 6 and
+                elif (self.prompt_helper.current_step == ExploreStep.QUERY and
                       "?" not in path):
                     new_path = self.create_common_query_for_endpoint(path)
                     # If "no params", keep original path, else use new_path
@@ -417,22 +431,22 @@ class ResponseHandler:
                 if (path in {self.last_path,
                              *self.prompt_helper.unsuccessful_paths,
                              *self.prompt_helper.found_endpoints}
-                        and self.prompt_helper.current_step != 6):
+                        and self.prompt_helper.current_step != ExploreStep.QUERY):
                     return self.finalize_path(random.choice(self.common_endpoints))
 
                 # Pattern-based check
                 if (pattern_replaced_path in self.prompt_helper.found_endpoints or
-                    pattern_replaced_path in self.prompt_helper.unsuccessful_paths) and self.prompt_helper.current_step != 2:
+                    pattern_replaced_path in self.prompt_helper.unsuccessful_paths) and self.prompt_helper.current_step != ExploreStep.INSTANCE:
                     return self.finalize_path(random.choice(self.common_endpoints))
 
             else:
                 # No parts
-                if self.prompt_helper.current_step == 1:
+                if self.prompt_helper.current_step == ExploreStep.ROOT:
                     root_level_endpoints = self.prompt_helper._get_root_level_endpoints()
                     chosen = root_level_endpoints[0] if root_level_endpoints else self.get_next_path(path)
                     return self.finalize_path(chosen)
 
-                if self.prompt_helper.current_step == 2:
+                if self.prompt_helper.current_step == ExploreStep.INSTANCE:
                     ep = self.prompt_helper._get_instance_level_endpoint(self.name)
                     return self.finalize_path(ep)
 
@@ -538,13 +552,13 @@ class ResponseHandler:
             """
             old_path = response.action.path
 
-            if "?" not in response.action.path and self.prompt_helper.current_step == 6:
+            if "?" not in response.action.path and self.prompt_helper.current_step == ExploreStep.QUERY:
                 if response.action.path not in self.prompt_helper.saved_endpoints:
                     if response.action.query is not None:
                         return response
             # Process action if it's not RecordNote
             if response.action.__class__.__name__ != "RecordNote":
-                if self.prompt_helper.current_step == 6 :
+                if self.prompt_helper.current_step == ExploreStep.QUERY :
                     response.action.path = self.create_common_query_for_endpoint(response.action.path)
 
                 if response.action.path in self.prompt_helper.unsuccessful_paths:
@@ -555,13 +569,13 @@ class ResponseHandler:
                     self.no_action_counter = 0
                 parts = response.action.path.split("/")
                 len_path = len([part.strip() for part in parts if part.strip()])
-                if self.prompt_helper.current_step == 2:
+                if self.prompt_helper.current_step == ExploreStep.INSTANCE:
                     if len_path  <2 or len_path > 2 or response.action.path  in self.prompt_helper.unsuccessful_paths:
                         id = self.prompt_helper.get_possible_id_for_instance_level_ep(parts[0])
                         if id:
                             response.action.path = parts[0] + f"/{id}"
                 else:
-                    if self.prompt_helper.current_step != 6 and not response.action.path.endswith("?"):
+                    if self.prompt_helper.current_step != ExploreStep.QUERY and not response.action.path.endswith("?"):
                         adjusted_path = self.adjust_path_if_necessary(response.action.path)
                         if adjusted_path != None:
                             response.action.path = adjusted_path

@@ -14,11 +14,23 @@ from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
 from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
+from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api_documentation.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
 from rich.panel import Panel
+
+
+# perform_round alternates explore/exploit by turn number:
+EXPLORE_PHASE_LAST_TURN = 18   # turns 1..18 explore
+EXPLOIT_PHASE_LAST_TURN = 19   # turn 19 exploits until no help is needed; 20+ explores again
+
+# run_documentation step-advance thresholds (per-step query / stagnation counters):
+QUERY_STEP_QUERY_LIMIT = 600   # advance out of the QUERY step after this many queries
+PER_STEP_QUERY_LIMIT = 200     # advance any pre-QUERY step after this many queries
+EXPLOIT_QUERY_LIMIT = 50       # stop once exploit mode has issued this many queries
+NO_NEW_ENDPOINT_LIMIT = 30     # advance a step after this many queries yield no new endpoint
 
 
 @use_case("Minimal implementation of a web API testing use case")
@@ -247,9 +259,9 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
                bool: True if all HTTP methods have been discovered by the end of the round.
            """
 
-        if turn <= 18:
+        if turn <= EXPLORE_PHASE_LAST_TURN:
             await self._explore_mode(turn)
-        elif turn <= 19:
+        elif turn <= EXPLOIT_PHASE_LAST_TURN:
             await self._exploit_until_no_help_needed(turn)
         else:
             await self._explore_mode(turn)
@@ -339,34 +351,34 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
             )
             self.prompt_helper.endpoint_examples = self._documentation_handler.endpoint_examples
 
-            if self._prompt_engineer.prompt_helper.current_step == 7 and move_type == "explore":
+            if self._prompt_engineer.prompt_helper.current_step == ExploreStep.DONE and move_type == "explore":
                 is_good = True
                 self.prompt_helper.current_step += 1
                 self._response_handler.query_counter = 0
-            if self._prompt_engineer.prompt_helper.current_step == 2 and len(self.prompt_helper._get_instance_level_endpoints("")) ==0:
+            if self._prompt_engineer.prompt_helper.current_step == ExploreStep.INSTANCE and len(self.prompt_helper._get_instance_level_endpoints("")) ==0:
                 is_good = True
                 self.prompt_helper.current_step += 1
                 self._response_handler.query_counter = 0
 
 
-            if self._response_handler.query_counter == 600 and self.prompt_helper.current_step == 6:
+            if self._response_handler.query_counter == QUERY_STEP_QUERY_LIMIT and self.prompt_helper.current_step == ExploreStep.QUERY:
                 is_good = True
                 self.explore_steps_done = True
                 self.prompt_helper.current_step += 1
                 self._response_handler.query_counter = 0
 
             if  move_type == "exploit" :
-                if self._response_handler.query_counter >= 50 :
+                if self._response_handler.query_counter >= EXPLOIT_QUERY_LIMIT :
                     is_good = True
                     self.all_steps_done = True
 
-            if self._prompt_engineer.prompt_helper.current_step < 6 and self._response_handler.no_new_endpoint_counter >30:
+            if self._prompt_engineer.prompt_helper.current_step < ExploreStep.QUERY and self._response_handler.no_new_endpoint_counter > NO_NEW_ENDPOINT_LIMIT:
                 is_good = True
                 self._response_handler.no_new_endpoint_counter = 0
                 self.prompt_helper.current_step += 1
                 self._response_handler.query_counter = 0
 
-            if self._prompt_engineer.prompt_helper.current_step < 6 and self._response_handler.query_counter > 200:
+            if self._prompt_engineer.prompt_helper.current_step < ExploreStep.QUERY and self._response_handler.query_counter > PER_STEP_QUERY_LIMIT:
                 is_good = True
                 self.prompt_helper.current_step += 1
                 self._response_handler.query_counter = 0

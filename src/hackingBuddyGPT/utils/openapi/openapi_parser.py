@@ -5,6 +5,8 @@ from typing import Dict, List, Union
 
 import yaml
 
+from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
+
 
 class OpenAPISpecificationParser:
     """
@@ -411,39 +413,14 @@ class OpenAPISpecificationParser:
                   - 'related_resource': Endpoints with three segments including 'id' (e.g., '/users/{id}/orders').
                   - 'multi-level_resource': Endpoints with more than two segments not matched by the above.
                   - 'query': The values from the input query dictionary."""
-        root_level = []
-        single_parameter = []
-        subresource = []
-        related_resource = []
-        multi_level_resource = []
-
-        for endpoint in endpoints:
-            # Split the endpoint by '/' and filter out empty strings
-            parts = [part for part in endpoint.split('/') if part]
-
-            # Determine the category based on the structure
-            if len(parts) == 1:
-                root_level.append(endpoint)
-            elif len(parts) == 2:
-                if "id" in endpoint:
-                    single_parameter.append(endpoint)
-                else:
-                    subresource.append(endpoint)
-            elif len(parts) == 3:
-                if "id" in endpoint:
-                    related_resource.append(endpoint)
-                else:
-                    multi_level_resource.append(endpoint)
-            else:
-                multi_level_resource.append(endpoint)
-
+        buckets = categorize_by_structure(endpoints)
         return {
-            "root_level": root_level,
-            "instance_level": single_parameter,
-            "subresource": subresource,
+            "root_level": buckets["root_level"],
+            "instance_level": buckets["instance_level"],
+            "subresource": buckets["subresource"],
             "query": query.values(),
-            "related_resource": related_resource,
-            "multi-level_resource": multi_level_resource,
+            "related_resource": buckets["related_resource"],
+            "multi-level_resource": buckets["multi_level_resource"],
         }
 
 

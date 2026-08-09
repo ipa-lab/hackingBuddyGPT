@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 import pydantic_core
 from rich.panel import Panel
 
+from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
@@ -90,45 +91,19 @@ class ResponseHandler:
     def set_response_analyzer(self, response_analyzer: ResponseAnalyzerWithLLM) -> None:
         self.response_analyzer = response_analyzer
 
-    def categorize_endpoints(self) :
-        root_level = []
-        single_parameter = []
-        subresource = []
-        related_resource = []
-        multi_level_resource = []
-
-        # Iterate through the cycle of endpoints
-        for endpoint in self.common_endpoints:
-            parts = [part for part in endpoint.split('/') if part]
-
-            if len(parts) == 1:
-                root_level.append(endpoint)
-            elif len(parts) == 2:
-                if "{id}" in parts[1]:
-                    single_parameter.append(endpoint)
-                else:
-                    subresource.append(endpoint)
-            elif len(parts) == 3:
-                if any("{id}" in part for part in parts):
-                    related_resource.append(endpoint)
-                else:
-                    multi_level_resource.append(endpoint)
-            else:
-                multi_level_resource.append(endpoint)
-
-        return {
-            1: cycle(root_level),
-            2: cycle(single_parameter),
-            3: cycle(subresource),
-            4: cycle(related_resource),
-            5: cycle(multi_level_resource),
-        }, {
-        1: root_level,
-        2: single_parameter,
-        3: subresource,
-        4: related_resource,
-        5: multi_level_resource,
-    }
+    def categorize_endpoints(self):
+        # Buckets keyed 1..5 by structural depth, matching the exploration steps.
+        buckets = categorize_by_structure(self.common_endpoints, id_token="{id}")
+        ordered = [
+            buckets["root_level"],
+            buckets["instance_level"],
+            buckets["subresource"],
+            buckets["related_resource"],
+            buckets["multi_level_resource"],
+        ]
+        cycles = {i + 1: cycle(bucket) for i, bucket in enumerate(ordered)}
+        plain = {i + 1: bucket for i, bucket in enumerate(ordered)}
+        return cycles, plain
 
 
     def parse_http_status_line(self, status_line: str) -> str:

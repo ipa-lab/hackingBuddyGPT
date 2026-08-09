@@ -13,6 +13,7 @@ from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import Pro
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
+from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api_documentation.evaluator import Evaluator
@@ -209,39 +210,14 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
                     - "multi-level_resource": Deeper or complex nested resources
                     - "query": Query parameter values from the input
             """
-        root_level = []
-        single_parameter = []
-        subresource = []
-        related_resource = []
-        multi_level_resource = []
-
-        for endpoint in endpoints:
-            # Split the endpoint by '/' and filter out empty strings
-            parts = [part for part in endpoint.split('/') if part]
-
-            # Determine the category based on the structure
-            if len(parts) == 1:
-                root_level.append(endpoint)
-            elif len(parts) == 2:
-                if "id" in endpoint:
-                    single_parameter.append(endpoint)
-                else:
-                    subresource.append(endpoint)
-            elif len(parts) == 3:
-                if "id" in endpoint:
-                    related_resource.append(endpoint)
-                else:
-                    multi_level_resource.append(endpoint)
-            else:
-                multi_level_resource.append(endpoint)
-
+        buckets = categorize_by_structure(endpoints)
         return {
-            "root_level": root_level,
-            "instance_level": single_parameter,
-            "subresource": subresource,
+            "root_level": buckets["root_level"],
+            "instance_level": buckets["instance_level"],
+            "subresource": buckets["subresource"],
             "query": query.values(),
-            "related_resource": related_resource,
-            "multi-level_resource": multi_level_resource,
+            "related_resource": buckets["related_resource"],
+            "multi-level_resource": buckets["multi_level_resource"],
         }
 
     def all_http_methods_found(self, turn: int) -> bool:

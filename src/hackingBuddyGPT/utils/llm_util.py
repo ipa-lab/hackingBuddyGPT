@@ -21,9 +21,17 @@ class LLMResult:
     result: typing.Any
     prompt: str
     answer: str
+    reasoning: str
     duration: datetime.timedelta = datetime.timedelta(0)
     tokens_query: int = 0
     tokens_response: int = 0
+    tokens_reasoning: int = 0
+    usage_details: str = ""
+    cost: float = 0.0
+
+    @property
+    def total_tokens(self):
+        return self.tokens_query + self.tokens_response + self.tokens_reasoning
 
 
 class LLM(abc.ABC):

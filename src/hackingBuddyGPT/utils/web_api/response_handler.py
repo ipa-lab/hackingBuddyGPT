@@ -247,7 +247,7 @@ class ResponseHandler:
 
         return required_endpoints
 
-    def evaluate_result(self, result: Any, prompt_history: Prompt, analysis_context: Any) -> Any:
+    async def evaluate_result(self, result: Any, prompt_history: Prompt, analysis_context: Any) -> Any:
         """
         Evaluates the result using the LLM-based response analyzer.
 
@@ -259,14 +259,14 @@ class ResponseHandler:
             Any: The evaluation result from the LLM response analyzer.
         """
         self.response_analyzer._prompt_helper = self.prompt_helper
-        llm_responses, status_code = self.response_analyzer.analyze_response(result, prompt_history, analysis_context)
+        llm_responses, status_code = await self.response_analyzer.analyze_response(result, prompt_history, analysis_context)
         return llm_responses, status_code
 
     def extract_key_elements_of_response(self, raw_response: Any) -> str:
         status_code, headers, body = self.response_analyzer.parse_http_response(raw_response)
         return "Status Code: " + str(status_code) + "\nHeaders:" + str(headers) + "\nBody" + str(body)
 
-    def handle_response(self, response, completion, prompt_history, log, categorized_endpoints, move_type):
+    async def handle_response(self, response, completion, prompt_history, log, categorized_endpoints, move_type):
         """
         Evaluates the response to determine if it is acceptable.
 
@@ -307,7 +307,7 @@ class ResponseHandler:
             return False, prompt_history, None, None
 
         else:
-            return self.handle_http_response(response, prompt_history, log, completion, message, categorized_endpoints,
+            return await self.handle_http_response(response, prompt_history, log, completion, message, categorized_endpoints,
                                              tool_call_id, move_type)
 
     def normalize_path(self, path):
@@ -327,7 +327,7 @@ class ResponseHandler:
             return True
         return False
 
-    def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any,
+    async def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any,
                              categorized_endpoints, tool_call_id, move_type) -> Any:
 
         response = self.adjust_path(response, move_type)
@@ -345,7 +345,7 @@ class ResponseHandler:
         with log.console.status("[bold green]Executing command..."):
 
 
-            result = response.execute()
+            result = await response.execute()
             self.query_counter += 1
             result_dict = self.extract_json(result)
             log.console.print(Panel(result, title="tool"))

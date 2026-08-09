@@ -33,10 +33,10 @@ class CommandStrategy(UseCase, abc.ABC):
 
     enable_compressed_history: bool = False
 
-    def before_run(self):
+    async def before_run(self):
         pass
 
-    def after_command_execution(self, cmd, result, got_root):
+    async def after_command_execution(self, cmd, result, got_root):
         pass
 
     def get_token_overhead(self) -> int:
@@ -55,50 +55,50 @@ class CommandStrategy(UseCase, abc.ABC):
                 self._history = HistoryCmdOnly()
             else:
                 self._history = HistoryFull()
-    
+
     @log_conversation("Starting run...")
-    def run(self, configuration):
+    async def run(self, configuration):
 
         self.configuration = configuration
-        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
+        await self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
 
         self._template_params["capabilities"] = self._capabilities.get_capability_block()
 
-        self.before_run()
+        await self.before_run()
 
         task_successful = False
         turn = 1
         try:
             while turn <= self.max_turns and not task_successful:
-                with self.log.section(f"round {turn}"):
+                async with self.log.section(f"round {turn}"):
                     self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
-                    task_successful = self.perform_round(turn)
+                    task_successful = await self.perform_round(turn)
                     turn += 1
         except Exception:
             import traceback
-            self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
+            await self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
             raise
 
         # write the final result to the database and console
         if task_successful:
-            self.log.run_was_success()
+            await self.log.run_was_success()
         else:
-            self.log.run_was_failure("maximum turn number reached")
+            await self.log.run_was_failure("maximum turn number reached")
         return task_successful
-    
+
     @log_conversation("Asking LLM for a new command(s)...")
-    def perform_round(self, turn: int) -> bool:
+    async def perform_round(self, turn: int) -> bool:
          # get the next command and run it
-        cmd, message_id = self.get_next_command()
+        cmd, message_id = await self.get_next_command()
 
         cmds = self.postprocess_commands(cmd)
         for cmd in cmds:
-            result = self.run_command(cmd, message_id)
+            result = await self.run_command(cmd, message_id)
             # store the results in our local history
             self._history.append(cmd, result)
 
             task_successful = self.check_success(cmd, result)
-            self.after_command_execution(cmd, result, task_successful)
+            await self.after_command_execution(cmd, result, task_successful)
             if task_successful:
                 return True
 
@@ -106,7 +106,7 @@ class CommandStrategy(UseCase, abc.ABC):
         return False
 
     @log_section("Asking LLM for a new command...")
-    def get_next_command(self) -> tuple[str, int]:
+    async def get_next_command(self) -> tuple[str, int]:
         history = self._history.get_text_representation()
 
         # calculate max history size
@@ -115,27 +115,29 @@ class CommandStrategy(UseCase, abc.ABC):
 
         self._template_params.update({"history": history})
         cmd = self.llm.get_response(self._template, **self._template_params)
-        message_id = self.log.call_response(cmd)
+        message_id = await self.log.call_response(cmd)
 
         return cmd.result, message_id
 
     @log_section("Executing that command...")
-    def run_command(self, cmd, message_id) -> str:
+    async def run_command(self, cmd, message_id) -> str:
         _capability_descriptions, parser = capabilities_to_simple_text_handler(self._capabilities._capabilities, default_capability=self._capabilities._default_capability)
         start_time = datetime.datetime.now()
         success, *output = parser(cmd)
         if not success:
-            self.log.add_tool_call(message_id, tool_call_id=0, function_name="", arguments=cmd, result_text=output[0], duration=0)
+            await self.log.add_tool_call(message_id, tool_call_id=0, function_name="", arguments=cmd, result_text=output[0], duration=0)
             return output[0]
 
         assert len(output) == 1
         capability, cmd, result = output[0]
+        # capability execution is asynchronous now, the simple-text handler returns the coroutine
+        result = await result
         duration = datetime.datetime.now() - start_time
-        self.log.add_tool_call(message_id, tool_call_id=0, function_name=capability, arguments=cmd, result_text=result, duration=duration)
+        await self.log.add_tool_call(message_id, tool_call_id=0, function_name=capability, arguments=cmd, result_text=result, duration=duration)
 
         return result
 
-    @abc.abstractmethod  
+    @abc.abstractmethod
     def check_success(self, cmd:str, result:str) -> bool:
         return False
 
@@ -159,41 +161,41 @@ class SimpleStrategy(UseCase, abc.ABC):
         self._capabilities = CapabilityManager(self.log)
 
     @abc.abstractmethod
-    def perform_round(self, turn: int):
+    async def perform_round(self, turn: int):
         pass
 
-    def before_run(self):
+    async def before_run(self):
         pass
 
-    def after_run(self):
+    async def after_run(self):
         pass
 
-    def run(self, configuration):
+    async def run(self, configuration):
         self.configuration = configuration
-        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
+        await self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
 
-        self.before_run()
+        await self.before_run()
 
         turn = 1
         try:
             while turn <= self.max_turns and not self._got_root:
-                with self.log.section(f"round {turn}"):
+                async with self.log.section(f"round {turn}"):
                     self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
 
-                    self._got_root = self.perform_round(turn)
+                    self._got_root = await self.perform_round(turn)
 
                     turn += 1
 
-            self.after_run()
+            await self.after_run()
 
             # write the final result to the database and console
             if self._got_root:
-                self.log.run_was_success()
+                await self.log.run_was_success()
             else:
-                self.log.run_was_failure("maximum turn number reached")
+                await self.log.run_was_failure("maximum turn number reached")
 
             return self._got_root
         except Exception:
             import traceback
-            self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
+            await self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
             raise

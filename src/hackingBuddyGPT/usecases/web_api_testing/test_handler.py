@@ -65,7 +65,7 @@ class GenerationTestHandler:
             "expected_output": expected_output
         }
 
-    def generate_test_case(self, analysis: str, endpoint: str, method: str, body:str, status_code: Any, prompt_history) -> Tuple[
+    async def generate_test_case(self, analysis: str, endpoint: str, method: str, body:str, status_code: Any, prompt_history) -> Tuple[
         str, Dict[str, Any], list]:
         """
         Uses LLM to generate a test case dictionary from analysis and test metadata.
@@ -103,7 +103,7 @@ class GenerationTestHandler:
         prompt_history.append({"role": "system", "content": prompt_text})
         response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt_history,
                                                                                          capability="python_test_case")
-        test_case = response.execute()
+        test_case = await response.execute()
 
         test_case["method"] = method
         test_case["endpoint"] = endpoint
@@ -126,7 +126,7 @@ class GenerationTestHandler:
             f.write(json.dumps(entry, indent=2) + "\n\n")
         print(f"Test case written to {self.file}")
 
-    def write_pytest_case(self, description: str, test_case: Dict[str, Any], prompt_history) -> list:
+    async def write_pytest_case(self, description: str, test_case: Dict[str, Any], prompt_history) -> list:
         """
         Uses LLM to generate a pytest-compatible test function and saves it to a `.py` file.
 
@@ -172,7 +172,7 @@ class GenerationTestHandler:
 
         prompt_history.append({"role": "system", "content": prompt})
         response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt_history, "record_note")
-        result = response.execute()
+        result = await response.execute()
 
         test_function = self.extract_pytest_from_string(result)
         if test_function:
@@ -204,7 +204,7 @@ class GenerationTestHandler:
 
         return text[func_start:func_end]
 
-    def generate_test_cases(self, analysis: str, endpoint: str, method: str, body:str,  status_code: Any, prompt_history) -> list:
+    async def generate_test_cases(self, analysis: str, endpoint: str, method: str, body:str,  status_code: Any, prompt_history) -> list:
         """
         Generates and stores both JSON and Python test cases based on analysis.
 
@@ -218,10 +218,10 @@ class GenerationTestHandler:
         Returns:
             list: Updated prompt history.
         """
-        description, test_case, prompt_history = self.generate_test_case(analysis, endpoint, method, body, status_code,
+        description, test_case, prompt_history = await self.generate_test_case(analysis, endpoint, method, body, status_code,
                                                                          prompt_history)
         self.write_test_case_to_file(description, test_case)
-        prompt_history = self.write_pytest_case(description, test_case, prompt_history)
+        prompt_history = await self.write_pytest_case(description, test_case, prompt_history)
         return prompt_history
 
     def get_status_code(self, description: str) -> int:

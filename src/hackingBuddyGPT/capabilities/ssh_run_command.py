@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from io import StringIO
+from typing import override
+
 from invoke import Responder
 from hackingBuddyGPT.capability import Capability
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
@@ -8,14 +10,22 @@ from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 class SSHRunCommand(Capability):
     conn: SSHConnection
     timeout: int = 10
+    additional_description: str = ""
 
+    @override
     def describe(self) -> str:
-        return "give a command to be executed and I will respond with the terminal output when running this command over SSH on the linux machine. The given command must not require user interaction. Do not use quotation marks in front and after your command."
+        desc = "Give a command to be executed in a linux shell."
+        if self.conn.banner:
+            desc += f"\nThe banner of the machine you're running on is:\n{self.conn.banner}"
+        desc = "The environment you're in is persistent, but only for your current session."
+        return desc + self.additional_description
 
+    @override
     def get_name(self):
-        return "exec_command"
+        return "execute_bash_command"
 
-    def __call__(self, command: str) -> str:
+    @override
+    async def __call__(self, command: str) -> str:
         if command.startswith(self.get_name()):
             cmd_parts = command.split(" ", 1)
             if len(cmd_parts) == 1:

@@ -61,7 +61,7 @@ class ResponseAnalyzerWithLLM:
             print(f"Response: {response}")
             print("-" * 50)
 
-    def analyze_response(self, raw_response: str, prompt_history: list, analysis_context: Any) -> tuple[list[str], Any]:
+    async def analyze_response(self, raw_response: str, prompt_history: list, analysis_context: Any) -> tuple[list[str], Any]:
         """
         Parses the HTTP response, generates prompts for an LLM, and processes each step with the LLM.
 
@@ -82,11 +82,11 @@ class ResponseAnalyzerWithLLM:
                 if step != steps[0]:
 
                     current_step = step.get("step")
-                    prompt_history, raw_response = self.process_step(current_step, prompt_history, "http_request")
-                test_case_responses, status_code = self.analyse_response(raw_response, step, prompt_history)
+                    prompt_history, raw_response = await self.process_step(current_step, prompt_history, "http_request")
+                test_case_responses, status_code = await self.analyse_response(raw_response, step, prompt_history)
                 llm_responses = llm_responses + test_case_responses
         else:
-            llm_responses, status_code = self.analyse_response(raw_response, steps[0], prompt_history)
+            llm_responses, status_code = await self.analyse_response(raw_response, steps[0], prompt_history)
 
         return llm_responses, status_code
 
@@ -178,7 +178,7 @@ class ResponseAnalyzerWithLLM:
         return id
 
 
-    def process_step(self, step: str, prompt_history: list, capability:str) -> tuple[list, str]:
+    async def process_step(self, step: str, prompt_history: list, capability:str) -> tuple[list, str]:
         """
         Helper function to process each analysis step with the LLM.
         """
@@ -195,7 +195,7 @@ class ResponseAnalyzerWithLLM:
 
         # Execute any tool call results and handle outputs
         try:
-            result = response.execute()
+            result = await response.execute()
         except Exception as e:
             result = f"Error executing tool call: {str(e)}"
         prompt_history.append(tool_message(str(result), tool_call_id))
@@ -203,7 +203,7 @@ class ResponseAnalyzerWithLLM:
 
         return prompt_history, result
 
-    def analyse_response(self, raw_response, step, prompt_history):
+    async def analyse_response(self, raw_response, step, prompt_history):
         llm_responses = []
 
         status_code, additional_analysis_context, full_response= self.get_addition_context(raw_response, step)
@@ -212,7 +212,7 @@ class ResponseAnalyzerWithLLM:
 
 
         if step.get("purpose") == PromptPurpose.SETUP:
-            _, additional_analysis_context, full_response = self.do_setup(status_code, step,  additional_analysis_context, full_response, prompt_history)
+            _, additional_analysis_context, full_response = await self.do_setup(status_code, step,  additional_analysis_context, full_response, prompt_history)
 
         if not any(str(status_code) in response for response in expected_responses):
             additional_analysis_context += step.get("conditions").get("if_unsuccessful")
@@ -224,7 +224,7 @@ class ResponseAnalyzerWithLLM:
             for purpose in self.pentesting_information.analysis_step_list:
                 analysis_step = self.pentesting_information.get_analysis_step(purpose, full_response,
                                                                           additional_analysis_context)
-                prompt_history, response = self.process_step(analysis_step, prompt_history, "record_note")
+                prompt_history, response = await self.process_step(analysis_step, prompt_history, "record_note")
                 llm_responses.append(response)
                 full_response = response  # make it iterative
 
@@ -240,12 +240,12 @@ class ResponseAnalyzerWithLLM:
         additional_analysis_context = f"\n Ensure that the status code is one of the expected responses: '{expected_responses}\n Also ensure that the following security requirements have been met: {security}"
         return   status_code, additional_analysis_context, full_response
 
-    def do_setup(self, status_code, step, additional_analysis_context, full_response, prompt_history):
+    async def do_setup(self, status_code, step, additional_analysis_context, full_response, prompt_history):
         counter = 0
         if not any(str(status_code) in response for response in step.get("expected_response_code")):
             add_info = "Unsuccessful. Try a different input for the schema."
             while not any(str(status_code) in response for response in step.get("expected_response_code")):
-                prompt_history, response = self.process_step(step.get("step") + add_info, prompt_history, "http_request")
+                prompt_history, response = await self.process_step(step.get("step") + add_info, prompt_history, "http_request")
                 status_code, additional_analysis_context, full_response = self.get_addition_context(response, step)
                 counter += 1
 

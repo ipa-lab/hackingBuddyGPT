@@ -177,15 +177,15 @@ class PrivEscLinux(CommandStrategy):
 
         return overhead
 
-    def after_command_execution(self, cmd:str, result:str, got_root:bool):
+    async def after_command_execution(self, cmd:str, result:str, got_root:bool):
         if self.enable_update_state:
             old_state = self._template_params['state']
             self._template_params.update({
-                "state": self.generate_new_state(old_state, cmd, result).result
+                "state": (await self.generate_new_state(old_state, cmd, result)).result
             })
 
         if self.enable_explanation:
-            self.analyze_result(cmd, result)
+            await self.analyze_result(cmd, result)
 
     # simple helper that reads the hints file and returns the hint
     # for the current machine (test-case)
@@ -214,32 +214,32 @@ class PrivEscLinux(CommandStrategy):
             return [llm_util.cmd_output_fixer(cmd)]
 
     @log_conversation("Updating fact list..", start_section=True)
-    def generate_new_state(self, old_state:str, cmd:str, result:str) -> str:
+    async def generate_new_state(self, old_state:str, cmd:str, result:str) -> str:
         # ugly, but cut down result to fit context size
         # don't do this linearly as this can take too long
         target_size = self.llm.context_size - llm_util.SAFETY_MARGIN - self.llm.count_tokens(old_state)
         result = llm_util.trim_result_front(self.llm, target_size, result)
         state = self.llm.get_response(template_update_state, cmd=cmd, resp=result, facts=old_state)
-        self.log.call_response(state)
+        await self.log.call_response(state)
         return state
 
     @log_conversation("Asking LLM for a search query...", start_section=True)
-    def get_rag_query(self, cmd, result):
+    async def get_rag_query(self, cmd, result):
         ctx = self.llm.context_size
         template_size = self.llm.count_tokens(template_rag.source)
         target_size = ctx - llm_util.SAFETY_MARGIN - template_size
         result = llm_util.trim_result_front(self.llm, target_size, result)
 
         result = self.llm.get_response(template_rag, cmd=cmd, resp=result)
-        self.log.call_response(result)
+        await self.log.call_response(result)
         return result
 
     @log_conversation("Analyze its result...", start_section=True)
-    def analyze_result(self, cmd, result):
+    async def analyze_result(self, cmd, result):
 
         relevant_document_data = ''
         if self._enable_rag:
-            queries = self.get_rag_query(cmd, result)
+            queries = await self.get_rag_query(cmd, result)
             print("QUERIES: " + queries.result)
             relevant_document_data = self._rag_data.get_relevant_documents(queries.result)
             print("RELEVANT DOCUMENT DATA: " + relevant_document_data)
@@ -250,7 +250,7 @@ class PrivEscLinux(CommandStrategy):
         # ugly, but cut down result to fit context size
         result = llm_util.trim_result_front(self.llm, target_size, result)
         answer = self.llm.get_response(template_analyze, cmd=cmd, resp=result, facts=known_facts, rag=relevant_document_data)
-        self.log.call_response(answer)
+        await self.log.call_response(answer)
         self._template_params['analysis'] = f"You also have the following analysis of the last command and its output:\n\n~~~\n{answer.result}\n~~~"
 
 

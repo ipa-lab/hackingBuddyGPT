@@ -1,11 +1,12 @@
 import abc
 import json
 from dataclasses import dataclass
+from typing import Dict, Generic, Type, TypeVar, override
 
+from hackingBuddyGPT.utils.configurable import Transparent, configurable
+from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.logging import Logger, log_param
-from typing import Dict, Type
 
-from hackingBuddyGPT.utils.configurable import configurable
 
 @dataclass
 class UseCase(abc.ABC):
@@ -20,26 +21,28 @@ class UseCase(abc.ABC):
     """
 
     log: Logger = log_param
+    limits: Limits = None
 
-    def init(self):
+    async def init(self):
         """
         The init method is called before the run method. It is used to initialize the UseCase, and can be used to
         perform any dynamic setup that is needed before the run method is called. One of the most common use cases is
         setting up the llm capabilities from the tools that were injected.
         """
-        pass
+        return
 
     def serialize_configuration(self, configuration) -> str:
         return json.dumps(configuration)
 
     @abc.abstractmethod
-    def run(self, configuration):
+    async def run(self, configuration):
         """
         The run method is the main method of the UseCase. It is used to run the UseCase, and should contain the main
         logic. It is recommended to have only the main llm loop in here, and call out to other methods for the
         functionalities of each step.
+        You should include a call to self.limits.start(), to make proper time based limit tracking work.
         """
-        pass
+        self.limits.start()
 
     @abc.abstractmethod
     def get_name(self) -> str:
@@ -48,7 +51,103 @@ class UseCase(abc.ABC):
         """
         pass
 
+
+# this runs the main loop for a bounded amount of turns or until root was achieved
+@dataclass
+class AutonomousUseCase(UseCase, abc.ABC):
+    @abc.abstractmethod
+    async def perform_round(self):
+        pass
+
+    async def before_run(self):
+        pass
+
+    async def after_run(self):
+        pass
+
+    @override
+    async def run(self, configuration):
+        self.limits.start()
+
+        self.configuration = configuration
+        await self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
+
+        await self.before_run()
+        try:
+            round = 1
+            while not self.limits.reached():
+                async with self.log.section(f"round {round}"):
+                    self.log.console.log(
+                        f"[yellow]Starting turn {round} ({self.limits._rounds}/{self.limits.max_rounds})"
+                    )  # TODO: raw console log
+
+                    await self.perform_round()
+
+                round += 1
+
+            await self.after_run()
+
+            if self.limits.reason is not None:
+                await self.log.run_was_failure(self.limits.reason)
+            else:
+                await self.log.run_was_success()
+
+        except Exception:
+            import traceback
+
+            await self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
+            raise
+
+
 use_cases: Dict[str, configurable] = dict()
+
+
+T = TypeVar("T", bound=type)
+
+
+class AutonomousAgentUseCase(AutonomousUseCase, Generic[T], abc.ABC):
+    agent: T = None
+
+    @override
+    async def perform_round(self):
+        raise ValueError("Do not use AutonomousAgentUseCase without supplying an agent type as generic")
+
+    @override
+    def get_name(self) -> str:
+        raise ValueError("Do not use AutonomousAgentUseCase without supplying an agent type as generic")
+
+    @classmethod
+    def __class_getitem__(cls, item: type[AutonomousUseCase]):
+        item = dataclass(item)
+
+        class AutonomousAgentUseCase(AutonomousUseCase):
+            agent: Transparent(item) = None
+
+            @override
+            async def init(self):
+                await super().init()
+                await self.agent.init()
+
+            @override
+            def get_name(self) -> str:
+                return self.__class__.__name__
+
+            @override
+            async def before_run(self):
+                return await self.agent.before_run(self.limits)
+
+            @override
+            async def after_run(self):
+                return await self.agent.after_run()
+
+            @override
+            async def perform_round(self):
+                return await self.agent.perform_round(self.limits)
+
+        constructed_class = dataclass(AutonomousAgentUseCase)
+
+        return constructed_class
+
 
 def use_case(description):
     def inner(cls):

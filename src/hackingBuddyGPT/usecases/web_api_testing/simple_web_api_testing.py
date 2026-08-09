@@ -223,7 +223,7 @@ class SimpleWebAPITesting(SimpleStrategy):
         self.http_capability = {"http_request": HTTPRequest(self.host),
                                 }
 
-    def perform_round(self, turn: int) -> None:
+    async def perform_round(self, turn: int) -> None:
         """
         Performs a single round of interaction with the LLM. Generates a prompt, sends it to the LLM,
         and handles the response.
@@ -231,14 +231,14 @@ class SimpleWebAPITesting(SimpleStrategy):
         Args:
             turn (int): The current round number.
         """
-        self._perform_prompt_generation(turn)
+        await self._perform_prompt_generation(turn)
         if len(self.prompt_engineer.pentesting_information.pentesting_step_list) == 0:
             self.all_test_cases_run()
             return
         if turn == 20:
             self._report_handler.save_report()
 
-    def _perform_prompt_generation(self, turn: int) -> None:
+    async def _perform_prompt_generation(self, turn: int) -> None:
         response: Any
         completion: Any
         while self.purpose == self.prompt_engineer._purpose and not self._all_test_cases_run:
@@ -246,7 +246,7 @@ class SimpleWebAPITesting(SimpleStrategy):
                                                           prompt_history=self._prompt_history)
 
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt, "http_request")
-            self._handle_response(completion, response)
+            await self._handle_response(completion, response)
             if len(self.prompt_engineer.pentesting_information.pentesting_step_list) == 0:
                 self.all_test_cases_run()
                 return
@@ -254,7 +254,7 @@ class SimpleWebAPITesting(SimpleStrategy):
         self.purpose = self.prompt_engineer._purpose
 
 
-    def _handle_response(self, completion: Any, response: Any) -> None:
+    async def _handle_response(self, completion: Any, response: Any) -> None:
         """
         Handles the response from the LLM. Parses the response, executes the necessary actions,
         and updates the prompt history.
@@ -271,19 +271,19 @@ class SimpleWebAPITesting(SimpleStrategy):
 
             response = self.adjust_action(response)
 
-            result = self.execute_response(response, completion)
+            result = await self.execute_response(response, completion)
 
             self._report_handler.write_vulnerability_to_report(self.prompt_helper.current_sub_step,
                                                                self.prompt_helper.current_test_step, result,
                                                                self.prompt_helper.counter)
 
-            analysis, status_code = self._response_handler.evaluate_result(
+            analysis, status_code = await self._response_handler.evaluate_result(
                 result=result,
                 prompt_history=self._prompt_history,
                 analysis_context=self.prompt_engineer.prompt_helper.current_test_step)
 
             if self.purpose != PromptPurpose.SETUP:
-                self._prompt_history = self._test_handler.generate_test_cases(
+                self._prompt_history = await self._test_handler.generate_test_cases(
                     analysis=analysis,
                     endpoint=response.action.path,
                     method=response.action.method,
@@ -525,7 +525,7 @@ class SimpleWebAPITesting(SimpleStrategy):
 
         return response
 
-    def execute_response(self, response, completion):
+    async def execute_response(self, response, completion):
         """
             Executes the API response, logs it, and updates internal state for documentation and testing.
 
@@ -551,7 +551,7 @@ class SimpleWebAPITesting(SimpleStrategy):
         self.log.console.print(Panel(command, title="assistant"))
         msg = {"role": message.role, "content": message.content, "tool_calls": message.tool_calls}
         self._prompt_history.append(msg)
-        result: Any = response.execute()
+        result: Any = await response.execute()
         self.log.console.print(Panel(result, title="tool"))
         if not isinstance(result, str):
             endpoint: str = str(response.action.path).split("/")[1]

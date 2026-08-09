@@ -10,7 +10,7 @@ class YAMLFile(Capability):
     def describe(self) -> str:
         return "Takes a Yaml file and updates it with the given information"
 
-    def __call__(self, yaml_str: str) -> str:
+    async def __call__(self, yaml_str: str) -> str:
         """
         Updates a YAML string based on provided inputs and returns the updated YAML string.
 

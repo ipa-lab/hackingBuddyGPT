@@ -17,6 +17,6 @@ class PythonTestCase(Capability):
         Returns a description of the test case.
         """
         return f"Test Case: {self.description}\nInput: {self.input}\nExpected Output: {self.expected_output}"
-    def __call__(self, description: str, input: dict, expected_output: dict) -> dict:
+    async def __call__(self, description: str, input: dict, expected_output: dict) -> dict:
         self.registry.append((description, input, expected_output))
         return {"description": description,  "input": input, "expected_output": expected_output}

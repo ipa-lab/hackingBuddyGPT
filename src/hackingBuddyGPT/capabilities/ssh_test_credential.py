@@ -15,7 +15,7 @@ class SSHTestCredential(Capability):
     def get_name(self):
         return "test_credential"
 
-    def __call__(self, username: str, password: str) -> str:
+    async def __call__(self, username: str, password: str) -> str:
         test_conn = self.conn.new_with(username=username, password=password)
         try:
             for attempt in range(10):

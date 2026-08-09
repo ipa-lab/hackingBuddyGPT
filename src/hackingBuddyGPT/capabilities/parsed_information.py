@@ -19,7 +19,7 @@ class ParsedInformation(Capability):
         Returns a description of the test case.
         """
         return f"Parsed information for {self.status_code}, reason_phrase: {self.reason_phrase}, headers: {self.headers}, response_body: {self.response_body} "
-    def __call__(self, status_code: str, reason_phrase: str, headers: str, response_body:str) -> dict:
+    async def __call__(self, status_code: str, reason_phrase: str, headers: str, response_body:str) -> dict:
         self.registry.append((status_code, response_body, headers,response_body))
 
         return {"status_code": status_code, "reason_phrase": reason_phrase, "headers": headers, "response_body": response_body}

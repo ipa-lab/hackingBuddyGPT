@@ -1,6 +1,7 @@
+import os
 import base64
 from dataclasses import dataclass
-from typing import Dict, Literal, Optional
+from typing import Literal, override
 
 import requests
 
@@ -18,7 +19,19 @@ class HTTPRequest(Capability):
     def __post_init__(self):
         if not self.use_cookie_jar:
             self._client = requests
+        else:
+            self._client = requests.Session()
+            if "CLIENT_HTTP_PROXY" in os.environ or "CLIENT_HTTPS_PROXY" in os.environ:
+                import urllib3
 
+                urllib3.disable_warnings()
+                self._client.verify = False
+                if "CLIENT_HTTP_PROXY" in os.environ:
+                    self._client.proxies["http"] = os.environ["CLIENT_HTTP_PROXY"]
+                if "CLIENT_HTTPS_PROXY" in os.environ:
+                    self._client.proxies["https"] = os.environ["CLIENT_HTTPS_PROXY"]
+
+    @override
     def describe(self) -> str:
         description = (
             f"Sends a request to the host {self.host} using the python requests library and returns the response. The schema and host are fixed and do not need to be provided.\n"
@@ -36,15 +49,18 @@ class HTTPRequest(Capability):
             description += "\nRedirects are not followed."
         return description
 
-    def __call__(
+    @override
+    async def __call__(
         self,
         method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTION", "PATCH"],
         path: str,
-        query: Optional[str] = None,
-        body: Optional[str] = None,
-        body_is_base64: Optional[bool] = False,
-        headers: Optional[Dict[str, str]] = None,
+        query: str | None = None,
+        body: str | None = None,
+        body_is_base64: bool | None = False,
+        headers: dict[str, str] | None = None,
+        hide_binary_response: bool | None = True,
     ) -> str:
+        ## TODO: make async by using aiohttp
 
         if body is not None and body_is_base64:
             body = base64.b64decode(body).decode()
@@ -65,5 +81,13 @@ class HTTPRequest(Capability):
 
         response_headers = "\r\n".join(f"{k}: {v}" for k, v in resp.headers.items())
 
+        try:
+            response_text = resp.content.decode("utf-8")
+        except UnicodeDecodeError:
+            if hide_binary_response:
+                response_text = f"<binary data hidden, {len(resp.content)} bytes, call with hide_binary_response=False to see the binary data>"
+            else:
+                response_text = resp.text
+
         # turn the response into "plain text format" for responding to the prompt
-        return f"HTTP/1.1 {resp.status_code} {resp.reason}\r\n{response_headers}\r\n\r\n{resp.text}"
+        return f"HTTP/1.1 {resp.status_code} {resp.reason}\r\n{response_headers}\r\n\r\n{response_text}"

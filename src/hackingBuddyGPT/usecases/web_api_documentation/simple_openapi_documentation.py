@@ -265,7 +265,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
             self.found_all_http_methods = True
         return self.found_all_http_methods
 
-    def perform_round(self, turn: int) -> bool:
+    async def perform_round(self, turn: int) -> bool:
         """
            Executes a round of the API documentation loop based on the current turn number.
 
@@ -282,15 +282,15 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
            """
 
         if turn <= 18:
-            self._explore_mode(turn)
+            await self._explore_mode(turn)
         elif turn <= 19:
-            self._exploit_until_no_help_needed(turn)
+            await self._exploit_until_no_help_needed(turn)
         else:
-            self._explore_mode(turn)
+            await self._explore_mode(turn)
 
         return self.all_http_methods_found(turn)
 
-    def _explore_mode(self, turn: int) -> None:
+    async def _explore_mode(self, turn: int) -> None:
         """
          Executes the exploration phase for a documentation round.
 
@@ -313,9 +313,9 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
                 and not self.found_all_http_methods
         ):
             if self.explore_steps_done :
-                self.run_documentation(turn, "exploit")
+                await self.run_documentation(turn, "exploit")
             else:
-                self.run_documentation(turn, "explore")
+                await self.run_documentation(turn, "explore")
             current_count = len(self._prompt_engineer.prompt_helper.found_endpoints)
             last_endpoint_found_x_steps_ago = last_endpoint_found_x_steps_ago + 1 if current_count == last_found_endpoints else 0
             last_found_endpoints = current_count
@@ -323,7 +323,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
                 new_endpoint_count = updated_count
                 self._prompt_engineer.open_api_spec = self._documentation_handler.openapi_spec
 
-    def _exploit_until_no_help_needed(self, turn: int) -> None:
+    async def _exploit_until_no_help_needed(self, turn: int) -> None:
         """
            Repeatedly performs exploit mode to gather deeper documentation details
            for endpoints flagged as needing further clarification.
@@ -335,10 +335,10 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
 
            """
         while self._prompt_engineer.prompt_helper.get_endpoints_needing_help():
-            self.run_documentation(turn, "exploit")
+            await self.run_documentation(turn, "exploit")
             self._prompt_engineer.open_api_spec = self._documentation_handler.openapi_spec
 
-    def _single_exploit_run(self, turn: int) -> None:
+    async def _single_exploit_run(self, turn: int) -> None:
         """
            Performs a single exploit pass to extract more precise documentation
            for endpoints or parameters that may have been incompletely parsed.
@@ -347,7 +347,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
                turn (int): Current step number for context.
 
            """
-        self.run_documentation(turn, "exploit")
+        await self.run_documentation(turn, "exploit")
         self._prompt_engineer.open_api_spec = self._documentation_handler.openapi_spec
 
     def has_no_numbers(self, path: str) -> bool:
@@ -364,7 +364,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
             """
         return not any(char.isdigit() for char in path)
 
-    def run_documentation(self, turn: int, move_type: str) -> None:
+    async def run_documentation(self, turn: int, move_type: str) -> None:
         """
             Runs a full documentation interaction cycle with the LLM agent for the given turn and mode.
 
@@ -385,7 +385,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
             self.log.console.print(Panel(prompt[-1]["content"], title="system"))
 
-            is_good, self._prompt_history, result, result_str = self._response_handler.handle_response(response,
+            is_good, self._prompt_history, result, result_str = await self._response_handler.handle_response(response,
                                                                                                        completion,
                                                                                                        self._prompt_history,
                                                                                                        self.log,

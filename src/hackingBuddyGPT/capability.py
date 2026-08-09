@@ -1,5 +1,6 @@
 import abc
 import copy
+import json
 from functools import partial, wraps
 import inspect
 from typing import Any, Callable, Dict, Iterable, TypeVar, ParamSpec, Type, Union, Awaitable, override
@@ -176,6 +177,24 @@ def capabilities_to_action_model(capabilities: dict[str, Capability]) -> type[Ac
         action: Union[tuple([capability.to_model() for capability in capabilities.values()])]
 
     return Model
+
+
+def tool_call_to_action(tool_call, capabilities: Dict[str, Capability]) -> Action:
+    """
+    Build an executable :class:`Action` from a litellm/OpenAI tool call.
+
+    The tool call's function name selects the capability, and its JSON ``arguments`` are
+    validated into that capability's model (via :func:`capabilities_to_action_model`). The
+    returned ``Action`` mirrors what the old instructor ``response_model`` produced: ``.action``
+    is the capability model instance and ``.execute()`` runs it.
+    """
+    name = tool_call.function.name
+    if name not in capabilities:
+        raise ValueError(f"Tool call for unknown capability: {name}")
+
+    arguments = tool_call.function.arguments or "{}"
+    action_model = capabilities_to_action_model({name: capabilities[name]})
+    return action_model.model_validate({"action": json.loads(arguments)})
 
 
 SimpleTextHandlerResult = tuple[bool, Union[str, tuple[str, str, ...]]]

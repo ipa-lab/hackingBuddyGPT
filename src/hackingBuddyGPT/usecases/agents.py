@@ -2,11 +2,9 @@ import asyncio
 import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import override
+from typing import Any, override
 
 from mako.template import Template
-from openai.types.chat import ChatCompletionMessageToolCall, ChatCompletionToolMessageParam
-from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
 from hackingBuddyGPT.capability import (
     Capability,
@@ -16,8 +14,8 @@ from hackingBuddyGPT.capability import (
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.llm import LiteLLM
+from hackingBuddyGPT.utils.llm_util import Message
 from hackingBuddyGPT.utils.logging import Logger, log_conversation, log_param
-from hackingBuddyGPT.utils.openai.openai_lib import ChatCompletionMessageParam
 
 
 @dataclass
@@ -83,14 +81,14 @@ class Agent(ABC):
         return result
 
     async def run_tool_calls(
-        self, message_id: int, message: ChatCompletionMessage
-    ) -> list[ChatCompletionToolMessageParam]:
+        self, message_id: int, message: Any
+    ) -> list[Message]:
         if message.tool_calls is None:
             return []
 
         try:
 
-            async def run_tool_call(tool_call: ChatCompletionMessageToolCall) -> ChatCompletionToolMessageParam:
+            async def run_tool_call(tool_call: Any) -> Message:
                 try:
                     tool_result = await self.run_capability_json(
                         message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments
@@ -162,7 +160,7 @@ class TemplatedAgent(Agent):
         return got_root
 
 
-Prompt = list[ChatCompletionMessage | ChatCompletionMessageParam]
+Prompt = list[Any]  # chat history: dict messages and/or litellm message objects
 
 
 @dataclass
@@ -199,7 +197,7 @@ class ChatAgent(Agent, ABC):
         message_id = await self.log.call_response(result)
         limits.register_message(result)
 
-        message: ChatCompletionMessage = result.result
+        message: Any = result.result
         self._prompt_history.append(result.result)
         tool_call_results = await self.run_tool_calls(message_id, message)
         for tool_call_result in tool_call_results:
@@ -316,7 +314,7 @@ Therefore, you need to specify what exactly the subagent should be reporting bac
                     _result = message.content
 
                     if hasattr(message, "tool_calls") and message.tool_calls:
-                        tool_calls: list[ChatCompletionMessageToolCall] = message.tool_calls
+                        tool_calls: Any = message.tool_calls
                         _result += "\n" + "\n".join(f"{tool_call.function}: " for tool_call in tool_calls)
 
                 if _result is None:

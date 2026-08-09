@@ -70,19 +70,8 @@ class LiteLLM(LLM):
             messages = [user_message(content)]
             tools = None
 
-        extra_body = {"provider": {"only": [self.provider]}} if self.provider else None
-
         tic = datetime.datetime.now()
-        response = litellm.completion(
-            model=self.model,
-            messages=messages,
-            tools=tools,
-            api_base=self.api_base,
-            api_key=self.api_key,
-            timeout=self.api_timeout,
-            num_retries=self.api_retries,
-            extra_body=extra_body,
-        )
+        response = self.raw_completion(messages, tools=tools)
         duration = datetime.datetime.now() - tic
 
         message = response.choices[0].message
@@ -118,6 +107,27 @@ class LiteLLM(LLM):
             tokens_reasoning,
             usage_details,
             cost,
+        )
+
+    def raw_completion(self, messages, *, tools=None, tool_choice=None):
+        """
+        Make a completion call and return the raw litellm ``ModelResponse``.
+
+        This is the single place that holds the upstream configuration (model, credentials,
+        provider routing, retries). It is used both by :meth:`get_response` and by callers
+        that need the unprocessed completion, e.g. the web_api tool-calling flow.
+        """
+        extra_body = {"provider": {"only": [self.provider]}} if self.provider else None
+        return litellm.completion(
+            model=self.model,
+            messages=messages,
+            tools=tools,
+            tool_choice=tool_choice,
+            api_base=self.api_base,
+            api_key=self.api_key,
+            timeout=self.api_timeout,
+            num_retries=self.api_retries,
+            extra_body=extra_body,
         )
 
     def count_tokens(self, query) -> int:

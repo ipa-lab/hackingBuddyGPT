@@ -4,9 +4,6 @@ from dataclasses import dataclass, field
 from os import path
 from typing import Awaitable, List, Any, Union, Dict, Iterable, Optional, Callable
 
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage, ChatCompletionToolMessageParam
-from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
-
 from hackingBuddyGPT.capabilities import Capability, function_capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
@@ -21,12 +18,12 @@ from hackingBuddyGPT.utils.logging import GlobalLogger
 from jinja2 import Template
 
 
-Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
+Prompt = List[Any]  # dict messages and/or litellm message objects
 Context = Any
 
 
 async def call_llm(
-    prompt: Iterable[ChatCompletionMessageParam],
+    prompt: Iterable[Any],
     role: str,
     llm: LiteLLM,
     log: GlobalLogger,
@@ -41,12 +38,12 @@ async def call_llm(
 
 
 async def run_tool_calls(
-    message_id: int, tool_calls: Optional[list[ChatCompletionMessageToolCall]], log: GlobalLogger, run_capability
-) -> list[ChatCompletionToolMessageParam]:
+    message_id: int, tool_calls: Optional[list[Any]], log: GlobalLogger, run_capability
+) -> list[Any]:
     if tool_calls is None:
         return []
 
-    async def run_tool_call(tool_call) -> ChatCompletionToolMessageParam:
+    async def run_tool_call(tool_call) -> Any:
         try:
             tool_result = await run_capability(
                 message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments
@@ -207,7 +204,7 @@ class ExecuteTask(Capability):
 
     async def execute(self, task_name: str, task_description: str) -> str:
         task_round = 1
-        prompt_history: list[ChatCompletionMessageParam] = [{"role": "system", "content": task_description}]
+        prompt_history: list[Any] = [{"role": "system", "content": task_description}]
         await self.log.system_message(task_description)
         finish_capabilities = {
             "finish_with_summary": function_capability(

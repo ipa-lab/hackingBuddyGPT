@@ -4,9 +4,6 @@ from functools import partial, wraps
 import inspect
 from typing import Any, Callable, Dict, Iterable, TypeVar, ParamSpec, Type, Union, Awaitable, override
 
-import openai
-from openai.types.chat import ChatCompletionToolParam
-from openai.types.chat.completion_create_params import Function
 from pydantic import BaseModel, create_model
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
@@ -283,37 +280,37 @@ def capabilities_to_simple_text_handler(
 
 def capabilities_to_functions(
     capabilities: Dict[str, Capability],
-) -> Iterable[openai.types.chat.completion_create_params.Function]:
+) -> Iterable[dict]:
     """
-    This function takes a dictionary of capabilities and returns a dictionary of functions, that can be called with the
-    parameters of the respective capabilities.
+    Convert capabilities to OpenAI/litellm-style function definitions (plain dicts, so this
+    stays independent of any provider SDK).
     """
     return [
-        Function(
-            name=name,
-            description=capability.describe(),
-            parameters=capability.to_model().model_json_schema(schema_generator=OptimizedSchemaGenerator),
-        )
+        {
+            "name": name,
+            "description": capability.describe(),
+            "parameters": capability.to_model().model_json_schema(schema_generator=OptimizedSchemaGenerator),
+        }
         for name, capability in capabilities.items()
     ]
 
 
 def capabilities_to_tools(
     capabilities: Dict[str, Capability],
-) -> Iterable[openai.types.chat.completion_create_params.ChatCompletionToolParam]:
+) -> Iterable[dict]:
     """
-    This function takes a dictionary of capabilities and returns a dictionary of functions, that can be called with the
-    parameters of the respective capabilities.
+    Convert capabilities to OpenAI/litellm-style tool definitions (plain dicts). The result is
+    passed straight to ``litellm.completion(tools=...)``.
     """
     return [
-        ChatCompletionToolParam(
-            type="function",
-            function=Function(
-                name=name,
-                description=capability.describe(),
-                parameters=capability.to_model().model_json_schema(schema_generator=OptimizedSchemaGenerator),
-            ),
-        )
+        {
+            "type": "function",
+            "function": {
+                "name": name,
+                "description": capability.describe(),
+                "parameters": capability.to_model().model_json_schema(schema_generator=OptimizedSchemaGenerator),
+            },
+        }
         for name, capability in capabilities.items()
     ]
 

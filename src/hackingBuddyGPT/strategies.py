@@ -7,8 +7,8 @@ from hackingBuddyGPT.capability import capabilities_to_simple_text_handler
 from hackingBuddyGPT.usecases.usecase import UseCase
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.histories import HistoryCmdOnly, HistoryFull, HistoryNone
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
-from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
+from hackingBuddyGPT.utils.llm import LiteLLM
+from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib  # web_api SimpleStrategy still uses instructor (Pass 2)
 from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param, log_section
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
 from typing import List
@@ -25,7 +25,7 @@ class CommandStrategy(UseCase, abc.ABC):
 
     max_turns: int = 10
 
-    llm: OpenAIConnection = None
+    llm: LiteLLM = None
 
     log: Logger = log_param
 
@@ -148,7 +148,7 @@ class CommandStrategy(UseCase, abc.ABC):
 class SimpleStrategy(UseCase, abc.ABC):
     max_turns: int = 10
 
-    llm: OpenAILib = None
+    llm: OpenAILib = None  # web_api use-cases rely on the instructor-based upstream (migrated in Pass 2)
 
     log: Logger = log_param
 

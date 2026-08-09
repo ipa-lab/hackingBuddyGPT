@@ -5,7 +5,6 @@ from os import path
 from typing import Awaitable, List, Any, Union, Dict, Iterable, Optional, Callable
 
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage, ChatCompletionToolMessageParam
-from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
 
 from hackingBuddyGPT.capabilities import Capability, function_capability
@@ -15,8 +14,8 @@ from hackingBuddyGPT.usecases.agents import Agent
 from hackingBuddyGPT.usecases.usecase import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.utils import LLMResult, tool_message
 from hackingBuddyGPT.utils.configurable import parameter
+from hackingBuddyGPT.utils.llm import LiteLLM
 from hackingBuddyGPT.utils.logging import GlobalLogger
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
 from jinja2 import Template
@@ -26,34 +25,19 @@ Prompt = List[Union[ChatCompletionMessage, ChatCompletionMessageParam]]
 Context = Any
 
 
-async def stream_llm(
+async def call_llm(
     prompt: Iterable[ChatCompletionMessageParam],
     role: str,
-    llm: OpenAILib,
+    llm: LiteLLM,
     log: GlobalLogger,
     capabilities: Optional[Dict[str, Capability]] = None,
 ) -> tuple[Optional[int], Optional[LLMResult]]:
-    result_stream: Iterable[Union[ChoiceDelta, LLMResult]] = llm.stream_response(
-        prompt, log.console, capabilities=capabilities, get_individual_updates=True
-    )
-    stream_output = log.stream_message(role)
-    for delta in result_stream:
-        if isinstance(delta, LLMResult):
-            message_id = await stream_output.finalize(
-                delta.tokens_query,
-                delta.tokens_response,
-                delta.tokens_reasoning,
-                delta.usage_details,
-                delta.cost,
-                delta.duration,
-                overwrite_finished_message=delta.answer,
-            )
-            return message_id, delta
-        if delta.content is not None:
-            await stream_output.append(delta.content)
-
-    await log.error_message("No result from the LLM")
-    return None, None
+    result = llm.get_response(prompt, capabilities=capabilities)
+    if result is None:
+        await log.error_message("No result from the LLM")
+        return None, None
+    message_id = await log.call_response(result)
+    return message_id, result
 
 
 async def run_tool_calls(
@@ -81,8 +65,8 @@ async def run_tool_calls(
 
 
 class Cochise(Agent):
-    llm: OpenAILib
-    execution_llm: OpenAILib = parameter(desc="The LLM to use for task execution", default=None)
+    llm: LiteLLM
+    execution_llm: LiteLLM = parameter(desc="The LLM to use for task execution", default=None)
 
     host: str = parameter(desc="The host to test", default="http://localhost")
     flag_format_description: str = parameter(
@@ -150,7 +134,7 @@ class Cochise(Agent):
         update_prompt = self.update_prompt()
         await self.log.system_message(update_prompt)
 
-        plan_message_id, plan_result = await stream_llm(
+        plan_message_id, plan_result = await call_llm(
             [{"role": "system", "content": update_prompt}],
             "assistant",
             self.llm,
@@ -174,7 +158,7 @@ class Cochise(Agent):
         next_task_prompt = self.next_task_prompt()
         await self.log.system_message(next_task_prompt)
 
-        task_message_id, task_result = await stream_llm(
+        task_message_id, task_result = await call_llm(
             [{"role": "system", "content": next_task_prompt}],
             "assistant",
             self.llm,
@@ -196,7 +180,7 @@ class Cochise(Agent):
 
 @dataclass
 class ExecuteTask(Capability):
-    llm: OpenAILib
+    llm: LiteLLM
     log: GlobalLogger
     max_rounds: int
     capabilities: Dict[str, Capability]
@@ -235,7 +219,7 @@ class ExecuteTask(Capability):
 
         while task_round <= self.max_rounds:
             task_round += 1
-            message_id, result = await stream_llm(
+            message_id, result = await call_llm(
                 prompt_history, f"assistant-{task_name}", self.llm, self.log, self.capabilities
             )
             if message_id is None or result is None:
@@ -261,7 +245,7 @@ class ExecuteTask(Capability):
                 }
             )
 
-            message_id, result = await stream_llm(
+            message_id, result = await call_llm(
                 prompt_history, f"assistant-{task_name}", self.llm, self.log, finish_capabilities
             )
             if message_id is None or result is None:

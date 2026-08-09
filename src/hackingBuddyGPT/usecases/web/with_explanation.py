@@ -8,11 +8,11 @@ from hackingBuddyGPT.usecases.agents import ChatAgent
 from hackingBuddyGPT.usecases.usecase import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.utils.configurable import parameter
 from hackingBuddyGPT.utils.limits import Limits
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
+from hackingBuddyGPT.utils.llm import LiteLLM
 
 
 class WebTestingWithExplanation(ChatAgent):
-    llm: OpenAILib  # pinning the llm implementation to OpenAILib
+    llm: LiteLLM  # pinning the llm implementation to the litellm-based upstream
     host: str = parameter(desc="The host to test", default="http://localhost")
     flag_format_description: str = parameter(
         desc="Description of the flag provided to the LLM",

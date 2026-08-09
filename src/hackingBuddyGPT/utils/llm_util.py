@@ -4,13 +4,9 @@ import re
 import typing
 from dataclasses import dataclass
 
-from openai.types.chat import (
-    ChatCompletionAssistantMessageParam,
-    ChatCompletionFunctionMessageParam,
-    ChatCompletionSystemMessageParam,
-    ChatCompletionToolMessageParam,
-    ChatCompletionUserMessageParam,
-)
+# A message is the canonical, litellm/OpenAI-native chat message: a dict with at least a
+# "role" and "content", optionally "tool_calls" / "tool_call_id". A history is a list of them.
+Message = dict[str, typing.Any]
 
 SAFETY_MARGIN = 128
 STEP_CUT_TOKENS = 128
@@ -52,24 +48,52 @@ class LLM(abc.ABC):
         return len(self.encode(query))
 
 
-def system_message(content: str) -> ChatCompletionSystemMessageParam:
+def system_message(content: str) -> Message:
     return {"role": "system", "content": content}
 
 
-def user_message(content: str) -> ChatCompletionUserMessageParam:
+def user_message(content: str) -> Message:
     return {"role": "user", "content": content}
 
 
-def assistant_message(content: str) -> ChatCompletionAssistantMessageParam:
+def assistant_message(content: str) -> Message:
     return {"role": "assistant", "content": content}
 
 
-def tool_message(content: str, tool_call_id: str) -> ChatCompletionToolMessageParam:
+def tool_message(content: str, tool_call_id: str) -> Message:
     return {"role": "tool", "content": content, "tool_call_id": tool_call_id}
 
 
-def function_message(content: str, name: str) -> ChatCompletionFunctionMessageParam:
+def function_message(content: str, name: str) -> Message:
     return {"role": "function", "content": content, "name": name}
+
+
+def _message_field(message: typing.Any, field: str, default=None):
+    """Read a field from a message that may be a dict or an object (e.g. a litellm message)."""
+    if isinstance(message, dict):
+        return message.get(field, default)
+    return getattr(message, field, default)
+
+
+def render_to_text(messages: typing.Iterable[Message]) -> str:
+    """
+    Flatten a chat history (the canonical message-list representation) into a single readable
+    string. This lets the template/manual prototypes consume the same history representation
+    as the chat prototypes.
+    """
+    lines: list[str] = []
+    for message in messages:
+        role = _message_field(message, "role", "user")
+        content = _message_field(message, "content") or ""
+        lines.append(f"{role}: {content}".rstrip())
+
+        for tool_call in _message_field(message, "tool_calls") or []:
+            function = _message_field(tool_call, "function")
+            name = _message_field(function, "name", "")
+            arguments = _message_field(function, "arguments", "")
+            lines.append(f"  -> tool call {name}({arguments})")
+
+    return "\n".join(lines)
 
 
 def remove_wrapping_characters(cmd: str, wrappers: str) -> str:

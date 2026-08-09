@@ -7,7 +7,6 @@ from functools import wraps
 from typing import Optional, Union, override
 
 from dataclasses_json.api import dataclass_json
-from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from rich.console import Group
 from rich.panel import Panel
 from websockets.sync.client import ClientConnection
@@ -186,16 +185,6 @@ class ALogger(ABC):
         )
 
     @abstractmethod
-    async def stream_message(self, role: str) -> "MessageStreamLogger":
-        pass
-
-    async def stream_message_from(
-        self, role: str, stream: Iterable[ChoiceDelta | LLMResult]
-    ) -> tuple[int, LLMResult] | None:
-        log_stream = await self.stream_message(role)
-        return await log_stream.consume(stream)
-
-    @abstractmethod
     async def add_message_update(
         self, message_id: int, action: StreamAction, content: str, reasoning: str | None = None
     ):
@@ -349,14 +338,6 @@ class LocalLogger(ALogger):
         message_id = await self.status_message(f"Run failed: {full_reason}")
         self.log_db.run_was_failure(self.run.id, reason)
         return message_id
-
-    @override
-    async def stream_message(self, role: str) -> "MessageStreamLogger":
-        message_id = self._last_message_id
-        self._last_message_id += 1
-        logger = MessageStreamLogger(self, message_id, self._current_conversation, role, local_output=True)
-        await logger.init()
-        return logger
 
     @override
     async def add_message_update(
@@ -561,15 +542,6 @@ class RemoteLogger(ALogger):
         return message_id
 
     @override
-    async def stream_message(self, role: str) -> "MessageStreamLogger":
-        message_id = self._last_message_id
-        self._last_message_id += 1
-
-        logger = MessageStreamLogger(self, message_id, self._current_conversation, role, local_output=self.local_output)
-        await logger.init()
-        return logger
-
-    @override
     async def add_message_update(
         self, message_id: int, action: StreamAction, content: str, reasoning: str | None = None
     ):
@@ -625,120 +597,3 @@ class LogConversationContext:
             del self._section
         self.logger._current_conversation = self.previous_conversation
 
-
-@dataclass
-class MessageStreamLogger:
-    logger: Logger
-    message_id: int
-    conversation: Optional[str]
-    role: str
-    local_output: bool
-
-    _completed: bool = False
-    _started_reasoning: bool = False
-    _printed_role: bool = False
-
-    async def init(self):
-        await self.logger._add_or_update_message(
-            self.message_id, self.conversation, self.role, "", "", 0, 0, 0, "", 0, datetime.timedelta(0)
-        )
-
-    def __del__(self):
-        if not self._completed:
-            print(
-                f"streamed message was not finalized ({self.logger.run.id}, {self.message_id}), please make sure to call finalize() on MessageStreamLogger objects"
-            )
-            # TODO: re-add? self.finalize(0, 0, 0, datetime.timedelta(0))
-
-    async def consume(self, stream: Iterable[ChoiceDelta | LLMResult]) -> tuple[int, LLMResult] | None:
-        result: LLMResult | None = None
-
-        for delta in stream:
-            if isinstance(delta, LLMResult):
-                result = delta
-                break
-            if delta.content is not None:
-                await self.append(
-                    delta.content, delta.reasoning if hasattr(delta, "reasoning") else None
-                )  # TODO: reasoning is theoretically not defined on the model
-
-        if result is None:
-            await self.logger.status_message("No result from the LLM")
-            return None
-
-        message_id = await self.finalize(
-            result.tokens_query,
-            result.tokens_response,
-            result.tokens_reasoning,
-            result.usage_details,
-            result.cost,
-            result.duration,
-            overwrite_finished_message=result.answer,
-        )
-
-        return message_id, result
-
-    async def append(self, content: str, reasoning: str | None = None):
-        if self._completed:
-            raise ValueError("MessageStreamLogger already finalized")
-        if self.local_output:
-            if reasoning is not None:
-                if self._printed_role:
-                    pass  # TODO: all bets are off
-                elif not self._started_reasoning:
-                    self.logger.console.print("\n\n[bold blue]REASONING:[/bold blue]")
-                    self._started_reasoning = True
-                self.logger.console.print(reasoning, end="")
-
-            if content is not None and len(content) > 0:
-                if not self._printed_role:
-                    self.logger.console.print("\n\n[bold blue]ASSISTANT:[/bold blue]")
-                    self._printed_role = True
-                self.logger.console.print(content, end="")
-
-        await self.logger.add_message_update(self.message_id, "append", content, reasoning)
-
-    async def finalize(
-        self,
-        tokens_query: int,
-        tokens_response: int,
-        tokens_reasoning: int,
-        usage_details: str,
-        cost: float,
-        duration: datetime.timedelta,
-        overwrite_finished_message: str | None = None,
-    ):
-        self._completed = True
-        if overwrite_finished_message:
-            await self.logger._add_or_update_message(
-                self.message_id,
-                self.conversation,
-                self.role,
-                overwrite_finished_message,
-                "",
-                tokens_query,
-                tokens_response,
-                tokens_reasoning,
-                usage_details,
-                cost,
-                duration,
-            )
-        else:
-            await self.logger._add_or_update_message(
-                self.message_id,
-                self.conversation,
-                self.role,
-                "",
-                "",
-                tokens_query,
-                tokens_response,
-                tokens_reasoning,
-                usage_details,
-                cost,
-                duration,
-            )
-
-        if self.local_output:
-            self.logger.console.print()
-
-        return self.message_id

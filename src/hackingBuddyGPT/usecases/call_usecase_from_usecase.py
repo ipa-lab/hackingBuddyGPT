@@ -3,7 +3,7 @@ from mako.template import Template
 from hackingBuddyGPT.capabilities import SSHRunCommand
 from hackingBuddyGPT.usecases.usecase import UseCase, use_case
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
-from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
+from hackingBuddyGPT.utils.llm import LiteLLM
 
 from .linux_privesc import PrivEscLinux
 
@@ -25,7 +25,7 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
     enable_explanation: bool = False
     enable_update_state: bool = False
     disable_history: bool = False
-    llm: OpenAIConnection = None
+    llm: LiteLLM = None
 
     _got_root: bool = False
 

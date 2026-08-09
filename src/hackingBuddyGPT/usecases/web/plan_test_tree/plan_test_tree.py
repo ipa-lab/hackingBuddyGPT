@@ -4,14 +4,14 @@ from dataclasses import dataclass
 
 from jinja2 import Template
 
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
+from hackingBuddyGPT.utils.llm import LiteLLM
 
 
 @dataclass
 class PlanTestTreeStrategy:
     plan: str
     scenario: str
-    llm: OpenAILib
+    llm: LiteLLM
 
     def next_task_prompt(self) -> str:
         template_path = __file__.replace(".py", "/prompts/ptt_next_task.md")

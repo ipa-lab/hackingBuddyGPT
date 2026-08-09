@@ -15,9 +15,9 @@ from hackingBuddyGPT.capability import (
 )
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.limits import Limits
+from hackingBuddyGPT.utils.llm import LiteLLM
 from hackingBuddyGPT.utils.logging import Logger, log_conversation, log_param
-from hackingBuddyGPT.utils.openai.openai_lib import ChatCompletionMessageParam, OpenAILib
-from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
+from hackingBuddyGPT.utils.openai.openai_lib import ChatCompletionMessageParam
 
 
 @dataclass
@@ -27,7 +27,7 @@ class Agent(ABC):
     _capabilities: dict[str, Capability] = field(default_factory=dict)
     _default_capability: Capability | None = None
 
-    llm: OpenAIConnection = None
+    llm: LiteLLM = None
 
     async def init(self):  # noqa: B027
         pass
@@ -167,7 +167,7 @@ Prompt = list[ChatCompletionMessage | ChatCompletionMessageParam]
 
 @dataclass
 class ChatAgent(Agent, ABC):
-    llm: OpenAILib  # pinning the llm implementation to OpenAILib
+    llm: LiteLLM  # pinning the llm implementation to the litellm-based upstream
 
     _role: str = "assistant"
     _prompt_history: Prompt = field(default_factory=list)
@@ -195,12 +195,8 @@ class ChatAgent(Agent, ABC):
     async def perform_round(self, limits: Limits):
         await self.add_limits_message(limits)
 
-        message_id, result = await self.log.stream_message_from(
-            self._role,
-            self.llm.stream_response(
-                self._prompt_history, capabilities=self._capabilities, get_individual_updates=True
-            ),
-        )
+        result = self.llm.get_response(self._prompt_history, capabilities=self._capabilities)
+        message_id = await self.log.call_response(result)
         limits.register_message(result)
 
         message: ChatCompletionMessage = result.result
@@ -215,7 +211,7 @@ class ChatAgent(Agent, ABC):
 @dataclass
 class SubAgentCapability(Capability):
     cls: type[ChatAgent]
-    llm: OpenAILib
+    llm: LiteLLM
     log: Logger
     parent_limits: Limits
     capabilities: dict[str, Capability]

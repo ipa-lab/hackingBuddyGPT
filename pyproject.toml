@@ -1,7 +1,3 @@
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "hackingBuddyGPT"
 # original author was Andreas Happe, for an up-to-date list see
@@ -52,6 +48,10 @@ Homepage = "https://www.hackingbuddy.ai"
 Documentation = "https://docs.hackingbuddy.ai"
 Repository = "https://github.com/ipa-lab/hackingBuddyGPT"
 "Bug Tracker" = "https://github.com/ipa-lab/hackingBuddyGPT/issues"
+
+[build-system]
+requires = ["uv_build>=0.8.16,<0.9.0"]
+build-backend = "uv_build"
 
 [tool.setuptools.packages.find]
 where = ["src"]

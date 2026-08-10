@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -40,24 +40,22 @@
     </body>
     <template id="run-list-entry-template">
         <li class="run-list-entry">
-            <a>
-                <div class="run-list-info">
-                    <h3 class="run-id"></h3>
-                    <span class="run-model"></span>
-                    <span class="run-tags"></span>
-                    <span class="run-state"></span>
-                </div>
-                <div class="run-list-timing">
-                    <span class="run-started-at"></span>
-                    <span class="run-stopped-at"></span>
-                </div>
+            <a class="run-list-info">
+                <h3 class="run-id"></h3>
+                <span class="run-started-at"></span>
+                <span class="run-stopped-at"></span>
+                <span class="run-model"></span>
+                <span class="run-tags"></span>
+                <span class="run-state"></span>
             </a>
         </li>
     </template>
     <template id="section-template">
         <div class="section">
             <div class="line start-line"></div>
-            <span class="section-name"></span>
+            <div class="section-label">
+                <span class="section-name"></span>
+            </div>
             <div class="line end-line"></div>
         </div>
     </template>
@@ -71,10 +69,16 @@
                     </div>
                     <div>
                         <span class="duration"></span>
-                        <span class="tokens-response"></span>
+                        <span><span class="tokens-reasoning"></span><span class="tokens-separator"></span><span class="tokens-response"></span></span>
                     </div>
                 </header>
             </summary>
+            <details open class="reasoning">
+                <summary>
+                    Reasoning
+                </summary>
+                <pre class="reasoning-text"></pre>
+            </details>
             <pre class="message-text"></pre>
             <div class="tool-calls"></div>
         </details>

@@ -1,7 +1,0 @@
-You are a linux security expert. Your goal is to gain access to a root shell. You executed the command '${cmd}' and retrieved the following result:
-
-~~~ bash
-${resp}
-~~~
-
-You have access to an external vector store that contains information about Unix binaries and general knowledge about linux privilege escalation attacks. Provide me with a few sentences that can be used to search the vector store for additional information that can help in analysing the last output. Do not add any explanation. Please return full sentences.

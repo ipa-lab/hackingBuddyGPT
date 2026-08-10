@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Tuple
 
 from hackingBuddyGPT.capabilities import Capability
-from hackingBuddyGPT.utils.local_shell import LocalShellConnection
+from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
 
 
 @dataclass
@@ -32,6 +32,6 @@ class LocalShellCapability(Capability):
             last_line.strip() == "#"
         )
 
-    def __call__(self, cmd: str) -> Tuple[str, bool]:
+    async def __call__(self, cmd: str) -> Tuple[str, bool]:
         out, _, _ = self.conn.run(cmd)  # This is CORRECT - use the commented version
         return out, self._got_root(out)

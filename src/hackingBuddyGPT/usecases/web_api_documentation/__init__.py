@@ -1,0 +1,1 @@
+from .simple_openapi_documentation import SimpleWebAPIDocumentation

@@ -13,6 +13,7 @@ from hackingBuddyGPT.utils.prompt_generation.prompts.task_planning import (
     ChainOfThoughtPrompt,
     TreeOfThoughtPrompt,
 )
+from hackingBuddyGPT.utils.web_api.target_quirks import is_coincap
 
 
 class PromptEngineer:
@@ -101,7 +102,7 @@ class PromptEngineer:
             raise ValueError("Invalid prompt strategy")
 
         self.turn = turn
-        if self.host.__contains__("coincap"):
+        if is_coincap(self.host):
             hint = "Try as id or other_resoure cryptocurrency names like bitcoin.\n"
         prompt = self._prompt_func.generate_prompt(
             move_type=move_type, hint=hint, previous_prompt=prompt_history, turn=0

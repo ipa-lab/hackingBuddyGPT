@@ -1,7 +1,8 @@
+import asyncio
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import ResponseAnalyzerWithLLM
+from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import ResponseAnalyzerWithLLM
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 
 
@@ -52,14 +53,14 @@ class TestResponseAnalyzerWithLLM(unittest.TestCase):
         capability = "http_request"
 
         fake_response = MagicMock()
-        fake_response.execute.return_value = "Execution Result"
+        fake_response.execute = AsyncMock(return_value="Execution Result")
 
         fake_completion = MagicMock()
         fake_completion.choices = [MagicMock(message=MagicMock(tool_calls=[MagicMock(id="abc123")]))]
 
         self.llm_handler.execute_prompt_with_specific_capability.return_value = (fake_response, fake_completion)
 
-        updated_history, result = self.analyzer.process_step(step, prompt_history, capability)
+        updated_history, result = asyncio.run(self.analyzer.process_step(step, prompt_history, capability))
 
         self.assertIn(step, updated_history[0]["content"])
         self.assertEqual(result, "Execution Result")

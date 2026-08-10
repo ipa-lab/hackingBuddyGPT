@@ -21,7 +21,7 @@ class SubmitHTTPMethod(Capability):
     def describe(self) -> str:
         return f"Submits a HTTP methods, which is the goal of all activities. The HTTP methods format is {self.http_methods_format}. If you find a flag following the that format, that you have not yet submitted, then the most important first step is to submit it, ignoring all other possibilities of further action"
 
-    def __call__(
+    async def __call__(
         self,
         method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTION", "PATCH"],
         path: str,

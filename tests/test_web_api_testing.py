@@ -1,8 +1,9 @@
+import asyncio
 import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
-    SimpleWebAPITestingUseCase, SimpleWebAPITesting,
+    SimpleWebAPITesting,
 )
 from hackingBuddyGPT.utils import Console, DbStorage
 
@@ -26,11 +27,6 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         self.agent = SimpleWebAPITesting(llm=self.mock_llm, log=log,config_path= config_path, strategy_string= "cot")
 
         self.agent.init()
-        self.simple_api_testing = SimpleWebAPITestingUseCase(
-            agent=self.agent
-
-        )
-        self.simple_api_testing.init()
 
 
 
@@ -67,7 +63,7 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         )
 
         # Mock the tool execution result
-        mock_response.execute.return_value = (
+        mock_response.execute = AsyncMock(return_value=(
     "HTTP/1.1 200 OK\n"
     "Date: Wed, 17 Apr 2025 12:00:00 GMT\n"
     "Content-Type: application/json; charset=utf-8\n"
@@ -84,12 +80,12 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
     '  "role": "user",\n'
     '  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."\n'
     "}"
-)
+))
 
         mock_response.action.path = "/users/"
 
         # Perform the round
-        result = self.agent.perform_round(1)
+        result = asyncio.run(self.agent.perform_round(1))
 
         # Assertions
         self.assertFalse(result)  # No flags found in this round

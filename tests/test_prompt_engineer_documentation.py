@@ -4,16 +4,18 @@ from unittest.mock import MagicMock
 
 from openai.types.chat import ChatCompletionMessage
 
-from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
-from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+import json
+
+from hackingBuddyGPT.utils.openapi.openapi_parser import OpenAPISpecificationParser
+from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.utils.prompt_generation.information import (
     PromptContext,
+    strategy_from_string,
 )
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import (
     PromptEngineer
 )
-from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
 
 
 class TestPromptEngineer(unittest.TestCase):
@@ -23,13 +25,16 @@ class TestPromptEngineer(unittest.TestCase):
         self.schemas = MagicMock()
         self.response_handler = MagicMock()
         self.config_path = os.path.join(os.path.dirname(__file__), "test_files/test_config.json")
-        self.configuration_handler = ConfigurationHandler(self.config_path)
-        self.config = self.configuration_handler._load_config(self.config_path)
+        with open(self.config_path) as f:
+            self.config = json.load(f)
         self._openapi_specification_parser = OpenAPISpecificationParser(self.config_path)
         self._openapi_specification = self._openapi_specification_parser.api_data
 
-        self.token, self.host, self.description, self.correct_endpoints, self.query_params = self.configuration_handler._extract_config_values(
-            self.config)
+        self.token = self.config.get("token")
+        self.host = self.config.get("host")
+        self.description = self.config.get("description")
+        self.correct_endpoints = self.config.get("correct_endpoints", {})
+        self.query_params = self.config.get("query_params", {})
         self.categorized_endpoints = self._openapi_specification_parser.categorize_endpoints(self.correct_endpoints,
                                                                                              self.query_params)
         self.prompt_helper = PromptGenerationHelper(self.host, self.description)
@@ -118,8 +123,8 @@ This is another hint."""
         self.assertEqual(1, len(prompt_history))  # Adjust to 3 if previous prompt exists + new prompt
 
     def generate_prompt_engineer(self, param):
-        config, strategy = self.configuration_handler.load(param)
-        self.pentesting_information = PenTestingInformation(self._openapi_specification_parser, config)
+        strategy = strategy_from_string(param)
+        self.pentesting_information = PenTestingInformation(self._openapi_specification_parser, self.config)
         prompt_engineer = PromptEngineer(
             strategy=strategy,
             prompt_helper=self.prompt_helper,

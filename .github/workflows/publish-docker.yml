@@ -1,0 +1,40 @@
+name: Publish Docker
+on:
+  push:
+    branches: [main, '*-public-docker']
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image with timestamp tag
+        run: |
+          IMAGE_NAME="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          BRANCH="${{ github.ref_name }}"
+          if [[ "$BRANCH" != "main" ]]; then
+            echo "Branch is: $BRANCH"
+            BRANCH_NAME=$(echo "${BRANCH%-public-docker}" | tr '[:upper:]' '[:lower:]')
+            echo "Branch name: $BRANCH_NAME"
+            IMAGE_NAME="$IMAGE_NAME/$BRANCH_NAME"
+          fi
+          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+
+          echo "Tagging image $IMAGE_NAME with timestamp $TIMESTAMP"
+
+          # Build the Docker image using source/Dockerfile.
+          docker build -t $IMAGE_NAME:$TIMESTAMP -t $IMAGE_NAME:latest -f Dockerfile .
+
+          # Push the image to GitHub Container Registry.
+          docker push $IMAGE_NAME:$TIMESTAMP
+          docker push $IMAGE_NAME:latest

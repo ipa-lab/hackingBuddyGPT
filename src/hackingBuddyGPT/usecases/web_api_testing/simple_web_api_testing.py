@@ -8,36 +8,35 @@ from typing import Any, Dict, List
 import pydantic_core
 from rich.panel import Panel
 
-from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.parsed_information import ParsedInformation
 from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
-from hackingBuddyGPT.usecases.agents import Agent
-from hackingBuddyGPT.usecases.base import AutonomousAgentUseCase, use_case
-from hackingBuddyGPT.utils.prompt_generation import PromptGenerationHelper
+from hackingBuddyGPT.strategies import SimpleStrategy
+from hackingBuddyGPT.usecases.usecase import use_case
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import strategy_from_string
+from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
-from hackingBuddyGPT.usecases.web_api_testing.documentation.parsing import OpenAPISpecificationParser
-from hackingBuddyGPT.usecases.web_api_testing.documentation.report_handler import ReportHandler
+from hackingBuddyGPT.utils.openapi.openapi_parser import OpenAPISpecificationParser
+from hackingBuddyGPT.usecases.web_api_testing.report_handler import ReportHandler
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_analyzer_with_llm import \
+from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
-from hackingBuddyGPT.usecases.web_api_testing.response_processing.response_handler import ResponseHandler
-from hackingBuddyGPT.usecases.web_api_testing.testing.test_handler import GenerationTestHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.configuration_handler import ConfigurationHandler
-from hackingBuddyGPT.usecases.web_api_testing.utils.custom_datatypes import Context, Prompt
-from hackingBuddyGPT.usecases.web_api_testing.utils.llm_handler import LLMHandler
+from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
+from hackingBuddyGPT.usecases.web_api_testing.test_handler import GenerationTestHandler
+from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
+from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.utils.web_api.target_quirks import auth_header_for
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
-from hackingBuddyGPT.utils.openai.openai_lib import OpenAILib
 
 
 # OpenAPI specification file path
 
-
-class SimpleWebAPITesting(Agent):
+@use_case("Minimal implementation of a web API testing use case")
+class SimpleWebAPITesting(SimpleStrategy):
     """
     SimpleWebAPITesting is an agent class for automating web API testing.
 
@@ -53,7 +52,6 @@ class SimpleWebAPITesting(Agent):
         _all_test_cases_run (bool): Flag indicating if all HTTP methods have been found.
     """
 
-    llm: OpenAILib
     host: str = parameter(desc="The host to test", default="https://jsonplaceholder.typicode.com")
     config_path: str = parameter(
         desc="Configuration file path",
@@ -71,20 +69,33 @@ class SimpleWebAPITesting(Agent):
     )
     _prompt_history: Prompt = field(default_factory=list)
     _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list(), "parsed": list()})
-    _capabilities: Dict[str, Capability] = field(default_factory=dict)
     _all_test_cases_run: bool = False
 
     def init(self):
         super().init()
-        configuration_handler = ConfigurationHandler(self.config_path, self.strategy_string)
-        self.config, self.strategy = configuration_handler.load()
-        self.token, self.host, self.description, self.correct_endpoints, self.query_params = configuration_handler._extract_config_values(
-            self.config)
+
+        # load config file
+        self.strategy = strategy_from_string(self.strategy_string)
+
+        """Loads JSON configuration from the specified path."""
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError(f"Configuration file not found at {self.config_path}")
+        with open(self.config_path, 'r') as file:
+            self.config = json.load(file)
+            self.token = self.config.get("token")
+            self.host = self.config.get("host")
+            self.description = self.config.get("description")
+            self.correct_endpoints = self.config.get("correct_endpoints", {})
+            self.query_params = self.config.get("query_params", {})
+
         self._load_openapi_specification()
         self._setup_environment()
         self._setup_handlers()
         self._setup_initial_prompt()
         self.last_prompt = ""
+
+    def get_name(self) -> str:
+        return self.__class__.__name__
 
     def _load_openapi_specification(self):
         """
@@ -108,6 +119,10 @@ class SimpleWebAPITesting(Agent):
            - Setting the prompt context to `PromptContext.PENTESTING`.
            """
         self._context["host"] = self.host
+
+        # setup capabilities
+        self._capabilities.add_capability(HTTPRequest(self.host))
+
         self._setup_capabilities()
         self.categorized_endpoints = self._openapi_specification_parser.categorize_endpoints(self.correct_endpoints,
                                                                                              self.query_params)
@@ -128,7 +143,7 @@ class SimpleWebAPITesting(Agent):
 
             If username and password are not found in the config, defaults are used.
             """
-        self._llm_handler = LLMHandler(self.llm, self._capabilities, all_possible_capabilities=self.all_capabilities)
+        self._llm_handler = LLMHandler(self.llm, self._capabilities._capabilities, all_possible_capabilities=self.all_capabilities)
         self.prompt_helper = PromptGenerationHelper(self.host, self.description)
         if "username" in self.config.keys() and "password" in self.config.keys():
             username = self.config.get("username")
@@ -194,15 +209,13 @@ class SimpleWebAPITesting(Agent):
         test_cases = self._context["test_cases"]
         self.python_test_case_capability = {"python_test_case": PythonTestCase(test_cases)}
         self.parse_capacity = {"parse": ParsedInformation(test_cases)}
-        self._capabilities = {
-            "http_request": HTTPRequest(self.host)}
         self.all_capabilities = {"python_test_case": PythonTestCase(test_cases), "parse": ParsedInformation(test_cases),
                                  "http_request": HTTPRequest(self.host),
                                  "record_note": RecordNote(notes)}
         self.http_capability = {"http_request": HTTPRequest(self.host),
                                 }
 
-    def perform_round(self, turn: int) -> None:
+    async def perform_round(self, turn: int) -> None:
         """
         Performs a single round of interaction with the LLM. Generates a prompt, sends it to the LLM,
         and handles the response.
@@ -210,14 +223,14 @@ class SimpleWebAPITesting(Agent):
         Args:
             turn (int): The current round number.
         """
-        self._perform_prompt_generation(turn)
+        await self._perform_prompt_generation(turn)
         if len(self.prompt_engineer.pentesting_information.pentesting_step_list) == 0:
             self.all_test_cases_run()
             return
         if turn == 20:
             self._report_handler.save_report()
 
-    def _perform_prompt_generation(self, turn: int) -> None:
+    async def _perform_prompt_generation(self, turn: int) -> None:
         response: Any
         completion: Any
         while self.purpose == self.prompt_engineer._purpose and not self._all_test_cases_run:
@@ -225,7 +238,7 @@ class SimpleWebAPITesting(Agent):
                                                           prompt_history=self._prompt_history)
 
             response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt, "http_request")
-            self._handle_response(completion, response)
+            await self._handle_response(completion, response)
             if len(self.prompt_engineer.pentesting_information.pentesting_step_list) == 0:
                 self.all_test_cases_run()
                 return
@@ -233,7 +246,7 @@ class SimpleWebAPITesting(Agent):
         self.purpose = self.prompt_engineer._purpose
 
 
-    def _handle_response(self, completion: Any, response: Any) -> None:
+    async def _handle_response(self, completion: Any, response: Any) -> None:
         """
         Handles the response from the LLM. Parses the response, executes the necessary actions,
         and updates the prompt history.
@@ -250,19 +263,19 @@ class SimpleWebAPITesting(Agent):
 
             response = self.adjust_action(response)
 
-            result = self.execute_response(response, completion)
+            result = await self.execute_response(response, completion)
 
             self._report_handler.write_vulnerability_to_report(self.prompt_helper.current_sub_step,
                                                                self.prompt_helper.current_test_step, result,
                                                                self.prompt_helper.counter)
 
-            analysis, status_code = self._response_handler.evaluate_result(
+            analysis, status_code = await self._response_handler.evaluate_result(
                 result=result,
                 prompt_history=self._prompt_history,
                 analysis_context=self.prompt_engineer.prompt_helper.current_test_step)
 
             if self.purpose != PromptPurpose.SETUP:
-                self._prompt_history = self._test_handler.generate_test_cases(
+                self._prompt_history = await self._test_handler.generate_test_cases(
                     analysis=analysis,
                     endpoint=response.action.path,
                     method=response.action.method,
@@ -477,14 +490,7 @@ class SimpleWebAPITesting(Agent):
                     token = account["token"]
                     break
         if token and (token != "" or token is not None):
-            if self.config.get("name") == "vAPI":
-                response.action.headers = {"Authorization-Token": f"{token}"}
-            elif self.config.get("name") == "crapi":
-                response.action.headers = {"Authorization": f"Bearer {token}"}
-
-            else:
-
-                response.action.headers = {"Authorization-Token": f"Bearer {token}"}
+            response.action.headers = auth_header_for(self.config.get("name"), token)
 
         if response.action.path != self.prompt_helper.current_sub_step.get("path"):
             response.action.path = self.prompt_helper.current_sub_step.get("path")
@@ -504,7 +510,7 @@ class SimpleWebAPITesting(Agent):
 
         return response
 
-    def execute_response(self, response, completion):
+    async def execute_response(self, response, completion):
         """
             Executes the API response, logs it, and updates internal state for documentation and testing.
 
@@ -528,26 +534,15 @@ class SimpleWebAPITesting(Agent):
         tool_call_id: str = message.tool_calls[0].id
         command: str = pydantic_core.to_json(response).decode()
         self.log.console.print(Panel(command, title="assistant"))
-        self._prompt_history.append(message)
-
-        result: Any = response.execute()
+        msg = {"role": message.role, "content": message.content, "tool_calls": message.tool_calls}
+        self._prompt_history.append(msg)
+        result: Any = await response.execute()
         self.log.console.print(Panel(result, title="tool"))
         if not isinstance(result, str):
             endpoint: str = str(response.action.path).split("/")[1]
             self._report_handler.write_endpoint_to_report(endpoint)
 
-        self._prompt_history.append(
-            tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
+        self._prompt_history.append(tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
 
         self.adjust_user(result)
         return result
-
-
-@use_case("Minimal implementation of a web API testing use case")
-class SimpleWebAPITestingUseCase(AutonomousAgentUseCase[SimpleWebAPITesting]):
-    """
-    A use case for the SimpleWebAPITesting agent, encapsulating the setup and execution
-    of the web API testing scenario.
-    """
-
-    pass

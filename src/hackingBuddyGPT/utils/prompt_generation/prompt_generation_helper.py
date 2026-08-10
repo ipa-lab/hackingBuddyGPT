@@ -3,6 +3,12 @@ import random
 import re
 import uuid
 
+from hackingBuddyGPT.utils.web_api.target_quirks import (
+    has_brew_style_ids,
+    has_named_resource_ids,
+    is_ballardtide,
+)
+
 
 class PromptGenerationHelper(object):
     """
@@ -28,6 +34,7 @@ class PromptGenerationHelper(object):
         self.counter = 0
         self.uuid =uuid.uuid4()
         self.bad_request_endpoints = []
+        self.new_endpoint_found = False
         self.endpoint_examples = {}
         self.name = ""
         if "coin" in host.lower():
@@ -426,7 +433,7 @@ class PromptGenerationHelper(object):
             # Instance-level endpoint
             test_endpoint = f"{path}/1/{other_resource}"
 
-        if "Coin" in name or "gbif" in name:
+        if has_named_resource_ids(name):
             parts = [part.strip() for part in path.split("/") if part.strip()]
 
             id = self.get_possible_id_for_instance_level_ep(parts[0])
@@ -447,7 +454,7 @@ class PromptGenerationHelper(object):
                     dict: A mapping of identified endpoints to their responses or error messages.
                 """
 
-        if "brew" in name or "gbif" in name:
+        if has_brew_style_ids(name):
             common_endpoints = ["autocomplete", "search",  "random","match", "suggest", "related"]
         if "Coin" in name :
             common_endpoints = ["markets", "search",  "history","match", "suggest", "related", '/notifications',
@@ -464,7 +471,7 @@ class PromptGenerationHelper(object):
         path = path.replace("{id}", "1")
         parts = [part.strip() for part in path.split("/") if part.strip()]
 
-        if "Coin" in name or "gbif" in name:
+        if has_named_resource_ids(name):
             id = self.get_possible_id_for_instance_level_ep(parts[0])
             if id:
                 path = path.replace("1", f"{id}")
@@ -494,7 +501,7 @@ class PromptGenerationHelper(object):
                 Returns:
                     dict: A mapping of identified endpoints to their responses or error messages.
                 """
-        if "brew" in name or "gbif" in name:
+        if has_brew_style_ids(name):
 
             common_endpoints = ["autocomplete", "search",  "random","match", "suggest", "related"]
 
@@ -526,7 +533,7 @@ class PromptGenerationHelper(object):
         else:
             if "1" not in path:
                 multilevel_endpoint = path
-        if "Coin" in name or "gbif" in name:
+        if has_named_resource_ids(name):
             id = self.get_possible_id_for_instance_level_ep(parts[0])
             if id:
                 multilevel_endpoint = multilevel_endpoint.replace("1", f"{id}")
@@ -570,7 +577,7 @@ class PromptGenerationHelper(object):
                 for key, value in example.items():
                     if not key in self.query_endpoints_params[endpoint]:
                         return f'{key}: {example[key]}'
-            elif "ballardtide" in self.name:
+            elif is_ballardtide(self.name):
                 for key, value in example.items():
                     if not key in self.query_endpoints_params[endpoint]:
                         return f'{key}: {example[key]}'

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from hackingBuddyGPT.usecases.web_api_testing.utils import LLMHandler
+from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 
 
 class TestLLMHandler(unittest.TestCase):

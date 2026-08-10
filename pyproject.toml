@@ -34,11 +34,6 @@ dependencies = [
     'pypsexec == 0.3.0',
     'pydantic == 2.8.2',
     'BeautifulSoup4',
-    'fastapi == 0.114.0',
-    'fastapi-utils == 0.7.0',
-    'uvicorn[standard] == 0.30.6',
-    'dataclasses_json == 0.6.7',
-    'websockets == 13.1',
     'faker',
     'fpdf',
 ]
@@ -53,12 +48,10 @@ Repository = "https://github.com/ipa-lab/hackingBuddyGPT"
 requires = ["uv_build>=0.8.16,<0.9.0"]
 build-backend = "uv_build"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-data]
-"hackingBuddyGPT.usecases.privesc.templates" = ["*.txt"]
-"hackingBuddyGPT.usecases.examples" = ["*.txt"]
+[tool.uv.build-backend]
+# the distribution name normalizes to "hackingbuddygpt"; the source lives under the mixed-case
+# directory, so pin the module name explicitly.
+module-name = "hackingBuddyGPT"
 
 [tool.pytest.ini_options]
 pythonpath = "src"
@@ -88,6 +81,8 @@ rag = [
 [project.scripts]
 wintermute = "hackingBuddyGPT.cli.wintermute:main"
 hackingBuddyGPT = "hackingBuddyGPT.cli.wintermute:main"
+hackingbuddygpt-log-view = "hackingBuddyGPT.cli.log_viewer:main"
+hackingbuddygpt-log-analyze = "hackingBuddyGPT.cli.log_analyze:main"
 
 [tool.ruff]
 line-length = 120

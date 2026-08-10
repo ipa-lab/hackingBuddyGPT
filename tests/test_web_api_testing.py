@@ -1,25 +1,25 @@
 import asyncio
 import os
+import tempfile
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
+
 from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
     SimpleWebAPITesting,
 )
-from hackingBuddyGPT.utils import Console, DbStorage
+from hackingBuddyGPT.utils import Console
+from hackingBuddyGPT.utils.logging import JsonlLogger
 
-from hackingBuddyGPT.utils.logging import LocalLogger
 
 class TestSimpleWebAPITestingTest(unittest.TestCase):
     def setUp(self):
         # A stand-in LLM; the actual LLM calls are mocked at the LLMHandler boundary per test.
         self.mock_llm = MagicMock()
-        log_db = DbStorage(":memory:")
         console = Console()
 
-        log_db.init()
-        log = LocalLogger(
-            log_db=log_db,
+        log = JsonlLogger(
             console=console,
+            log_dir=tempfile.mkdtemp(),
         )
         config_path = os.path.join(os.path.dirname(__file__), "test_files","fakeapi_config.json")
 

@@ -24,6 +24,9 @@ class LLMResult:
     tokens_reasoning: int = 0
     usage_details: str = ""
     cost: float = 0.0
+    model: str = ""
+    finish_reason: str = ""
+    provider: str = ""
 
     @property
     def total_tokens(self):

@@ -96,6 +96,16 @@ class LiteLLM(LLM):
         content = message.content or ""
         result = message if chat_style else content
 
+        model_name = getattr(response, "model", None) or self.model
+        try:
+            finish_reason = response.choices[0].finish_reason or ""
+        except Exception:
+            finish_reason = ""
+        try:
+            provider = (getattr(response, "_hidden_params", None) or {}).get("custom_llm_provider", "") or ""
+        except Exception:
+            provider = ""
+
         return LLMResult(
             result,
             str(prompt),
@@ -107,6 +117,9 @@ class LiteLLM(LLM):
             tokens_reasoning,
             usage_details,
             cost,
+            model=model_name,
+            finish_reason=finish_reason,
+            provider=provider,
         )
 
     def raw_completion(self, messages, *, tools=None, tool_choice=None):

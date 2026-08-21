@@ -301,6 +301,53 @@ $ hackingbuddygpt-log-analyze logs/*.jsonl
 $ hackingbuddygpt-log-analyze logs/*.jsonl --latex --model gpt-4o --min-duration 30
 ```
 
+## Benchmarking against a fleet of Docker targets
+
+For regression testing and quick experiments we ship a small benchmark launcher,
+`benchmark_privesc.py`, in the repository root. It attacks a fleet of **locally running Docker
+containers** whose image names start with `privesc_` (for example the vulnerable boxes from our
+[Linux Privilege-Escalation Benchmark](https://github.com/ipa-lab/benchmark-privesc-linux)),
+runs a privilege-escalation use-case once against each, and produces a report.
+
+For every matching, running container it:
+
+1. discovers the container and its published SSH port automatically from `docker ps`,
+2. runs the use-case via `wintermute` with a selectable LLM and a per-run turn budget (`--rounds`),
+3. scores the run by reading back its OpenTelemetry/GenAI JSONL trace (a box counts as rooted when
+   the trace's final state is `got root`), and
+4. writes a Markdown `report.md` plus the per-run JSONL traces and console logs under
+   `benchmark_results/<timestamp>/`, alongside a console summary of rooted/failed systems and token
+   cost.
+
+You can drive it with a **local [Ollama](https://ollama.com/) model** (the default, no API key
+needed) or with **[OpenRouter](https://openrouter.ai/)**. Run it from inside the project
+virtualenv so `hackingBuddyGPT` is importable:
+
+```bash
+# make sure the target containers are running first, e.g. the privesc benchmark images
+$ docker ps --format '{{.Names}}\t{{.Image}}'   # images should start with 'privesc_'
+
+# option A: local Ollama model (default provider, no API key required)
+$ uv run benchmark_privesc.py --provider ollama --model ollama_chat/llama3 --rounds 20
+
+# option B: OpenRouter (pass --api-key or set $OPENROUTER_API_KEY)
+$ uv run benchmark_privesc.py --provider openrouter \
+      --model openrouter/anthropic/claude-3.5-sonnet --api-key sk-or-... --rounds 20
+```
+
+Useful options (see `benchmark_privesc.py --help` for the full list):
+
+- `--use-case` — which privesc use-case to launch (default `MinimalPrivEscLinux`; the
+  function-calling prototype is `MinimalToolCallPrivEscLinux`).
+- `--filter SUBSTR` — only run containers whose name/image contains `SUBSTR`.
+- `--trials N` — run each container `N` times (useful for measuring variance).
+- `--rounds N` — per-run turn budget (mapped automatically to `--max_turns` or
+  `--limits.max_rounds` depending on the use-case).
+- `--max-cost`, `--run-timeout` — optional per-run cost cap and wall-clock timeout.
+- `--ollama-host`, `--or-provider` — Ollama base URL / OpenRouter provider routing.
+- `--username`, `--password`, `--ssh-host` — SSH credentials/host for the target containers
+  (default `lowpriv` / `trustno1` on `127.0.0.1`).
+
 ## Use Cases
 
 GitHub Codespaces:

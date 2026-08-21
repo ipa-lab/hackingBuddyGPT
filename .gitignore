@@ -9,6 +9,7 @@ __pycache__/
 *.sqlite3-jounal
 *.sqlite
 logs/
+benchmark_results/
 src/hackingBuddyGPT.egg-info/
 build/
 dist/

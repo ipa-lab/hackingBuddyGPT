@@ -41,7 +41,9 @@ from typing import Optional
 # re-implementing any parsing. Importing these also fails fast with a clear message if the script
 # is not run inside an environment where hackingBuddyGPT is importable.
 try:
+    import hackingBuddyGPT.usecases  # noqa: F401 - importing the package registers every use-case
     from hackingBuddyGPT.analysis.log_model import RunSummary, load_run, load_spans
+    from hackingBuddyGPT.usecases.usecase import AutonomousUseCase, use_cases
     from hackingBuddyGPT.utils.log_storage import (
         GEN_AI_OPERATION_NAME,
         GEN_AI_TOOL_CALL_ARGUMENTS,
@@ -60,6 +62,7 @@ except ModuleNotFoundError as exc:  # pragma: no cover - environment guard
 # Map the friendly use-case module name to the actual wintermute command (the class name).
 USE_CASE_ALIASES = {
     "minimal_linux_privesc": "MinimalPrivEscLinux",
+    "minimal_linux_privesc_tool_calling": "MinimalToolCallPrivEscLinux",
     "linux_privesc": "PrivEscLinux",
 }
 
@@ -67,6 +70,26 @@ DEFAULT_MODELS = {
     "ollama": "ollama_chat/llama3",
     "openrouter": "openrouter/anthropic/claude-3.5-sonnet",
 }
+
+# The two use-case families count "rounds" through different CLI flags: the strategy-based ones
+# (CommandStrategy/SimpleStrategy, e.g. MinimalPrivEscLinux) loop on --max_turns, while the
+# autonomous agents (AutonomousUseCase, e.g. the tool-calling MinimalToolCallPrivEscLinux) loop on
+# --limits.max_rounds. resolve_rounds_flag() picks the right one from the registered class.
+ROUNDS_FLAG_MAX_TURNS = "--max_turns"
+ROUNDS_FLAG_MAX_ROUNDS = "--limits.max_rounds"
+
+
+def resolve_rounds_flag(use_case_name: str, override: str = "auto") -> str:
+    if override == "max_turns":
+        return ROUNDS_FLAG_MAX_TURNS
+    if override == "max_rounds":
+        return ROUNDS_FLAG_MAX_ROUNDS
+
+    cls = use_cases.get(use_case_name)
+    if cls is not None and isinstance(cls, type) and issubclass(cls, AutonomousUseCase):
+        return ROUNDS_FLAG_MAX_ROUNDS
+    # default / strategy-based use-cases (and unknown names) loop on --max_turns
+    return ROUNDS_FLAG_MAX_TURNS
 
 IMAGE_PREFIX = "privesc_"
 # host-port that is forwarded to the container's SSH port (22). docker ps prints entries like
@@ -219,7 +242,7 @@ def build_wintermute_argv(args: argparse.Namespace, container: Container, trace_
         f"--conn.username={args.username}",
         f"--conn.password={args.password}",
         f"--conn.hostname={container.hostname}",
-        f"--max_turns={args.rounds}",
+        f"{args.rounds_flag}={args.rounds}",
         f"--log.log_dir={trace_dir}",
         f"--log.tag={tag}",
     ]
@@ -393,7 +416,7 @@ def write_markdown_report(report_path: Path, args: argparse.Namespace, results: 
     lines.append(f"- **Date:** {datetime.datetime.now().isoformat(timespec='seconds')}")
     lines.append(f"- **Use-case:** `{args.use_case}`")
     lines.append(f"- **LLM:** `{args.model}` (provider: `{args.provider}`)")
-    lines.append(f"- **Rounds (max_turns):** {args.rounds}")
+    lines.append(f"- **Rounds:** {args.rounds} (via `{args.rounds_flag}`)")
     if args.trials > 1:
         lines.append(f"- **Trials per container:** {args.trials}")
     lines.append(f"- **SSH host:** `{args.ssh_host}` (user `{args.username}`)")
@@ -476,7 +499,11 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     p.add_argument("--or-provider", default=None,
                    help="optional OpenRouter provider routing (--llm.provider)")
     p.add_argument("--context-size", type=int, default=8192, help="model context size for prompt trimming")
-    p.add_argument("--rounds", type=int, default=20, help="per-run turn budget (mapped to --max_turns)")
+    p.add_argument("--rounds", type=int, default=20,
+                   help="per-run turn budget (mapped to --max_turns or --limits.max_rounds per use-case)")
+    p.add_argument("--rounds-flag", choices=["auto", "max_turns", "max_rounds"], default="auto",
+                   help="which CLI flag --rounds maps to; 'auto' picks per use-case "
+                        "(strategy=--max_turns, autonomous agent=--limits.max_rounds)")
     p.add_argument("--trials", type=int, default=1, help="how many times to run each container")
     p.add_argument("--filter", default=None, help="only run containers whose name/image contains this substring")
     p.add_argument("--username", default="lowpriv", help="SSH username on the target containers")
@@ -489,6 +516,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     args = p.parse_args(argv)
 
     args.use_case = USE_CASE_ALIASES.get(args.use_case, args.use_case)
+    args.rounds_flag = resolve_rounds_flag(args.use_case, args.rounds_flag)
     if args.model is None:
         args.model = DEFAULT_MODELS[args.provider]
     if args.api_key is None:
@@ -524,7 +552,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     total_runs = len(containers) * args.trials
     print(f"Found {len(containers)} container(s); running {total_runs} run(s) with use-case "
-          f"'{args.use_case}', model '{args.model}', rounds={args.rounds}.")
+          f"'{args.use_case}', model '{args.model}', rounds={args.rounds} ({args.rounds_flag}).")
     print(f"Output: {output_dir}")
     print()
 

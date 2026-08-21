@@ -41,7 +41,7 @@ class SimpleWebAPITesting(SimpleStrategy):
     SimpleWebAPITesting is an agent class for automating web API testing.
 
     Attributes:
-        llm (OpenAILib): The language model interface for generating prompts and handling responses.
+        llm (LiteLLM): The language model interface for generating prompts and handling responses.
         host (str): The host URL to test.
         http_method_description (str): Description pattern for expected HTTP methods in the API response.
         http_method_template (str): Template for formatting HTTP methods in API requests.

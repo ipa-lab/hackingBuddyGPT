@@ -39,7 +39,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
          SimpleWebAPIDocumentation is an agent class for automating REST API documentation.
 
         Attributes:
-            llm (OpenAILib): The language model interface used for prompt execution.
+            llm (LiteLLM): The language model interface used for prompt execution.
             _prompt_history (Prompt): Internal history of prompts exchanged with the LLM.
             _context (Context): Context information used by capabilities (e.g., notes).
             config_path (str): Path to the configuration file for the API under test.

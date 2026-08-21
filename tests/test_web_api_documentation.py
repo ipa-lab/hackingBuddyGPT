@@ -1,27 +1,25 @@
 import asyncio
 import os
+import tempfile
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from hackingBuddyGPT.utils.logging import LocalLogger
 from hackingBuddyGPT.usecases.web_api_documentation.simple_openapi_documentation import (
     SimpleWebAPIDocumentation,
 )
-from hackingBuddyGPT.utils import Console, DbStorage
+from hackingBuddyGPT.utils import Console
+from hackingBuddyGPT.utils.logging import JsonlLogger
 
 
 class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
-    @patch("hackingBuddyGPT.utils.openai.openai_lib.OpenAILib")
-    def setUp(self, MockOpenAILib):
-        # Mock the OpenAILib instance
-        self.mock_llm = MockOpenAILib.return_value
-        log_db = DbStorage(":memory:")
+    def setUp(self):
+        # A stand-in LLM; the actual LLM calls are mocked at the LLMHandler boundary per test.
+        self.mock_llm = MagicMock()
         console = Console()
 
-        log_db.init()
-        log = LocalLogger(
-            log_db=log_db,
+        log = JsonlLogger(
             console=console,
+            log_dir=tempfile.mkdtemp(),
             tag="webApiDocumentation",
         )
         config_path = os.path.join(os.path.dirname(__file__), "test_files", "test_config.json")
@@ -54,10 +52,9 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         mock_completion.usage.prompt_tokens = 10
         mock_completion.usage.completion_tokens = 20
 
-        # Mock the OpenAI LLM response
-        self.agent.llm.instructor.chat.completions.create_with_completion.return_value = (
-            mock_response,
-            mock_completion,
+        # Mock the LLM handler boundary: (action, completion) as litellm tool-calling returns.
+        self.agent._llm_handler.execute_prompt_with_specific_capability = MagicMock(
+            return_value=(mock_response, mock_completion)
         )
 
         # Mock the tool execution result
@@ -84,11 +81,10 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         # Assertions
         self.assertFalse(result)
 
-        # Check if the LLM was called with the correct parameters
-        mock_create_with_completion = self.agent.llm.instructor.chat.completions.create_with_completion
-
-        # if it can be called multiple times, use assert_called
-        self.assertGreaterEqual(mock_create_with_completion.call_count, 1)
+        # Check that the LLM handler was invoked
+        self.assertGreaterEqual(
+            self.agent._llm_handler.execute_prompt_with_specific_capability.call_count, 1
+        )
         # Check if the prompt history was updated correctly
         self.assertGreaterEqual(len(self.agent._prompt_history), 1)  # Initial message + LLM response + tool message
 

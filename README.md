@@ -1,11 +1,6 @@
-**NEITHER THE IPA-LAB NOR HACKINGBUDDYGPT ARE INVOLVED IN ANY CRYPTO COIN! ALL INFORMATION TO THE CONTRARY IS BEING USED TO SCAM YOU! THE TWITTER ACCOUNT THAT CURRENTLY EXISTS IS JUST TRYING TO GET YOUR MONEY, DO NOT FALL FOR IT!**
-
-
-# <div class="vertical-align: middle"><img src="https://github.com/ipa-lab/hackingBuddyGPT/blob/main/docs/hackingbuddy-rounded.png?raw=true" width="72"> HackingBuddyGPT [![Discord](https://dcbadge.vercel.app/api/server/vr4PhSM8yN?style=flat&compact=true)](https://discord.gg/vr4PhSM8yN)</div>
+# <div class="vertical-align: middle"><img src="https://github.com/ipa-lab/hackingBuddyGPT/blob/main/docs/hackingbuddy-rounded.png?raw=true" width="72"> HackingBuddyGPT</div>
 
 *Helping Ethical Hackers use LLMs in 50 Lines of Code or less..*
-
-[Read the Docs](https://docs.hackingbuddy.ai) | [Join us on discord!](https://discord.gg/vr4PhSM8yN)
 
 HackingBuddyGPT helps security researchers use LLMs to discover new attack vectors and save the world (or earn bug bounties) in 50 lines of code or less. In the long run, we hope to make the world a safer place by empowering security  professionals to get more hacking done by using AI. The more testing they can do, the safer all of us will get.
 
@@ -45,11 +40,7 @@ hackingBuddyGPT is described in [Getting pwn'd by AI: Penetration Testing with L
 }
 ~~~
 
-## Getting help
-
-If you need help or want to chat about using AI for security or education, please join our [discord server where we talk about all things AI + Offensive Security](https://discord.gg/vr4PhSM8yN)!
-
-### Main Contributors
+## Main Contributors
 
 The project originally started with [Andreas](https://github.com/andreashappe) asking himself a simple question during a rainy weekend: *Can LLMs be used to hack systems?* Initial results were promising (or disturbing, depends whom you ask) and led to the creation of our motley group of academics and professional pen-testers at TU Wien's [IPA-Lab](https://ipa-lab.github.io/).
 
@@ -85,7 +76,7 @@ So you want to create your own LLM hacking agent? We've got you covered and take
 Create a new usecase and implement `perform_round` containing all system/LLM interactions. We provide multiple helper and base classes so that a new experiment can be implemented in a few dozen lines of code. Tedious tasks, such as
 connecting to the LLM, logging, etc. are taken care of by our framework. Check our [developer quickstart quide](https://docs.hackingbuddy.ai/docs/dev-guide/dev-quickstart) for more information.
 
-The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), logs trace data to a local sqlite database for each run, implements a round limit (after which the agent will stop if root has not been achieved until then) and can connect to a target system either locally or over SSH for fully-autonomous command execution (as well as password guessing).
+The following would create a new (minimal) linux privilege-escalation agent. Through using our infrastructure, this already uses configurable LLM-connections (e.g., for testing OpenAI or locally run LLMs), writes an OpenTelemetry/GenAI trace of each run to a single JSONL file under `logs/`, implements a round limit (after which the agent will stop if root has not been achieved until then) and can connect to a target system either locally or over SSH for fully-autonomous command execution (as well as password guessing).
 
 ~~~ python
 template_dir = pathlib.Path(__file__).parent
@@ -159,24 +150,28 @@ To run it, continue with the next section:
 
 We try to keep our python dependencies as light as possible. This should allow for easier experimentation. To run the main priv-escalation program (which is called `wintermute`) together with an OpenAI-based model you need:
 
-1. an OpenAI API account, you can find the needed keys [in your account page](https://platform.openai.com/account/api-keys)
+1. **Python 3.13 or newer.** The project builds with the [uv](https://docs.astral.sh/uv/) build backend, and we recommend using `uv` to manage the environment (a plain `python -m venv` + `pip` still works too).
+2. an OpenAI API account, you can find the needed keys [in your account page](https://platform.openai.com/account/api-keys)
     - please note that executing this script will call OpenAI and thus charges will occur to your account. Please keep track of those.
-2. a target environment to test against. You have two options:
+3. a target environment to test against. You have two options:
     - **Local Shell**: Use your local system (useful for testing and development)
     - **SSH Target**: A remote machine accessible over SSH. You can use a deliberately vulnerable machine such as [Lin.Security.1](https://www.vulnhub.com/entry/) or a security benchmark such as our [linux priv-esc benchmark](https://github.com/ipa-lab/benchmark-privesc-linux).
 
-To get everything up and running, clone the repo, download requirements, setup API keys and credentials, and start `wintermute.py`:
+To get everything up and running, clone the repo, install the package, setup API keys and credentials, and start `wintermute`:
 
 ```bash
 # clone the repository
 $ git clone https://github.com/ipa-lab/hackingBuddyGPT.git
 $ cd hackingBuddyGPT
 
-# setup virtual python environment
+# option A (recommended): let uv create the environment and install the project
+$ uv sync
+# prefix later commands with `uv run`, or activate the environment:
+$ source .venv/bin/activate
+
+# option B: use a plain virtual environment + pip
 $ python -m venv venv
 $ source ./venv/bin/activate
-
-# install python requirements
 $ pip install -e .
 
 # copy default .env.example 
@@ -188,53 +183,57 @@ $ cp .env.example.aws .env
 # IMPORTANT: setup your OpenAI API key, the VM's IP and credentials within .env
 $ vi .env
 
-# if you start wintermute without parameters, it will list all available use cases
-$ python src/hackingBuddyGPT/cli/wintermute.py
+# installing the project provides the `wintermute` command; if you start it without
+# parameters, it will list all available use cases
+$ wintermute
 No command provided
-usage: src/hackingBuddyGPT/cli/wintermute.py  <command> [--help] [--config config.json] [options...]
+usage: wintermute  <command> [--help] [--config config.json] [options...]
 
 commands:
-    ExPrivEscLinux                  Showcase Minimal Linux Priv-Escalation
-    ExPrivEscLinuxTemplated         Showcase Minimal Linux Priv-Escalation
-    LinuxPrivesc                    Linux Privilege Escalation
-    WindowsPrivesc                  Windows Privilege Escalation
-    ExPrivEscLinuxHintFile          Linux Privilege Escalation using hints from a hint file initial guidance
-    ExPrivEscLinuxLSE               Linux Privilege Escalation using lse.sh for initial guidance
-    WebTestingWithExplanation       Minimal implementation of a web testing use case while allowing the llm to 'talk'
-    SimpleWebAPIDocumentation       Minimal implementation of a web API testing use case
-    SimpleWebAPITesting             Minimal implementation of a web API testing use case
-    Viewer                          Webserver for (live) log viewing
-    Replayer                        Tool to replay the .jsonl logs generated by the Viewer (not well tested)
-    ThesisLinuxPrivescPrototype     Thesis Linux Privilege Escalation Prototype
+    AdvancedWebTesting             Advanced of a web testing use case
+    WebTestingWithExplanation      Minimal implementation of a web testing use case while allowing the llm to 'talk'
+    WebTestingWithShell            Minimal implementation of a web testing use case with shell access
+    SimpleWebAPIDocumentation      Minimal implementation of a web API testing use case
+    SimpleWebAPITesting            Minimal implementation of a web API testing use case
+    MinimalPrivEscLinux            Minimal Strategy-based Linux Priv-Escalation
+    PrivEscLinux                   Strategy-based Linux Priv-Escalation
+    ExPrivEscLinuxLSE              Linux Privilege Escalation using lse.sh for initial guidance
 
 # to get more information about how to configure a use case you can call it with --help
-$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --help
-usage: src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc [--help] [--config config.json] [options...]
+$ wintermute PrivEscLinux --help
+usage: wintermute PrivEscLinux [--help] [--config config.json] [options...]
 
-    --log.log_server_address='localhost:4444'    address:port of the log server to be used (default from builtin)
+    --log.log_dir='logs'    directory for the per-run JSONL log files (default from builtin)
     --log.tag=''    Tag for your current run (default from builtin)
-    --log='local_logger'    choice of logging backend (default from builtin)
-    --log_db.connection_string='wintermute.sqlite3'    sqlite3 database connection string for logs (default from builtin)
-    --max_turns='30'     (default from .env file, alternatives: 10 from builtin)
-    --llm.api_key=<secret>    OpenAI API Key (default from .env file)
-    --llm.model    OpenAI model name
-    --llm.context_size='100000'    Maximum context size for the model, only used internally for things like trimming to the context size (default from .env file)
-    --llm.api_url='https://api.openai.com'    URL of the OpenAI API (default from builtin)
-    --llm.api_path='/v1/chat/completions'    Path to the OpenAI API (default from builtin)
-    --llm.api_timeout=240    Timeout for the API request (default from builtin)
-    --llm.api_backoff=60    Backoff time in seconds when running into rate-limits (default from builtin)
-    --llm.api_retries=3    Number of retries when running into rate-limits (default from builtin)
-    --system='linux'     (default from builtin)
-    --enable_explanation=False     (default from builtin)
-    --enable_update_state=False     (default from builtin)
+    --limits.max_rounds=100    Maximum number of rounds (0 is no limit) (default from builtin)
+    --limits.max_tokens=0    Maximum number of tokens (input+output+thinking, 0 is no limit) (default from builtin)
+    --limits.max_cost=10.0    Maximum cost in dollars (0 is no limit) (default from builtin)
+    --limits.max_duration=0    Maximum duration of the run in seconds (0 is no limit) (default from builtin)
+    --max_turns=10     (default from builtin)
+    --llm.api_key    API key for the upstream
+    --llm.model    model name in litellm format, e.g. 'gpt-4o' or 'openrouter/anthropic/claude-3.5-sonnet'
+    --llm.context_size    maximum context size of the model (used for prompt trimming)
+    --llm.api_base='https://openrouter.ai/api'    base URL of the API (default from builtin)
+    --llm.api_timeout=60    timeout for a single request in seconds (default from builtin)
+    --llm.api_retries=3    number of retries when running into rate-limits (default from builtin)
+    --llm.provider=''    OpenRouter provider routing, only useful when using OpenRouter, otherwise leave empty (default from builtin)
+    --llm.proxy=''    Proxy URL for the API calls (default from builtin)
+    --llm.proxy_insecure=False    Disable TLS certificate verification for the proxy (only for intercepting proxies like Burp/mitmproxy) (default from builtin)
     --disable_history=False     (default from builtin)
-    --hint=''     (default from builtin)
+    --enable_compressed_history=False     (default from builtin)
     --conn.host
-    --conn.hostname
     --conn.username
     --conn.password
-    --conn.keyfilename
-    --conn.port='2222'     (default from .env file, alternatives: 22 from builtin)
+    --conn.hostname=''     (default from builtin)
+    --conn.keyfilename=''     (default from builtin)
+    --conn.port=22     (default from builtin)
+    --conn.banner=''     (default from builtin)
+    --hints=''     (default from builtin)
+    --enable_update_state=False     (default from builtin)
+    --enable_explanation=False     (default from builtin)
+    --enable_structured_guidance=False     (default from builtin)
+    --enable_cot=False     (default from builtin)
+    --rag_path=''     (default from builtin)
 ```
 
 ### Connection Options: Local Shell vs SSH
@@ -253,7 +252,7 @@ Use your local system for testing and development. This is useful for quick expe
 2. Once you have the tmux shell running, use hackingBuddyGPT to interact with it:
    ```bash
    # Local shell with tmux session
-   $ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --conn=local_shell --conn.tmux_session=<session_name>
+   $ wintermute PrivEscLinux --conn=local_shell --conn.tmux_session=<session_name>
    ```
 
 **Example:**
@@ -262,7 +261,7 @@ Use your local system for testing and development. This is useful for quick expe
 $ tmux new-session -s hacking_session
 
 # Step 2: In another terminal, run hackingBuddyGPT
-$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --conn=local_shell --conn.tmux_session=hacking_session
+$ wintermute PrivEscLinux --conn=local_shell --conn.tmux_session=hacking_session
 ```
 
 #### SSH Mode  
@@ -270,7 +269,7 @@ Connect to a remote target machine over SSH. This is the traditional mode for te
 
 ```bash
 # SSH connection (note the updated format with --conn=ssh)
-$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --conn=ssh --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1
+$ wintermute PrivEscLinux --conn=ssh --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1
 ```
 
 When using SSH mode, the target machine should be situated at your specified IP address (e.g., `192.168.122.151` in the example above).
@@ -281,22 +280,73 @@ We are using vulnerable Linux systems running in Virtual Machines for SSH testin
 >
 > We are using virtual machines from our [Linux Privilege-Escalation Benchmark](https://github.com/ipa-lab/benchmark-privesc-linux) project. Feel free to use them for your own research!
 
-## Using the web based viewer and replayer
+## Viewing and analyzing logs
 
-If you want to have a better representation of the agent's output, you can use the web-based viewer. You can start it using `wintermute Viewer`, which will run the server on `http://127.0.0.1:4444` for the default `wintermute.sqlite3` database. You can change these options using the `--log_server_address` and `--log_db.connection_string` parameters.
+Each run writes a single append-only file `logs/log-<timestamp>.jsonl` (the timestamp is the run
+start time). Every line is a complete OpenTelemetry span using the GenAI semantic conventions
+(`gen_ai.*`); LLM prompts/completions are stored as structured message parts, a shape that also
+matches the OWASP Agent Observability Standard (AOS). The format is self-contained, so the files
+can be inspected directly or fed into external OpenTelemetry tooling.
 
-Navigating to the log server address will show you an overview of all runs and clicking on a run will show you the details of that run. The viewer updates live using a websocket connection, and if you enable `Follow new runs` it will automatically switch to the new run when one is started.
+Two CLI tools ship for working with these logs:
 
-Keep in mind that there is no additional protection for this webserver, other than how it can be reached (per default binding to `127.0.0.1` means it can only be reached from your local machine). If you make it accessible to the internet, everybody will be able to see all of your runs and also be able to inject arbitrary data into the database.
+```bash
+# re-render a single run to the terminal (rich panels, in run order)
+$ hackingbuddygpt-log-view logs/log-20260810-094141.jsonl
 
-Therefore **DO NOT** make it accessible to the internet if you're not super sure about what you're doing!
+# aggregate one or more runs into a stats table (duration, LLM calls, tokens, cost, tool calls)
+$ hackingbuddygpt-log-analyze logs/*.jsonl
 
-There is also the experimental replay functionality, which can replay a run live from a capture file, including timing information. This is great for showcases and presentations, because it looks like everything is happening live and for real, but you know exactly what the results will be.
+# emit a paper-ready LaTeX tabular instead, optionally filtered by model / minimum duration
+$ hackingbuddygpt-log-analyze logs/*.jsonl --latex --model gpt-4o --min-duration 30
+```
 
-To use this, the run needs to be captured by a Viewer server by setting `--save_playback_dir` to a directory where the viewer can write the capture files.
+## Benchmarking against a fleet of Docker targets
 
-With the Viewer server still running, you can then start `wintermute Replayer --replay_file <path_to_capture_file>` to replay the captured run (this will create a new run in the database).
-You can configure it to `--pause_on_message` and `--pause_on_tool_calls`, which will interrupt the replay at the respective points until enter is pressed in the shell where you run the Replayer in. You can also configure the `--playback_speed` to control the speed of the replay.
+For regression testing and quick experiments we ship a small benchmark launcher,
+`benchmark_privesc.py`, in the repository root. It attacks a fleet of **locally running Docker
+containers** whose image names start with `privesc_` (for example the vulnerable boxes from our
+[Linux Privilege-Escalation Benchmark](https://github.com/ipa-lab/benchmark-privesc-linux)),
+runs a privilege-escalation use-case once against each, and produces a report.
+
+For every matching, running container it:
+
+1. discovers the container and its published SSH port automatically from `docker ps`,
+2. runs the use-case via `wintermute` with a selectable LLM and a per-run turn budget (`--rounds`),
+3. scores the run by reading back its OpenTelemetry/GenAI JSONL trace (a box counts as rooted when
+   the trace's final state is `got root`), and
+4. writes a Markdown `report.md` plus the per-run JSONL traces and console logs under
+   `benchmark_results/<timestamp>/`, alongside a console summary of rooted/failed systems and token
+   cost.
+
+You can drive it with a **local [Ollama](https://ollama.com/) model** (the default, no API key
+needed) or with **[OpenRouter](https://openrouter.ai/)**. Run it from inside the project
+virtualenv so `hackingBuddyGPT` is importable:
+
+```bash
+# make sure the target containers are running first, e.g. the privesc benchmark images
+$ docker ps --format '{{.Names}}\t{{.Image}}'   # images should start with 'privesc_'
+
+# option A: local Ollama model (default provider, no API key required)
+$ uv run benchmark_privesc.py --provider ollama --model ollama_chat/llama3 --rounds 20
+
+# option B: OpenRouter (pass --api-key or set $OPENROUTER_API_KEY)
+$ uv run benchmark_privesc.py --provider openrouter \
+      --model openrouter/anthropic/claude-3.5-sonnet --api-key sk-or-... --rounds 20
+```
+
+Useful options (see `benchmark_privesc.py --help` for the full list):
+
+- `--use-case` — which privesc use-case to launch (default `MinimalPrivEscLinux`; the
+  function-calling prototype is `MinimalToolCallPrivEscLinux`).
+- `--filter SUBSTR` — only run containers whose name/image contains `SUBSTR`.
+- `--trials N` — run each container `N` times (useful for measuring variance).
+- `--rounds N` — per-run turn budget (mapped automatically to `--max_turns` or
+  `--limits.max_rounds` depending on the use-case).
+- `--max-cost`, `--run-timeout` — optional per-run cost cap and wall-clock timeout.
+- `--ollama-host`, `--or-provider` — Ollama base URL / OpenRouter provider routing.
+- `--username`, `--password`, `--ssh-host` — SSH credentials/host for the target containers
+  (default `lowpriv` / `trustno1` on `127.0.0.1`).
 
 ## Use Cases
 
@@ -322,30 +372,14 @@ With that out of the way, let's look at an example hackingBuddyGPT run. Each run
 # Example 1: Using local shell with tmux session
 # First create the tmux session: tmux new-session -s hacking_session
 # Then run hackingBuddyGPT:
-$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...ChangeMeToYourOpenAiApiKey --llm.model=gpt-4-turbo --llm.context_size=8192 --conn=local_shell --conn.tmux_session=hacking_session
+$ wintermute PrivEscLinux --llm.api_key=sk...ChangeMeToYourOpenAiApiKey --llm.model=gpt-4-turbo --llm.context_size=8192 --conn=local_shell --conn.tmux_session=hacking_session
 
 # Example 2: Using SSH connection (updated format)
-$ python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=sk...ChangeMeToYourOpenAiApiKey --llm.model=gpt-4-turbo --llm.context_size=8192 --conn=ssh --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
+$ wintermute PrivEscLinux --llm.api_key=sk...ChangeMeToYourOpenAiApiKey --llm.model=gpt-4-turbo --llm.context_size=8192 --conn=ssh --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1 --conn.hostname=test1
 
 # install dependencies for testing if you want to run the tests
-$ pip install '.[testing]'
+$ uv sync --extra testing   # or: pip install '.[testing]'
 ```
-
-## Beta Features
-
-### Viewer
-
-The viewer is a simple web-based tool to view the results of hackingBuddyGPT runs. It is currently in beta and can be started with:
-
-```bash
-$ hackingBuddyGPT Viewer
-```
-
-This will start a webserver on `http://localhost:4444` that can be accessed with a web browser.
-
-To log to this central viewer, you currently need to change the `GlobalLogger` definition in [./src/hackingBuddyGPT/utils/logging.py](src/hackingBuddyGPT/utils/logging.py) to `GlobalRemoteLogger`.
-
-This feature is not fully tested yet and therefore is not recommended to be exposed to the internet!
 
 ## Publications about hackingBuddyGPT
 

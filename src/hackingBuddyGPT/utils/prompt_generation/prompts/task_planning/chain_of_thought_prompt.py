@@ -95,7 +95,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 "Query Instance-level resource endpoint with id",
                 "Look for Instance-level resource endpoint : Identify endpoints of type `/resource/id` where id is the parameter for the id.",
                 "Query these `/resource/id` endpoints to see if an `id` parameter resolves the request successfully."
-                "Ids can be integers, longs or base62."
+                "Ids can be integers or longs."
 
             ],
             [

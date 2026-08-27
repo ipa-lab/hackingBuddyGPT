@@ -211,7 +211,7 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
                 "Next, move to instance-level resource endpoints.",
                 "Identify and list endpoints formatted as `/resource/id`, where 'id' represents a dynamic parameter.",
                 "Attempt to query these endpoints to validate whether the 'id' parameter correctly retrieves individual resource instances.",
-                "Consider testing with various ID formats, such as integers, longs, or base62 encodings like '6rqhFgbbKwnb9MLmUQDhG6'."
+                "Consider testing with various ID formats, such as integers or longs."
             ],
             ["Now, move to query Subresource Endpoints.",
              "Identify subresource endpoints of the form `/resource/other_resource`.",

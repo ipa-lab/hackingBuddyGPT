@@ -294,8 +294,6 @@ class OpenAPISpecificationParser:
                            ['user', 'users', 'signup']) and not "login" in path or any(
                         word in description for word in ['create a user']):
 
-                        if path.lower().endswith("user") and name.startswith("OWASP"):
-                            continue
                         if not any(keyword in path.lower() for keyword in
                                    ['pictures', 'verify-email-token', 'change-email', "reset", "verify", "videos",
                                     "mechanic"]):
@@ -422,12 +420,3 @@ class OpenAPISpecificationParser:
             "related_resource": buckets["related_resource"],
             "multi-level_resource": buckets["multi_level_resource"],
         }
-
-
-if __name__ == "__main__":  # Usage
-    parser = OpenAPISpecificationParser(
-        "/config/hard/reqres_config.json")
-
-    endpoint_classes = parser.classify_endpoints()
-    for category, endpoints in endpoint_classes.items():
-        print(f"{category}: {endpoints}")

@@ -157,31 +157,11 @@ class ReportHandler:
         test_case_name = test_over_step.get("phase_title").split("Phase: ")[1]
         step = test_step.get('step', "No step")
         expected = test_step.get('expected_response_code', "No expected result")
-        # Example response headers from a web server
-        response_headers = {
-            'Server': 'Apache/2.4.1',
-            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-            'X-Content-Type-Options': 'nosniff',
-            'Content-Security-Policy': "default-src 'self'",
-            'X-Frame-Options': 'DENY',
-            'Set-Cookie': 'sessionid=123456; HttpOnly; Secure'
-        }
-
-        # Define the security configurations we expect
-        expected_configurations = {
-            'Strict-Transport-Security': lambda value: "max-age" in value,
-            'X-Content-Type-Options': lambda value: value.lower() == 'nosniff',
-            'Content-Security-Policy': lambda value: "default-src 'self'" in value,
-            'X-Frame-Options': lambda value: value.lower() == 'deny',
-            'Set-Cookie': lambda value: 'httponly' in value.lower() and 'secure' in value.lower()
-        }
-
-
 
         if "only one id" in test_step.get("security"):
             headers, body = raw_response.split('\r\n\r\n', 1)
             body = json.loads(body)
-            if len(body)> 1:
+            if len(body) > 1:
                 self.vulnerabilities_counter += 1
                 report_line = (
                     f"Test Purpose: {test_case_purpose}\n"
@@ -193,47 +173,17 @@ class ReportHandler:
                 )
                 with open(self.vul_report_name, "a", encoding="utf-8") as f:
                     f.write(report_line)
-
-            elif "Access-Control Allow-Origin *" in headers or "Access-Control Allow-Credentials: true" in headers:
+            elif "message" in body:
                 report_line = (
                     f"Test Purpose: {test_case_purpose}\n"
                     f"Test Name: {test_case_name}\n"
                     f"Step: {step}\n"
-                    f"Expected Result: All debug options disabled, no default credentials, correct permission settings applied\n"
-                    f"Actual Result: Debug mode enabled, default admin account active, incorrect file permissions\n"
+                    f"Expected Result: Only necesary information should be returned.\n"
+                    f"Actual Result: Too much information was logged.\n"
                     f"Number of found vulnerabilities: {self.vulnerabilities_counter}\n\n"
                 )
-
                 with open(self.vul_report_name, "a", encoding="utf-8") as f:
                     f.write(report_line)
-
-                # Check the response headers for security misconfigurations
-                for header, is_config_correct in expected_configurations.items():
-                        actual_value = response_headers.get(header, '')
-                        if not actual_value or not is_config_correct(actual_value):
-                            report_line = (
-                                f"Test Purpose: {test_case_purpose}\n"
-                                f"Test Name: {test_case_name}\n"
-                                f"Step: {step}\n"
-                                f"Expected Result: All debug options disabled, no default credentials, correct permission settings applied\n"
-                                f"Actual Result: Debug mode enabled, default admin account active, incorrect file permissions\n"
-                                f"Number of found vulnerabilities: {self.vulnerabilities_counter}\n\n"
-                            )
-
-                            with open(self.vul_report_name, "a", encoding="utf-8") as f:
-                                f.write(report_line)
-            elif "message" in body or "conversion_params" in body:
-                    report_line = (
-                        f"Test Purpose: {test_case_purpose}\n"
-                        f"Test Name: {test_case_name}\n"
-                        f"Step: {step}\n"
-                        f"Expected Result: Only necesary information should be returned.\n"
-                        f"Actual Result: Too much information was logged.\n"
-                        f"Number of found vulnerabilities: {self.vulnerabilities_counter}\n\n"
-                    )
-
-                    with open(self.vul_report_name, "a", encoding="utf-8") as f:
-                        f.write(report_line)
 
         expected_codes = test_step.get('expected_response_code', [])
         conditions = test_step.get('conditions', {})

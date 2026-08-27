@@ -1,7 +1,6 @@
 import copy
 
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
-from hackingBuddyGPT.utils.web_api.target_quirks import CRYPTO_NAMES
 
 
 class Evaluator:
@@ -155,8 +154,6 @@ class Evaluator:
         routes_found = copy.deepcopy(routes_found)
 
         false_positives = 0
-        for idx, route in enumerate(routes_found):
-                routes_found = self.add_if_is_cryptocurrency(idx, route, routes_found, current_step)
         # Use evaluator to record routes and parameters found
         if response.action.__class__.__name__ != "RecordNote":
             for path in query_endpoints :
@@ -167,59 +164,6 @@ class Evaluator:
             self.results["routes_found"] += routes_found
             #self.results["query_params_found"].append(query_params_found)
             self.results["false_positives"].append(false_positives)
-
-    def add_if_is_cryptocurrency(self, idx, path,routes_found,current_step):
-        """
-               If the path contains a known cryptocurrency name, replace that part with '{id}'
-               and add the resulting path to `self.prompt_helper.found_endpoints`.
-               """
-        # Default list of cryptos to detect
-        routes_found = list(set(routes_found))
-        cryptos = CRYPTO_NAMES
-
-        # Convert to lowercase for the match, but preserve the original path for reconstruction if you prefer
-        lower_path = path.lower()
-
-        parts = [part.strip() for part in path.split("/") if part.strip()]
-
-        for crypto in cryptos:
-            if crypto in lower_path:
-                # Example approach: split by '/' and replace the segment that matches crypto
-                parts = path.split('/')
-                replaced_any = False
-                for i, segment in enumerate(parts):
-                    if segment.lower() == crypto:
-                        parts[i] = "{id}"
-                        replaced_any = True
-
-                # Only join and store once per path
-                if replaced_any:
-                    replaced_path = "/".join(parts)
-                    if path in routes_found:
-                        for i, route in enumerate(routes_found):
-                            if route == path:
-                                routes_found[i] = replaced_path
-
-                    else:
-                        routes_found.append(replaced_path)
-        if len(parts) == 3 and current_step == 4:
-            if "/"+ parts[0] + "/{id}/" + parts[2] not  in routes_found:
-                for i, route in enumerate(routes_found):
-                    if route == path:
-                        routes_found[i] = "/" + parts[0] + "/{id}/" + parts[2]
-                        break
-        if len(parts) == 2 and current_step == 2:
-            if "/"+parts[0] + "/{id}" not in routes_found:
-                for i, route in enumerate(routes_found):
-                    if route == path:
-                        routes_found[i] ="/"+parts[0] + "/{id}"
-                        break
-
-        if "/1" in path:
-            if idx < len(routes_found):
-                routes_found[idx] = routes_found[idx].replace("/1", "/{id}")
-        return routes_found
-
 
     def get_percentage(self, param, documented_param):
         found_set = set(param)

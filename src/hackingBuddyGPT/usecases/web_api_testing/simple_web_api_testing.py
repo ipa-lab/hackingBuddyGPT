@@ -28,7 +28,6 @@ from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
 from hackingBuddyGPT.usecases.web_api_testing.test_handler import GenerationTestHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
-from hackingBuddyGPT.utils.web_api.target_quirks import auth_header_for
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 
@@ -469,7 +468,7 @@ class SimpleWebAPITesting(SimpleStrategy):
 
         This method is typically used during API test setup or fuzzing to:
         - Modify the HTTP method (e.g., set to POST during setup).
-        - Inject authorization tokens into the request headers based on the API type (`vAPI`, `crapi`, etc.).
+        - Inject a standard `Authorization: Bearer <token>` header when a token is available.
         - Correct or override request paths and bodies with current user context.
         - Optionally save resource data if the path contains identifiable parameters (e.g., `_id`).
 
@@ -490,7 +489,7 @@ class SimpleWebAPITesting(SimpleStrategy):
                     token = account["token"]
                     break
         if token and (token != "" or token is not None):
-            response.action.headers = auth_header_for(self.config.get("name"), token)
+            response.action.headers = {"Authorization": f"Bearer {token}"}
 
         if response.action.path != self.prompt_helper.current_sub_step.get("path"):
             response.action.path = self.prompt_helper.current_sub_step.get("path")

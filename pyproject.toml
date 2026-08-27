@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     'fabric',
+    'asyncssh',
     'Mako',
     'requests',
     'rich',
@@ -36,6 +37,7 @@ dependencies = [
     'BeautifulSoup4',
     'faker',
     'fpdf',
+    "tenacity>=9.1.4",
 ]
 
 [project.urls]

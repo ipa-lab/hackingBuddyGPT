@@ -27,6 +27,7 @@ Run it from inside the project virtualenv, e.g.:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import datetime
 import glob
 import os
@@ -260,6 +261,48 @@ def child_env(args: argparse.Namespace) -> dict[str, str]:
     if args.provider == "ollama":
         env["OLLAMA_API_BASE"] = args.ollama_host
     return env
+
+
+def preflight_check(args: argparse.Namespace, containers: list[Container]) -> list[str]:
+    """Fast SSH smoke test run before the (slow, costly) benchmark sweep.
+
+    Opens the same interactive connector the use-cases use against every target, runs ``id``, and
+    requires non-empty output. A connection/auth regression (e.g. asyncssh offering keys before the
+    password and tripping the server's MaxAuthTries) otherwise surfaces only as every command
+    silently returning "" — i.e. a mysterious 0% success rate after a long run. This turns that into
+    an immediate, explicit failure. Returns a list of failure messages (empty means all good).
+    """
+    from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
+
+    async def check(container: Container) -> Optional[str]:
+        where = f"{container.image} (ssh {args.ssh_host}:{container.port})"
+        conn = SSHInteractiveConnection(
+            host=args.ssh_host,
+            port=container.port,
+            username=args.username,
+            password=args.password,
+            hostname=container.hostname,
+        )
+        try:
+            out, err, _ = await asyncio.wait_for(conn.run("id", timeout=8), timeout=15)
+        except Exception as exc:  # noqa: BLE001 - any failure here should abort the sweep clearly
+            return f"{where}: could not run 'id': {exc}"
+        finally:
+            try:
+                await conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+        if not out.strip():
+            return f"{where}: 'id' returned no output (error: {err or 'none'}) — SSH interaction is broken"
+        if "uid=" not in out:
+            return f"{where}: unexpected 'id' output: {out.strip()[:120]!r}"
+        return None
+
+    async def run_all() -> list[Optional[str]]:
+        return await asyncio.gather(*(check(c) for c in containers))
+
+    return [msg for msg in asyncio.run(run_all()) if msg]
 
 
 def run_one(args: argparse.Namespace, container: Container, trial: int, total_trials: int, traces_root: Path) -> RunResult:
@@ -511,6 +554,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     p.add_argument("--ssh-host", default="127.0.0.1", help="host the container SSH ports are published on")
     p.add_argument("--max-cost", type=float, default=0.0, help="optional per-run cost cap (--limits.max_cost); 0 = off")
     p.add_argument("--run-timeout", type=int, default=0, help="optional per-run wall-clock timeout in seconds; 0 = off")
+    p.add_argument("--skip-preflight", action="store_true",
+                   help="skip the pre-sweep SSH smoke test that verifies each target returns shell output")
     p.add_argument("--output-dir", default=None, help="output directory (default: benchmark_results/<timestamp>)")
 
     args = p.parse_args(argv)
@@ -555,6 +600,18 @@ def main(argv: Optional[list[str]] = None) -> int:
           f"'{args.use_case}', model '{args.model}', rounds={args.rounds} ({args.rounds_flag}).")
     print(f"Output: {output_dir}")
     print()
+
+    if not args.skip_preflight:
+        print(f"Preflight: checking SSH connectivity to {len(containers)} target(s) ...")
+        failures = preflight_check(args, containers)
+        if failures:
+            print("error: preflight SSH smoke test failed — aborting before the benchmark:")
+            for msg in failures:
+                print(f"  ! {msg}")
+            print("(fix the SSH connector/credentials, or pass --skip-preflight to bypass.)")
+            return 2
+        print(f"Preflight OK: all {len(containers)} target(s) reachable and returning shell output.")
+        print()
 
     results: list[RunResult] = []
     idx = 0

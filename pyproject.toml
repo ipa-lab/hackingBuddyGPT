@@ -36,7 +36,6 @@ dependencies = [
     'pydantic',
     'BeautifulSoup4',
     'faker',
-    'fpdf',
     "tenacity>=9.1.4",
 ]
 

@@ -3,8 +3,10 @@ from io import StringIO
 from typing import override
 
 from invoke import Responder
+
 from hackingBuddyGPT.capability import Capability
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
+
 
 @dataclass
 class SSHRunCommand(Capability):
@@ -14,10 +16,12 @@ class SSHRunCommand(Capability):
 
     @override
     def describe(self) -> str:
-        desc = "Give a command to be executed in a linux shell."
+        desc = (
+            "Give a command to be executed in a linux shell. Each command runs in its own shell, so "
+            "state is not preserved between commands."
+        )
         if self.conn.banner:
             desc += f"\nThe banner of the machine you're running on is:\n{self.conn.banner}"
-        desc = "The environment you're in is persistent, but only for your current session."
         return desc + self.additional_description
 
     @override
@@ -48,7 +52,7 @@ class SSHRunCommand(Capability):
         tmp = ""
         for line in out.readlines():
             if not line.startswith("[sudo] password for " + self.conn.username + ":"):
-                line.replace("\r", "")
+                line = line.replace("\r", "")
                 tmp = tmp + line
 
         return tmp

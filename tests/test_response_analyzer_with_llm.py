@@ -1,6 +1,6 @@
 import asyncio
 import unittest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import ResponseAnalyzerWithLLM
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
@@ -8,12 +8,14 @@ from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 
 class TestResponseAnalyzerWithLLM(unittest.TestCase):
     def setUp(self):
-        self.llm_handler = MagicMock()
+        self.llm = MagicMock()
+        self.capabilities = {"http_request": MagicMock()}
         self.pentesting_info = MagicMock()
         self.prompt_helper = MagicMock()
         self.analyzer = ResponseAnalyzerWithLLM(
             purpose=PromptPurpose.PARSING,
-            llm_handler=self.llm_handler,
+            llm=self.llm,
+            capabilities=self.capabilities,
             pentesting_info=self.pentesting_info,
             capacity=MagicMock(),
             prompt_helper=self.prompt_helper
@@ -47,21 +49,33 @@ class TestResponseAnalyzerWithLLM(unittest.TestCase):
         self.assertEqual(headers["Content-Type"], "text/html")
         self.assertEqual(body, "")
 
-    def test_process_step_calls_llm_handler(self):
+    def test_process_step_calls_llm(self):
         step = "Please analyze the response"
         prompt_history = []
         capability = "http_request"
 
+        tool_call = MagicMock()
+        tool_call.id = "abc123"
+        tool_call.function.arguments = "{}"
+        message = MagicMock()
+        message.tool_calls = [tool_call]
+        llm_result = MagicMock()
+        llm_result.result = message
+        self.llm.get_response = MagicMock(return_value=llm_result)
+
         fake_response = MagicMock()
         fake_response.execute = AsyncMock(return_value="Execution Result")
 
-        fake_completion = MagicMock()
-        fake_completion.choices = [MagicMock(message=MagicMock(tool_calls=[MagicMock(id="abc123")]))]
+        with patch(
+            "hackingBuddyGPT.utils.web_api.response_analyzer_with_llm.tool_call_to_action",
+            return_value=fake_response,
+        ):
+            updated_history, result = asyncio.run(self.analyzer.process_step(step, prompt_history, capability))
 
-        self.llm_handler.execute_prompt_with_specific_capability.return_value = (fake_response, fake_completion)
-
-        updated_history, result = asyncio.run(self.analyzer.process_step(step, prompt_history, capability))
-
+        # get_response was asked to force exactly the requested capability.
+        _, kwargs = self.llm.get_response.call_args
+        self.assertEqual(kwargs.get("tool_choice"), "required")
+        self.assertEqual(list(kwargs.get("capabilities").keys()), ["http_request"])
         self.assertIn(step, updated_history[0]["content"])
         self.assertEqual(result, "Execution Result")
 

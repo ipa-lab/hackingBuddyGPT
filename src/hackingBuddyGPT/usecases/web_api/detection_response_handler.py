@@ -11,6 +11,7 @@ the slim, phase-agnostic ``ResponseHandler`` (which keeps ``evaluate_result`` /
 ``extract_key_elements_of_response`` / ``parse_http_status_line`` for the testing phase) and
 holds all the detection-only state and steering logic here, next to the detection engine.
 """
+import datetime
 import json
 import random
 import re
@@ -26,7 +27,6 @@ from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInform
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
 from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
-from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
 from hackingBuddyGPT.utils import tool_message
@@ -35,9 +35,9 @@ from hackingBuddyGPT.utils import tool_message
 class DetectionResponseHandler(ResponseHandler):
     """Response handler for the documentation/detection phase (the ``ExploreStep`` FSM)."""
 
-    def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext, config: Any,
+    def __init__(self, prompt_context: PromptContext, config: Any,
                  prompt_helper: PromptGenerationHelper, pentesting_information: PenTestingInformation = None) -> None:
-        super().__init__(llm_handler, prompt_context, config, prompt_helper, pentesting_information)
+        super().__init__(prompt_context, config, prompt_helper, pentesting_information)
         self.no_new_endpoint_counter = 0
         self.all_query_combinations = []
         self.no_action_counter = 0
@@ -98,22 +98,22 @@ class DetectionResponseHandler(ResponseHandler):
         return cycles, plain
 
 
-    async def handle_response(self, response, completion, prompt_history, log, categorized_endpoints, move_type):
+    async def handle_response(self, response, message, message_id, tool_call, prompt_history, log, move_type):
         """
         Evaluates the response to determine if it is acceptable.
 
         Args:
-            response (str): The response to evaluate.
-            completion (Completion): The completion object with tool call results.
+            response: The executable action rebuilt from the tool call.
+            message: The assistant message (LLMResult.result) carrying the tool call.
+            message_id: The log id of the LLM response, used to parent the tool-call span.
+            tool_call: The chosen tool call (id + function arguments).
             prompt_history (list): History of prompts and responses.
             log (Log): Logging object for console output.
 
         Returns:
             tuple: (bool, prompt_history, result, result_str) indicating if response is acceptable.
         """
-        # Extract message and tool call information
-        message = completion.choices[0].message
-        tool_call_id = message.tool_calls[0].id
+        tool_call_id = tool_call.id
         if "undefined" in response.action.path :
             response.action.path = response.action.path.replace("undefined", "1")
         if "Id" in response.action.path:
@@ -139,11 +139,11 @@ class DetectionResponseHandler(ResponseHandler):
             return False, prompt_history, None, None
 
         else:
-            return await self.handle_http_response(response, prompt_history, log, completion, message, categorized_endpoints,
-                                             tool_call_id, move_type)
+            return await self.handle_http_response(response, prompt_history, log, message, message_id, tool_call, move_type)
 
-    async def handle_http_response(self, response: Any, prompt_history: Any, log: Any, completion: Any, message: Any,
-                             categorized_endpoints, tool_call_id, move_type) -> Any:
+    async def handle_http_response(self, response: Any, prompt_history: Any, log: Any, message: Any,
+                             message_id, tool_call, move_type) -> Any:
+        tool_call_id = tool_call.id
 
         response = self.adjust_path(response, move_type)
         # Add Authorization header if token is available
@@ -157,11 +157,14 @@ class DetectionResponseHandler(ResponseHandler):
         # Execute the command and parse the result
         with log.console.status("[bold green]Executing command..."):
 
-
+            tic = datetime.datetime.now()
             result = await response.execute()
+            duration = datetime.datetime.now() - tic
             self.query_counter += 1
             result_dict = self.extract_json(result)
             log.console.print(Panel(result, title="tool"))
+            # Structured tool-call record (parented to the LLM response span).
+            await log.add_tool_call(message_id, tool_call_id, "http_request", tool_call.function.arguments, result, duration)
             if "Could not request" in result:
                 return False, prompt_history, result, ""
 
@@ -173,7 +176,7 @@ class DetectionResponseHandler(ResponseHandler):
             request_path = response.action.path
 
             if "action" not in command:
-                return False, prompt_history, response, completion
+                return False, prompt_history, response, ""
 
             # Check response success
             is_successful = result_str.startswith("200")
@@ -181,7 +184,7 @@ class DetectionResponseHandler(ResponseHandler):
             prompt_history.append(msg)
             self.last_path = request_path
 
-            status_message = self.check_if_successful(is_successful, request_path, result_dict, result_str, categorized_endpoints)
+            status_message = self.check_if_successful(is_successful, request_path, result_dict, result_str)
             log.console.print(Panel(status_message, title="system"))
 
             prompt_history.append(tool_message(status_message, tool_call_id))
@@ -518,7 +521,7 @@ class DetectionResponseHandler(ResponseHandler):
 
             return response
 
-    def check_if_successful(self, is_successful, request_path, result_dict, result_str, categorized_endpoints):
+    def check_if_successful(self, is_successful, request_path, result_dict, result_str):
         self.prompt_helper.new_endpoint_found = False
         if is_successful:
             self.prompt_helper.new_endpoint_found =True

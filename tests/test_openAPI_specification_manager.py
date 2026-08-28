@@ -7,29 +7,24 @@ from hackingBuddyGPT.usecases.web_api.openapi_specification_handler import OpenA
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy, PromptContext
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
-from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 
 
 class TestOpenAPISpecificationHandler(unittest.TestCase):
     def setUp(self):
-        self.llm_handler = MagicMock(spec=LLMHandler)
-        self.llm_handler_mock = MagicMock()
         self.response_handler = MagicMock(spec=ResponseHandler)
         self.strategy = PromptStrategy.IN_CONTEXT
         self.url = "https://jsonplaceholder.typicode.com/"
         self.description = "JSON Placeholder API"
         self.name = "JSON Placeholder API"
-        self.llm_handler_mock = MagicMock(spec=LLMHandler)
         self.config_path = os.path.join(os.path.dirname(__file__), "test_files", "test_config.json")
         with open(self.config_path) as f:
             self.config = json.load(f)
         self.host = "https://jsonplaceholder.typicode.com/"
         self.description = "JSON Placeholder API"
         self.prompt_helper = PromptGenerationHelper(self.host, self.description)
-        self.response_handler = ResponseHandler(self.llm_handler_mock, PromptContext.DOCUMENTATION, self.config,
+        self.response_handler = ResponseHandler(PromptContext.DOCUMENTATION, self.config,
                                                 self.prompt_helper, None)
         self.openapi_handler = OpenAPISpecificationHandler(
-            llm_handler=self.llm_handler,
             strategy=self.strategy,
             url=self.url,
             description=self.description,

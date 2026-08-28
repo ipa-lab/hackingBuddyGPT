@@ -9,7 +9,6 @@ import yaml
 from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy
-from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils.web_api.http_response import extract_status_code_and_message
 
 
@@ -21,20 +20,17 @@ class OpenAPISpecificationHandler(object):
         schemas (dict): A dictionary to store API schemas.
         filename (str): The filename for the OpenAPI specification file.
         openapi_spec (dict): The OpenAPI specification document structure.
-        llm_handler (object): An instance of the LLM handler for interacting with the LLM.
-        api_key (str): The API key for accessing the LLM.
         file_path (str): The path to the directory where the OpenAPI specification file will be stored.
         file (str): The complete path to the OpenAPI specification file.
         _capabilities (dict): A dictionary to store capabilities related to YAML file handling.
     """
 
-    def __init__(self, llm_handler: LLMHandler, strategy: PromptStrategy, url: str,
+    def __init__(self, strategy: PromptStrategy, url: str,
                  description: str, name: str) -> None:
         """
         Initializes the handler with a template OpenAPI specification.
 
         Args:
-            llm_handler (object): An instance of the LLM handler for interacting with the LLM.
             strategy (PromptStrategy): An instance of the PromptStrategy class.
         """
         self.unsuccessful_methods = {}
@@ -55,7 +51,6 @@ class OpenAPISpecificationHandler(object):
             "endpoints": {},
             "components": {"schemas": {}},
         }
-        self.llm_handler = llm_handler
         current_path = os.path.dirname(os.path.abspath(__file__))
 
         self.file_path = os.path.join(current_path, "openapi_spec", str(strategy).split(".")[1].lower(), name.lower(), date)
@@ -96,7 +91,6 @@ class OpenAPISpecificationHandler(object):
 
         if len(body_dict) == 1 and "data" not in body_dict:
             entry_dict["id"] = body_dict
-            self.llm_handler._add_created_object(entry_dict, object_name)
         else:
             if "data" in body_dict:
                 body_dict = body_dict["data"]
@@ -106,7 +100,6 @@ class OpenAPISpecificationHandler(object):
                         for entry in body_dict:
                             key = entry.get("title") or entry.get("name") or entry.get("id")
                             entry_dict[key] = {"value": entry}
-                            self.llm_handler._add_created_object(entry_dict[key], object_name)
                             if len(entry_dict) > 3:
                                 break
 
@@ -118,7 +111,6 @@ class OpenAPISpecificationHandler(object):
                     for entry in body_dict:
                         key = entry.get("title") or entry.get("name") or entry.get("id")
                         entry_dict[key] = entry
-                        self.llm_handler._add_created_object(entry_dict[key], object_name)
                         if len(entry_dict) > 3:
                             break
             else:
@@ -130,7 +122,6 @@ class OpenAPISpecificationHandler(object):
                         entry_dict = entry_dict[0]
                 else:
                     entry_dict= body_dict
-                self.llm_handler._add_created_object(entry_dict, object_name)
         if isinstance(old_body_dict, dict) and len(old_body_dict.keys()) > 0 and "data" in old_body_dict.keys() and isinstance(old_body_dict, dict) \
                 and isinstance(entry_dict, dict):
             old_body_dict.pop("data")

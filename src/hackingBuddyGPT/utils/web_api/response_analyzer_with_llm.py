@@ -7,7 +7,7 @@ from hackingBuddyGPT.utils.prompt_generation.information import (
 from hackingBuddyGPT.utils.prompt_generation.information import (
     PromptPurpose,
 )
-from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.capability import tool_call_to_action
 from hackingBuddyGPT.utils.web_api.http_response import extract_status_code_and_message
 from hackingBuddyGPT.utils import tool_message
 
@@ -21,18 +21,20 @@ class ResponseAnalyzerWithLLM:
         purpose (PromptPurpose): The specific purpose for analyzing the HTTP response.
     """
 
-    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None,
+    def __init__(self, purpose: PromptPurpose = None, llm: Any = None, capabilities: dict = None,
                  pentesting_info: PenTestingInformation = None, capacity: Any = None, prompt_helper: Any = None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
 
         Args:
             purpose (PromptPurpose, optional): The purpose for analyzing the HTTP response. Default is None.
-            llm_handler (LLMHandler): Handles the llm operations. Default is None.
+            llm (LiteLLM): The LLM upstream used for the analysis tool calls. Default is None.
+            capabilities (dict): Name -> Capability map the analysis steps may call. Default is None.
             prompt_engineer(PromptEngineer): Handles the prompt operations. Default is None.
         """
         self.purpose = purpose
-        self.llm_handler = llm_handler
+        self.llm = llm
+        self.capabilities = capabilities or {}
         self.pentesting_information = pentesting_info
         self.capacity = capacity
         self.prompt_helper = prompt_helper
@@ -154,13 +156,15 @@ class ResponseAnalyzerWithLLM:
         # Log current step
         prompt_history.append({"role": "system", "content": step + "Stay within the output limit."})
 
-        # Call the LLM and handle the response
-        response, completion = self.llm_handler.execute_prompt_with_specific_capability(prompt_history, capability)
-        message = completion.choices[0].message
-        tool_call_id = message.tool_calls[0].id
+        # Force the model to call the given capability, then execute the resulting action.
+        caps = {capability: self.capabilities[capability]}
+        llm_result = self.llm.get_response(prompt_history, capabilities=caps, tool_choice="required")
+        message = llm_result.result
+        tool_call = message.tool_calls[0]
+        tool_call_id = tool_call.id
+        response = tool_call_to_action(tool_call, caps)
 
-        msg = {"role": message.role, "content": message.content, "tool_calls": message.tool_calls}
-        prompt_history.append(msg)
+        prompt_history.append(message)
 
         # Execute any tool call results and handle outputs
         try:

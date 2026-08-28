@@ -5,7 +5,6 @@ from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import ResponseAnalyzerWithLLM
-from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Prompt
 
 
@@ -19,14 +18,12 @@ class ResponseHandler:
     state machine lives in ``usecases.web_api.detection_response_handler.DetectionResponseHandler``.
 
     Attributes:
-        llm_handler (LLMHandler): An instance of the LLM handler for interacting with the LLM.
         pentesting_information (PenTestingInformation): Pentesting information (pentesting context only).
         response_analyzer (ResponseAnalyzerWithLLM): An instance for analyzing responses with the LLM.
     """
 
-    def __init__(self, llm_handler: LLMHandler, prompt_context: PromptContext, config: Any,
+    def __init__(self, prompt_context: PromptContext, config: Any,
                  prompt_helper: PromptGenerationHelper, pentesting_information: PenTestingInformation = None) -> None:
-        self.llm_handler = llm_handler
         self.prompt_helper = prompt_helper
         if prompt_context == PromptContext.PENTESTING:
             self.pentesting_information = pentesting_information

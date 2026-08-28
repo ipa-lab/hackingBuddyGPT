@@ -42,22 +42,24 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
 
     @patch("time.perf_counter", side_effect=[1, 2])  # Mocking perf_counter for consistent timing
     def test_perform_round(self, mock_perf_counter):
-        # Prepare mock responses
+        # The detection loop now uses llm.get_response(tool_choice="required") and rebuilds the
+        # un-executed action via tool_call_to_action; the FSM/handle_response are unchanged.
+        tool_call = MagicMock()
+        tool_call.id = "tool_call_1"
+        tool_call.function.arguments = "{}"
+        message = MagicMock()
+        message.role = "assistant"
+        message.content = "Mocked LLM response"
+        message.tool_calls = [tool_call]
+        llm_result = MagicMock()
+        llm_result.result = message
+
+        self.agent.llm.get_response = MagicMock(return_value=llm_result)
+        self.agent.log.call_response = AsyncMock(return_value=1)
+        self.agent.log.add_tool_call = AsyncMock()
+
+        # The rebuilt action + its execution result.
         mock_response = MagicMock()
-        mock_completion = MagicMock()
-
-        # Setup completion response with mocked data
-        mock_completion.choices[0].message.content = "Mocked LLM response"
-        mock_completion.choices[0].message.tool_calls = [MagicMock(id="tool_call_1")]
-        mock_completion.usage.prompt_tokens = 10
-        mock_completion.usage.completion_tokens = 20
-
-        # Mock the LLM handler boundary: (action, completion) as litellm tool-calling returns.
-        self.agent._llm_handler.execute_prompt_with_specific_capability = MagicMock(
-            return_value=(mock_response, mock_completion)
-        )
-
-        # Mock the tool execution result
         real_http_response = (
             "HTTP/1.1 200 OK\r\n"
             "Date: Fri, 18 Apr 2025 07:31:21 GMT\r\n"
@@ -68,23 +70,23 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
             "\r\n"
             '{"page":1,"per_page":6,"total":12,"total_pages":2,"data":[{"id":1,"name":"cerulean"}]}'
         )
-
         mock_response.execute = AsyncMock(return_value=real_http_response)
-
         mock_response.action.path = "/posts/"
 
         self.agent.prompt_helper.found_endpoints = ["/users/"]
-        # Perform the round
-        result = asyncio.run(self.agent.perform_round(1))
-
+        with patch(
+            "hackingBuddyGPT.usecases.web_api.simple_openapi_documentation.tool_call_to_action",
+            return_value=mock_response,
+        ):
+            result = asyncio.run(self.agent.perform_round(1))
 
         # Assertions
         self.assertFalse(result)
 
-        # Check that the LLM handler was invoked
-        self.assertGreaterEqual(
-            self.agent._llm_handler.execute_prompt_with_specific_capability.call_count, 1
-        )
+        # The model was asked with a forced tool choice.
+        self.assertGreaterEqual(self.agent.llm.get_response.call_count, 1)
+        _, kwargs = self.agent.llm.get_response.call_args
+        self.assertEqual(kwargs.get("tool_choice"), "required")
         # Check if the prompt history was updated correctly
         self.assertGreaterEqual(len(self.agent._prompt_history), 1)  # Initial message + LLM response + tool message
 

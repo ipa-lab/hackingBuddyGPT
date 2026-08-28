@@ -14,7 +14,7 @@ from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngine
 from hackingBuddyGPT.usecases.web_api.detection_response_handler import DetectionResponseHandler
 from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_endpoints_with_query
 from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
-from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.capability import tool_call_to_action
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
@@ -177,14 +177,13 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
                name (str): Base name of the current documentation session.
                initial_prompt (dict): Initial system prompt for the LLM.
            """
-        self.all_capabilities = {
-                                 "http_request": HTTPRequest(self.host)}
-        self._llm_handler = LLMHandler(self.llm, self._capabilities._capabilities,  all_possible_capabilities=self.all_capabilities)
+        # The single capability the model is offered (and forced to call) each detection round.
+        self.all_capabilities = {"http_request": HTTPRequest(self.host)}
 
-        self._response_handler = DetectionResponseHandler(llm_handler=self._llm_handler, prompt_context=self._prompt_context,
+        self._response_handler = DetectionResponseHandler(prompt_context=self._prompt_context,
                                                           prompt_helper=self.prompt_helper, config=config)
         self._documentation_handler = OpenAPISpecificationHandler(
-            self._llm_handler, self.strategy, self.host, description, name
+            self.strategy, self.host, description, name
         )
 
         self._prompt_history.append(initial_prompt)
@@ -333,15 +332,20 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
         while not is_good:
             prompt = self._prompt_engineer.generate_prompt(turn=turn, move_type=move_type,
                                                            prompt_history=self._prompt_history)
-            response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt,"http_request" )
+            # Force the model to call http_request, then rebuild the same un-executed action the
+            # FSM used to receive (via tool_call_to_action) so handle_response is unchanged.
+            llm_result = self.llm.get_response(prompt, capabilities=self.all_capabilities, tool_choice="required")
+            message_id = await self.log.call_response(llm_result)
             self.log.console.print(Panel(prompt[-1]["content"], title="system"))
 
-            is_good, self._prompt_history, result, result_str = await self._response_handler.handle_response(response,
-                                                                                                       completion,
-                                                                                                       self._prompt_history,
-                                                                                                       self.log,
-                                                                                                       self.categorized_endpoints,
-                                                                                                       move_type)
+            message = llm_result.result
+            if not getattr(message, "tool_calls", None):
+                continue
+            tool_call = message.tool_calls[0]
+            response = tool_call_to_action(tool_call, self.all_capabilities)
+
+            is_good, self._prompt_history, result, result_str = await self._response_handler.handle_response(
+                response, message, message_id, tool_call, self._prompt_history, self.log, move_type)
 
             if result == None or "Could not request" in result:
                 continue

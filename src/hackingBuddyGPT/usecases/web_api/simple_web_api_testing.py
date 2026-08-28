@@ -22,7 +22,6 @@ from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
-from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 
@@ -146,7 +145,6 @@ class SimpleWebAPITesting(SimpleStrategy):
 
             If username and password are not found in the config, defaults are used.
             """
-        self._llm_handler = LLMHandler(self.llm, self._capabilities._capabilities, all_possible_capabilities=self.all_capabilities)
         self.prompt_helper = PromptGenerationHelper(self.host, self.description)
         if "username" in self.config.keys() and "password" in self.config.keys():
             username = self.config.get("username")
@@ -165,9 +163,10 @@ class SimpleWebAPITesting(SimpleStrategy):
         )
         self._capabilities.add_capability(self._proposed_http_request, name="ProposedHTTPRequest")
         self._response_handler = ResponseHandler(
-            llm_handler=self._llm_handler, prompt_context=self.prompt_context, prompt_helper=self.prompt_helper,
+            prompt_context=self.prompt_context, prompt_helper=self.prompt_helper,
             config=self.config, pentesting_information=self.pentesting_information)
-        self.response_analyzer = ResponseAnalyzerWithLLM(llm_handler=self._llm_handler,
+        self.response_analyzer = ResponseAnalyzerWithLLM(llm=self.llm,
+                                                         capabilities=self.all_capabilities,
                                                          pentesting_info=self.pentesting_information,
                                                          capacity=self.parse_capacity,
                                                          prompt_helper=self.prompt_helper)

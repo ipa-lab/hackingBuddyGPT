@@ -9,23 +9,20 @@ from hackingBuddyGPT.utils.prompt_generation.information import PromptContext, P
 from hackingBuddyGPT.utils.web_api.response_handler import (
     ResponseHandler,
 )
-from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 
 
 class TestResponseHandler(unittest.TestCase):
     def setUp(self):
-        self.llm_handler_mock = MagicMock(spec=LLMHandler)
         self.config_path = os.path.join(os.path.dirname(__file__), "test_files", "test_config.json")
         with open(self.config_path) as f:
             self.config = json.load(f)
         self.host = "https://reqres.in"
         self.description = "Fake API"
         self.prompt_helper = PromptGenerationHelper(self.host, self.description)
-        self.response_handler = ResponseHandler(self.llm_handler_mock, PromptContext.DOCUMENTATION, self.config,
+        self.response_handler = ResponseHandler(PromptContext.DOCUMENTATION, self.config,
                                                 self.prompt_helper, None)
         # parse_http_response_* and extract_keys live on the OpenAPI spec handler.
         self.openapi_handler = OpenAPISpecificationHandler(
-            llm_handler=self.llm_handler_mock,
             strategy=PromptStrategy.IN_CONTEXT,
             url=self.host,
             description=self.description,

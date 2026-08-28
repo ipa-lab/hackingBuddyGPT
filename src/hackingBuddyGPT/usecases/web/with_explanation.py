@@ -3,6 +3,7 @@ from typing import override
 from hackingBuddyGPT.capability import awaitable
 from hackingBuddyGPT.capabilities.end_run import EndRun
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from hackingBuddyGPT.capabilities.pentest_playbook import PentestPlaybook
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
 from hackingBuddyGPT.usecases.agents import ChatAgent
 from hackingBuddyGPT.usecases.usecase import AutonomousAgentUseCase, use_case
@@ -64,6 +65,7 @@ class WebTestingWithExplanation(ChatAgent):
             )
         )
         self.add_capability(HTTPRequest(self.host))
+        self.add_capability(PentestPlaybook())
         self.add_capability(EndRun(limits.cancel))
 
 

@@ -3,6 +3,7 @@ from typing import override
 from hackingBuddyGPT.capabilities import SSHRunCommand
 from hackingBuddyGPT.capability import awaitable
 from hackingBuddyGPT.capabilities.end_run import EndRun
+from hackingBuddyGPT.capabilities.pentest_playbook import PentestPlaybook
 from hackingBuddyGPT.capabilities.submit_flag import SubmitFlag
 from hackingBuddyGPT.usecases.agents import ChatAgent
 from hackingBuddyGPT.usecases.usecase import AutonomousAgentUseCase, use_case
@@ -71,6 +72,7 @@ class WebTestingWithShell(ChatAgent):
                 additional_description="You can use this capability to run commands on a kali linux machine that is in the same network as the server you want to attack.",
             )
         )
+        self.add_capability(PentestPlaybook())
         self.add_capability(EndRun(limits.cancel))
 
 

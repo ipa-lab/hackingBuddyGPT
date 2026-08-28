@@ -48,17 +48,6 @@ class ReportHandler:
 
         self._render()
 
-    def write_endpoint_to_report(self, endpoint: str) -> None:
-        """
-        Records a single tested endpoint.
-
-        Args:
-            endpoint (str): The tested endpoint.
-        """
-        if endpoint not in self._endpoints:
-            self._endpoints.append(endpoint)
-        self._render()
-
     def write_analysis_to_report(self, analysis: List[str], purpose: Enum) -> None:
         """
         Records analysis data, grouped by purpose.

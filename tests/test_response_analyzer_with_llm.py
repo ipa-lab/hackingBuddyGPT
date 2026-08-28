@@ -17,7 +17,6 @@ class TestResponseAnalyzerWithLLM(unittest.TestCase):
             llm=self.llm,
             capabilities=self.capabilities,
             pentesting_info=self.pentesting_info,
-            capacity=MagicMock(),
             prompt_helper=self.prompt_helper
         )
 

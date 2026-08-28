@@ -1,13 +1,12 @@
 import json
 import os.path
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.utils.limits import Limits
-from hackingBuddyGPT.capabilities.parsed_information import ParsedInformation
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.strategies import SimpleStrategy
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import strategy_from_string
@@ -22,7 +21,7 @@ from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngine
 from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
-from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
+from hackingBuddyGPT.utils.web_api.custom_datatypes import Prompt
 from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 
@@ -46,7 +45,7 @@ class SimpleWebAPITesting(SimpleStrategy):
         http_method_template (str): Template for formatting HTTP methods in API requests.
         http_methods (str): Comma-separated list of HTTP methods expected in the API response.
         _prompt_history (Prompt): The history of prompts sent to the language model.
-        _context (Context): Contextual data for the test session.
+        _context (dict): Contextual data for the test session.
         _capabilities (Dict[str, Capability]): Available capabilities for the agent.
         _all_test_cases_run (bool): Flag indicating if all HTTP methods have been found.
     """
@@ -67,7 +66,7 @@ class SimpleWebAPITesting(SimpleStrategy):
         default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).",
     )
     _prompt_history: Prompt = field(default_factory=list)
-    _context: Context = field(default_factory=lambda: {"notes": list(), "test_cases": list(), "parsed": list()})
+    _context: dict = field(default_factory=lambda: {"notes": list()})
     _all_test_cases_run: bool = False
 
     def init(self):
@@ -174,7 +173,6 @@ class SimpleWebAPITesting(SimpleStrategy):
         self.response_analyzer = ResponseAnalyzerWithLLM(llm=self.llm,
                                                          capabilities=self.all_capabilities,
                                                          pentesting_info=self.pentesting_information,
-                                                         capacity=self.parse_capacity,
                                                          prompt_helper=self.prompt_helper,
                                                          limits=self.limits)
         self._response_handler.set_response_analyzer(self.response_analyzer)
@@ -217,19 +215,11 @@ class SimpleWebAPITesting(SimpleStrategy):
 
     def _setup_capabilities(self) -> None:
         """
-        Sets up the capabilities required for the use case. Initializes HTTP request capabilities,
-        note recording capabilities, and HTTP method submission capabilities based on the provided
-        configuration.
+        Sets up the capabilities the analysis steps may call: HTTP requests and note recording.
         """
         notes: List[str] = self._context["notes"]
-        parsed: List[str] = self._context["parsed"]
-        test_cases = self._context["test_cases"]
-        self.parse_capacity = {"parse": ParsedInformation(test_cases)}
-        self.all_capabilities = {"parse": ParsedInformation(test_cases),
-                                 "http_request": HTTPRequest(self.host),
+        self.all_capabilities = {"http_request": HTTPRequest(self.host),
                                  "record_note": RecordNote(notes)}
-        self.http_capability = {"http_request": HTTPRequest(self.host),
-                                }
 
     async def perform_round(self, turn: int) -> None:
         """

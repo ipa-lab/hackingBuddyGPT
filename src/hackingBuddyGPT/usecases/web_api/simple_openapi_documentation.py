@@ -16,8 +16,7 @@ from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_endpoi
 from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
 from hackingBuddyGPT.capability import tool_call_to_action
 from hackingBuddyGPT.utils.limits import Limits
-from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
-from hackingBuddyGPT.usecases.web_api.evaluator import Evaluator
+from hackingBuddyGPT.utils.web_api.custom_datatypes import Prompt
 from hackingBuddyGPT.utils.configurable import parameter
 from rich.panel import Panel
 
@@ -45,7 +44,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
         Attributes:
             llm (LiteLLM): The language model interface used for prompt execution.
             _prompt_history (Prompt): Internal history of prompts exchanged with the LLM.
-            _context (Context): Context information used by capabilities (e.g., notes).
+            _context (dict): Context information used by capabilities (e.g., notes).
             config_path (str): Path to the configuration file for the API under test.
             strategy_string (str): Serialized string representing the documentation strategy to apply.
             _http_method_description (str): Description for identifying HTTP methods in responses.
@@ -56,7 +55,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
             all_steps_done (bool): Flag to indicate whether the full documentation process is complete.
         """
     _prompt_history: Prompt = field(default_factory=list)
-    _context: Context = field(default_factory=lambda: {"notes": list()})
+    _context: dict = field(default_factory=lambda: {"notes": list()})
     _all_http_methods_found: bool = False
     config_path: str = parameter(
         desc="Configuration file path",
@@ -173,7 +172,6 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
            - LLM interaction handler.
            - Response handling and OpenAPI documentation logic.
            - Prompt engineering strategy.
-           - Evaluator for judging API test or doc performance.
 
            Args:
                config (dict): Configuration dictionary containing API setup options.
@@ -201,7 +199,6 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
             rest_api_info=(token, self.host, self._correct_endpoints, self.categorized_endpoints),
             prompt_file=self.prompt_file
         )
-        self._evaluator = Evaluator(config=config)
 
     def categorize_endpoints(self, endpoints, query: dict):
 
@@ -394,11 +391,5 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
 
             counter = counter + 1
             self.prompt_helper.found_endpoints = list(set(self._prompt_engineer.prompt_helper.found_endpoints))
-
-            self._evaluator.evaluate_response(response, self._prompt_engineer.prompt_helper.found_endpoints, self.prompt_helper.current_step,
-                                              self.prompt_helper.found_query_endpoints)
-
-            self._evaluator.finalize_documentation_metrics(
-                file_path=self._documentation_handler.file.split(".yaml")[0] + ".txt")
 
         self.all_http_methods_found(turn)

@@ -420,21 +420,6 @@ class OpenAPISpecificationHandler(object):
 
         return prompt_history, prompt_engineer
 
-    def found_all_endpoints(self):
-        """
-            Determines whether a sufficient number of API endpoints have been discovered.
-
-            Currently, this uses a simple heuristic: if the number of endpoint-method pairs
-            is at least 10, it is assumed that all relevant endpoints have been found.
-
-            Returns:
-                bool: True if at least 10 endpoint-method entries exist, False otherwise.
-            """
-        if len(self.endpoint_methods.items()) < 10:
-            return False
-        else:
-            return True
-
     def get_type(self, value):
         """
             Determines the data type of a given string value.

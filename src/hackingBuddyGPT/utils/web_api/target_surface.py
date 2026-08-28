@@ -208,10 +208,6 @@ class SitemapSurface(OpenAPISpecificationParser):
     def from_urls(cls, urls, host: str = "", filepath: str = "") -> "SitemapSurface":
         return cls(filepath=filepath, api_data=urls_to_openapi(urls, host))
 
-    @classmethod
-    def from_html(cls, html: str, base_url: str = "", host: str = "", filepath: str = "") -> "SitemapSurface":
-        return cls(filepath=filepath, api_data=html_to_openapi(html, base_url=base_url, host=host))
-
 
 def load_surface(path: str, host: str = None) -> TargetSurface:
     """Load a surface file, auto-detecting OpenAPI vs sitemap.

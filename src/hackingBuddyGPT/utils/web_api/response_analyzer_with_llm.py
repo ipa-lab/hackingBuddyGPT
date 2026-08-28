@@ -23,7 +23,7 @@ class ResponseAnalyzerWithLLM:
     """
 
     def __init__(self, purpose: PromptPurpose = None, llm: Any = None, capabilities: dict = None,
-                 pentesting_info: PenTestingInformation = None, capacity: Any = None, prompt_helper: Any = None,
+                 pentesting_info: PenTestingInformation = None, prompt_helper: Any = None,
                  limits: Limits = None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
@@ -39,7 +39,6 @@ class ResponseAnalyzerWithLLM:
         self.llm = llm
         self.capabilities = capabilities or {}
         self.pentesting_information = pentesting_info
-        self.capacity = capacity
         self.prompt_helper = prompt_helper
         # A never-reached default keeps standalone/analyzer-only use unconstrained.
         self.limits = limits if limits is not None else Limits(max_rounds=0, max_tokens=0, max_cost=0, max_duration=0)

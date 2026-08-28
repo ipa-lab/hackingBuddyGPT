@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional
 
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PromptContext,
@@ -100,29 +100,11 @@ class TreeOfThoughtPrompt(TaskPlanningPrompt):
             "assessments": [],
             "path": test_case.get("path")
         }
+        # Note: counter is intentionally never advanced here (unchanged behaviour) — every branch
+        # uses the first step's fields.
         counter = 0
-        # Process steps in the test case as potential steps
-        for i, step in enumerate(test_case["steps"]):
-            if counter < len(test_case["security"]):
-                security = test_case["security"][counter]
-            else:
-                security = test_case["security"][0]
-
-            if len(test_case["steps"]) > 1:
-                if counter < len(test_case["expected_response_code"]):
-                    expected_response_code = test_case["expected_response_code"][counter]
-
-                else:
-                    expected_response_code = test_case["expected_response_code"]
-
-                print(f'COunter: {counter}')
-                token = test_case["token"][counter]
-                path = test_case["path"][counter]
-            else:
-                expected_response_code = test_case["expected_response_code"]
-                token = test_case["token"][0]
-                path = test_case["path"][0]
-
+        for step in test_case["steps"]:
+            security, expected_response_code, token, path = self._step_fields(test_case, counter)
 
             step = """Imagine three different experts are answering this question.
                       All experts will write down 1 step of their thinking,

@@ -25,6 +25,7 @@ from rich.panel import Panel
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
+from hackingBuddyGPT.utils.web_api import endpoint_shapes
 from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
 from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
@@ -312,36 +313,31 @@ class DetectionResponseHandler(ResponseHandler):
 
                 elif self.prompt_helper.current_step == ExploreStep.SUBRESOURCE:
                     if path in self.prompt_helper.unsuccessful_paths:
-                        ep = self.prompt_helper._get_sub_resource_endpoint(
-                            random.choice(self.prompt_helper.found_endpoints),
-                            self.common_endpoints, self.name
+                        ep = endpoint_shapes.sub_resource(
+                            random.choice(self.prompt_helper.found_endpoints), self.common_endpoints
                         )
                         return self.finalize_path(ep)
 
-                    ep = self.prompt_helper._get_sub_resource_endpoint(path, self.common_endpoints, self.name)
+                    ep = endpoint_shapes.sub_resource(path, self.common_endpoints)
                     return self.finalize_path(ep)
 
                 elif self.prompt_helper.current_step == ExploreStep.RELATED:
                     if path in self.prompt_helper.unsuccessful_paths:
-                        ep = self.prompt_helper._get_related_resource_endpoint(
-                            random.choice(self.prompt_helper.found_endpoints),
-                            self.common_endpoints,
-                            self.name
+                        ep = endpoint_shapes.related_resource(
+                            random.choice(self.prompt_helper.found_endpoints), self.common_endpoints
                         )
                         return self.finalize_path(ep)
 
-                    ep = self.prompt_helper._get_related_resource_endpoint(path, self.common_endpoints, self.name)
+                    ep = endpoint_shapes.related_resource(path, self.common_endpoints)
                     return self.finalize_path(ep)
 
                 elif self.prompt_helper.current_step == ExploreStep.MULTI_LEVEL:
                     if path in self.prompt_helper.unsuccessful_paths:
-                        ep = self.prompt_helper._get_multi_level_resource_endpoint(
-                            random.choice(self.prompt_helper.found_endpoints),
-                            self.common_endpoints,
-                            self.name
+                        ep = endpoint_shapes.multi_level_resource(
+                            random.choice(self.prompt_helper.found_endpoints), self.common_endpoints
                         )
                     else:
-                        ep = self.prompt_helper._get_multi_level_resource_endpoint(path, self.common_endpoints, self.name)
+                        ep = endpoint_shapes.multi_level_resource(path, self.common_endpoints)
                     return self.finalize_path(ep)
 
                 elif (self.prompt_helper.current_step == ExploreStep.QUERY and

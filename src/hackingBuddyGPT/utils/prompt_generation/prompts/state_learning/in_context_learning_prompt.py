@@ -264,7 +264,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
         return result
 
 
-    def transform_into_prompt_structure_with_previous_examples(self, test_case, purpose):
+    def transform_into_prompt_structure(self, test_case, purpose):
         """
             Transforms a single test case into a  In context learning structure.
 
@@ -291,24 +291,7 @@ class InContextLearningPrompt(StatePlanningPrompt):
         # Process steps in the test case
         counter = 0
         for step in test_case["steps"]:
-            if counter < len(test_case["security"]):
-                security = test_case["security"][counter]
-            else:
-                security = test_case["security"][0]
-
-            if len(test_case["steps"]) > 1:
-                if counter <len(test_case["expected_response_code"]):
-                    expected_response_code = test_case["expected_response_code"][counter]
-
-                else:
-                    expected_response_code = test_case["expected_response_code"]
-
-                token = test_case["token"][counter]
-                path = test_case["path"][counter]
-            else:
-                expected_response_code = test_case["expected_response_code"]
-                token = test_case["token"][0]
-                path = test_case["path"][0]
+            security, expected_response_code, token, path = self._step_fields(test_case, counter)
 
             previous_example = self.response_history.get(purpose.name, None)
             if previous_example is not None:

@@ -1,11 +1,8 @@
-import copy
 import json
 import os.path
-import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
-import pydantic_core
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
@@ -18,6 +15,7 @@ from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInform
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 from hackingBuddyGPT.utils.openapi.openapi_parser import OpenAPISpecificationParser
 from hackingBuddyGPT.usecases.web_api.report_handler import ReportHandler
+from hackingBuddyGPT.usecases.web_api.proposed_http_request import ProposedHTTPRequest
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
 from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import \
@@ -157,6 +155,15 @@ class SimpleWebAPITesting(SimpleStrategy):
             username = "test"
             password = "<PASSWORD>"
         self.pentesting_information = PenTestingInformation(self._openapi_specification_parser, self.config)
+        # The capability the model is given for the testing round: it finalises the proposed request
+        # against the current test step and sends it (see ProposedHTTPRequest). Registered in the
+        # CapabilityManager so the standard run_capability_json path can execute it.
+        self._proposed_http_request = ProposedHTTPRequest(
+            http_request=HTTPRequest(self.host),
+            prompt_helper=self.prompt_helper,
+            pentesting_information=self.pentesting_information,
+        )
+        self._capabilities.add_capability(self._proposed_http_request, name="ProposedHTTPRequest")
         self._response_handler = ResponseHandler(
             llm_handler=self._llm_handler, prompt_context=self.prompt_context, prompt_helper=self.prompt_helper,
             config=self.config, pentesting_information=self.pentesting_information)
@@ -234,14 +241,11 @@ class SimpleWebAPITesting(SimpleStrategy):
             self._report_handler.save_report()
 
     async def _perform_prompt_generation(self, turn: int) -> None:
-        response: Any
-        completion: Any
         while self.purpose == self.prompt_engineer._purpose and not self._all_test_cases_run:
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore",
                                                           prompt_history=self._prompt_history)
 
-            response, completion = self._llm_handler.execute_prompt_with_specific_capability(prompt, "http_request")
-            await self._handle_response(completion, response)
+            await self._run_testing_step(prompt)
             if len(self.prompt_engineer.pentesting_information.pentesting_step_list) == 0:
                 self.all_test_cases_run()
                 return
@@ -249,28 +253,40 @@ class SimpleWebAPITesting(SimpleStrategy):
         self.purpose = self.prompt_engineer._purpose
 
 
-    async def _handle_response(self, completion: Any, response: Any) -> None:
+    async def _run_testing_step(self, prompt) -> None:
+        """Run one testing round on the standard LLM loop.
+
+        The model is offered exactly one capability (``ProposedHTTPRequest``) and forced to call it
+        (``tool_choice="required"``). The capability finalises and sends the request and captures
+        response state; here we record the LLM result (cost/tokens via ``call_response``), execute the
+        tool call through the shared ``run_capability_json`` path (structured ``add_tool_call``
+        logging), and drive reporting + LLM analysis exactly as before.
         """
-        Handles the response from the LLM. Parses the response, executes the necessary actions,
-        and updates the prompt history.
+        llm_result = self.llm.get_response(
+            prompt,
+            capabilities={"ProposedHTTPRequest": self._proposed_http_request},
+            tool_choice="required",
+        )
+        message_id = await self.log.call_response(llm_result)
 
-        Args:
-            completion (Any): The completion object from the LLM.
-            response (Any): The response object from the LLM.
-            purpose (str): The purpose or intent behind the response handling.
-        """
-        with self.log.console.status("[bold green]Executing that command..."):
-            if response is None:
-                return
+        message = llm_result.result
+        self._prompt_history.append(message)
+        if not getattr(message, "tool_calls", None):
+            return
 
+        # Execute sequentially: the capability mutates shared prompt_helper/account state, which is not
+        # safe to run concurrently. tool_choice="required" over a single capability yields one call.
+        for tool_call in message.tool_calls:
+            result = await self._capabilities.run_capability_json(
+                message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments
+            )
+            self._prompt_history.append(
+                tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call.id)
+            )
 
-            response = self.adjust_action(response)
-
-            result = await self.execute_response(response, completion)
-
-            self._report_handler.write_vulnerability_to_report(self.prompt_helper.current_sub_step,
-                                                               self.prompt_helper.current_test_step, result,
-                                                               self.prompt_helper.counter)
+            self._report_handler.write_vulnerability_to_report(
+                self.prompt_helper.current_sub_step, self.prompt_helper.current_test_step, result,
+                self.prompt_helper.counter)
 
             analysis, status_code = await self._response_handler.evaluate_result(
                 result=result,
@@ -279,266 +295,3 @@ class SimpleWebAPITesting(SimpleStrategy):
 
             if self.purpose != PromptPurpose.SETUP:
                 self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)
-
-    def extract_ids(self, data, id_resources=None, parent_key=''):
-        """
-           Recursively extracts all string-based identifiers (IDs) from a nested data structure.
-
-           This method traverses a deeply nested dictionary or list (e.g., a parsed JSON response)
-           and collects all keys that contain `"id"` and have string values. It organizes these IDs
-           into a dictionary grouped by normalized resource categories based on the key names.
-
-           Args:
-               data (Union[dict, list]): The input data structure (e.g., API response) to search for IDs.
-               id_resources (dict, optional): A dictionary used to accumulate found IDs, grouped by category.
-                                              If None, a new dictionary is initialized.
-               parent_key (str, optional): The key path used for context when processing nested fields.
-
-           Returns:
-               dict: A dictionary where keys are derived categories (e.g., `"user_id"`, `"post_id"`) and
-                     values are lists of extracted ID strings.
-
-           """
-        if id_resources is None:
-            id_resources = {}
-        if isinstance(data, dict):
-            for key, value in data.items():
-                # Update the key to reflect nested structures
-                new_key = f"{parent_key}.{key}" if parent_key else key
-                if 'id' in key and isinstance(value, str):
-                    # Determine the category based on the key name before 'id'
-                    category = key.replace('id', '').rstrip('_').lower()  # Normalize the key
-                    if category == '':  # If no specific category, it could just be 'id'
-                        category = parent_key.split('.')[-1]  # Use parent key as category
-                    category = category.rstrip('s')  # Singular form for consistency
-                    if category != "id":
-                        category = category + "_id"
-
-                    if category in id_resources:
-                        id_resources[category].append(value)
-                    else:
-                        id_resources[category] = [value]
-                else:
-                    # Recursively search for ids within nested dictionaries or lists
-                    self.extract_ids(value, id_resources, new_key)
-
-        # If the data is a list, apply the function recursively to each item
-        elif isinstance(data, list):
-            for index, item in enumerate(data):
-                self.extract_ids(item, id_resources, f"{parent_key}[{index}]")
-
-        return id_resources
-
-    def extract_resource_name(self, path: str) -> str:
-        """
-        Extracts the key resource word from a path.
-
-        Examples:
-          - '/identity/api/v2/user/videos/{video_id}' -> 'video'
-          - '/workshop/api/shop/orders/{order_id}'    -> 'order'
-          - '/community/api/v2/community/posts/{post_id}/comment' -> 'comment'
-        """
-        # Split into non-empty segments
-        parts = [p for p in path.split('/') if p]
-        if not parts:
-            return ""
-
-        last_segment = parts[-1]
-
-        # 1) If last segment is a placeholder like "{video_id}", return 'video'
-        #    i.e., capture the substring before "_id".
-        match = re.match(r'^\{(\w+)_id\}$', last_segment)
-        if match:
-            return match.group(1)  # e.g. 'video', 'order'
-
-        # 2) Otherwise, if the last segment is a word like "videos" or "orders",
-        #    strip a trailing 's' (e.g., "videos" -> "video").
-        if last_segment.endswith('s'):
-            return last_segment[:-1]
-
-        # 3) If it's just "comment" or a similar singular word, return as-is
-        return last_segment
-
-    def extract_token_from_http_response(self, http_response):
-        """
-        Extracts the token from an HTTP response body.
-
-        Args:
-            http_response (str): The raw HTTP response as a string.
-
-        Returns:
-            str: The extracted token if found, otherwise None.
-        """
-        # Split the HTTP headers from the body
-        try:
-            headers, body = http_response.split("\r\n\r\n", 1)
-        except ValueError:
-            return None
-
-        try:
-            # Parse the body as JSON
-            body_json = json.loads(body)
-            # Extract the token
-            if "token" in body_json.keys():
-                return body_json["token"]
-            elif "authentication" in body_json.keys():
-                return body_json.get("authentication", {}).get("token", None)
-        except json.JSONDecodeError:
-            # If the body is not valid JSON, return None
-            return None
-
-    def save_resource(self, path, data):
-        """
-          Saves a discovered API resource and its associated data to the current user context.
-
-          This method extracts the resource name from the given API path (e.g., from `/users/1/posts` → `posts`),
-          then stores the provided `data` under that resource for the current user in `prompt_helper.current_user`.
-
-          If the resource does not already exist in the user's data, it initializes it as an empty list.
-          It also updates the corresponding account entry in `pentesting_information.accounts` to ensure
-          consistency across known user accounts.
-
-          Args:
-              path (str): The API endpoint path from which to extract the resource name.
-              data (Any): The resource data to be saved under the extracted resource name.
-          """
-        resource = self.extract_resource_name(path)
-        if resource != "" and resource not in self.prompt_helper.current_user.keys():
-            self.prompt_helper.current_user[resource] = []
-        if data not in self.prompt_helper.current_user[resource]:
-            self.prompt_helper.current_user[resource].append(data)
-            for i, account in enumerate(self.prompt_helper.accounts):
-                if account.get("x") == self.prompt_helper.current_user.get("x"):
-                    self.pentesting_information.accounts[i][resource] = self.prompt_helper.current_user[resource]
-
-    def adjust_user(self, result):
-        """
-            Adjusts the current user and pentesting state based on the contents of an HTTP response.
-
-            This method parses the HTTP response into headers and body, and inspects the body for specific
-            keys such as `"key"`, `"posts"`, and `"id"` to update user-related data structures accordingly.
-
-            Behavior:
-            - If the body contains `"html"`, the method returns early (assumed to be an invalid or non-JSON response).
-            - If `"key"` is found:
-                - Parses the body and updates the `"key"` field of the matching user in `prompt_helper.accounts`.
-            - If `"posts"` is found:
-                - Parses the body, extracts resource IDs, and updates `pentesting_information.resources`.
-            - If `"id"` is found and the current sub-step purpose is `PromptPurpose.SETUP`:
-                - Extracts the user ID from the body and stores it in the matching user account.
-
-            Args:
-                result (str): The full HTTP response string including headers and body (separated by `\r\n\r\n`).
-            """
-        if "Could not" in result:
-            return
-        headers, body = result.split("\r\n\r\n", 1)
-        if "html" in body:
-            return
-
-        if "key" in body:
-            data = json.loads(body)
-            for account in self.prompt_helper.accounts:
-                if account.get("x") == self.prompt_helper.current_user.get("x"):
-                    account["key"] = data.get("key")
-        if "posts" in body:
-            data = json.loads(body)
-            # Extract ids
-            id_resources = self.extract_ids(data)
-            if len(self.pentesting_information.resources) == 0:
-                self.pentesting_information.resources = id_resources
-            else:
-                self.pentesting_information.resources.update(id_resources)
-
-        if "id" in body and self.prompt_helper.current_sub_step.get("purpose") == PromptPurpose.SETUP:
-            data = json.loads(body)
-            user_id = data.get('id')
-            for account in self.prompt_helper.accounts:
-
-                if account.get("x") == self.prompt_helper.current_user.get("x"):
-                    account["id"] = user_id
-                    break
-
-    def adjust_action(self, response: Any):
-        """
-        Modifies the action of an API response object based on the current prompt context and configuration.
-
-        This method is typically used during API test setup or fuzzing to:
-        - Modify the HTTP method (e.g., set to POST during setup).
-        - Inject a standard `Authorization: Bearer <token>` header when a token is available.
-        - Correct or override request paths and bodies with current user context.
-        - Optionally save resource data if the path contains identifiable parameters (e.g., `_id`).
-
-        Args:
-            response (Any): The response object containing an `action` field (with `method`, `headers`, `path`, `body`, etc.).
-
-        Returns:
-            Any: The updated response object with modified action values based on prompt context and configuration.
-        """
-        old_response = copy.deepcopy(response)
-        if self.prompt_engineer._purpose == PromptPurpose.SETUP:
-            response.action.method = "POST"
-
-        token = self.prompt_helper.current_sub_step.get("token")
-        if token is not None and "{{" in token:
-            for account in self.prompt_helper.accounts:
-                if account["x"] == self.prompt_helper.current_user["x"]:
-                    token = account["token"]
-                    break
-        if token and (token != "" or token is not None):
-            response.action.headers = {"Authorization": f"Bearer {token}"}
-
-        if response.action.path != self.prompt_helper.current_sub_step.get("path"):
-            response.action.path = self.prompt_helper.current_sub_step.get("path")
-
-        if response.action.path and "_id}" in response.action.path:
-            if response.action.__class__.__name__ != "HTTPRequest":
-                self.save_resource(response.action.path, response.action.data)
-
-        if isinstance(response.action.path, dict):
-            response.action.path = response.action.path.get("path")
-
-        if response.action.body is None:
-            response.action.body = self.prompt_helper.current_user
-
-        if response.action.path is None:
-            response.action.path = old_response.action.path
-
-        return response
-
-    async def execute_response(self, response, completion):
-        """
-            Executes the API response, logs it, and updates internal state for documentation and testing.
-
-            This method performs the following actions:
-            - Converts the `response` object to JSON and prints it as an assistant message.
-            - Executes the response as a tool call (i.e., performs the API request).
-            - Logs and prints the tool response.
-            - If the result is not a string, it attempts to extract the endpoint name and write it to a report.
-            - Appends a tool message with key elements extracted from the result to the prompt history.
-            - Adjusts user-related state based on the result (e.g., tokens, user IDs).
-            - Prints the state of user accounts after the request for debugging.
-
-            Args:
-                response (Any): The response object that encapsulates the tool call to be executed.
-                completion (Any): The LLM completion object, including metadata like the tool call ID.
-
-            Returns:
-                Any: The result of executing the tool call (typically a string or structured object).
-            """
-        message = completion.choices[0].message
-        tool_call_id: str = message.tool_calls[0].id
-        command: str = pydantic_core.to_json(response).decode()
-        self.log.console.print(Panel(command, title="assistant"))
-        msg = {"role": message.role, "content": message.content, "tool_calls": message.tool_calls}
-        self._prompt_history.append(msg)
-        result: Any = await response.execute()
-        self.log.console.print(Panel(result, title="tool"))
-        if not isinstance(result, str):
-            endpoint: str = str(response.action.path).split("/")[1]
-            self._report_handler.write_endpoint_to_report(endpoint)
-
-        self._prompt_history.append(tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call_id))
-
-        self.adjust_user(result)
-        return result

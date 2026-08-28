@@ -13,8 +13,94 @@ from hackingBuddyGPT.capability import (
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.llm import LiteLLM
-from hackingBuddyGPT.utils.llm_util import Message
 from hackingBuddyGPT.utils.logging import Logger, log_conversation, log_param
+
+
+async def run_tool_calling_turn(
+    llm: LiteLLM,
+    log: Logger,
+    limits: Limits,
+    *,
+    prompt: Any,
+    history: list[Any],
+    capabilities: dict[str, Capability],
+    run_capability_json,
+    tool_choice: str | None = None,
+    sequential: bool = False,
+    result_transform=None,
+    on_result=None,
+):
+    """One native-tool-calling LLM turn, shared by every caller that drives a target through tool calls.
+
+    Used by ``ChatAgent.perform_round`` (the ``web`` agents and ``MinimalToolCallPrivEscLinux``) and by the
+    web-api testing engine's ``_run_testing_step``. It asks the model, logs/records the result, appends the
+    assistant message to ``history``, then executes each tool call through ``run_capability_json`` and appends
+    a tool message per call. Parameters cover the differences between callers:
+
+    * ``prompt`` – the messages sent to the model (``ChatAgent`` sends its whole ``history``; the engine sends
+      a freshly generated prompt), while the assistant/tool messages are always appended to ``history``.
+    * ``capabilities`` / ``tool_choice`` – which tools are offered and whether one is forced.
+    * ``sequential`` – run tool calls one after another (the engine mutates shared state per call) instead of
+      concurrently (the default, as the web agents do).
+    * ``result_transform`` – map the raw tool result to the text appended to ``history`` (the engine condenses
+      the HTTP response; the web agents append it verbatim).
+    * ``on_result(tool_call, raw_result)`` – optional async hook run after each successful call on the *raw*
+      result (the engine's per-call reporting/analysis).
+
+    Returns the ``LLMResult``. The caller is responsible for ``limits.register_round()``.
+    """
+    # Pass tool_choice only when set, so the default (web-agent) call stays exactly
+    # get_response(prompt, capabilities=...) and the engine's forced call adds tool_choice="required".
+    extra = {"tool_choice": tool_choice} if tool_choice is not None else {}
+    result = llm.get_response(prompt, capabilities=capabilities, **extra)
+    message_id = await log.call_response(result)
+    limits.register_message(result)
+
+    message = result.result
+    history.append(message)
+
+    tool_calls = getattr(message, "tool_calls", None)
+    if not tool_calls:
+        return result
+
+    async def run_one(tool_call: Any):
+        try:
+            raw = await run_capability_json(
+                message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments
+            )
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            err = f"Error during tool call {tool_call.id}: {e}"
+            await log.status_message(err)
+            return llm_util.tool_message(err, tool_call.id), None
+        text = result_transform(raw) if result_transform is not None else raw
+        return llm_util.tool_message(text, tool_call.id), raw
+
+    async def record(tool_call: Any, tool_msg: Any, raw: Any) -> None:
+        history.append(tool_msg)
+        if raw is not None and on_result is not None:
+            await on_result(tool_call, raw)
+
+    try:
+        if sequential:
+            # Execute one at a time and record before the next: each call mutates shared state that the
+            # reporting/analysis hook then reads, so the calls must not be interleaved concurrently.
+            for tool_call in tool_calls:
+                tool_msg, raw = await run_one(tool_call)
+                await record(tool_call, tool_msg, raw)
+        else:
+            gathered = await asyncio.gather(*(run_one(tool_call) for tool_call in tool_calls))
+            for tool_call, (tool_msg, raw) in zip(tool_calls, gathered):
+                await record(tool_call, tool_msg, raw)
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+        await log.status_message(f"Framework error during tool calls: {e}")
+
+    return result
 
 
 @dataclass
@@ -42,39 +128,7 @@ class Agent(CapabilityRegistry, ABC):
 
     # add_capability / get_capability / run_capability_json / run_capability_simple_text /
     # get_capability_block are inherited from CapabilityRegistry (shared with CapabilityManager).
-
-    async def run_tool_calls(
-        self, message_id: int, message: Any
-    ) -> list[Message]:
-        if message.tool_calls is None:
-            return []
-
-        try:
-
-            async def run_tool_call(tool_call: Any) -> Message:
-                try:
-                    tool_result = await self.run_capability_json(
-                        message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments
-                    )
-                    return llm_util.tool_message(tool_result, tool_call.id)
-                except Exception as e:
-                    import traceback
-
-                    traceback.print_exc()
-
-                    message = f"Error during tool call {tool_call.id}: {e}"
-                    await self.log.status_message(message)
-                    return llm_util.tool_message(message, tool_call.id)
-
-            return await asyncio.gather(*(run_tool_call(tool_call) for tool_call in message.tool_calls))
-        except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-
-            await self.log.status_message(f"Framework error during tool calls: {e}")
-
-        return []
+    # The native tool-calling round is the shared module-level run_tool_calling_turn() below.
 
 
 @dataclass
@@ -152,15 +206,18 @@ class ChatAgent(Agent, ABC):
     async def perform_round(self, limits: Limits):
         await self.add_limits_message(limits)
 
-        result = self.llm.get_response(self._prompt_history, capabilities=self._capabilities)
-        message_id = await self.log.call_response(result)
-        limits.register_message(result)
-
-        message: Any = result.result
-        self._prompt_history.append(result.result)
-        tool_call_results = await self.run_tool_calls(message_id, message)
-        for tool_call_result in tool_call_results:
-            self._prompt_history.append(tool_call_result)
+        # Offer all capabilities and let the model choose; tool calls run concurrently and their results are
+        # appended verbatim (see run_tool_calling_turn). The web-api testing engine reuses the same turn with
+        # a single forced capability, sequential execution and a reporting hook.
+        await run_tool_calling_turn(
+            self.llm,
+            self.log,
+            limits,
+            prompt=self._prompt_history,
+            history=self._prompt_history,
+            capabilities=self._capabilities,
+            run_capability_json=self.run_capability_json,
+        )
 
         limits.register_round()
 

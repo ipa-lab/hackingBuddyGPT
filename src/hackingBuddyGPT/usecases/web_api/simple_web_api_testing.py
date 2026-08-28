@@ -9,6 +9,7 @@ from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.strategies import SimpleStrategy
+from hackingBuddyGPT.usecases.agents import run_tool_calling_turn
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import strategy_from_string
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
@@ -22,7 +23,6 @@ from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Prompt
-from hackingBuddyGPT.utils import tool_message
 from hackingBuddyGPT.utils.configurable import parameter
 
 
@@ -250,45 +250,38 @@ class SimpleWebAPITesting(SimpleStrategy):
 
 
     async def _run_testing_step(self, prompt) -> None:
-        """Run one testing round on the standard LLM loop.
+        """Run one testing round on the shared native-tool-calling turn.
 
         The model is offered exactly one capability (``ProposedHTTPRequest``) and forced to call it
-        (``tool_choice="required"``). The capability finalises and sends the request and captures
-        response state; here we record the LLM result (cost/tokens via ``call_response``), execute the
-        tool call through the shared ``run_capability_json`` path (structured ``add_tool_call``
-        logging), and drive reporting + LLM analysis exactly as before.
+        (``tool_choice="required"``); the same ``run_tool_calling_turn`` the web agents use records the
+        LLM result, appends the (condensed) tool response, and drives reporting + LLM analysis per call
+        via ``_analyse_and_report``. Calls run sequentially because the capability mutates shared
+        prompt_helper/account state.
         """
-        llm_result = self.llm.get_response(
-            prompt,
+        await run_tool_calling_turn(
+            self.llm,
+            self.log,
+            self.limits,
+            prompt=prompt,
+            history=self._prompt_history,
             capabilities={"ProposedHTTPRequest": self._proposed_http_request},
+            run_capability_json=self._capabilities.run_capability_json,
             tool_choice="required",
+            sequential=True,
+            result_transform=self._response_handler.extract_key_elements_of_response,
+            on_result=self._analyse_and_report,
         )
-        self.limits.register_message(llm_result)
-        message_id = await self.log.call_response(llm_result)
 
-        message = llm_result.result
-        self._prompt_history.append(message)
-        if not getattr(message, "tool_calls", None):
-            return
+    async def _analyse_and_report(self, tool_call, result) -> None:
+        """Per-request reporting + LLM analysis hook for the testing turn (raw tool result)."""
+        self._report_handler.write_vulnerability_to_report(
+            self.prompt_helper.current_sub_step, self.prompt_helper.current_test_step, result,
+            self.prompt_helper.counter)
 
-        # Execute sequentially: the capability mutates shared prompt_helper/account state, which is not
-        # safe to run concurrently. tool_choice="required" over a single capability yields one call.
-        for tool_call in message.tool_calls:
-            result = await self._capabilities.run_capability_json(
-                message_id, tool_call.id, tool_call.function.name, tool_call.function.arguments
-            )
-            self._prompt_history.append(
-                tool_message(self._response_handler.extract_key_elements_of_response(result), tool_call.id)
-            )
+        analysis, status_code = await self._response_handler.evaluate_result(
+            result=result,
+            prompt_history=self._prompt_history,
+            analysis_context=self.prompt_engineer.prompt_helper.current_test_step)
 
-            self._report_handler.write_vulnerability_to_report(
-                self.prompt_helper.current_sub_step, self.prompt_helper.current_test_step, result,
-                self.prompt_helper.counter)
-
-            analysis, status_code = await self._response_handler.evaluate_result(
-                result=result,
-                prompt_history=self._prompt_history,
-                analysis_context=self.prompt_engineer.prompt_helper.current_test_step)
-
-            if self.purpose != PromptPurpose.SETUP:
-                self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)
+        if self.purpose != PromptPurpose.SETUP:
+            self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)

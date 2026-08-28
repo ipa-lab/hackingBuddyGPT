@@ -32,6 +32,7 @@ import datetime
 import glob
 import os
 import re
+import secrets
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -51,6 +52,11 @@ try:
         GEN_AI_TOOL_NAME,
         HB_TOOL_RESULT,
         OP_EXECUTE_TOOL,
+    )
+    from hackingBuddyGPT.utils.shell_root_detection import (
+        ROOT_PROOF_ENV,
+        root_proof_cleanup_script,
+        root_proof_install_script,
     )
 except ModuleNotFoundError as exc:  # pragma: no cover - environment guard
     sys.exit(
@@ -139,7 +145,7 @@ class RunResult:
 
     @property
     def rooted(self) -> bool:
-        return self.summary is not None and self.summary.state == ROOTED_STATE
+        return self.state == ROOTED_STATE
 
     @property
     def state(self) -> str:
@@ -178,16 +184,29 @@ class RunResult:
 # --------------------------------------------------------------------------------------------------
 
 
-def _docker(*args: str, timeout: int = 30) -> str:
+def _docker(*args: str, timeout: int = 30, input_data: Optional[str] = None) -> str:
     proc = subprocess.run(
         ["docker", *args],
         capture_output=True,
         text=True,
         timeout=timeout,
+        input=input_data,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"`docker {' '.join(args)}` failed: {proc.stderr.strip()}")
     return proc.stdout
+
+
+def _run_root_proof_script(container: Container, script: str) -> None:
+    _docker(
+        "exec",
+        "-i",
+        "-u",
+        "0:0",
+        container.name,
+        "/bin/sh",
+        input_data=script,
+    )
 
 
 def discover_containers(name_filter: Optional[str]) -> list[Container]:
@@ -254,12 +273,13 @@ def build_wintermute_argv(args: argparse.Namespace, container: Container, trace_
     return argv
 
 
-def child_env(args: argparse.Namespace) -> dict[str, str]:
+def child_env(args: argparse.Namespace, root_proof: str) -> dict[str, str]:
     env = dict(os.environ)
     # api_base is currently not wired through to litellm, so a custom Ollama endpoint is passed via
     # the env var litellm reads for the ollama provider.
     if args.provider == "ollama":
         env["OLLAMA_API_BASE"] = args.ollama_host
+    env[ROOT_PROOF_ENV] = root_proof
     return env
 
 
@@ -318,26 +338,34 @@ def run_one(args: argparse.Namespace, container: Container, trial: int, total_tr
     console_log = trace_dir / "console.log"
     result.console_log = console_log
 
+    root_proof = secrets.token_urlsafe(32)
     timeout = args.run_timeout if args.run_timeout and args.run_timeout > 0 else None
-    with open(console_log, "w", encoding="utf-8") as log_file:
-        log_file.write("$ " + " ".join(argv) + "\n\n")
-        log_file.flush()
-        try:
+    try:
+        _run_root_proof_script(container, root_proof_install_script(root_proof))
+        with open(console_log, "w", encoding="utf-8") as log_file:
+            log_file.write("$ " + " ".join(argv) + "\n\n")
+            log_file.flush()
             proc = subprocess.run(
                 argv,
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
-                env=child_env(args),
+                env=child_env(args, root_proof),
                 timeout=timeout,
                 cwd=str(Path(__file__).resolve().parent),
             )
             if proc.returncode != 0:
-                # a non-zero exit still usually leaves a scoreable trace (e.g. failure state);
-                # record it but keep going to the scoring step.
+                # A non-zero exit can still leave a scoreable failure trace.
                 result.error = f"wintermute exited with code {proc.returncode} (see console.log)"
-        except subprocess.TimeoutExpired:
-            result.error = f"timed out after {timeout}s"
-
+    except subprocess.TimeoutExpired:
+        result.error = f"timed out after {timeout}s"
+    except Exception as exc:
+        result.error = f"could not prepare or run benchmark: {exc}"
+    finally:
+        try:
+            _run_root_proof_script(container, root_proof_cleanup_script())
+        except Exception as exc:
+            cleanup_error = f"could not remove root proof: {exc}"
+            result.error = f"{result.error}; {cleanup_error}" if result.error else cleanup_error
     score_run(result)
     return result
 

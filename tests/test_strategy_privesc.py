@@ -2,12 +2,13 @@
 
 The only test that exercised this loop (``integration_minimal_test.py``) is skipped — it imports a
 pre-PR-#141 module layout that no longer exists. This pins the *current* ``CommandStrategy.run``
-behaviour (drive scripted commands, detect root via ``check_command_success``, return ``True``)
+behaviour (drive scripted commands, detect the connector's verified root proof, return ``True``)
 before the run-loop unification (converge onto ``AutonomousUseCase.run`` + ``Limits``) touches it.
 
 A fake SSH connection maps commands to canned output and a fake LLM replays a fixed command
 sequence, so the loop runs deterministically to a root escalation.
 """
+
 import asyncio
 import tempfile
 import unittest
@@ -19,12 +20,12 @@ from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
 from hackingBuddyGPT.utils.logging import JsonlLogger
 
-# The winning command whose (faked) output shows root; everything else is lowpriv.
-ROOT_CMD = "sudo id"
+# The winning command whose fake connection reports a verified proof.
+ROOT_CMD = "sudo su"
 _RESULTS = {
     "id": "uid=1001(lowpriv) gid=1001(lowpriv) groups=1001(lowpriv)",
     "sudo -l": "Sorry, user lowpriv may not run sudo.",
-    ROOT_CMD: "uid=0(root) gid=0(root) groups=0(root)",
+    ROOT_CMD: "root shell entered",
 }
 
 
@@ -33,11 +34,11 @@ class FakeSSHConnection:
     password: str = "toomanysecrets"
     hostname: str = "host"
     banner: str = ""
-    last_uid = None
-    last_user: str = "lowpriv"
+    root_verified: bool = False
 
     async def run(self, cmd, *args, **kwargs) -> Tuple[str, str, int]:
         out = _RESULTS.get(cmd, "")
+        self.root_verified = cmd == ROOT_CMD
         return (out, "", 0) if out else ("", "Command not found", 1)
 
     async def test_credential(self, username: str, password: str):
@@ -69,6 +70,13 @@ def _log():
 
 
 class TestStrategyPrivEscRunLoop(unittest.TestCase):
+    def test_prompt_requests_persistent_target_shell_without_verifier_details(self):
+        agent = MinimalPrivEscLinux(conn=FakeSSHConnection(), llm=FakeLLM([]), log=_log())
+        agent.init()
+        prompt = agent._template.render(**(agent._template_params | {"history": [], "capabilities": ""}))
+        self.assertIn("in a persistent shell or authenticate as that user", prompt)
+        self.assertNotIn("proof", prompt)
+
     def test_linux_privesc_reaches_root(self):
         responses = ["id", "sudo -l", ROOT_CMD]
         agent = PrivEscLinux(

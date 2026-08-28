@@ -28,8 +28,8 @@ class SSHCommandCapability(Capability):
     @override
     def describe(self) -> str:
         desc = self._intro
-        if self.conn.banner:
-            desc += f"\nThe banner of the machine you're running on is:\n{self.conn.banner}"
+        if banner := getattr(self.conn, "banner", ""):
+            desc += f"\nThe banner of the machine you're running on is:\n{banner}"
         return desc + self.additional_description
 
     def _strip_command_prefix(self, command: str) -> str:

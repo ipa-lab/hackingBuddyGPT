@@ -10,7 +10,6 @@ from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.parsed_information import ParsedInformation
-from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.strategies import SimpleStrategy
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import strategy_from_string
@@ -24,7 +23,6 @@ from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngine
 from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
-from hackingBuddyGPT.usecases.web_api.test_handler import GenerationTestHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils import tool_message
@@ -147,7 +145,6 @@ class SimpleWebAPITesting(SimpleStrategy):
             - Response handler for parsing and reacting to tool responses.
             - Response analyzer powered by LLMs for deeper inspection.
             - Reporting handler to track and export findings.
-            - Test case handler for saving and generating test cases.
 
             If username and password are not found in the config, defaults are used.
             """
@@ -169,7 +166,6 @@ class SimpleWebAPITesting(SimpleStrategy):
                                                          prompt_helper=self.prompt_helper)
         self._response_handler.set_response_analyzer(self.response_analyzer)
         self._report_handler = ReportHandler(self.config)
-        self._test_handler = GenerationTestHandler(self._llm_handler)
 
     def _setup_initial_prompt(self) -> None:
         """
@@ -215,9 +211,8 @@ class SimpleWebAPITesting(SimpleStrategy):
         notes: List[str] = self._context["notes"]
         parsed: List[str] = self._context["parsed"]
         test_cases = self._context["test_cases"]
-        self.python_test_case_capability = {"python_test_case": PythonTestCase(test_cases)}
         self.parse_capacity = {"parse": ParsedInformation(test_cases)}
-        self.all_capabilities = {"python_test_case": PythonTestCase(test_cases), "parse": ParsedInformation(test_cases),
+        self.all_capabilities = {"parse": ParsedInformation(test_cases),
                                  "http_request": HTTPRequest(self.host),
                                  "record_note": RecordNote(notes)}
         self.http_capability = {"http_request": HTTPRequest(self.host),
@@ -283,13 +278,6 @@ class SimpleWebAPITesting(SimpleStrategy):
                 analysis_context=self.prompt_engineer.prompt_helper.current_test_step)
 
             if self.purpose != PromptPurpose.SETUP:
-                self._prompt_history = await self._test_handler.generate_test_cases(
-                    analysis=analysis,
-                    endpoint=response.action.path,
-                    method=response.action.method,
-                    body=response.action.body,
-                    prompt_history=self._prompt_history, status_code=status_code)
-
                 self._report_handler.write_analysis_to_report(analysis=analysis, purpose=self.prompt_engineer._purpose)
 
     def extract_ids(self, data, id_resources=None, parent_key=''):

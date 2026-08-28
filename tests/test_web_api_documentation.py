@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from hackingBuddyGPT.usecases.web_api_documentation.simple_openapi_documentation import (
+from hackingBuddyGPT.usecases.web_api.simple_openapi_documentation import (
     SimpleWebAPIDocumentation,
 )
 from hackingBuddyGPT.utils import Console

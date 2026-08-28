@@ -1,12 +1,11 @@
 import json
 import os
 
-from dataclasses import field
+from dataclasses import dataclass, field
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.strategies import SimpleStrategy
-from hackingBuddyGPT.usecases.usecase import use_case
-from hackingBuddyGPT.usecases.web_api_documentation.openapi_specification_handler import \
+from hackingBuddyGPT.usecases.web_api.openapi_specification_handler import \
     OpenAPISpecificationHandler
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import strategy_from_string
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
@@ -17,7 +16,7 @@ from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_str
 from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
-from hackingBuddyGPT.usecases.web_api_documentation.evaluator import Evaluator
+from hackingBuddyGPT.usecases.web_api.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
 from rich.panel import Panel
 
@@ -33,7 +32,11 @@ EXPLOIT_QUERY_LIMIT = 50       # stop once exploit mode has issued this many que
 NO_NEW_ENDPOINT_LIMIT = 30     # advance a step after this many queries yield no new endpoint
 
 
-@use_case("Minimal implementation of a web API testing use case")
+# NOTE: This class is no longer a standalone CLI use case; it is the *detection phase engine*
+# driven by the merged `WebAPITesting` use case (see usecases/web_api/web_api_testing.py). It
+# stays a constructible dataclass so its unit tests and the orchestrator can build it. The
+# OpenAPI document it builds is handed to the testing phase via `built_surface_document()`.
+@dataclass
 class SimpleWebAPIDocumentation(SimpleStrategy):
     """
          SimpleWebAPIDocumentation is an agent class for automating REST API documentation.
@@ -85,6 +88,10 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
 
     def get_name(self) -> str:
         return self.__class__.__name__
+
+    def built_surface_document(self) -> dict:
+        """Return the OpenAPI document discovered so far (standard ``paths`` layout)."""
+        return self._documentation_handler.to_openapi_document()
 
     def init(self):
         """Initialize the agent with configurations, capabilities, and handlers."""

@@ -3,7 +3,7 @@ import os
 import unittest
 from unittest.mock import MagicMock
 
-from hackingBuddyGPT.usecases.web_api_documentation.openapi_specification_handler import OpenAPISpecificationHandler
+from hackingBuddyGPT.usecases.web_api.openapi_specification_handler import OpenAPISpecificationHandler
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy, PromptContext
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler

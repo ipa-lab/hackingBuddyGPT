@@ -10,7 +10,7 @@ class TestLLMHandler(unittest.TestCase):
         self.capabilities = {"cap1": MagicMock(), "cap2": MagicMock()}
         self.llm_handler = LLMHandler(self.llm_mock, self.capabilities)
 
-    """@patch('hackingBuddyGPT.usecases.web_api_testing.utils.capabilities_to_action_model')
+    """@patch('hackingBuddyGPT.usecases.web_api.utils.capabilities_to_action_model')
     def test_call_llm(self, mock_capabilities_to_action_model):
         prompt = [{'role': 'user', 'content': 'Hello, LLM!'}]
         response_mock = MagicMock()

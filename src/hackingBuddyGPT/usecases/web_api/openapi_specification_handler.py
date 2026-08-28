@@ -332,19 +332,29 @@ class OpenAPISpecificationHandler(object):
 
         return list(self.openapi_spec["endpoints"].keys())
 
+    def to_openapi_document(self):
+        """
+        Returns the accumulated spec as a standard OpenAPI document.
+
+        The handler tracks paths internally under the non-standard ``endpoints`` key; this maps
+        it back onto the standard ``paths`` key so the result can be written to YAML or wrapped
+        in an ``OpenAPISurface`` and handed to the testing phase without a file round-trip.
+        """
+        return {
+            "openapi": self.openapi_spec["openapi"],
+            "info": self.openapi_spec["info"],
+            "servers": self.openapi_spec["servers"],
+            "components": self.openapi_spec["components"],
+            "paths": self.openapi_spec["endpoints"],
+        }
+
     def write_openapi_to_yaml(self):
         """
         Writes the updated OpenAPI specification to a YAML file with a timestamped filename.
         """
         try:
             # Prepare data to be written to YAML
-            openapi_data = {
-                "openapi": self.openapi_spec["openapi"],
-                "info": self.openapi_spec["info"],
-                "servers": self.openapi_spec["servers"],
-                "components": self.openapi_spec["components"],
-                "paths": self.openapi_spec["endpoints"],
-            }
+            openapi_data = self.to_openapi_document()
 
             # Create directory if it doesn't exist and generate the timestamped filename
             os.makedirs(self.file_path, exist_ok=True)
@@ -497,8 +507,9 @@ class OpenAPISpecificationHandler(object):
         Returns:
             str: The updated path with numeric IDs replaced by `{id}`.
         """
-        if "1" in path:
-            path = path.replace("1", "{id}")
+        # Replace whole numeric path segments (e.g. /users/1 -> /users/{id}); never a bare
+        # substring replace, which used to corrupt paths like /v1/users or /items/11.
+        path = "/".join("{id}" if segment.isdigit() else segment for segment in path.split("/"))
         if prompt_engineer.prompt_helper.current_step == 2:
             parts = [part.strip() for part in path.split("/") if part.strip()]
             if len(parts) > 1:

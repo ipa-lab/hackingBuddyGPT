@@ -2,7 +2,7 @@ import copy
 import json
 import os.path
 import re
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 import pydantic_core
@@ -13,19 +13,18 @@ from hackingBuddyGPT.capabilities.parsed_information import ParsedInformation
 from hackingBuddyGPT.capabilities.python_test_case import PythonTestCase
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.strategies import SimpleStrategy
-from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import strategy_from_string
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PenTestingInformation
 from hackingBuddyGPT.utils.prompt_generation.information import PromptPurpose
 from hackingBuddyGPT.utils.openapi.openapi_parser import OpenAPISpecificationParser
-from hackingBuddyGPT.usecases.web_api_testing.report_handler import ReportHandler
+from hackingBuddyGPT.usecases.web_api.report_handler import ReportHandler
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
 from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import \
     ResponseAnalyzerWithLLM
 from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
-from hackingBuddyGPT.usecases.web_api_testing.test_handler import GenerationTestHandler
+from hackingBuddyGPT.usecases.web_api.test_handler import GenerationTestHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils import tool_message
@@ -34,7 +33,12 @@ from hackingBuddyGPT.utils.configurable import parameter
 
 # OpenAPI specification file path
 
-@use_case("Minimal implementation of a web API testing use case")
+# NOTE: This class is no longer a standalone CLI use case; it is the *testing phase engine*
+# driven by the merged `WebAPITesting` use case (see usecases/web_api/web_api_testing.py).
+# It stays a constructible dataclass so its unit tests and the orchestrator can build it, and
+# so it can consume any TargetSurface (a passed-in OpenAPI spec, a sitemap, or a spec produced
+# by the detection phase) instead of only loading one from the config's oas/ sibling file.
+@dataclass
 class SimpleWebAPITesting(SimpleStrategy):
     """
     SimpleWebAPITesting is an agent class for automating web API testing.
@@ -98,12 +102,17 @@ class SimpleWebAPITesting(SimpleStrategy):
 
     def _load_openapi_specification(self):
         """
-           Loads the OpenAPI specification from the configured file path.
+           Resolves the target surface the pentest runs against.
 
-           If the config path exists, it initializes the `OpenAPISpecificationParser` and stores both
-           the parser instance and the parsed OpenAPI spec data.
+           If a surface was injected (``self._injected_surface`` — an OpenAPI spec, a sitemap, or
+           a spec produced by the detection phase), it is used directly. Otherwise the OpenAPI
+           spec is loaded from the config's sibling ``oas/<name>_oas.json`` as before.
            """
-        if os.path.exists(self.config_path):
+        injected = getattr(self, "_injected_surface", None)
+        if injected is not None:
+            self._openapi_specification_parser = injected
+            self._openapi_specification = injected.api_data
+        elif os.path.exists(self.config_path):
             self._openapi_specification_parser = OpenAPISpecificationParser(self.config_path)
             self._openapi_specification = self._openapi_specification_parser.api_data
 

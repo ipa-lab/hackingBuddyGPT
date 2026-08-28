@@ -193,8 +193,7 @@ commands:
     AdvancedWebTesting             Advanced of a web testing use case
     WebTestingWithExplanation      Minimal implementation of a web testing use case while allowing the llm to 'talk'
     WebTestingWithShell            Minimal implementation of a web testing use case with shell access
-    SimpleWebAPIDocumentation      Minimal implementation of a web API testing use case
-    SimpleWebAPITesting            Minimal implementation of a web API testing use case
+    WebAPITesting                  Web API testing: detect the target surface (OpenAPI spec or sitemap), then pentest it
     MinimalPrivEscLinux            Minimal Strategy-based Linux Priv-Escalation
     PrivEscLinux                   Strategy-based Linux Priv-Escalation
     ExPrivEscLinuxLSE              Linux Privilege Escalation using lse.sh for initial guidance

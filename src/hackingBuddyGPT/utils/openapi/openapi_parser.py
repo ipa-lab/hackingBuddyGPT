@@ -17,16 +17,29 @@ class OpenAPISpecificationParser:
         api_data (Dict[str, Union[Dict, List]]): The parsed data from the YAML file.
     """
 
-    def __init__(self, filepath: str):
+    def __init__(self, filepath: str = "", api_data: Dict[str, Union[Dict, List]] = None):
         """
-        Initializes the OpenAPISpecificationParser with the specified file path.
+        Initializes the OpenAPISpecificationParser.
 
         Args:
-            filepath (str): The path to the OpenAPI specification YAML file.
+            filepath (str): The path to the config file whose sibling ``oas/<name>_oas.json``
+                holds the OpenAPI specification. Ignored when ``api_data`` is supplied.
+            api_data (dict, optional): An already-parsed OpenAPI document. When given, the spec
+                is taken from memory and no file is read (used for specs produced during a
+                detection run or synthesized from a sitemap).
         """
         self.filepath: str = filepath
-        self.api_data: Dict[str, Union[Dict, List]] = self.load_file(filepath=self.find_oas(filepath=filepath))
-        self.oas_path = self.find_oas(filepath)
+        if api_data is not None:
+            self.api_data: Dict[str, Union[Dict, List]] = api_data
+            self.oas_path = filepath
+        else:
+            self.api_data = self.load_file(filepath=self.find_oas(filepath=filepath))
+            self.oas_path = self.find_oas(filepath)
+
+    @classmethod
+    def from_dict(cls, api_data: Dict[str, Union[Dict, List]], filepath: str = "") -> "OpenAPISpecificationParser":
+        """Builds a parser from an in-memory OpenAPI document instead of a file."""
+        return cls(filepath=filepath, api_data=api_data)
 
     def load_file(self, filepath="") -> Dict[str, Union[Dict, List]]:
         """

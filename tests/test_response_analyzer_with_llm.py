@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from hackingBuddyGPT.utils.web_api.response_analyzer_with_llm import ResponseAnalyzerWithLLM
@@ -47,6 +48,47 @@ class TestResponseAnalyzerWithLLM(unittest.TestCase):
         self.assertEqual(status_code, "200")
         self.assertEqual(headers["Content-Type"], "text/html")
         self.assertEqual(body, "")
+
+    def _analyzer_with_state(self, current_user, accounts):
+        # A real (non-mock) prompt_helper so parse_http_response's account/token side effects
+        # are observable.
+        analyzer = ResponseAnalyzerWithLLM()
+        analyzer.prompt_helper = SimpleNamespace(current_user=current_user, accounts=accounts)
+        return analyzer
+
+    def test_parse_http_response_captures_token(self):
+        # A JSON body carrying a token must be captured onto self.token, the current user, and the
+        # matching account (matched by "x").
+        current_user = {"x": 0}
+        accounts = [{"x": 0}]
+        analyzer = self._analyzer_with_state(current_user, accounts)
+        raw_response = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n\r\n"
+            '{"token": "T"}'
+        )
+
+        analyzer.parse_http_response(raw_response)
+
+        self.assertEqual(analyzer.token, "T")
+        self.assertEqual(current_user, {"x": 0, "token": "T"})
+        self.assertEqual(accounts, [{"x": 0, "token": "T"}])
+
+    def test_parse_http_response_captures_id(self):
+        # When a body value matches the current user and carries an id, that id is written to the
+        # matching account.
+        current_user = {"x": 0, "email": "a@b"}
+        accounts = [{"x": 0}]
+        analyzer = self._analyzer_with_state(current_user, accounts)
+        raw_response = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n\r\n"
+            '{"email": "a@b", "id": 5}'
+        )
+
+        analyzer.parse_http_response(raw_response)
+
+        self.assertEqual(accounts, [{"x": 0, "id": 5}])
 
     def test_process_step_calls_llm(self):
         step = "Please analyze the response"

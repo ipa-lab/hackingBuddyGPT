@@ -92,51 +92,25 @@ class ResponseAnalyzerWithLLM:
                     body = line
 
         status_code, _ = extract_status_code_and_message(raw_response)
-        if body.__contains__("<!DOCTYPE"):
+        if "<!DOCTYPE" in body:
             body = ""
-
         elif status_code in ["500", "400", "404", "422"]:
-            body = body
+            pass  # keep error-response bodies verbatim
         else:
-
-            if body.__contains__("<html>"):
+            if "<html>" in body:
                 body = ""
             elif body.startswith("["):
                 body = json.loads(body)
-                print(f'"body:{body}')
-            elif body.__contains__("{") and (body != '' or body != ""):
-                if not  body.lower().__contains__("png") :
+            elif "{" in body:
+                if "png" not in body.lower():
                     body = json.loads(body)
-                    if "token" in body:
-
-                        self.prompt_helper.current_user["token"] = body["token"]
-                        self.token = body["token"]
-                        for account in self.prompt_helper.accounts:
-                                if account.get("x") == self.prompt_helper.current_user.get("x"):
-                                    if  "token" not in account.keys():
-                                        account["token"] = self.token
-                                    else:
-                                        if account["token"] != self.token:
-                                            account["token"] = self.token
-                                    print(f'token:{self.token}')
-                                    print(f"accoun:{account}")
-                    if any (value in body.values() for value in self.prompt_helper.current_user.values()):
-                        if "id" in body:
-                            for account in self.prompt_helper.accounts:
-                                if account.get("x") == self.prompt_helper.current_user.get(
-                                        "x") and "id" not in account.keys():
-                                    account["id"] = body["id"]
-
+                    self._capture_token(body)
+                    self._capture_ids(body)
             elif isinstance(body, list) and len(body) > 1:
                 body = body[0]
-                if self.prompt_helper.current_user in body:
-                    self.prompt_helper.current_user["id"] = self.get_id_from_user(body)
-                    if self.prompt_helper.current_user not in self.prompt_helper.accounts:
-                        self.prompt_helper.accounts.append(self.prompt_helper.current_user)
+                self._note_account_from_list(body)
             else:
-                if self.prompt_helper.current_user not in self.prompt_helper.accounts:
-                    self.prompt_helper.accounts.append(self.prompt_helper.current_user)
-
+                self._note_current_account()
 
         headers = {
             key.strip(): value.strip()
@@ -147,6 +121,42 @@ class ResponseAnalyzerWithLLM:
             body = ""
 
         return status_code, headers, body
+
+    # ------------------------------------------------------------------ account/token state capture
+    def _capture_token(self, body: dict) -> None:
+        """If the body carries a token, record it on the analyzer, the current user and its account."""
+        if "token" not in body:
+            return
+        self.prompt_helper.current_user["token"] = body["token"]
+        self.token = body["token"]
+        for account in self.prompt_helper.accounts:
+            if account.get("x") == self.prompt_helper.current_user.get("x"):
+                if "token" not in account.keys():
+                    account["token"] = self.token
+                elif account["token"] != self.token:
+                    account["token"] = self.token
+
+    def _capture_ids(self, body: dict) -> None:
+        """When a body value matches the current user, copy the body's id onto the matching account."""
+        if not any(value in body.values() for value in self.prompt_helper.current_user.values()):
+            return
+        if "id" not in body:
+            return
+        for account in self.prompt_helper.accounts:
+            if account.get("x") == self.prompt_helper.current_user.get("x") and "id" not in account.keys():
+                account["id"] = body["id"]
+
+    def _note_account_from_list(self, body) -> None:
+        """List-body branch: adopt the current user's id from the body and register the account."""
+        if self.prompt_helper.current_user in body:
+            self.prompt_helper.current_user["id"] = self.get_id_from_user(body)
+            if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+                self.prompt_helper.accounts.append(self.prompt_helper.current_user)
+
+    def _note_current_account(self) -> None:
+        """Fallback: ensure the current user is registered as an account."""
+        if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+            self.prompt_helper.accounts.append(self.prompt_helper.current_user)
 
     def get_id_from_user(self, body) -> str:
         id = body.split("id")[1].split(",")[0]

@@ -10,7 +10,6 @@ hackingBuddyGPT is a research-driven Python framework that helps security resear
 - **CLI Entrypoint:** `wintermute` (see `src/hackingBuddyGPT/cli/wintermute.py`)
 - **Web viewer:** Optional, for log viewing (`wintermute Viewer`)
 - **RAG/Knowledge base:** Markdown files in `rag/`
-- **Container/VM orchestration:** Bash scripts in `scripts/`, Ansible playbooks (`tasks.yaml`)
 
 ## Project Structure
 - `src/hackingBuddyGPT/` — Main Python package
@@ -19,7 +18,6 @@ hackingBuddyGPT is a research-driven Python framework that helps security resear
   - `usecases/` — Agent logic for each use case (Linux privesc, web, API, etc.)
   - `utils/` — Shared helpers (LLM, logging, config, prompt generation)
 - `tests/` — Pytest-based unit and integration tests
-- `scripts/` — Setup, orchestration, and run scripts for Mac, Codespaces, and containers
 - `rag/` — Markdown knowledge base for RAG (GTFOBins, HackTricks)
 - `docs/` — Minimal, see https://docs.hackingbuddy.ai for full docs
 
@@ -33,11 +31,11 @@ hackingBuddyGPT is a research-driven Python framework that helps security resear
   ```
 - **Run:**
   - List use cases: `python src/hackingBuddyGPT/cli/wintermute.py`
-  - Example: `python src/hackingBuddyGPT/cli/wintermute.py LinuxPrivesc --llm.api_key=... --conn=ssh ...`
-  - See `README.md`, `MAC.md`, `CODESPACES.md` for platform-specific instructions.
+  - Example: `python src/hackingBuddyGPT/cli/wintermute.py PrivEscLinux --llm.api_key=... --conn=ssh ...`
+  - See `README.md` for setup and usage instructions.
 - **Testing:** `pip install '.[testing]' && pytest`
 - **Linting:** `ruff` (config in `pyproject.toml`)
-- **Container/VM setup:** Use scripts in `scripts/` (see comments in each script for prerequisites and usage).
+- **Benchmark:** `uv run benchmark_privesc.py --help` runs privesc use-cases against local `privesc_*` Docker containers.
 
 ## Coding Guidelines
 - Follow PEP8 and use `ruff` for linting (see `[tool.ruff]` in `pyproject.toml`).
@@ -58,13 +56,10 @@ hackingBuddyGPT is a research-driven Python framework that helps security resear
 - **Benchmarks:** https://github.com/ipa-lab/benchmark-privesc-linux
 
 ## Tips to Minimize Bash/Build Failures
-- Always use the provided scripts for environment/container setup; do not run ad-hoc commands unless necessary.
-- Ensure Bash version 4+ (Mac: install via Homebrew).
 - Use virtual environments for Python dependencies.
-- For Codespaces/Mac, follow the step-by-step guides in `CODESPACES.md` and `MAC.md`.
 - Never expose the web viewer to the public internet.
 - Always set API keys and credentials in `.env` or as prompted by scripts.
 - For RAG, add new markdown files to the appropriate `rag/` subfolder.
 
 ---
-For further details, see the `README.md` and https://docs.hackingbuddy.ai. When in doubt, prefer existing patterns and scripts over inventing new ones.
+For further details, see the `README.md` and https://docs.hackingbuddy.ai. When in doubt, prefer existing patterns over inventing new ones.

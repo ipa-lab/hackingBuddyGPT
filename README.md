@@ -177,9 +177,6 @@ $ pip install -e .
 # copy default .env.example 
 $ cp .env.example .env
 
-# NOTE: if you are trying to use this with AWS or ssh-key only authentication, copy .env.example.aws
-$ cp .env.example.aws .env 
-
 # IMPORTANT: setup your OpenAI API key, the VM's IP and credentials within .env
 $ vi .env
 
@@ -346,16 +343,6 @@ Useful options (see `benchmark_privesc.py --help` for the full list):
 - `--ollama-host`, `--or-provider` — Ollama base URL / OpenRouter provider routing.
 - `--username`, `--password`, `--ssh-host` — SSH credentials/host for the target containers
   (default `lowpriv` / `trustno1` on `127.0.0.1`).
-
-## Use Cases
-
-GitHub Codespaces:
-
-* See [CODESPACES.md](CODESPACES.md)
-
-Mac, Docker Desktop and Gemini-OpenAI-Proxy:
-
-* See [MAC.md](MAC.md)
 
 ## Run the Hacking Agent
 

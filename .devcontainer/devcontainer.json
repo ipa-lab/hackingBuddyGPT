@@ -1,3 +1,0 @@
-{
-	"onCreateCommand": "./scripts/codespaces_create_and_start_containers.sh"
-}

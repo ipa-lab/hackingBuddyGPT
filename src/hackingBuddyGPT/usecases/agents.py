@@ -3,8 +3,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, override
 
-from mako.template import Template
-
 from hackingBuddyGPT.capability import (
     Capability,
     CapabilityRegistry,
@@ -13,7 +11,7 @@ from hackingBuddyGPT.capability import (
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.llm import LiteLLM
-from hackingBuddyGPT.utils.logging import Logger, log_conversation, log_param
+from hackingBuddyGPT.utils.logging import Logger, log_param
 
 
 async def run_tool_calling_turn(
@@ -129,48 +127,6 @@ class Agent(CapabilityRegistry, ABC):
     # add_capability / get_capability / run_capability_json / run_capability_simple_text /
     # get_capability_block are inherited from CapabilityRegistry (shared with CapabilityManager).
     # The native tool-calling round is the shared module-level run_tool_calling_turn() below.
-
-
-@dataclass
-class AgentWorldview(ABC):
-    @abstractmethod
-    def to_template(self):
-        pass
-
-    @abstractmethod
-    def update(self, capability, cmd, result):
-        pass
-
-
-class TemplatedAgent(Agent):
-    _state: AgentWorldview = None
-    _template: Template = None
-    _template_size: int = 0
-
-    def set_initial_state(self, initial_state: AgentWorldview):
-        self._state = initial_state
-
-    def set_template(self, template: str):
-        self._template = Template(filename=template)
-        self._template_size = self.llm.count_tokens(self._template.source)
-
-    @override
-    @log_conversation("Asking LLM for a new command...")
-    async def perform_round(self, turn: int) -> bool:
-        # get the next command from the LLM
-        answer = self.llm.get_response(
-            self._template, capabilities=self.get_capability_block(), **self._state.to_template()
-        )
-        message_id = await self.log.call_response(answer)
-
-        capability, cmd, result, got_root = self.run_capability_simple_text(
-            message_id, llm_util.cmd_output_fixer(answer.result)
-        )
-
-        self._state.update(capability, cmd, result)
-
-        # if we got root, we can stop the loop
-        return got_root
 
 
 Prompt = list[Any]  # chat history: dict messages and/or litellm message objects

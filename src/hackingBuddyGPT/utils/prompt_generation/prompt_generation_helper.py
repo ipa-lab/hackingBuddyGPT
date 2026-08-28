@@ -3,12 +3,6 @@ import random
 import re
 import uuid
 
-from hackingBuddyGPT.utils.web_api.target_quirks import (
-    has_brew_style_ids,
-    has_named_resource_ids,
-    is_ballardtide,
-)
-
 
 class PromptGenerationHelper(object):
     """
@@ -37,10 +31,6 @@ class PromptGenerationHelper(object):
         self.new_endpoint_found = False
         self.endpoint_examples = {}
         self.name = ""
-        if "coin" in host.lower():
-            self.name = "Coin"
-        if "reqres" in host.lower():
-            self.name = "reqres"
 
         self.current_sub_step = None
         self.saved_endpoints = []
@@ -326,8 +316,6 @@ class PromptGenerationHelper(object):
         for endpoint in self._get_root_level_endpoints():
             new_endpoint = endpoint + "/1"
             new_endpoint = new_endpoint.replace("//", "/")
-            if new_endpoint == "seasons_average":
-                new_endpoint = r"season_averages\general"
             if new_endpoint != "/1/1" and (
                     endpoint + "/{id}" not in self.found_endpoints and
                     endpoint + "/1" not in self.unsuccessful_paths and
@@ -364,8 +352,6 @@ class PromptGenerationHelper(object):
                 endpoints_missing_id_or_query = list(
                     set(self.correct_endpoint_but_some_error["Missing required field: ids"]))
                 hint = f"ADD an id after these endpoints: {endpoints_missing_id_or_query} avoid getting this error again: {self.hint_for_next_round}"
-            if "base62" in self.hint_for_next_round and "Missing required field: ids" not in self.correct_endpoint_but_some_error:
-                hint += " Try an id like 6rqhFgbbKwnb9MLmUQDhG6"
             new_endpoint = self._get_instance_level_endpoint(self.name)
             if new_endpoint:
                 hint += f" Create a GET request for this endpoint: {new_endpoint}"
@@ -377,10 +363,6 @@ class PromptGenerationHelper(object):
         if self.current_step == 6:
             query_endpoint = self._get_endpoint_for_query_params()
 
-            if query_endpoint == "season_averages":
-                query_endpoint = "season_averages/general"
-            if query_endpoint == "stats":
-                query_endpoint = "stats/advanced"
             query_params = self.get_possible_params(query_endpoint)
             if query_params is None:
                 query_params = ["limit", "page", "size"]
@@ -417,12 +399,6 @@ class PromptGenerationHelper(object):
                     dict: A mapping of identified endpoints to their responses or error messages.
                 """
 
-        if "ball" in name:
-            common_endpoints = ["stats", "seasons_average", "history", "match", "suggest", "related", '/notifications',
-                                    '/messages', '/files', '/settings', '/status', '/health',
-                                    '/healthcheck',
-                                    '/feedback',
-                                    '/support', '/profile', '/account', '/reports', '/dashboard', '/activity', ]
         other_resource = random.choice(common_endpoints)
 
         # Determine if the path is a root-level or instance-level endpoint
@@ -432,13 +408,6 @@ class PromptGenerationHelper(object):
         else:
             # Instance-level endpoint
             test_endpoint = f"{path}/1/{other_resource}"
-
-        if has_named_resource_ids(name):
-            parts = [part.strip() for part in path.split("/") if part.strip()]
-
-            id = self.get_possible_id_for_instance_level_ep(parts[0])
-            if id:
-                test_endpoint = test_endpoint.replace("1", f"{id}")
 
         # Query the constructed endpoint
         test_endpoint = test_endpoint.replace("//", "/")
@@ -454,27 +423,12 @@ class PromptGenerationHelper(object):
                     dict: A mapping of identified endpoints to their responses or error messages.
                 """
 
-        if has_brew_style_ids(name):
-            common_endpoints = ["autocomplete", "search",  "random","match", "suggest", "related"]
-        if "Coin" in name :
-            common_endpoints = ["markets", "search",  "history","match", "suggest", "related", '/notifications',
-                                '/messages', '/files', '/settings', '/status', '/health',
-                                 '/healthcheck',
-                                 '/feedback',
-                                 '/support', '/profile', '/account', '/reports', '/dashboard', '/activity',]
-
-
         other_resource = random.choice(common_endpoints)
         another_resource = random.choice(common_endpoints)
         if other_resource == another_resource:
             another_resource = random.choice(common_endpoints)
         path = path.replace("{id}", "1")
         parts = [part.strip() for part in path.split("/") if part.strip()]
-
-        if has_named_resource_ids(name):
-            id = self.get_possible_id_for_instance_level_ep(parts[0])
-            if id:
-                path = path.replace("1", f"{id}")
 
         multilevel_endpoint = path
 
@@ -501,10 +455,6 @@ class PromptGenerationHelper(object):
                 Returns:
                     dict: A mapping of identified endpoints to their responses or error messages.
                 """
-        if has_brew_style_ids(name):
-
-            common_endpoints = ["autocomplete", "search",  "random","match", "suggest", "related"]
-
         filtered_endpoints = [resource for resource in common_endpoints
                               if "id" not in resource ]
         possible_resources = []
@@ -533,10 +483,6 @@ class PromptGenerationHelper(object):
         else:
             if "1" not in path:
                 multilevel_endpoint = path
-        if has_named_resource_ids(name):
-            id = self.get_possible_id_for_instance_level_ep(parts[0])
-            if id:
-                multilevel_endpoint = multilevel_endpoint.replace("1", f"{id}")
         multilevel_endpoint = multilevel_endpoint.replace("//", "/")
 
         return multilevel_endpoint
@@ -573,17 +519,6 @@ class PromptGenerationHelper(object):
     def get_possible_params(self, endpoint):
         if endpoint in self.endpoint_examples:
             example = self.endpoint_examples[endpoint]
-            if "reqres" in self.name:
-                for key, value in example.items():
-                    if not key in self.query_endpoints_params[endpoint]:
-                        return f'{key}: {example[key]}'
-            elif is_ballardtide(self.name):
-                for key, value in example.items():
-                    if not key in self.query_endpoints_params[endpoint]:
-                        return f'{key}: {example[key]}'
-                if example is None:
-                    example = {"season_type": "regular", "type": "base"}
-
             return example
 
 

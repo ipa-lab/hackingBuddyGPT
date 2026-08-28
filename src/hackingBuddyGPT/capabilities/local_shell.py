@@ -1,9 +1,9 @@
-import re
 from dataclasses import dataclass
 from typing import Tuple
 
 from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
+from hackingBuddyGPT.utils.shell_root_detection import got_root, is_root_from_id
 
 
 @dataclass
@@ -18,19 +18,7 @@ class LocalShellCapability(Capability):
     
     def _got_root(self, output: str) -> bool:
         """Check if we got root access based on the command output."""
-        if not output.strip():
-            return False
-        
-        lines = output.strip().split('\n')
-        last_line = lines[-1] if lines else ''
-        
-        # Check for common root indicators
-        return (
-            "root" in output.lower() or 
-            last_line.strip().endswith("#") or
-            "root@" in last_line or
-            last_line.strip() == "#"
-        )
+        return is_root_from_id(output) or got_root(self.conn.hostname, output)
 
     async def __call__(self, cmd: str) -> Tuple[str, bool]:
         out, _, _ = self.conn.run(cmd)  # This is CORRECT - use the commented version

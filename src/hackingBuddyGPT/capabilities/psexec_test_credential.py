@@ -2,6 +2,7 @@ import warnings
 from dataclasses import dataclass
 
 from hackingBuddyGPT.utils.connectors.psexec import PSExecConnection
+from hackingBuddyGPT.utils.shell_root_detection import LOGIN_AS_ROOT_SUCCESSFUL
 
 from ..capability import Capability
 
@@ -24,6 +25,6 @@ class PSExecTestCredential(Capability):
                 message="full credential testing is not implemented yet for psexec, we have logged in, but do not know who we are, returning True for now",
                 stacklevel=1,
             )
-            return "Login as root was successful\n"
+            return LOGIN_AS_ROOT_SUCCESSFUL
         except Exception:
             return "Authentication error, credentials are wrong\n"

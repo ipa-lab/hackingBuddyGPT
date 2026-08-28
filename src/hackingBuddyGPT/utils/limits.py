@@ -53,6 +53,14 @@ class Limits:
             self._start_time = datetime.datetime.now()
 
     def reached(self) -> bool:
+        # An explicit successful completion (e.g. the agent's ``task_solved`` calling ``complete()``)
+        # is authoritative and must take precedence over the resource-limit checks below. ``complete()``
+        # deliberately leaves ``_reason`` unset; without this short-circuit a solve on the very last
+        # allowed round would fall through to the max-rounds branch, get tagged with a failure reason,
+        # and be mis-scored as "Reached maximum rounds" instead of a success.
+        if self._state == RunState.COMPLETED:
+            return True
+
         if self._parent and self._parent.reached():
             if self._parent.reason:
                 self._reason = f"Parent limit reached: {self._parent.reason}"

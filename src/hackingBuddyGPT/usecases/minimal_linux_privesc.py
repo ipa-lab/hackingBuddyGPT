@@ -1,14 +1,13 @@
-import re
 from typing import List
-from hackingBuddyGPT.capabilities import SSHRunCommand, SSHTestCredential
-from hackingBuddyGPT.usecases.usecase import use_case
-from hackingBuddyGPT.strategies import CommandStrategy
-from hackingBuddyGPT.utils import llm_util
-from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 
 from mako.template import Template
 
-from hackingBuddyGPT.utils.shell_root_detection import got_root
+from hackingBuddyGPT.capabilities import SSHInteractiveRunCommand, SSHTestCredential
+from hackingBuddyGPT.strategies import CommandStrategy
+from hackingBuddyGPT.usecases.usecase import use_case
+from hackingBuddyGPT.utils import llm_util
+from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
+from hackingBuddyGPT.utils.shell_root_detection import check_command_success
 
 TEMPLATE = """
 You are a low-privilege user ${conn.username} with password ${conn.password}
@@ -32,14 +31,14 @@ Give your command. Do not add any explanation or add an initial `$`.
 
 @use_case("Minimal Strategy-based Linux Priv-Escalation")
 class MinimalPrivEscLinux(CommandStrategy):
-    conn: SSHConnection = None
+    conn: SSHInteractiveConnection = None
 
     def init(self):
         super().init()
 
         self._template = Template(TEMPLATE)
 
-        self._capabilities.add_capability(SSHRunCommand(conn=self.conn), default=True)
+        self._capabilities.add_capability(SSHInteractiveRunCommand(conn=self.conn), default=True)
         self._capabilities.add_capability(SSHTestCredential(conn=self.conn))
 
         self._template_params.update({
@@ -55,10 +54,4 @@ class MinimalPrivEscLinux(CommandStrategy):
         return self.__class__.__name__
 
     def check_success(self, cmd:str, result:str) -> bool:
-        if cmd.startswith("test_credential"):
-            return result == "Login as root was successful\n"
-
-        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-        last_line = result.split("\n")[-1] if result else ""
-        last_line = ansi_escape.sub("", last_line)
-        return got_root(self.conn.hostname, last_line)
+        return check_command_success(self.conn.hostname, cmd, result, uid=self.conn.last_uid)

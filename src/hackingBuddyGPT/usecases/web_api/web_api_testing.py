@@ -30,6 +30,7 @@ from hackingBuddyGPT.usecases.web_api.simple_web_api_testing import (
     SimpleWebAPITesting,
 )
 from hackingBuddyGPT.utils.configurable import parameter
+from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.web_api.target_surface import OpenAPISurface, load_surface
 
 VALID_MODES = ("document", "test", "auto")
@@ -65,6 +66,11 @@ class WebAPITesting(SimpleStrategy):
 
     def init(self):
         super().init()
+        # Shared run limits (tokens/cost/duration/rounds) enforced across both phases and injected
+        # into each engine. When not configured (e.g. built directly in tests), default to a
+        # never-reached Limits so behaviour is bounded only by the per-phase turn caps, as before.
+        if self.limits is None:
+            self.limits = Limits(max_rounds=0, max_tokens=0, max_cost=0, max_duration=0)
         if self.mode not in VALID_MODES:
             raise ValueError(f"mode must be one of {'|'.join(VALID_MODES)}, got {self.mode!r}")
 
@@ -91,18 +97,22 @@ class WebAPITesting(SimpleStrategy):
         raise NotImplementedError("WebAPITesting orchestrates its phases in run(), not perform_round()")
 
     async def run(self, configuration):
+        self.limits.start()
         self.configuration = configuration
         await self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
         try:
             if self._surface_obj is None and self.mode in ("document", "auto"):
                 await self._run_detection()
 
-            if self.mode == "document":
-                await self.log.run_was_success()
-                return True
+            if self.mode != "document" and not self.limits.reached():
+                await self._run_testing()
 
-            await self._run_testing()
-            await self.log.run_was_success()
+            # A reached limit (cost/tokens/duration/rounds) ends the run as a failure with its
+            # reason, matching the framework's AutonomousUseCase; otherwise it is a success.
+            if self.limits.reason is not None:
+                await self.log.run_was_failure(self.limits.reason)
+            else:
+                await self.log.run_was_success()
             return True
         except Exception:
             await self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
@@ -116,14 +126,16 @@ class WebAPITesting(SimpleStrategy):
             config_path=self.config_path,
             strategy_string=self.strategy_string,
         )
+        engine.limits = self.limits
         engine.init()
         self._detection = engine
 
         turn, done = 1, False
-        while turn <= self.detection_max_turns and not done:
+        while turn <= self.detection_max_turns and not done and not self.limits.reached():
             async with self.log.section(f"detect round {turn}"):
                 self.log.console.log(f"[yellow]Detection turn {turn}/{self.detection_max_turns}")
                 done = await engine.perform_round(turn)
+            self.limits.register_round()
             turn += 1
 
         engine._documentation_handler.write_openapi_to_yaml()
@@ -141,12 +153,14 @@ class WebAPITesting(SimpleStrategy):
             strategy_string=self.strategy_string,
         )
         engine._injected_surface = self._surface_obj
+        engine.limits = self.limits
         engine.init()
         self._testing = engine
 
         turn = 1
-        while turn <= self.max_turns and not engine._all_test_cases_run:
+        while turn <= self.max_turns and not engine._all_test_cases_run and not self.limits.reached():
             async with self.log.section(f"test round {turn}"):
                 self.log.console.log(f"[yellow]Testing turn {turn}/{self.max_turns}")
                 await engine.perform_round(turn)
+            self.limits.register_round()
             turn += 1

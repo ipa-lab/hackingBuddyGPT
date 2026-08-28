@@ -61,6 +61,8 @@ class TestResponseAnalyzerWithLLM(unittest.TestCase):
         message.tool_calls = [tool_call]
         llm_result = MagicMock()
         llm_result.result = message
+        llm_result.total_tokens = 5
+        llm_result.cost = 0.0
         self.llm.get_response = MagicMock(return_value=llm_result)
 
         fake_response = MagicMock()

@@ -53,6 +53,8 @@ class TestSimpleWebAPIDocumentationTest(unittest.TestCase):
         message.tool_calls = [tool_call]
         llm_result = MagicMock()
         llm_result.result = message
+        llm_result.total_tokens = 5
+        llm_result.cost = 0.0
 
         self.agent.llm.get_response = MagicMock(return_value=llm_result)
         self.agent.log.call_response = AsyncMock(return_value=1)

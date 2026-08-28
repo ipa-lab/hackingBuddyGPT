@@ -57,6 +57,8 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
 
         llm_result = MagicMock()
         llm_result.result = message
+        llm_result.total_tokens = 5
+        llm_result.cost = 0.0
 
         # Mock the LLM boundary (get_response) and the pieces that need a live run/network:
         self.agent.llm.get_response = MagicMock(return_value=llm_result)

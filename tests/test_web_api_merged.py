@@ -2,11 +2,13 @@ import asyncio
 import os
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from hackingBuddyGPT.usecases.web_api.web_api_testing import WebAPITesting
 from hackingBuddyGPT.usecases.web_api.simple_web_api_testing import SimpleWebAPITesting
 from hackingBuddyGPT.utils import Console
+from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.logging import JsonlLogger
 from hackingBuddyGPT.utils.web_api.target_surface import OpenAPISurface, SitemapSurface
 
@@ -67,6 +69,34 @@ class TestWebAPITestingModes(unittest.TestCase):
         asyncio.run(agent.run({}))
         agent._run_detection.assert_awaited_once()
         agent._run_testing.assert_not_awaited()
+
+    def test_reached_limit_skips_testing_and_reports_reason(self):
+        # A cost limit exhausted during detection must stop the run before testing and be
+        # reported as the run's failure reason.
+        limits = Limits(max_rounds=0, max_tokens=0, max_cost=0.001, max_duration=0)
+        agent = self._build(mode="auto", limits=limits)
+        agent.init()
+
+        async def exhaust_budget():
+            agent.limits.register_message(SimpleNamespace(total_tokens=1, cost=0.01))
+
+        agent._run_detection = exhaust_budget
+        agent._run_testing = AsyncMock()
+        agent.log.run_was_failure = AsyncMock()
+        agent.log.run_was_success = AsyncMock()
+
+        asyncio.run(agent.run({}))
+
+        agent._run_testing.assert_not_awaited()  # limit reached after detection
+        agent.log.run_was_success.assert_not_awaited()
+        agent.log.run_was_failure.assert_awaited_once()
+        self.assertIn("cost", agent.log.run_was_failure.await_args.args[0].lower())
+
+    def test_limits_default_never_reached_when_unset(self):
+        agent = self._build(mode="auto")
+        agent.init()
+        self.assertIsNotNone(agent.limits)
+        self.assertFalse(agent.limits.reached())
 
 
 class TestSurfaceInjectionIntoTestingEngine(unittest.TestCase):

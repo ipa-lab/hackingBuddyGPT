@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 from rich.panel import Panel
 
 from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.capabilities.parsed_information import ParsedInformation
 from hackingBuddyGPT.capabilities.record_note import RecordNote
 from hackingBuddyGPT.strategies import SimpleStrategy
@@ -71,6 +72,11 @@ class SimpleWebAPITesting(SimpleStrategy):
 
     def init(self):
         super().init()
+
+        # Run limits (tokens/cost/duration/rounds). The orchestrator injects a shared Limits before
+        # init(); a never-reached default keeps this engine usable stand-alone / in tests.
+        if self.limits is None:
+            self.limits = Limits(max_rounds=0, max_tokens=0, max_cost=0, max_duration=0)
 
         # load config file
         self.strategy = strategy_from_string(self.strategy_string)
@@ -169,7 +175,8 @@ class SimpleWebAPITesting(SimpleStrategy):
                                                          capabilities=self.all_capabilities,
                                                          pentesting_info=self.pentesting_information,
                                                          capacity=self.parse_capacity,
-                                                         prompt_helper=self.prompt_helper)
+                                                         prompt_helper=self.prompt_helper,
+                                                         limits=self.limits)
         self._response_handler.set_response_analyzer(self.response_analyzer)
         self._report_handler = ReportHandler(self.config)
 
@@ -240,7 +247,7 @@ class SimpleWebAPITesting(SimpleStrategy):
             self._report_handler.save_report()
 
     async def _perform_prompt_generation(self, turn: int) -> None:
-        while self.purpose == self.prompt_engineer._purpose and not self._all_test_cases_run:
+        while self.purpose == self.prompt_engineer._purpose and not self._all_test_cases_run and not self.limits.reached():
             prompt = self.prompt_engineer.generate_prompt(turn=turn, move_type="explore",
                                                           prompt_history=self._prompt_history)
 
@@ -266,6 +273,7 @@ class SimpleWebAPITesting(SimpleStrategy):
             capabilities={"ProposedHTTPRequest": self._proposed_http_request},
             tool_choice="required",
         )
+        self.limits.register_message(llm_result)
         message_id = await self.log.call_response(llm_result)
 
         message = llm_result.result

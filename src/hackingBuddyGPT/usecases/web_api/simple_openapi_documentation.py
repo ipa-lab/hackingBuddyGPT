@@ -15,6 +15,7 @@ from hackingBuddyGPT.usecases.web_api.detection_response_handler import Detectio
 from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_endpoints_with_query
 from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
 from hackingBuddyGPT.capability import tool_call_to_action
+from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
 from hackingBuddyGPT.usecases.web_api.evaluator import Evaluator
 from hackingBuddyGPT.utils.configurable import parameter
@@ -96,6 +97,10 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
     def init(self):
         """Initialize the agent with configurations, capabilities, and handlers."""
         super().init()
+        # Run limits (tokens/cost/duration/rounds). The orchestrator injects a shared Limits before
+        # init(); a never-reached default keeps this engine usable stand-alone / in tests.
+        if self.limits is None:
+            self.limits = Limits(max_rounds=0, max_tokens=0, max_cost=0, max_duration=0)
         self.explore_steps_done = False
         self.found_all_http_methods = False
         self.all_steps_done = False
@@ -329,12 +334,13 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
             """
         is_good = False
         counter = 0
-        while not is_good:
+        while not is_good and not self.limits.reached():
             prompt = self._prompt_engineer.generate_prompt(turn=turn, move_type=move_type,
                                                            prompt_history=self._prompt_history)
             # Force the model to call http_request, then rebuild the same un-executed action the
             # FSM used to receive (via tool_call_to_action) so handle_response is unchanged.
             llm_result = self.llm.get_response(prompt, capabilities=self.all_capabilities, tool_choice="required")
+            self.limits.register_message(llm_result)
             message_id = await self.log.call_response(llm_result)
             self.log.console.print(Panel(prompt[-1]["content"], title="system"))
 

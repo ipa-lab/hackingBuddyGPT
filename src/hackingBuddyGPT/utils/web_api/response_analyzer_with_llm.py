@@ -8,6 +8,7 @@ from hackingBuddyGPT.utils.prompt_generation.information import (
     PromptPurpose,
 )
 from hackingBuddyGPT.capability import tool_call_to_action
+from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.web_api.http_response import extract_status_code_and_message
 from hackingBuddyGPT.utils import tool_message
 
@@ -22,7 +23,8 @@ class ResponseAnalyzerWithLLM:
     """
 
     def __init__(self, purpose: PromptPurpose = None, llm: Any = None, capabilities: dict = None,
-                 pentesting_info: PenTestingInformation = None, capacity: Any = None, prompt_helper: Any = None):
+                 pentesting_info: PenTestingInformation = None, capacity: Any = None, prompt_helper: Any = None,
+                 limits: Limits = None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
 
@@ -31,6 +33,7 @@ class ResponseAnalyzerWithLLM:
             llm (LiteLLM): The LLM upstream used for the analysis tool calls. Default is None.
             capabilities (dict): Name -> Capability map the analysis steps may call. Default is None.
             prompt_engineer(PromptEngineer): Handles the prompt operations. Default is None.
+            limits (Limits): Run limits the analysis LLM calls register their tokens/cost into.
         """
         self.purpose = purpose
         self.llm = llm
@@ -38,6 +41,8 @@ class ResponseAnalyzerWithLLM:
         self.pentesting_information = pentesting_info
         self.capacity = capacity
         self.prompt_helper = prompt_helper
+        # A never-reached default keeps standalone/analyzer-only use unconstrained.
+        self.limits = limits if limits is not None else Limits(max_rounds=0, max_tokens=0, max_cost=0, max_duration=0)
         self.token = ""
 
     async def analyze_response(self, raw_response: str, prompt_history: list, analysis_context: Any) -> tuple[list[str], Any]:
@@ -159,6 +164,7 @@ class ResponseAnalyzerWithLLM:
         # Force the model to call the given capability, then execute the resulting action.
         caps = {capability: self.capabilities[capability]}
         llm_result = self.llm.get_response(prompt_history, capabilities=caps, tool_choice="required")
+        self.limits.register_message(llm_result)
         message = llm_result.result
         tool_call = message.tool_calls[0]
         tool_call_id = tool_call.id

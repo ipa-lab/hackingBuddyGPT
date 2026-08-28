@@ -3,6 +3,8 @@ import random
 import re
 import uuid
 
+from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
+
 
 class PromptGenerationHelper(object):
     """
@@ -346,7 +348,7 @@ class PromptGenerationHelper(object):
             str: A tailored hint that provides guidance based on the current testing phase and identified needs.
         """
         hint = ""
-        if self.current_step == 2:
+        if self.current_step == ExploreStep.INSTANCE:
             instance_level_found_endpoints = [ep for ep in self.found_endpoints if "id" in ep]
             if "Missing required field: ids" in self.correct_endpoint_but_some_error:
                 endpoints_missing_id_or_query = list(
@@ -356,11 +358,11 @@ class PromptGenerationHelper(object):
             if new_endpoint:
                 hint += f" Create a GET request for this endpoint: {new_endpoint}"
 
-        elif self.current_step == 3 and "No search query" in self.correct_endpoint_but_some_error:
+        elif self.current_step == ExploreStep.SUBRESOURCE and "No search query" in self.correct_endpoint_but_some_error:
             endpoints_missing_query = list(set(self.correct_endpoint_but_some_error['No search query']))
             hint = f"First, try out these endpoints: {endpoints_missing_query}"
 
-        if self.current_step == 6:
+        if self.current_step == ExploreStep.QUERY:
             query_endpoint = self._get_endpoint_for_query_params()
 
             query_params = self.get_possible_params(query_endpoint)

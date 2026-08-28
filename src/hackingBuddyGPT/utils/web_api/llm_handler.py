@@ -69,6 +69,3 @@ class LLMHandler:
             self.created_objects[object_type] = []
         if len(self.created_objects[object_type]) < 7:
             self.created_objects[object_type].append(created_object)
-
-    def _get_created_objects(self) -> Dict[str, List[Any]]:
-        return self.created_objects

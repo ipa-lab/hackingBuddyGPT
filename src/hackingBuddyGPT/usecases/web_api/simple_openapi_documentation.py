@@ -11,8 +11,8 @@ from hackingBuddyGPT.utils.prompt_generation.information.prompt_information impo
 from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
 from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
 from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
-from hackingBuddyGPT.utils.web_api.response_handler import ResponseHandler
-from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
+from hackingBuddyGPT.usecases.web_api.detection_response_handler import DetectionResponseHandler
+from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_endpoints_with_query
 from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
 from hackingBuddyGPT.utils.web_api.custom_datatypes import Context, Prompt
@@ -181,8 +181,8 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
                                  "http_request": HTTPRequest(self.host)}
         self._llm_handler = LLMHandler(self.llm, self._capabilities._capabilities,  all_possible_capabilities=self.all_capabilities)
 
-        self._response_handler = ResponseHandler(llm_handler=self._llm_handler, prompt_context=self._prompt_context,
-                                                 prompt_helper=self.prompt_helper, config=config)
+        self._response_handler = DetectionResponseHandler(llm_handler=self._llm_handler, prompt_context=self._prompt_context,
+                                                          prompt_helper=self.prompt_helper, config=config)
         self._documentation_handler = OpenAPISpecificationHandler(
             self._llm_handler, self.strategy, self.host, description, name
         )
@@ -220,15 +220,7 @@ class SimpleWebAPIDocumentation(SimpleStrategy):
                     - "multi-level_resource": Deeper or complex nested resources
                     - "query": Query parameter values from the input
             """
-        buckets = categorize_by_structure(endpoints)
-        return {
-            "root_level": buckets["root_level"],
-            "instance_level": buckets["instance_level"],
-            "subresource": buckets["subresource"],
-            "query": query.values(),
-            "related_resource": buckets["related_resource"],
-            "multi-level_resource": buckets["multi_level_resource"],
-        }
+        return categorize_endpoints_with_query(endpoints, query)
 
     def all_http_methods_found(self, turn: int) -> bool:
         """

@@ -10,6 +10,7 @@ from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.utils.web_api.http_response import extract_status_code_and_message
 
 
 class OpenAPISpecificationHandler(object):
@@ -479,15 +480,7 @@ class OpenAPISpecificationHandler(object):
                 Tuple[Optional[str], Optional[str]]: A tuple containing the HTTP status code and message.
                 Returns (None, None) if the pattern is not matched.
             """
-        if not isinstance(result, str):
-            result = str(result)
-        match = re.search(r"^HTTP/\d\.\d\s+(\d+)\s+(.*)", result, re.MULTILINE)
-        if match:
-            status_code = match.group(1)
-            status_message = match.group(2).strip()
-            return status_code, status_message
-        else:
-            return None, None
+        return extract_status_code_and_message(result)
 
     def replace_id_with_placeholder(self, path, prompt_engineer):
         """

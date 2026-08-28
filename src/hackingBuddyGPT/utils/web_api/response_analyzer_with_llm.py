@@ -1,9 +1,6 @@
 import json
-import re
-from typing import Any, Dict
-from unittest.mock import MagicMock
+from typing import Any
 
-from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.utils.prompt_generation.information import (
     PenTestingInformation,
 )
@@ -11,6 +8,7 @@ from hackingBuddyGPT.utils.prompt_generation.information import (
     PromptPurpose,
 )
 from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.utils.web_api.http_response import extract_status_code_and_message
 from hackingBuddyGPT.utils import tool_message
 
 
@@ -39,27 +37,6 @@ class ResponseAnalyzerWithLLM:
         self.capacity = capacity
         self.prompt_helper = prompt_helper
         self.token = ""
-
-    def set_purpose(self, purpose: PromptPurpose):
-        """
-        Sets the purpose for analyzing the HTTP response.
-
-        Args:
-            purpose (PromptPurpose): The specific purpose for analyzing the HTTP response.
-        """
-        self.purpose = purpose
-
-    def print_results(self, results: Dict[str, str]):
-        """
-        Prints the LLM responses in a structured and readable format.
-
-        Args:
-            results (dict): The LLM responses to be printed.
-        """
-        for prompt, response in results.items():
-            print(f"Prompt: {prompt}")
-            print(f"Response: {response}")
-            print("-" * 50)
 
     async def analyze_response(self, raw_response: str, prompt_history: list, analysis_context: Any) -> tuple[list[str], Any]:
         """
@@ -108,13 +85,7 @@ class ResponseAnalyzerWithLLM:
                 if line.startswith("{") or line.startswith("["):
                     body = line
 
-        status_line = header_lines[0].strip()
-
-        match = re.search(r"^HTTP/\d\.\d\s+(\d+)\s+(.*)", raw_response, re.MULTILINE)
-        if match:
-            status_code = match.group(1)
-        else:
-            status_code = None
+        status_code, _ = extract_status_code_and_message(raw_response)
         if body.__contains__("<!DOCTYPE"):
             body = ""
 
@@ -150,8 +121,6 @@ class ResponseAnalyzerWithLLM:
                                         "x") and "id" not in account.keys():
                                     account["id"] = body["id"]
 
-
-                    #self.replace_account()
             elif isinstance(body, list) and len(body) > 1:
                 body = body[0]
                 if self.prompt_helper.current_user in body:
@@ -256,65 +225,3 @@ class ResponseAnalyzerWithLLM:
 
 
         return status_code, additional_analysis_context, full_response
-
-    def replace_account(self):
-        # Now let's replace the existing account if it exists, otherwise add it
-        replaced = False
-        for i, account in enumerate(self.prompt_helper.accounts):
-            # Compare the 'id' (or any unique field) to find the matching account
-            if account.get("x") == self.prompt_helper.current_user.get("x"):
-                self.prompt_helper.accounts[i] = self.prompt_helper.current_user
-                replaced = True
-                break
-
-        # If we did not replace any existing account, append this as a new account
-        if not replaced:
-            self.prompt_helper.accounts.append(self.prompt_helper.current_user)
-
-
-
-if __name__ == "__main__":
-    # Example HTTP response to parse
-    raw_http_response = """HTTP/1.1 404 Not Found
-    Date: Fri, 16 Aug 2024 10:01:19 GMT
-    Content-Type: application/json; charset=utf-8
-    Content-Length: 2
-    Connection: keep-alive
-    Report-To: {"group":"heroku-nel","max_age":3600,"endpoints":[{"url":"https://nel.heroku.com/reports?ts=1723802269&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=dkvm744qehjJmab8kgf%2BGuZA8g%2FCCIkfoYc1UdYuZMc%3D"}]}
-    Reporting-Endpoints: heroku-nel=https://nel.heroku.com/reports?ts=1723802269&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=dkvm744qehjJmab8kgf%2BGuZA8g%2FCCIkfoYc1UdYuZMc%3D
-    Nel: {"report_to":"heroku-nel","max_age":3600,"success_fraction":0.005,"failure_fraction":0.05,"response_headers":["Via"]}
-    X-Powered-By: Express
-    X-Ratelimit-Limit: 1000
-    X-Ratelimit-Remaining: 999
-    X-Ratelimit-Reset: 1723802321
-    Vary: Origin, Accept-Encoding
-    Access-Control-Allow-Credentials: true
-    Cache-Control: max-age=43200
-    Pragma: no-cache
-    Expires: -1
-    X-Content-Type-Options: nosniff
-    Etag: W/"2-vyGp6PvFo4RvsFtPoIWeCReyIC8"
-    Via: 1.1 vegur
-    CF-Cache-Status: HIT
-    Age: 210
-    Server: cloudflare
-    CF-RAY: 8b40951728d9c289-VIE
-    alt-svc: h3=":443"; ma=86400
-
-    {}"""
-    llm_mock = MagicMock()
-    capabilities = {
-        "submit_http_method": HTTPRequest("https://jsonplaceholder.typicode.com"),
-        "http_request": HTTPRequest("https://jsonplaceholder.typicode.com"),
-    }
-
-    # Initialize the ResponseAnalyzer with a specific purpose and an LLM instance
-    response_analyzer = ResponseAnalyzerWithLLM(
-        PromptPurpose.PARSING, llm_handler=LLMHandler(llm=llm_mock, capabilities=capabilities)
-    )
-
-    # Generate and process LLM prompts based on the HTTP response
-    results = response_analyzer.analyze_response(raw_http_response)
-
-    # Print the LLM processing results
-    response_analyzer.print_results(results)

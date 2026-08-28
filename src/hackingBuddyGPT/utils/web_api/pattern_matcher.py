@@ -101,22 +101,3 @@ class PatternMatcher:
         for _, param, value in matches:
             params[param] = value
         return params
-
-
-if __name__ == "__main__":
-    # Example usage
-    matcher = PatternMatcher()
-    example_path = "/resource/456?param1=10&Param2=text&NumValue=123456"
-    example_nested_path = "/category/resource/789?detail=42&Info2=moreText"
-
-    # Replace parameters in paths
-    modified_path = matcher.replace_parameters(example_path)
-    modified_nested_path = matcher.replace_parameters(example_nested_path)
-
-    print(modified_path)
-    print(modified_nested_path)
-    print(f'Original path: {example_path}')
-    print(f'Extracted parameters: {matcher.extract_query_params(example_path)}')
-
-    print(f'Original nested path: {example_nested_path}')
-    print(f'Extracted parameters: {matcher.extract_query_params(example_nested_path)}')

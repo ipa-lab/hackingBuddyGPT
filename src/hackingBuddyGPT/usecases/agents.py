@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, override
@@ -8,7 +7,7 @@ from mako.template import Template
 
 from hackingBuddyGPT.capability import (
     Capability,
-    capabilities_to_simple_text_handler,
+    CapabilityRegistry,
     function_call_capability,
 )
 from hackingBuddyGPT.utils import llm_util
@@ -19,7 +18,7 @@ from hackingBuddyGPT.utils.logging import Logger, log_conversation, log_param
 
 
 @dataclass
-class Agent(ABC):
+class Agent(CapabilityRegistry, ABC):
     log: Logger = log_param
 
     _capabilities: dict[str, Capability] = field(default_factory=dict)
@@ -41,44 +40,8 @@ class Agent(ABC):
     async def perform_round(self, limits: Limits):
         pass
 
-    def add_capability(self, cap: Capability, name: str = None, default: bool = False):
-        if name is None:
-            name = cap.get_name()
-        self._capabilities[name] = cap
-        if default:
-            self._default_capability = cap
-
-    def get_capability(self, name: str) -> Capability:
-        return self._capabilities.get(name, self._default_capability)
-
-    async def run_capability_json(
-        self,
-        message_id: int,
-        tool_call_id: str,
-        capability_name: str,
-        arguments: str,
-        capabilities: dict[str, Capability] | None = None,
-    ) -> str:
-        if capabilities is not None:
-            capability = capabilities.get(capability_name, self._default_capability)
-        else:
-            capability = self.get_capability(capability_name)
-
-        if capability is None:
-            raise ValueError(f"Capability {capability_name} not found")
-
-        tic = datetime.datetime.now()
-        try:
-            result = await capability.to_model().model_validate_json(arguments).execute()
-        except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            result = f"EXCEPTION: {e}"
-        duration = datetime.datetime.now() - tic
-
-        await self.log.add_tool_call(message_id, tool_call_id, capability_name, arguments, result, duration)
-        return result
+    # add_capability / get_capability / run_capability_json / run_capability_simple_text /
+    # get_capability_block are inherited from CapabilityRegistry (shared with CapabilityManager).
 
     async def run_tool_calls(
         self, message_id: int, message: Any
@@ -112,10 +75,6 @@ class Agent(ABC):
             await self.log.status_message(f"Framework error during tool calls: {e}")
 
         return []
-
-    def get_capability_block(self) -> str:
-        capability_descriptions, _parser = capabilities_to_simple_text_handler(self._capabilities)
-        return "You can either\n\n" + "\n".join(f"- {description}" for description in capability_descriptions.values())
 
 
 @dataclass

@@ -5,7 +5,7 @@ from hackingBuddyGPT.usecases.usecase import UseCase, use_case
 from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
 from hackingBuddyGPT.utils.llm import LiteLLM
 
-from .linux_privesc import PrivEscLinux
+from .priv_esc.linux_privesc import PrivEscLinux
 
 template_lse = Template("""
 Create a list of up to ${number} attack classes that you would try on a linux system

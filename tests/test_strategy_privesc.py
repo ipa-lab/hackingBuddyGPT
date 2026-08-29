@@ -13,8 +13,8 @@ import tempfile
 import unittest
 from typing import Tuple
 
-from hackingBuddyGPT.usecases.linux_privesc import PrivEscLinux
-from hackingBuddyGPT.usecases.minimal_linux_privesc import MinimalPrivEscLinux
+from hackingBuddyGPT.usecases.priv_esc.linux_privesc import PrivEscLinux
+from hackingBuddyGPT.usecases.priv_esc.minimal_linux_privesc import MinimalPrivEscLinux
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
 from hackingBuddyGPT.utils.logging import JsonlLogger

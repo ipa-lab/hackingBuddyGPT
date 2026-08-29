@@ -12,7 +12,7 @@ Covers the two coordinated pieces of the fix:
 
 import asyncio
 
-from hackingBuddyGPT.usecases.minimal_linux_privesc_tool_calling import (
+from hackingBuddyGPT.usecases.priv_esc.minimal_linux_privesc_tool_calling import (
     MinimalToolCallPrivEscLinux,
     _RootWatchingRunCommand,
     _TrackingSSHTestCredential,

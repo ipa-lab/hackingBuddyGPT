@@ -1,5 +1,5 @@
 from hackingBuddyGPT.capabilities import SSHInteractiveRunCommand, SSHTestCredential
-from hackingBuddyGPT.usecases._privesc_common import TemplatedCommandPrivEsc
+from ._base import TemplatedCommandPrivEsc
 from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
 from hackingBuddyGPT.utils.shell_root_detection import check_command_success

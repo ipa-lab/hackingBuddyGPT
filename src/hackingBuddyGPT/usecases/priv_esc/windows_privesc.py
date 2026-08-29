@@ -1,5 +1,5 @@
 from hackingBuddyGPT.capabilities import PSExecRunCommand, PSExecTestCredential
-from hackingBuddyGPT.usecases._privesc_common import TemplatedCommandPrivEsc
+from ._base import TemplatedCommandPrivEsc
 from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils.connectors.psexec import PSExecConnection
 from hackingBuddyGPT.utils.shell_root_detection import check_windows_admin_success

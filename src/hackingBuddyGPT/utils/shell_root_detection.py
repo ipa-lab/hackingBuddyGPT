@@ -60,3 +60,32 @@ def check_command_success(hostname: str, cmd: str, result: str, uid: int = None)
     if is_root_from_id(result):
         return True
     return got_root(hostname, result)
+
+
+# --- Windows ---------------------------------------------------------------------------------------
+# Well-known BUILTIN\Administrators group SID (shown by `whoami /groups` / `whoami /all`). A member of
+# this group that is present in the token (not a "deny only" entry) indicates an elevated context.
+_WIN_ADMIN_SID = "s-1-5-32-544"
+
+
+def is_admin_from_whoami(output: str) -> bool:
+    """Detect a Windows Administrator/SYSTEM context from `whoami` / `whoami /groups` / `whoami /all`
+    output: running as ``NT AUTHORITY\\SYSTEM``, or an *enabled* membership in the Administrators
+    group (SID ``S-1-5-32-544``, ignoring "deny only" entries in a filtered token). Heuristic, like
+    the Linux probes above; token-elevation state is not inspected directly."""
+    text = strip_ansi(output or "").lower()
+    if "nt authority\\system" in text:
+        return True
+    for line in text.splitlines():
+        if _WIN_ADMIN_SID in line and "deny only" not in line:
+            return True
+    return False
+
+
+def check_windows_admin_success(cmd: str, result: str) -> bool:
+    """Windows analogue of :func:`check_command_success`: a credential test reports success through
+    the shared ``LOGIN_AS_ROOT_SUCCESSFUL`` message; otherwise look for an Administrators/SYSTEM
+    marker in the output of an identity probe (``whoami`` / ``whoami /groups`` / ``whoami /all``)."""
+    if cmd.startswith("test_credential"):
+        return result == LOGIN_AS_ROOT_SUCCESSFUL
+    return is_admin_from_whoami(result)

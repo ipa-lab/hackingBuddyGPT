@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from typing import override
 
-from hackingBuddyGPT.capability import Capability
+from hackingBuddyGPT.capabilities._ssh_command import SSHCommandCapability
 from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
 
 
 @dataclass
-class SSHInteractiveRunCommand(Capability):
+class SSHInteractiveRunCommand(SSHCommandCapability):
     """Run a command in a persistent interactive SSH shell.
 
     The marker framing, sudo/su password answering and per-command timeout all live in
@@ -16,29 +16,16 @@ class SSHInteractiveRunCommand(Capability):
     """
 
     conn: SSHInteractiveConnection
-    timeout: int = 10
-    additional_description: str = ""
 
-    @override
-    def describe(self) -> str:
-        desc = (
-            "Give a command to be executed in a Linux shell. The environment is persistent across "
-            "commands, so an interactive escalation such as 'sudo su' stays in effect for the "
-            "commands that follow."
-        )
-        if self.conn.banner:
-            desc += f"\nThe banner of the machine you're running on is:\n{self.conn.banner}"
-        return desc + self.additional_description
-
-    @override
-    def get_name(self):
-        return "execute_bash_command"
+    _intro = (
+        "Give a command to be executed in a Linux shell. The environment is persistent across "
+        "commands, so an interactive escalation such as 'sudo su' stays in effect for the "
+        "commands that follow."
+    )
 
     @override
     async def __call__(self, command: str) -> str:
-        if command.startswith(self.get_name()):
-            cmd_parts = command.split(" ", 1)
-            command = "" if len(cmd_parts) == 1 else cmd_parts[1]
+        command = self._strip_command_prefix(command)
 
         out, err, _ = await self.conn.run(command, timeout=self.timeout)
         # a command can legitimately produce no output; only fall back to the error text (e.g. a

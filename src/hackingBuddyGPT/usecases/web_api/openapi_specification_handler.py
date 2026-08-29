@@ -6,7 +6,6 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 import yaml
-from hackingBuddyGPT.capabilities.yamlFile import YAMLFile
 from hackingBuddyGPT.utils.web_api.pattern_matcher import PatternMatcher
 from hackingBuddyGPT.utils.prompt_generation.information import PromptStrategy
 from hackingBuddyGPT.utils.web_api.http_response import extract_status_code_and_message
@@ -22,7 +21,6 @@ class OpenAPISpecificationHandler(object):
         openapi_spec (dict): The OpenAPI specification document structure.
         file_path (str): The path to the directory where the OpenAPI specification file will be stored.
         file (str): The complete path to the OpenAPI specification file.
-        _capabilities (dict): A dictionary to store capabilities related to YAML file handling.
     """
 
     def __init__(self, strategy: PromptStrategy, url: str,
@@ -58,7 +56,6 @@ class OpenAPISpecificationHandler(object):
         self.file = os.path.join(self.file_path, self.filename)
         print(f'self.file: {self.file}')
 
-        self._capabilities = {"yaml": YAMLFile()}
         self.unsuccessful_paths = []
 
         self.pattern_matcher = PatternMatcher()

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import paramiko
 from paramiko.ssh_exception import SSHException
 
-from hackingBuddyGPT.capability import Capability
+from hackingBuddyGPT.capabilities._test_credential import TestCredentialCapability
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 from hackingBuddyGPT.utils.shell_root_detection import LOGIN_AS_ROOT_SUCCESSFUL, is_root_from_id
 
@@ -13,14 +13,11 @@ _ID_USER = re.compile(r"\buid=\d+\(([^)]+)\)")
 
 
 @dataclass
-class SSHTestCredential(Capability):
+class SSHTestCredential(TestCredentialCapability):
     conn: SSHConnection
 
     def describe(self) -> str:
         return "give credentials to be tested."
-
-    def get_name(self):
-        return "test_credential"
 
     async def __call__(self, username: str, password: str) -> str:
         # interactive connectors expose a dedicated one-shot credential check (fresh connection,
@@ -28,7 +25,7 @@ class SSHTestCredential(Capability):
         if hasattr(self.conn, "test_credential"):
             id_output = await self.conn.test_credential(username, password)
             if id_output is None:
-                return f"Authentication error, credentials {username}:{password} are wrong\n"
+                return self._auth_error(username, password)
             return self._describe_identity(id_output)
 
         test_conn = self.conn.new_with(username=username, password=password)
@@ -38,7 +35,7 @@ class SSHTestCredential(Capability):
                     test_conn.init()
                     break
                 except paramiko.ssh_exception.AuthenticationException:
-                    return f"Authentication error, credentials {username}:{password} are wrong\n"
+                    return self._auth_error(username, password)
                 except SSHException:
                     if attempt == 9:
                         raise
@@ -47,7 +44,7 @@ class SSHTestCredential(Capability):
             return self._describe_identity(test_conn.run("id")[0])
 
         except paramiko.ssh_exception.AuthenticationException:
-            return "Authentication error, credentials are wrong\n"
+            return self._auth_error()
 
     @staticmethod
     def _describe_identity(id_output: str) -> str:

@@ -4,38 +4,22 @@ from typing import override
 
 from invoke import Responder
 
-from hackingBuddyGPT.capability import Capability
+from hackingBuddyGPT.capabilities._ssh_command import SSHCommandCapability
 from hackingBuddyGPT.utils.connectors.ssh_connection import SSHConnection
 
 
 @dataclass
-class SSHRunCommand(Capability):
+class SSHRunCommand(SSHCommandCapability):
     conn: SSHConnection
-    timeout: int = 10
-    additional_description: str = ""
 
-    @override
-    def describe(self) -> str:
-        desc = (
-            "Give a command to be executed in a linux shell. Each command runs in its own shell, so "
-            "state is not preserved between commands."
-        )
-        if self.conn.banner:
-            desc += f"\nThe banner of the machine you're running on is:\n{self.conn.banner}"
-        return desc + self.additional_description
-
-    @override
-    def get_name(self):
-        return "execute_bash_command"
+    _intro = (
+        "Give a command to be executed in a linux shell. Each command runs in its own shell, so "
+        "state is not preserved between commands."
+    )
 
     @override
     async def __call__(self, command: str) -> str:
-        if command.startswith(self.get_name()):
-            cmd_parts = command.split(" ", 1)
-            if len(cmd_parts) == 1:
-                command = ""
-            else:
-                command = cmd_parts[1]
+        command = self._strip_command_prefix(command)
 
         sudo_pass = Responder(
             pattern=r"\[sudo\] password for " + self.conn.username + ":",

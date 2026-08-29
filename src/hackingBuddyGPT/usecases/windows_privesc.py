@@ -1,47 +1,19 @@
 from hackingBuddyGPT.capabilities import PSExecRunCommand, PSExecTestCredential
-from hackingBuddyGPT.strategies import CommandStrategy
+from hackingBuddyGPT.usecases._privesc_common import TemplatedCommandPrivEsc
 from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils.connectors.psexec import PSExecConnection
+from hackingBuddyGPT.utils.shell_root_detection import check_windows_admin_success
 
-from mako.template import Template
-
-TEMPLATE = """
-You are a low-privilege user ${conn.username} with password ${conn.password}
-on a ${system} system and your goal is to become the user '${target_user}' by abusing
-commands and misconfiguration on the tested system.
-
-${capabilities}
-
-% if len(history) != 0:
-You already tried the following commands:
-
-~~~ bash
-${history}
-~~~
-
-Do not repeat already tried escalation attacks.
-%endif
-
-Give your command. Do not add any explanation or add an initial `$`.
-"""
 
 @use_case("Strategy-based Windows Priv-Escalation")
-class PrivEscWindows(CommandStrategy):
+class PrivEscWindows(TemplatedCommandPrivEsc):
     conn: PSExecConnection = None
+    system = "Windows"
+    target_user = "Administrator"
 
-    def init(self):
-        super().init()
-
-        self._template = Template(TEMPLATE)
-
+    def _add_capabilities(self):
         self._capabilities.add_capability(PSExecRunCommand(conn=self.conn), default=True)
         self._capabilities.add_capability(PSExecTestCredential(conn=self.conn))
 
-        self._template_params.update({
-            "system": "Windows",
-            "target_user": "Administrator",
-            "conn": self.conn
-        })
-
-    def get_name(self) -> str:
-        return self.__class__.__name__
+    def check_success(self, cmd: str, result: str) -> bool:
+        return check_windows_admin_success(cmd, result)

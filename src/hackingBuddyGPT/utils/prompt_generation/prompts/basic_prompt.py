@@ -1,6 +1,6 @@
 import os.path
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import List, Optional, Any
 from hackingBuddyGPT.utils.prompt_generation.information import (
     PenTestingInformation,
 )
@@ -359,3 +359,110 @@ class BasicPrompt(ABC):
                 test_cases = self.pentesting_information.explore_steps(self.purpose)
 
         return test_cases
+
+    def _get_pentesting_steps(self, move_type: str) -> List[str]:
+        """
+        Provides the steps for the chain-of-thought strategy when the context is pentesting.
+
+        Args:
+            move_type (str): The type of move to generate.
+            common_step (Optional[str]): A common step prefix to apply to each generated step.
+
+        Returns:
+            List[str]: A list of steps for the chain-of-thought strategy in the pentesting context.
+        """
+        if self.previous_purpose != self.purpose:
+            self.previous_purpose = self.purpose
+            self.reset_accounts()
+            self.test_cases = self.pentesting_information.explore_steps(self.purpose)
+            if self.purpose == PromptPurpose.SETUP:
+                if self.counter == 0:
+                    self.prompt_helper.accounts = self.pentesting_information.accounts
+            else:
+                self.pentesting_information.accounts = self.prompt_helper.accounts
+
+        else:
+
+            self.prompt_helper.accounts = self.pentesting_information.accounts
+        purpose = self.purpose
+
+        if move_type == "explore":
+            test_cases = self.get_test_cases(self.test_cases)
+            for test_case in test_cases:
+                if purpose not in self.transformed_steps.keys():
+                    self.transformed_steps[purpose] = []
+                # Transform steps into icl based on purpose
+                self.transformed_steps[purpose].append(
+                    self.transform_into_prompt_structure(test_case, purpose)
+                )
+
+                # Extract the CoT for the current purpose
+                built_cases = self.transformed_steps[purpose]
+
+                # Process steps one by one, with memory of explored steps and conditional handling
+                for built_case in built_cases:
+                    if built_case not in self.explored_steps and not self.all_substeps_explored(built_case):
+                        self.current_step = built_case
+                        # single step test case
+                        if len(built_case.get("steps")) == 1:
+                            self.current_sub_step = built_case.get("steps")[0]
+                            self.current_sub_step["path"] = built_case.get("path")[0]
+                        else:
+                            if self.counter < len(built_case.get("steps")):
+                                # multi-step test case
+                                self.current_sub_step = built_case.get("steps")[self.counter]
+                                if len(built_case.get("path")) > 1:
+                                    self.current_sub_step["path"] = built_case.get("path")[self.counter]
+                            self.explored_sub_steps.append(self.current_sub_step)
+                        self.explored_steps.append(built_case)
+
+                        self.prompt_helper.current_user = self.prompt_helper.get_user_from_prompt(self.current_sub_step, self.pentesting_information.accounts)
+                        self.prompt_helper.counter = self.counter
+
+
+
+                        step = self.transform_test_case_to_string(self.current_step, "steps")
+                        if self.prompt_helper.current_user is not None or isinstance(self.prompt_helper.current_user,
+                                                                                     dict):
+                            if "token" in self.prompt_helper.current_user and "'{{token}}'" in step:
+                                step = step.replace("'{{token}}'", self.prompt_helper.current_user.get("token"))
+                        self.counter += 1
+                        # if last step of exploration, change purpose to next
+                        self.next_purpose(built_case,test_cases, purpose)
+
+                        return [step]
+
+        # Default steps if none match
+        return ["Look for exploits."]
+
+    def _step_fields(self, test_case, counter):
+        """Return ``(security, expected_response_code, token, path)`` for step ``counter``.
+
+        Multi-step cases index ``expected_response_code`` / ``token`` / ``path`` per step; single-step
+        cases take the first entry. ``security`` falls back to the first entry when the list is shorter.
+        Shared by the CoT / ToT / ICL ``transform_into_prompt_structure`` overrides.
+        """
+        if counter < len(test_case["security"]):
+            security = test_case["security"][counter]
+        else:
+            security = test_case["security"][0]
+        if len(test_case["steps"]) > 1:
+            if counter < len(test_case["expected_response_code"]):
+                expected_response_code = test_case["expected_response_code"][counter]
+            else:
+                expected_response_code = test_case["expected_response_code"]
+            token = test_case["token"][counter]
+            path = test_case["path"][counter]
+        else:
+            expected_response_code = test_case["expected_response_code"]
+            token = test_case["token"][0]
+            path = test_case["path"][0]
+        return security, expected_response_code, token, path
+
+    @abstractmethod
+    def transform_into_prompt_structure(self, test_case, purpose):
+        pass
+
+    @abstractmethod
+    def transform_test_case_to_string(self, current_step, param):
+        pass

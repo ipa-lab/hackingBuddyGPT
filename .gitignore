@@ -14,10 +14,6 @@ src/hackingBuddyGPT.egg-info/
 build/
 dist/
 .coverage
-src/hackingBuddyGPT/usecases/web_api_testing/openapi_spec/
-src/hackingBuddyGPT/usecases/web_api_testing/converted_files/
-/src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/
-/src/hackingBuddyGPT/usecases/web_api_testing/documentation/reports/
 scripts/codespaces_ansible.cfg
 scripts/codespaces_ansible_hosts.ini
 scripts/codespaces_ansible_id_rsa
@@ -28,19 +24,20 @@ scripts/mac_ansible_id_rsa
 scripts/mac_ansible_id_rsa.pub
 .aider*
 *.bak
-src/hackingBuddyGPT/usecases/web_api_testing/documentation/openapi_spec/
-src/hackingBuddyGPT/usecases/web_api_testing/documentation/reports/
-src/hackingBuddyGPT/usecases/web_api_testing/retrieve_spotify_token.py
 config/my_configs/*
 config/configs/*
 config/configs/
 
 .DS_Store
 *.zip
-src/hackingBuddyGPT/usecases/web_api_documentation/openapi_spec/
-# generated test/run artifacts for the web_api_testing use-case
-src/hackingBuddyGPT/usecases/web_api_testing/reports/
-src/hackingBuddyGPT/usecases/web_api_testing/vulnerabilities/
-src/hackingBuddyGPT/usecases/web_api_testing/tests/
+
+
+# generated run artifacts for the unified web_api use-case (WebAPITesting)
+src/hackingBuddyGPT/usecases/web_api/openapi_spec/
+src/hackingBuddyGPT/usecases/web_api/reports/
+src/hackingBuddyGPT/usecases/web_api/vulnerabilities/
+src/hackingBuddyGPT/usecases/web_api/tests/
+src/hackingBuddyGPT/usecases/web_api/converted_files/
+src/hackingBuddyGPT/usecases/web_api/retrieve_spotify_token.py
 
 .claude

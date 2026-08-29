@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple
 
-from hackingBuddyGPT.capabilities import Capability
+from hackingBuddyGPT.capability import Capability
 from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
 from hackingBuddyGPT.utils.shell_root_detection import got_root, is_root_from_id
 

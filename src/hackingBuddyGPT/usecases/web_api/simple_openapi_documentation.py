@@ -1,0 +1,395 @@
+import json
+import os
+
+from dataclasses import dataclass, field
+from hackingBuddyGPT.capabilities.http_request import HTTPRequest
+from hackingBuddyGPT.capabilities.record_note import RecordNote
+from hackingBuddyGPT.strategies import SimpleStrategy
+from hackingBuddyGPT.usecases.web_api.openapi_specification_handler import \
+    OpenAPISpecificationHandler
+from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import strategy_from_string
+from hackingBuddyGPT.utils.prompt_generation.prompt_generation_helper import PromptGenerationHelper
+from hackingBuddyGPT.utils.prompt_generation.information import PromptContext
+from hackingBuddyGPT.utils.prompt_generation.prompt_engineer import PromptEngineer
+from hackingBuddyGPT.usecases.web_api.detection_response_handler import DetectionResponseHandler
+from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_endpoints_with_query
+from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
+from hackingBuddyGPT.capability import tool_call_to_action
+from hackingBuddyGPT.utils.limits import Limits
+from hackingBuddyGPT.utils.web_api.custom_datatypes import Prompt
+from hackingBuddyGPT.utils.configurable import parameter
+from rich.panel import Panel
+
+
+# perform_round alternates explore/exploit by turn number:
+EXPLORE_PHASE_LAST_TURN = 18   # turns 1..18 explore
+EXPLOIT_PHASE_LAST_TURN = 19   # turn 19 exploits until no help is needed; 20+ explores again
+
+# run_documentation step-advance thresholds (per-step query / stagnation counters):
+QUERY_STEP_QUERY_LIMIT = 600   # advance out of the QUERY step after this many queries
+PER_STEP_QUERY_LIMIT = 200     # advance any pre-QUERY step after this many queries
+EXPLOIT_QUERY_LIMIT = 50       # stop once exploit mode has issued this many queries
+NO_NEW_ENDPOINT_LIMIT = 30     # advance a step after this many queries yield no new endpoint
+
+
+# NOTE: This class is no longer a standalone CLI use case; it is the *detection phase engine*
+# driven by the merged `WebAPITesting` use case (see usecases/web_api/web_api_testing.py). It
+# stays a constructible dataclass so its unit tests and the orchestrator can build it. The
+# OpenAPI document it builds is handed to the testing phase via `built_surface_document()`.
+@dataclass
+class SimpleWebAPIDocumentation(SimpleStrategy):
+    """
+         SimpleWebAPIDocumentation is an agent class for automating REST API documentation.
+
+        Attributes:
+            llm (LiteLLM): The language model interface used for prompt execution.
+            _prompt_history (Prompt): Internal history of prompts exchanged with the LLM.
+            _context (dict): Context information used by capabilities (e.g., notes).
+            config_path (str): Path to the configuration file for the API under test.
+            strategy_string (str): Serialized string representing the documentation strategy to apply.
+            _http_method_description (str): Description for identifying HTTP methods in responses.
+            _http_method_template (str): Template string for formatting HTTP methods.
+            _http_methods (str): Comma-separated list of expected HTTP methods.
+            explore_steps_done (bool): Flag to indicate if exploration steps are completed.
+            found_all_http_methods (bool): Flag indicating whether all HTTP methods have been found.
+            all_steps_done (bool): Flag to indicate whether the full documentation process is complete.
+        """
+    _prompt_history: Prompt = field(default_factory=list)
+    _context: dict = field(default_factory=lambda: {"notes": list()})
+    _all_http_methods_found: bool = False
+    config_path: str = parameter(
+        desc="Configuration file path",
+        default="",
+    )
+
+    strategy_string: str = parameter(
+        desc="strategy string",
+        default="",
+    )
+
+    prompt_file: str = parameter(
+        desc="prompt file name",
+        default="",
+    )
+
+
+    _http_method_description: str = parameter(
+        desc="Pattern description for expected HTTP methods in the API response",
+        default="A string that represents an HTTP method (e.g., 'GET', 'POST', etc.).",
+    )
+    _http_method_template: str = parameter(
+        desc="Template to format HTTP methods in API requests, with {method} replaced by actual HTTP method names.",
+        default="{method}",
+    )
+    _http_methods: str = parameter(
+        desc="Expected HTTP methods in the API, as a comma-separated list.",
+        default="GET,POST,PUT,PATCH,DELETE",
+    )
+
+    def get_name(self) -> str:
+        return self.__class__.__name__
+
+    def built_surface_document(self) -> dict:
+        """Return the OpenAPI document discovered so far (standard ``paths`` layout)."""
+        return self._documentation_handler.to_openapi_document()
+
+    def init(self):
+        """Initialize the agent with configurations, capabilities, and handlers."""
+        super().init()
+        # Run limits (tokens/cost/duration/rounds). The orchestrator injects a shared Limits before
+        # init(); a never-reached default keeps this engine usable stand-alone / in tests.
+        if self.limits is None:
+            self.limits = Limits(max_rounds=0, max_tokens=0, max_cost=0, max_duration=0)
+        self.explore_steps_done = False
+        self.found_all_http_methods = False
+        self.all_steps_done = False
+
+        # load config file
+        self.strategy = strategy_from_string(self.strategy_string)
+
+        """Loads JSON configuration from the specified path."""
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError(f"Configuration file not found at {self.config_path}")
+        with open(self.config_path, 'r') as file:
+            config = json.load(file)
+            token = config.get("token")
+            self.host = config.get("host")
+            description = config.get("description")
+            self._correct_endpoints = config.get("correct_endpoints", {})
+            query_params = config.get("query_params", {})
+
+        self.categorized_endpoints = self.categorize_endpoints(self._correct_endpoints, query_params)
+
+        # setup capabilities
+        self._capabilities.add_capability(HTTPRequest(self.host))
+        self._capabilities.add_capability(RecordNote(self._context["notes"]))
+
+        self._prompt_context = PromptContext.DOCUMENTATION
+        name, initial_prompt = self._setup_initial_prompt(description=description)
+        self._initialize_handlers(config=config, description=description, token=token, name=name,
+                                  initial_prompt=initial_prompt)
+
+
+
+    def _setup_initial_prompt(self, description: str):
+        """
+           Configures the initial prompt for the API documentation process.
+
+           This prompt provides system-level instructions to the LLM, guiding it to start documenting
+           the REST API from scratch using an empty OpenAPI specification.
+
+           Args:
+               description (str): A short description of the website or service being documented.
+
+           Returns:
+               tuple:
+                   - str: The base project name, extracted from the config file name.
+                   - dict: The initial prompt dictionary to be added to the prompt history.
+           """
+        initial_prompt = {
+            "role": "system",
+            "content": (
+                f"You're tasked with documenting the REST APIs of a website hosted at {self.host}. "
+                f"The website is {description}. Start with an empty OpenAPI specification and be meticulous in "
+                f"documenting your observations as you traverse the APIs."
+            ),
+        }
+
+        base_name = os.path.basename(self.config_path)
+
+        # Split the base name by '_config' and take the first part
+        name = base_name.split('_config')[0]
+
+        self.prompt_helper = PromptGenerationHelper(self.host, description)
+        return name, initial_prompt
+
+    def _initialize_handlers(self, config, description, token, name, initial_prompt):
+        """
+           Initializes the core handler components required for API exploration and documentation.
+
+           This includes setting up:
+           - Capabilities such as HTTP request execution.
+           - LLM interaction handler.
+           - Response handling and OpenAPI documentation logic.
+           - Prompt engineering strategy.
+
+           Args:
+               config (dict): Configuration dictionary containing API setup options.
+               description (str): Description of the target API or web service.
+               token (str): Authorization token (if any) to be used for API interaction.
+               name (str): Base name of the current documentation session.
+               initial_prompt (dict): Initial system prompt for the LLM.
+           """
+        # The single capability the model is offered (and forced to call) each detection round.
+        self.all_capabilities = {"http_request": HTTPRequest(self.host)}
+
+        self._response_handler = DetectionResponseHandler(prompt_context=self._prompt_context,
+                                                          prompt_helper=self.prompt_helper, config=config)
+        self._documentation_handler = OpenAPISpecificationHandler(
+            self.strategy, self.host, description, name
+        )
+
+        self._prompt_history.append(initial_prompt)
+
+        self._prompt_engineer = PromptEngineer(
+            strategy=self.strategy,
+            context=PromptContext.DOCUMENTATION,
+            prompt_helper=self.prompt_helper,
+            open_api_spec=self._documentation_handler.openapi_spec,
+            rest_api_info=(token, self.host, self._correct_endpoints, self.categorized_endpoints),
+            prompt_file=self.prompt_file
+        )
+
+    def categorize_endpoints(self, endpoints, query: dict):
+
+        """
+            Categorizes a list of API endpoints based on their path depth and structure.
+
+            Endpoints are grouped into categories such as root-level, instance-level, subresources,
+            and multi-level/related resources. Useful for prioritizing exploration and testing.
+
+            Args:
+                endpoints (list[str]): A list of API endpoint paths.
+                query (dict): Dictionary of query parameters to associate with the categorized endpoints.
+
+            Returns:
+                dict: A dictionary containing categorized endpoint groups:
+                    - "root_level": Endpoints like `/users`
+                    - "instance_level": Endpoints with one ID parameter like `/users/{id}`
+                    - "subresource": Direct subpaths without ID
+                    - "related_resource": Nested resources with an ID in the middle like `/users/{id}/posts`
+                    - "multi-level_resource": Deeper or complex nested resources
+                    - "query": Query parameter values from the input
+            """
+        return categorize_endpoints_with_query(endpoints, query)
+
+    def all_http_methods_found(self, turn: int) -> bool:
+        """
+           Checks whether all expected HTTP methods (GET, POST, PUT, DELETE) have been discovered
+           for each endpoint by the documentation engine.
+
+           Args:
+               turn (int): The current execution round or step index.
+
+           Returns:
+               bool: True if all methods are found and all exploration steps are complete, False otherwise.
+
+           Side Effects:
+               - Sets `self.found_all_http_methods` to True if conditions are met.
+           """
+
+        found_count = sum(len(endpoints) for endpoints in self._documentation_handler.endpoint_methods.values())
+        if found_count >= len(self._correct_endpoints) and self.all_steps_done:
+            self.found_all_http_methods = True
+        return self.found_all_http_methods
+
+    async def perform_round(self, turn: int) -> bool:
+        """
+           Executes a round of the API documentation loop based on the current turn number.
+
+           The method selects between exploration and exploitation modes:
+           - Turns 1–18: Run exploration (`_explore_mode`)
+           - Turn 19: Switch to exploit mode until all endpoints are fully documented
+           - Turn 20+: Resume exploration for completeness
+
+           Args:
+               turn (int): The current iteration index in the documentation process.
+
+           Returns:
+               bool: True if all HTTP methods have been discovered by the end of the round.
+           """
+
+        if turn <= EXPLORE_PHASE_LAST_TURN:
+            await self._explore_mode(turn)
+        elif turn <= EXPLOIT_PHASE_LAST_TURN:
+            await self._exploit_until_no_help_needed(turn)
+        else:
+            await self._explore_mode(turn)
+
+        return self.all_http_methods_found(turn)
+
+    async def _explore_mode(self, turn: int) -> None:
+        """
+         Executes the exploration phase for a documentation round.
+
+         In this mode, the agent probes new API endpoints, extracts metadata,
+         and updates its OpenAPI spec. The process continues until:
+         - No new endpoints are discovered for several steps.
+         - A maximum exploration depth is reached.
+         - All HTTP methods are found.
+
+         Args:
+             turn (int): The current round number to be logged and used for prompt context.
+         """
+
+        last_endpoint_found_x_steps_ago, new_endpoint_count = 0, len(self._documentation_handler.endpoint_methods)
+        last_found_endpoints = len(self._prompt_engineer.prompt_helper.found_endpoints)
+
+        while (
+                last_endpoint_found_x_steps_ago <= new_endpoint_count + 5
+                and last_endpoint_found_x_steps_ago <= 10
+                and not self.found_all_http_methods
+        ):
+            if self.explore_steps_done :
+                await self.run_documentation(turn, "exploit")
+            else:
+                await self.run_documentation(turn, "explore")
+            current_count = len(self._prompt_engineer.prompt_helper.found_endpoints)
+            last_endpoint_found_x_steps_ago = last_endpoint_found_x_steps_ago + 1 if current_count == last_found_endpoints else 0
+            last_found_endpoints = current_count
+            if (updated_count := len(self._documentation_handler.endpoint_methods)) > new_endpoint_count:
+                new_endpoint_count = updated_count
+                self._prompt_engineer.open_api_spec = self._documentation_handler.openapi_spec
+
+    async def _exploit_until_no_help_needed(self, turn: int) -> None:
+        """
+           Repeatedly performs exploit mode to gather deeper documentation details
+           for endpoints flagged as needing further clarification.
+
+           This runs until all such endpoints are fully explained by the LLM agent.
+
+           Args:
+               turn (int): Current round number, passed to `run_documentation()` for tracking.
+
+           """
+        while self._prompt_engineer.prompt_helper.get_endpoints_needing_help():
+            await self.run_documentation(turn, "exploit")
+            self._prompt_engineer.open_api_spec = self._documentation_handler.openapi_spec
+
+    async def run_documentation(self, turn: int, move_type: str) -> None:
+        """
+            Runs a full documentation interaction cycle with the LLM agent for the given turn and mode.
+
+            This method forms the core of the documentation loop. It generates prompts, interacts with
+            the LLM to simulate API calls, handles responses, updates the OpenAPI spec, and determines
+            when to advance exploration or exploitation steps based on multiple heuristics.
+
+            Args:
+                turn (int): The current turn index (used for context and state progression).
+                move_type (str): Either `"explore"` or `"exploit"`, determining the type of documentation logic used.
+
+            """
+        is_good = False
+        counter = 0
+        while not is_good and not self.limits.reached():
+            prompt = self._prompt_engineer.generate_prompt(turn=turn, move_type=move_type,
+                                                           prompt_history=self._prompt_history)
+            # Force the model to call http_request, then rebuild the same un-executed action the
+            # FSM used to receive (via tool_call_to_action) so handle_response is unchanged.
+            llm_result = self.llm.get_response(prompt, capabilities=self.all_capabilities, tool_choice="required")
+            self.limits.register_message(llm_result)
+            message_id = await self.log.call_response(llm_result)
+            self.log.console.print(Panel(prompt[-1]["content"], title="system"))
+
+            message = llm_result.result
+            if not getattr(message, "tool_calls", None):
+                continue
+            tool_call = message.tool_calls[0]
+            response = tool_call_to_action(tool_call, self.all_capabilities)
+
+            is_good, self._prompt_history, result, result_str = await self._response_handler.handle_response(
+                response, message, message_id, tool_call, self._prompt_history, self.log, move_type)
+
+            if result == None or "Could not request" in result:
+                continue
+            self._prompt_history, self._prompt_engineer = self._documentation_handler.document_response(
+                result, response, result_str, self._prompt_history, self._prompt_engineer
+            )
+            self.prompt_helper.endpoint_examples = self._documentation_handler.endpoint_examples
+
+            if self._prompt_engineer.prompt_helper.current_step == ExploreStep.DONE and move_type == "explore":
+                is_good = True
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+            if self._prompt_engineer.prompt_helper.current_step == ExploreStep.INSTANCE and len(self.prompt_helper._get_instance_level_endpoints("")) ==0:
+                is_good = True
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+
+
+            if self._response_handler.query_counter == QUERY_STEP_QUERY_LIMIT and self.prompt_helper.current_step == ExploreStep.QUERY:
+                is_good = True
+                self.explore_steps_done = True
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+
+            if  move_type == "exploit" :
+                if self._response_handler.query_counter >= EXPLOIT_QUERY_LIMIT :
+                    is_good = True
+                    self.all_steps_done = True
+
+            if self._prompt_engineer.prompt_helper.current_step < ExploreStep.QUERY and self._response_handler.no_new_endpoint_counter > NO_NEW_ENDPOINT_LIMIT:
+                is_good = True
+                self._response_handler.no_new_endpoint_counter = 0
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+
+            if self._prompt_engineer.prompt_helper.current_step < ExploreStep.QUERY and self._response_handler.query_counter > PER_STEP_QUERY_LIMIT:
+                is_good = True
+                self.prompt_helper.current_step += 1
+                self._response_handler.query_counter = 0
+
+            counter = counter + 1
+            self.prompt_helper.found_endpoints = list(set(self._prompt_engineer.prompt_helper.found_endpoints))
+
+        self.all_http_methods_found(turn)

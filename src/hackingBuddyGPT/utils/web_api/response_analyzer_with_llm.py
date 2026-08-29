@@ -1,16 +1,15 @@
 import json
-import re
-from typing import Any, Dict
-from unittest.mock import MagicMock
+from typing import Any
 
-from hackingBuddyGPT.capabilities.http_request import HTTPRequest
 from hackingBuddyGPT.utils.prompt_generation.information import (
     PenTestingInformation,
 )
 from hackingBuddyGPT.utils.prompt_generation.information import (
     PromptPurpose,
 )
-from hackingBuddyGPT.utils.web_api.llm_handler import LLMHandler
+from hackingBuddyGPT.capability import tool_call_to_action
+from hackingBuddyGPT.utils.limits import Limits
+from hackingBuddyGPT.utils.web_api.http_response import extract_status_code_and_message
 from hackingBuddyGPT.utils import tool_message
 
 
@@ -23,43 +22,27 @@ class ResponseAnalyzerWithLLM:
         purpose (PromptPurpose): The specific purpose for analyzing the HTTP response.
     """
 
-    def __init__(self, purpose: PromptPurpose = None, llm_handler: LLMHandler = None,
-                 pentesting_info: PenTestingInformation = None, capacity: Any = None, prompt_helper: Any = None):
+    def __init__(self, purpose: PromptPurpose = None, llm: Any = None, capabilities: dict = None,
+                 pentesting_info: PenTestingInformation = None, prompt_helper: Any = None,
+                 limits: Limits = None):
         """
         Initializes the ResponseAnalyzer with an optional purpose and an LLM instance.
 
         Args:
             purpose (PromptPurpose, optional): The purpose for analyzing the HTTP response. Default is None.
-            llm_handler (LLMHandler): Handles the llm operations. Default is None.
+            llm (LiteLLM): The LLM upstream used for the analysis tool calls. Default is None.
+            capabilities (dict): Name -> Capability map the analysis steps may call. Default is None.
             prompt_engineer(PromptEngineer): Handles the prompt operations. Default is None.
+            limits (Limits): Run limits the analysis LLM calls register their tokens/cost into.
         """
         self.purpose = purpose
-        self.llm_handler = llm_handler
+        self.llm = llm
+        self.capabilities = capabilities or {}
         self.pentesting_information = pentesting_info
-        self.capacity = capacity
         self.prompt_helper = prompt_helper
+        # A never-reached default keeps standalone/analyzer-only use unconstrained.
+        self.limits = limits if limits is not None else Limits(max_rounds=0, max_tokens=0, max_cost=0, max_duration=0)
         self.token = ""
-
-    def set_purpose(self, purpose: PromptPurpose):
-        """
-        Sets the purpose for analyzing the HTTP response.
-
-        Args:
-            purpose (PromptPurpose): The specific purpose for analyzing the HTTP response.
-        """
-        self.purpose = purpose
-
-    def print_results(self, results: Dict[str, str]):
-        """
-        Prints the LLM responses in a structured and readable format.
-
-        Args:
-            results (dict): The LLM responses to be printed.
-        """
-        for prompt, response in results.items():
-            print(f"Prompt: {prompt}")
-            print(f"Response: {response}")
-            print("-" * 50)
 
     async def analyze_response(self, raw_response: str, prompt_history: list, analysis_context: Any) -> tuple[list[str], Any]:
         """
@@ -108,60 +91,26 @@ class ResponseAnalyzerWithLLM:
                 if line.startswith("{") or line.startswith("["):
                     body = line
 
-        status_line = header_lines[0].strip()
-
-        match = re.search(r"^HTTP/\d\.\d\s+(\d+)\s+(.*)", raw_response, re.MULTILINE)
-        if match:
-            status_code = match.group(1)
-        else:
-            status_code = None
-        if body.__contains__("<!DOCTYPE"):
+        status_code, _ = extract_status_code_and_message(raw_response)
+        if "<!DOCTYPE" in body:
             body = ""
-
         elif status_code in ["500", "400", "404", "422"]:
-            body = body
+            pass  # keep error-response bodies verbatim
         else:
-
-            if body.__contains__("<html>"):
+            if "<html>" in body:
                 body = ""
             elif body.startswith("["):
                 body = json.loads(body)
-                print(f'"body:{body}')
-            elif body.__contains__("{") and (body != '' or body != ""):
-                if not  body.lower().__contains__("png") :
+            elif "{" in body:
+                if "png" not in body.lower():
                     body = json.loads(body)
-                    if "token" in body:
-
-                        self.prompt_helper.current_user["token"] = body["token"]
-                        self.token = body["token"]
-                        for account in self.prompt_helper.accounts:
-                                if account.get("x") == self.prompt_helper.current_user.get("x"):
-                                    if  "token" not in account.keys():
-                                        account["token"] = self.token
-                                    else:
-                                        if account["token"] != self.token:
-                                            account["token"] = self.token
-                                    print(f'token:{self.token}')
-                                    print(f"accoun:{account}")
-                    if any (value in body.values() for value in self.prompt_helper.current_user.values()):
-                        if "id" in body:
-                            for account in self.prompt_helper.accounts:
-                                if account.get("x") == self.prompt_helper.current_user.get(
-                                        "x") and "id" not in account.keys():
-                                    account["id"] = body["id"]
-
-
-                    #self.replace_account()
+                    self._capture_token(body)
+                    self._capture_ids(body)
             elif isinstance(body, list) and len(body) > 1:
                 body = body[0]
-                if self.prompt_helper.current_user in body:
-                    self.prompt_helper.current_user["id"] = self.get_id_from_user(body)
-                    if self.prompt_helper.current_user not in self.prompt_helper.accounts:
-                        self.prompt_helper.accounts.append(self.prompt_helper.current_user)
+                self._note_account_from_list(body)
             else:
-                if self.prompt_helper.current_user not in self.prompt_helper.accounts:
-                    self.prompt_helper.accounts.append(self.prompt_helper.current_user)
-
+                self._note_current_account()
 
         headers = {
             key.strip(): value.strip()
@@ -172,6 +121,42 @@ class ResponseAnalyzerWithLLM:
             body = ""
 
         return status_code, headers, body
+
+    # ------------------------------------------------------------------ account/token state capture
+    def _capture_token(self, body: dict) -> None:
+        """If the body carries a token, record it on the analyzer, the current user and its account."""
+        if "token" not in body:
+            return
+        self.prompt_helper.current_user["token"] = body["token"]
+        self.token = body["token"]
+        for account in self.prompt_helper.accounts:
+            if account.get("x") == self.prompt_helper.current_user.get("x"):
+                if "token" not in account.keys():
+                    account["token"] = self.token
+                elif account["token"] != self.token:
+                    account["token"] = self.token
+
+    def _capture_ids(self, body: dict) -> None:
+        """When a body value matches the current user, copy the body's id onto the matching account."""
+        if not any(value in body.values() for value in self.prompt_helper.current_user.values()):
+            return
+        if "id" not in body:
+            return
+        for account in self.prompt_helper.accounts:
+            if account.get("x") == self.prompt_helper.current_user.get("x") and "id" not in account.keys():
+                account["id"] = body["id"]
+
+    def _note_account_from_list(self, body) -> None:
+        """List-body branch: adopt the current user's id from the body and register the account."""
+        if self.prompt_helper.current_user in body:
+            self.prompt_helper.current_user["id"] = self.get_id_from_user(body)
+            if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+                self.prompt_helper.accounts.append(self.prompt_helper.current_user)
+
+    def _note_current_account(self) -> None:
+        """Fallback: ensure the current user is registered as an account."""
+        if self.prompt_helper.current_user not in self.prompt_helper.accounts:
+            self.prompt_helper.accounts.append(self.prompt_helper.current_user)
 
     def get_id_from_user(self, body) -> str:
         id = body.split("id")[1].split(",")[0]
@@ -185,13 +170,16 @@ class ResponseAnalyzerWithLLM:
         # Log current step
         prompt_history.append({"role": "system", "content": step + "Stay within the output limit."})
 
-        # Call the LLM and handle the response
-        response, completion = self.llm_handler.execute_prompt_with_specific_capability(prompt_history, capability)
-        message = completion.choices[0].message
-        tool_call_id = message.tool_calls[0].id
+        # Force the model to call the given capability, then execute the resulting action.
+        caps = {capability: self.capabilities[capability]}
+        llm_result = self.llm.get_response(prompt_history, capabilities=caps, tool_choice="required")
+        self.limits.register_message(llm_result)
+        message = llm_result.result
+        tool_call = message.tool_calls[0]
+        tool_call_id = tool_call.id
+        response = tool_call_to_action(tool_call, caps)
 
-        msg = {"role": message.role, "content": message.content, "tool_calls": message.tool_calls}
-        prompt_history.append(msg)
+        prompt_history.append(message)
 
         # Execute any tool call results and handle outputs
         try:
@@ -256,65 +244,3 @@ class ResponseAnalyzerWithLLM:
 
 
         return status_code, additional_analysis_context, full_response
-
-    def replace_account(self):
-        # Now let's replace the existing account if it exists, otherwise add it
-        replaced = False
-        for i, account in enumerate(self.prompt_helper.accounts):
-            # Compare the 'id' (or any unique field) to find the matching account
-            if account.get("x") == self.prompt_helper.current_user.get("x"):
-                self.prompt_helper.accounts[i] = self.prompt_helper.current_user
-                replaced = True
-                break
-
-        # If we did not replace any existing account, append this as a new account
-        if not replaced:
-            self.prompt_helper.accounts.append(self.prompt_helper.current_user)
-
-
-
-if __name__ == "__main__":
-    # Example HTTP response to parse
-    raw_http_response = """HTTP/1.1 404 Not Found
-    Date: Fri, 16 Aug 2024 10:01:19 GMT
-    Content-Type: application/json; charset=utf-8
-    Content-Length: 2
-    Connection: keep-alive
-    Report-To: {"group":"heroku-nel","max_age":3600,"endpoints":[{"url":"https://nel.heroku.com/reports?ts=1723802269&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=dkvm744qehjJmab8kgf%2BGuZA8g%2FCCIkfoYc1UdYuZMc%3D"}]}
-    Reporting-Endpoints: heroku-nel=https://nel.heroku.com/reports?ts=1723802269&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=dkvm744qehjJmab8kgf%2BGuZA8g%2FCCIkfoYc1UdYuZMc%3D
-    Nel: {"report_to":"heroku-nel","max_age":3600,"success_fraction":0.005,"failure_fraction":0.05,"response_headers":["Via"]}
-    X-Powered-By: Express
-    X-Ratelimit-Limit: 1000
-    X-Ratelimit-Remaining: 999
-    X-Ratelimit-Reset: 1723802321
-    Vary: Origin, Accept-Encoding
-    Access-Control-Allow-Credentials: true
-    Cache-Control: max-age=43200
-    Pragma: no-cache
-    Expires: -1
-    X-Content-Type-Options: nosniff
-    Etag: W/"2-vyGp6PvFo4RvsFtPoIWeCReyIC8"
-    Via: 1.1 vegur
-    CF-Cache-Status: HIT
-    Age: 210
-    Server: cloudflare
-    CF-RAY: 8b40951728d9c289-VIE
-    alt-svc: h3=":443"; ma=86400
-
-    {}"""
-    llm_mock = MagicMock()
-    capabilities = {
-        "submit_http_method": HTTPRequest("https://jsonplaceholder.typicode.com"),
-        "http_request": HTTPRequest("https://jsonplaceholder.typicode.com"),
-    }
-
-    # Initialize the ResponseAnalyzer with a specific purpose and an LLM instance
-    response_analyzer = ResponseAnalyzerWithLLM(
-        PromptPurpose.PARSING, llm_handler=LLMHandler(llm=llm_mock, capabilities=capabilities)
-    )
-
-    # Generate and process LLM prompts based on the HTTP response
-    results = response_analyzer.analyze_response(raw_http_response)
-
-    # Print the LLM processing results
-    response_analyzer.print_results(results)

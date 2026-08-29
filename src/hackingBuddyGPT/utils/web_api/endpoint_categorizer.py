@@ -47,3 +47,21 @@ def categorize_by_structure(endpoints: Iterable[str], id_token: str = "id") -> D
         "related_resource": related_resource,
         "multi_level_resource": multi_level_resource,
     }
+
+
+def categorize_endpoints_with_query(endpoints: Iterable[str], query: dict) -> Dict[str, List]:
+    """Structural categorisation plus the caller-supplied query values.
+
+    Returns the exploration-facing shape consumed by the web-API use-cases: the five
+    structural buckets from :func:`categorize_by_structure` (with the ``multi-level_resource``
+    hyphenated spelling that shape uses) plus a ``query`` entry carrying ``query.values()``.
+    """
+    buckets = categorize_by_structure(endpoints)
+    return {
+        "root_level": buckets["root_level"],
+        "instance_level": buckets["instance_level"],
+        "subresource": buckets["subresource"],
+        "query": query.values(),
+        "related_resource": buckets["related_resource"],
+        "multi-level_resource": buckets["multi_level_resource"],
+    }

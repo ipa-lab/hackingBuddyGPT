@@ -53,7 +53,7 @@ class LiteLLM(LLM):
             # which is sometimes needed to route traffic through an intercepting proxy.
             litellm.client_session = httpx.Client(proxy=self.proxy, verify=not self.proxy_insecure)
 
-    def get_response(self, prompt, *, capabilities: dict[str, Capability] | None = None, **kwargs) -> LLMResult:
+    def get_response(self, prompt, *, capabilities: dict[str, Capability] | None = None, tool_choice=None, **kwargs) -> LLMResult:
         chat_style = isinstance(prompt, list)
 
         if chat_style:
@@ -70,8 +70,12 @@ class LiteLLM(LLM):
             messages = [user_message(content)]
             tools = None
 
+        # tool_choice (e.g. "required" or {"type": "function", "function": {"name": ...}}) is only
+        # meaningful when tools are offered; ignore it otherwise so a stray value can't reach the API.
+        effective_tool_choice = tool_choice if tools else None
+
         tic = datetime.datetime.now()
-        response = self.raw_completion(messages, tools=tools)
+        response = self.raw_completion(messages, tools=tools, tool_choice=effective_tool_choice)
         duration = datetime.datetime.now() - tic
 
         message = response.choices[0].message

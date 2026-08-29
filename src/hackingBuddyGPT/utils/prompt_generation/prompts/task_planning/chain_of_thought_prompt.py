@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from hackingBuddyGPT.utils.prompt_generation.information.prompt_information import (
     PromptContext,
     PromptPurpose,
@@ -55,7 +55,7 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
                 "Let's think step by step"] + chain_of_thought_steps[1:]
 
         elif self.context == PromptContext.PENTESTING:
-            chain_of_thought_steps = self._get_pentesting_steps(move_type,"")
+            chain_of_thought_steps = self._get_pentesting_steps(move_type)
         else:
             steps = self.parse_prompt_file()
             chain_of_thought_steps = self._get_documentation_steps([],move_type, steps)
@@ -149,26 +149,8 @@ class ChainOfThoughtPrompt(TaskPlanningPrompt):
 
         # Process steps in the test case
         counter = 0
-        #print(f' test case:{test_case}')
         for step in test_case["steps"]:
-            if counter < len(test_case["security"]):
-                security = test_case["security"][counter]
-            else:
-                security = test_case["security"][0]
-
-            if len(test_case["steps"]) > 1:
-                if counter < len(test_case["expected_response_code"]):
-                    expected_response_code = test_case["expected_response_code"][counter]
-
-                else:
-                    expected_response_code = test_case["expected_response_code"]
-
-                token = test_case["token"][counter]
-                path = test_case["path"][counter]
-            else:
-                expected_response_code = test_case["expected_response_code"]
-                token = test_case["token"][0]
-                path = test_case["path"][0]
+            security, expected_response_code, token, path = self._step_fields(test_case, counter)
 
             step_details = {
                 "purpose": purpose,

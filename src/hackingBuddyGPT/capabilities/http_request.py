@@ -5,7 +5,7 @@ from typing import Literal, override
 
 import requests
 
-from . import Capability
+from hackingBuddyGPT.capability import Capability
 
 
 @dataclass

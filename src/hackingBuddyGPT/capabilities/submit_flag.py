@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Callable, Awaitable, Set, override
 
-from . import Capability
+from hackingBuddyGPT.capability import Capability
 
 
 @dataclass

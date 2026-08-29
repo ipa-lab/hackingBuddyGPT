@@ -87,10 +87,16 @@ class AutonomousUseCase(UseCase, abc.ABC):
 
             await self.after_run()
 
+            # Success == the run ended without a limit-reason: an explicit complete() (e.g. a strategy's
+            # check_success or an agent's task_solved) leaves reason unset. Returning it lets orchestrators
+            # like call_usecase_from_usecase consume the outcome; use-cases that ignore the return are
+            # unaffected.
             if self.limits.reason is not None:
                 await self.log.run_was_failure(self.limits.reason)
+                return False
             else:
                 await self.log.run_was_success()
+                return True
 
         except Exception:
             import traceback

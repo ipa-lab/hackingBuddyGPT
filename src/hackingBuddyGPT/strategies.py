@@ -4,9 +4,10 @@ import datetime
 from dataclasses import dataclass
 from mako.template import Template
 from hackingBuddyGPT.capability import capabilities_to_simple_text_handler
-from hackingBuddyGPT.usecases.usecase import UseCase
+from hackingBuddyGPT.usecases.usecase import AutonomousUseCase, UseCase
 from hackingBuddyGPT.utils import llm_util
 from hackingBuddyGPT.utils.histories import HistoryCmdOnly, HistoryFull, HistoryNone
+from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.llm import LiteLLM
 from hackingBuddyGPT.utils.logging import log_conversation, Logger, log_param, log_section
 from hackingBuddyGPT.utils.capability_manager import CapabilityManager
@@ -14,7 +15,11 @@ from typing import List
 
 
 @dataclass
-class CommandStrategy(UseCase, abc.ABC):
+class CommandStrategy(AutonomousUseCase, abc.ABC):
+    """Simple-text command strategy: templates the whole history into one prompt each round and
+    parses a bare command out of the reply. Runs on the shared ``AutonomousUseCase.run`` loop
+    (Limits-driven) like every other use-case; ``max_turns`` is folded into the round limit in
+    ``init``, and success is signalled through ``limits.complete()`` when ``check_success`` holds."""
 
     _capabilities: CapabilityManager = None
 
@@ -33,7 +38,9 @@ class CommandStrategy(UseCase, abc.ABC):
     enable_compressed_history: bool = False
 
     async def before_run(self):
-        pass
+        # The shared loop calls this once before the first round; expose the capability list to the
+        # template here (it used to be set at the top of the old bespoke run()).
+        self._template_params["capabilities"] = self._capabilities.get_capability_block()
 
     async def after_command_execution(self, cmd, result, got_root):
         pass
@@ -55,39 +62,17 @@ class CommandStrategy(UseCase, abc.ABC):
             else:
                 self._history = HistoryFull()
 
-    @log_conversation("Starting run...")
-    async def run(self, configuration):
-
-        self.configuration = configuration
-        await self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
-
-        self._template_params["capabilities"] = self._capabilities.get_capability_block()
-
-        await self.before_run()
-
-        task_successful = False
-        turn = 1
-        try:
-            while turn <= self.max_turns and not task_successful:
-                async with self.log.section(f"round {turn}"):
-                    self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
-                    task_successful = await self.perform_round(turn)
-                    turn += 1
-        except Exception:
-            import traceback
-            await self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
-            raise
-
-        # write the final result to the database and console
-        if task_successful:
-            await self.log.run_was_success()
-        else:
-            await self.log.run_was_failure("maximum turn number reached")
-        return task_successful
+        # Bound the run with Limits like every other use-case. max_turns is this strategy's round
+        # budget, so fold it into the round cap (strictest of it and any injected --max_rounds wins);
+        # the injected cost/token/duration caps apply on top. A never-reached default keeps the class
+        # usable when built directly (e.g. in tests) with no Limits injected.
+        if self.limits is None:
+            self.limits = Limits(max_rounds=0, max_tokens=0, max_cost=0, max_duration=0)
+        self.limits.max_rounds = min(self.max_turns, self.limits.max_rounds or self.max_turns)
 
     @log_conversation("Asking LLM for a new command(s)...")
-    async def perform_round(self, turn: int) -> bool:
-         # get the next command and run it
+    async def perform_round(self):
+        # get the next command and run it
         cmd, message_id = await self.get_next_command()
 
         cmds = self.postprocess_commands(cmd)
@@ -99,10 +84,11 @@ class CommandStrategy(UseCase, abc.ABC):
             task_successful = self.check_success(cmd, result)
             await self.after_command_execution(cmd, result, task_successful)
             if task_successful:
-                return True
+                # Mark the run solved; the shared loop's limits.reached() then ends it as a success.
+                self.limits.complete()
+                break
 
-        # signal if we were successful in our task
-        return False
+        self.limits.register_round()
 
     @log_section("Asking LLM for a new command...")
     async def get_next_command(self) -> tuple[str, int]:
@@ -115,6 +101,9 @@ class CommandStrategy(UseCase, abc.ABC):
         self._template_params.update({"history": history})
         cmd = self.llm.get_response(self._template, **self._template_params)
         message_id = await self.log.call_response(cmd)
+        # Account this round's LLM call against the run limits so the cost/token caps apply to strategy
+        # use-cases too (duration is tracked by the loop; rounds by register_round in perform_round).
+        self.limits.register_message(cmd)
 
         return cmd.result, message_id
 
@@ -151,8 +140,6 @@ class SimpleStrategy(UseCase, abc.ABC):
 
     log: Logger = log_param
 
-    _got_root: bool = False
-
     _capabilities: CapabilityManager = None
 
     def init(self):
@@ -170,31 +157,10 @@ class SimpleStrategy(UseCase, abc.ABC):
         pass
 
     async def run(self, configuration):
-        self.configuration = configuration
-        await self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
-
-        await self.before_run()
-
-        turn = 1
-        try:
-            while turn <= self.max_turns and not self._got_root:
-                async with self.log.section(f"round {turn}"):
-                    self.log.console.log(f"[yellow]Starting turn {turn} of {self.max_turns}")
-
-                    self._got_root = await self.perform_round(turn)
-
-                    turn += 1
-
-            await self.after_run()
-
-            # write the final result to the database and console
-            if self._got_root:
-                await self.log.run_was_success()
-            else:
-                await self.log.run_was_failure("maximum turn number reached")
-
-            return self._got_root
-        except Exception:
-            import traceback
-            await self.log.run_was_failure("exception occurred", details=f":\n\n{traceback.format_exc()}")
-            raise
+        # SimpleStrategy subclasses are phase engines driven by an orchestrator (e.g. WebAPITesting
+        # calls their perform_round(turn) directly and owns the round/limits loop). None is run via
+        # this method: WebAPITesting overrides run(); the engines are stepped externally. The concrete
+        # stub keeps subclasses instantiable while making the contract explicit.
+        raise NotImplementedError(
+            "SimpleStrategy subclasses are driven by their orchestrator; call perform_round() directly."
+        )

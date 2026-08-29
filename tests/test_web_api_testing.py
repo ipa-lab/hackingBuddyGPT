@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from hackingBuddyGPT.usecases.web_api_testing.simple_web_api_testing import (
+from hackingBuddyGPT.usecases.web_api.simple_web_api_testing import (
     SimpleWebAPITesting,
 )
 from hackingBuddyGPT.utils import Console
@@ -45,42 +45,31 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
 
     @patch("time.perf_counter", side_effect=[1, 2])  # Mocking perf_counter for consistent timing
     def test_perform_round(self, mock_perf_counter):
-        # Prepare mock responses
-        mock_response = MagicMock()
-        mock_completion = MagicMock()
+        # The testing round now runs on the standard loop: llm.get_response(tool_choice="required")
+        # returns an assistant message with a tool call, which is executed via the CapabilityManager.
+        tool_call = MagicMock()
+        tool_call.id = "tool_call_1"
+        tool_call.function.name = "ProposedHTTPRequest"
+        tool_call.function.arguments = '{"method": "GET", "path": "/users/"}'
 
-        # Setup completion response with mocked data
-        mock_completion.choices[0].message.content = "Mocked LLM response"
-        mock_completion.choices[0].message.tool_calls = [MagicMock(id="tool_call_1")]
-        mock_completion.usage.prompt_tokens = 10
-        mock_completion.usage.completion_tokens = 20
+        message = MagicMock()
+        message.tool_calls = [tool_call]
 
-        # Mock the LLM handler boundary: (action, completion) as litellm tool-calling returns.
-        self.agent._llm_handler.execute_prompt_with_specific_capability = MagicMock(
-            return_value=(mock_response, mock_completion)
-        )
+        llm_result = MagicMock()
+        llm_result.result = message
+        llm_result.total_tokens = 5
+        llm_result.cost = 0.0
 
-        # Mock the tool execution result
-        mock_response.execute = AsyncMock(return_value=(
-    "HTTP/1.1 200 OK\n"
-    "Date: Wed, 17 Apr 2025 12:00:00 GMT\n"
-    "Content-Type: application/json; charset=utf-8\n"
-    "Content-Length: 85\n"
-    "Connection: keep-alive\n"
-    "X-Powered-By: Express\n"
-    "Strict-Transport-Security: max-age=31536000; includeSubDomains\n"
-    "Cache-Control: no-store\n"
-    "Set-Cookie: sessionId=abc123; HttpOnly; Secure; Path=/\r\n\r\n"
-    "\n"
-    "{\n"
-    '  "id": 1,\n'
-    '  "username": "alice@example.com",\n'
-    '  "role": "user",\n'
-    '  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."\n'
-    "}"
-))
-
-        mock_response.action.path = "/users/"
+        # Mock the LLM boundary (get_response) and the pieces that need a live run/network:
+        self.agent.llm.get_response = MagicMock(return_value=llm_result)
+        self.agent.log.call_response = AsyncMock(return_value=1)
+        self.agent._capabilities.run_capability_json = AsyncMock(return_value=(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json; charset=utf-8\r\n\r\n"
+            '{"id": 1, "username": "alice@example.com", "token": "eyJhbGciOi..."}'
+        ))
+        # The LLM-driven response analysis is exercised by its own tests; stub it here.
+        self.agent._response_handler.evaluate_result = AsyncMock(return_value=([], "200"))
 
         # Perform the round
         result = asyncio.run(self.agent.perform_round(1))
@@ -88,10 +77,13 @@ class TestSimpleWebAPITestingTest(unittest.TestCase):
         # Assertions
         self.assertFalse(result)  # No flags found in this round
 
-        # Check that the LLM handler was invoked
-        self.assertGreaterEqual(
-            self.agent._llm_handler.execute_prompt_with_specific_capability.call_count, 1
-        )
+        # The standard loop was driven: the model was asked and the tool call was executed.
+        self.assertGreaterEqual(self.agent.llm.get_response.call_count, 1)
+        self.assertGreaterEqual(self.agent._capabilities.run_capability_json.call_count, 1)
+        # get_response must force exactly the proposed-request capability.
+        _, kwargs = self.agent.llm.get_response.call_args
+        self.assertEqual(kwargs.get("tool_choice"), "required")
+        self.assertEqual(list(kwargs.get("capabilities").keys()), ["ProposedHTTPRequest"])
         # Check if the prompt history was updated correctly
         self.assertGreaterEqual(len(self.agent._prompt_history), 1)  # Initial message + LLM response + tool message
 

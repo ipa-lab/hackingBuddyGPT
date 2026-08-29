@@ -5,7 +5,7 @@ from typing import Dict, List, Union
 
 import yaml
 
-from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_by_structure
+from hackingBuddyGPT.utils.web_api.endpoint_categorizer import categorize_endpoints_with_query
 
 
 class OpenAPISpecificationParser:
@@ -17,16 +17,29 @@ class OpenAPISpecificationParser:
         api_data (Dict[str, Union[Dict, List]]): The parsed data from the YAML file.
     """
 
-    def __init__(self, filepath: str):
+    def __init__(self, filepath: str = "", api_data: Dict[str, Union[Dict, List]] = None):
         """
-        Initializes the OpenAPISpecificationParser with the specified file path.
+        Initializes the OpenAPISpecificationParser.
 
         Args:
-            filepath (str): The path to the OpenAPI specification YAML file.
+            filepath (str): The path to the config file whose sibling ``oas/<name>_oas.json``
+                holds the OpenAPI specification. Ignored when ``api_data`` is supplied.
+            api_data (dict, optional): An already-parsed OpenAPI document. When given, the spec
+                is taken from memory and no file is read (used for specs produced during a
+                detection run or synthesized from a sitemap).
         """
         self.filepath: str = filepath
-        self.api_data: Dict[str, Union[Dict, List]] = self.load_file(filepath=self.find_oas(filepath=filepath))
-        self.oas_path = self.find_oas(filepath)
+        if api_data is not None:
+            self.api_data: Dict[str, Union[Dict, List]] = api_data
+            self.oas_path = filepath
+        else:
+            self.api_data = self.load_file(filepath=self.find_oas(filepath=filepath))
+            self.oas_path = self.find_oas(filepath)
+
+    @classmethod
+    def from_dict(cls, api_data: Dict[str, Union[Dict, List]], filepath: str = "") -> "OpenAPISpecificationParser":
+        """Builds a parser from an in-memory OpenAPI document instead of a file."""
+        return cls(filepath=filepath, api_data=api_data)
 
     def load_file(self, filepath="") -> Dict[str, Union[Dict, List]]:
         """
@@ -78,22 +91,6 @@ class OpenAPISpecificationParser:
         path_item = self.api_data.get("paths", {}).get(path, {})
         return {method: details for method, details in path_item.items() if method.lower() in valid_methods}
 
-    def _print_api_details(self) -> None:
-        """
-        Prints details of the API extracted from the OpenAPI document, including title, version, servers,
-        paths, and operations.
-        """
-        print("API Title:", self.api_data["info"]["title"])
-        print("API Version:", self.api_data["info"]["version"])
-        print("Servers:", self._get_servers())
-        print("\nAvailable Paths and Operations:")
-        for path, operations in self.get_paths().items():
-            print(f"\nPath: {path}")
-            for operation, details in operations.items():
-                print(f"  Operation: {operation.upper()}")
-                print(f"    Summary: {details.get('summary')}")
-                print(f"    Description: {details['responses']['200']['description']}")
-
     def find_oas(self, filepath) -> str:
         """
 
@@ -122,35 +119,6 @@ class OpenAPISpecificationParser:
         components = self.api_data.get('components', {})
         schemas = components.get('schemas', {})
         return schemas
-
-    def get_protected_endpoints(self) -> List:
-        """
-               Retrieves protected endpoints from api data.
-
-
-               Returns:
-                   List: A list of protected endpoints
-        """
-        protected = []
-        for path, operations in self.api_data['paths'].items():
-            for operation, details in operations.items():
-                if 'security' in details:
-                    protected.append(f"{operation.upper()} {path}")
-        return protected
-
-    def get_refresh_endpoints(self):
-        """
-                Retrieves refresh endpoints from api data.
-
-
-                Returns:
-                    List: A list of refresh endpoints
-         """
-        refresh_endpoints = []
-        for path, operations in self.api_data['paths'].items():
-            if 'refresh' in path.lower():
-                refresh_endpoints.extend([f"{op.upper()} {path}" for op in operations])
-        return refresh_endpoints
 
     def get_schema_for_endpoint(self, path, method):
         """
@@ -411,12 +379,4 @@ class OpenAPISpecificationParser:
                   - 'related_resource': Endpoints with three segments including 'id' (e.g., '/users/{id}/orders').
                   - 'multi-level_resource': Endpoints with more than two segments not matched by the above.
                   - 'query': The values from the input query dictionary."""
-        buckets = categorize_by_structure(endpoints)
-        return {
-            "root_level": buckets["root_level"],
-            "instance_level": buckets["instance_level"],
-            "subresource": buckets["subresource"],
-            "query": query.values(),
-            "related_resource": buckets["related_resource"],
-            "multi-level_resource": buckets["multi_level_resource"],
-        }
+        return categorize_endpoints_with_query(endpoints, query)

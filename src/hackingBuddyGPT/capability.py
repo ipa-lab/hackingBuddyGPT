@@ -1,6 +1,8 @@
 import abc
 import copy
+import datetime
 import json
+import traceback
 from functools import partial, wraps
 import inspect
 from typing import Any, Callable, Dict, Iterable, TypeVar, ParamSpec, Type, Union, Awaitable, override
@@ -315,6 +317,88 @@ def capabilities_to_tools(
         }
         for name, capability in capabilities.items()
     ]
+
+
+class CapabilityRegistry:
+    """Shared capability storage, lookup and execution for every use-case family.
+
+    Both ``usecases.agents.Agent`` (the native tool-calling family — the ``web`` agents and
+    ``MinimalToolCallPrivEscLinux``) and ``utils.capability_manager.CapabilityManager`` (the
+    ``CommandStrategy`` strategy priv-esc use-cases and the ``SimpleStrategy`` web-api engines) mix
+    this in, so registering, looking up and executing a capability has a single implementation.
+
+    Concrete classes supply the attributes this relies on: ``_capabilities`` (a **per-instance**
+    ``dict[str, Capability]``), ``_default_capability`` and ``log``.
+    """
+
+    def add_capability(self, cap: "Capability", name: str = None, default: bool = False):
+        if name is None:
+            name = cap.get_name()
+        self._capabilities[name] = cap
+        if default:
+            self._default_capability = cap
+
+    def get_capability(self, name: str) -> "Capability":
+        return self._capabilities.get(name, self._default_capability)
+
+    async def run_capability_json(
+        self,
+        message_id: int,
+        tool_call_id: str,
+        capability_name: str,
+        arguments: str,
+        capabilities: "Dict[str, Capability] | None" = None,
+    ) -> str:
+        if capabilities is not None:
+            capability = capabilities.get(capability_name, self._default_capability)
+        else:
+            capability = self.get_capability(capability_name)
+
+        if capability is None:
+            raise ValueError(f"Capability {capability_name} not found")
+
+        tic = datetime.datetime.now()
+        try:
+            result = await capability.to_model().model_validate_json(arguments).execute()
+        except Exception as e:
+            traceback.print_exc()
+            result = f"EXCEPTION: {e}"
+        duration = datetime.datetime.now() - tic
+
+        await self.log.add_tool_call(message_id, tool_call_id, capability_name, arguments, result, duration)
+        return result
+
+    async def run_capability_simple_text(self, message_id: int, cmd: str) -> tuple[str, str, str, bool]:
+        _capability_descriptions, parser = capabilities_to_simple_text_handler(
+            self._capabilities, default_capability=self._default_capability
+        )
+
+        tic = datetime.datetime.now()
+        try:
+            success, *output = parser(cmd)
+        except Exception as e:
+            success = False
+            output = [f"EXCEPTION: {e}"]
+        duration = datetime.datetime.now() - tic
+
+        if not success:
+            await self.log.add_tool_call(
+                message_id, tool_call_id=0, function_name="", arguments=cmd, result_text=output[0], duration=0
+            )
+            return "", "", output[0], False
+
+        capability, cmd, result = output[0]
+        # capability execution is asynchronous now, the simple-text handler returns the coroutine
+        result = await result
+        await self.log.add_tool_call(
+            message_id, tool_call_id=0, function_name=capability, arguments=cmd, result_text=result, duration=duration
+        )
+
+        return capability, cmd, result, False
+
+    def get_capability_block(self) -> str:
+        capability_descriptions, _parser = capabilities_to_simple_text_handler(self._capabilities)
+        return "You can either\n\n" + "\n".join(f"- {description}" for description in capability_descriptions.values())
 
 
 def function_call_capability(

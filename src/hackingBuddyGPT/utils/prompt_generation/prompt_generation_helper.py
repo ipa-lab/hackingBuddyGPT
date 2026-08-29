@@ -3,6 +3,8 @@ import random
 import re
 import uuid
 
+from hackingBuddyGPT.utils.web_api.exploration_steps import ExploreStep
+
 
 class PromptGenerationHelper(object):
     """
@@ -346,7 +348,7 @@ class PromptGenerationHelper(object):
             str: A tailored hint that provides guidance based on the current testing phase and identified needs.
         """
         hint = ""
-        if self.current_step == 2:
+        if self.current_step == ExploreStep.INSTANCE:
             instance_level_found_endpoints = [ep for ep in self.found_endpoints if "id" in ep]
             if "Missing required field: ids" in self.correct_endpoint_but_some_error:
                 endpoints_missing_id_or_query = list(
@@ -356,11 +358,11 @@ class PromptGenerationHelper(object):
             if new_endpoint:
                 hint += f" Create a GET request for this endpoint: {new_endpoint}"
 
-        elif self.current_step == 3 and "No search query" in self.correct_endpoint_but_some_error:
+        elif self.current_step == ExploreStep.SUBRESOURCE and "No search query" in self.correct_endpoint_but_some_error:
             endpoints_missing_query = list(set(self.correct_endpoint_but_some_error['No search query']))
             hint = f"First, try out these endpoints: {endpoints_missing_query}"
 
-        if self.current_step == 6:
+        if self.current_step == ExploreStep.QUERY:
             query_endpoint = self._get_endpoint_for_query_params()
 
             query_params = self.get_possible_params(query_endpoint)
@@ -390,102 +392,6 @@ class PromptGenerationHelper(object):
             if len(parts) == 1 and not endpoint+ "/{id}" in self.found_endpoints :
                 root_level_endpoints.append(endpoint)
         return root_level_endpoints
-
-    def _get_related_resource_endpoint(self, path, common_endpoints, name):
-        """
-                Identify related resource endpoints that match the format /resource/id/other_resource.
-
-                Returns:
-                    dict: A mapping of identified endpoints to their responses or error messages.
-                """
-
-        other_resource = random.choice(common_endpoints)
-
-        # Determine if the path is a root-level or instance-level endpoint
-        if path.endswith("/1"):
-            # Root-level source endpoint
-            test_endpoint = f"{path}/{other_resource}"
-        else:
-            # Instance-level endpoint
-            test_endpoint = f"{path}/1/{other_resource}"
-
-        # Query the constructed endpoint
-        test_endpoint = test_endpoint.replace("//", "/")
-
-
-        return test_endpoint
-
-    def _get_multi_level_resource_endpoint(self, path, common_endpoints, name):
-        """
-                Identify related resource endpoints that match the format /resource/id/other_resource.
-
-                Returns:
-                    dict: A mapping of identified endpoints to their responses or error messages.
-                """
-
-        other_resource = random.choice(common_endpoints)
-        another_resource = random.choice(common_endpoints)
-        if other_resource == another_resource:
-            another_resource = random.choice(common_endpoints)
-        path = path.replace("{id}", "1")
-        parts = [part.strip() for part in path.split("/") if part.strip()]
-
-        multilevel_endpoint = path
-
-        if len(parts) == 1:
-            multilevel_endpoint = f"{path}/{other_resource}/{another_resource}"
-        elif len(parts) == 2:
-            path = [part.strip() for part in path.split("/") if part.strip()]
-            if len(path) == 1:
-                multilevel_endpoint = f"{path}/{other_resource}/{another_resource}"
-            if len(path) >=2:
-                multilevel_endpoint = f"{path}/{another_resource}"
-        else:
-            if "/1" not in path:
-                multilevel_endpoint = path
-
-        multilevel_endpoint = multilevel_endpoint.replace("//", "/")
-
-        return multilevel_endpoint
-
-    def _get_sub_resource_endpoint(self, path, common_endpoints, name):
-        """
-                Identify related resource endpoints that match the format /resource/other_resource.
-
-                Returns:
-                    dict: A mapping of identified endpoints to their responses or error messages.
-                """
-        filtered_endpoints = [resource for resource in common_endpoints
-                              if "id" not in resource ]
-        possible_resources = []
-        for endpoint in filtered_endpoints:
-            partz = [part.strip() for part in endpoint.split("/") if part.strip()]
-            if len(partz) == 1 and "1" not in partz:
-                possible_resources.append(endpoint)
-
-        other_resource = random.choice(possible_resources)
-        path = path.replace("{id}", "1")
-
-        parts = [part.strip() for part in path.split("/") if part.strip()]
-
-        multilevel_endpoint = path
-
-
-        if len(parts) == 1:
-            multilevel_endpoint = f"{path}/{other_resource}"
-        elif len(parts) == 2:
-            if "1" in parts:
-                p = path.split("/1")
-                new_path = ""
-                for part in p:
-                    new_path = path.join(part)
-                multilevel_endpoint = f"{new_path}/{other_resource}"
-        else:
-            if "1" not in path:
-                multilevel_endpoint = path
-        multilevel_endpoint = multilevel_endpoint.replace("//", "/")
-
-        return multilevel_endpoint
 
     def get_possible_id_for_instance_level_ep(self, endpoint):
         if endpoint in self.endpoint_examples:

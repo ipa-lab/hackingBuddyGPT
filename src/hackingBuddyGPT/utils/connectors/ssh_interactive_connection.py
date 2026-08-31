@@ -44,7 +44,6 @@ class SSHInteractiveConnection:
 
     # runtime state (not configuration)
     last_uid: Optional[int] = field(default=None, init=False)
-    last_user: Optional[str] = field(default=None, init=False)
     root_verified: bool = field(default=False, init=False)
     _root_proof: str = field(default_factory=lambda: os.environ.get(ROOT_PROOF_ENV, ""), init=False, repr=False)
     # how long the output stream must be quiet before a command is considered finished
@@ -109,15 +108,15 @@ class SSHInteractiveConnection:
         timeout = kwargs.get("timeout", self.timeout)
         async with self._lock:
             self.root_verified = False
-            self.last_user = None
             self.last_uid = None
             try:
                 await self._ensure_connected()
                 result = await self._run_framed(cmd, timeout)
                 if self.last_uid == 0 and self._root_proof:
                     command, digest = new_root_proof_challenge(self._root_proof)
+                    self.last_uid = None
                     output, _, _ = await self._run_framed(command, timeout)
-                    self.root_verified = root_proof_challenge_matches(output, digest)
+                    self.root_verified = self.last_uid == 0 and root_proof_challenge_matches(output, digest)
                 return result
             except Exception as e:
                 # the shell may be wedged (a program still holding the tty) or gone; drop it so the
@@ -154,9 +153,12 @@ class SSHInteractiveConnection:
                 stdin.write(self.password + "\n")
                 answered = True
 
-        # 3) capture identity before attempting the root-only proof.
-        stdin.write(f'echo "{end}:$?:$(id -u):$(id -un)"\n')
-        end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+):(\S+)")
+        # 3) capture UID before attempting the root-only proof.
+        stdin.write(
+            f"r=$?;case $- in *r*)((EUID))||echo {end}:$r:0;;"
+            f"*)/usr/bin/printf '{end}:%s:%s\\n' \"$r\" \"$(/usr/bin/id -u)\";;esac\n"
+        )
+        end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+)")
         end_deadline = loop.time() + timeout
         while loop.time() < end_deadline:
             if end_re.search(strip_ansi("".join(buf))):
@@ -186,7 +188,6 @@ class SSHInteractiveConnection:
             if m and start_idx != -1:
                 rc = int(m.group(1))
                 self.last_uid = int(m.group(2))
-                self.last_user = m.group(3)
                 end_idx = i
                 break
 

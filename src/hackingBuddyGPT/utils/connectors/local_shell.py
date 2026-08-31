@@ -69,7 +69,9 @@ class LocalShellConnection:
             output = self.run_with_unique_markers(cmd)
             if self.last_uid == 0 and self._root_proof:
                 command, digest = new_root_proof_challenge(self._root_proof)
-                self.root_verified = root_proof_challenge_matches(self.run_with_unique_markers(command), digest)
+                self.last_uid = None
+                proof_output = self.run_with_unique_markers(command)
+                self.root_verified = self.last_uid == 0 and root_proof_challenge_matches(proof_output, digest)
             return redact_root_proof(output, self._root_proof), "", 0
         except Exception as e:
             return "", str(e), 1
@@ -194,7 +196,10 @@ class LocalShellConnection:
             if not self.wait_for_command_completion():
                 raise RuntimeError(f"Command timed out after {self.max_wait}s")
             
-            self.send_command(f'echo "{end_marker}:${{EUID:-$(id -u)}}"')
+            self.send_command(
+                f'case $- in *r*) if [[ $EUID -eq 0 ]]; then echo "{end_marker}:0"; fi ;; '
+                f'*) /usr/bin/printf "{end_marker}:%s\\n" "$(/usr/bin/id -u)" ;; esac'
+            )
             time.sleep(0.8)
             
             final_output = self.capture_output(50000)

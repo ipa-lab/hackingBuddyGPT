@@ -1,7 +1,8 @@
 import asyncio
 
+import pytest
+
 import hackingBuddyGPT.utils.connectors.local_shell as local_shell
-from hackingBuddyGPT.capabilities.local_shell import LocalShellCapability
 from hackingBuddyGPT.capabilities.ssh_test_credential import SSHTestCredential
 from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
 from hackingBuddyGPT.utils.shell_root_detection import (
@@ -43,16 +44,6 @@ def test_strip_ansi():
     assert strip_ansi(None) == ""
 
 
-class _FakeLocalShell:
-    def __init__(self, responses, root_verified=False):
-        self.responses = responses
-        self.root_verified = root_verified
-
-    def run(self, command):
-        return self.responses.get(command, ""), "", 0
-
-
-
 def test_is_admin_from_whoami():
     from hackingBuddyGPT.utils.shell_root_detection import is_admin_from_whoami
 
@@ -60,13 +51,9 @@ def test_is_admin_from_whoami():
     assert is_admin_from_whoami("nt authority\\system") is True
     assert is_admin_from_whoami("NT AUTHORITY\\SYSTEM") is True
     # enabled Administrators-group membership (SID S-1-5-32-544)
-    assert is_admin_from_whoami(
-        "BUILTIN\\Administrators S-1-5-32-544 Enabled group, Group owner"
-    ) is True
+    assert is_admin_from_whoami("BUILTIN\\Administrators S-1-5-32-544 Enabled group, Group owner") is True
     # filtered token: Administrators present but "deny only" -> not elevated
-    assert is_admin_from_whoami(
-        "BUILTIN\\Administrators S-1-5-32-544 Group used for deny only"
-    ) is False
+    assert is_admin_from_whoami("BUILTIN\\Administrators S-1-5-32-544 Group used for deny only") is False
     # a plain low-priv user
     assert is_admin_from_whoami("myhost\\alice S-1-5-21-1000 Mandatory group, Enabled") is False
 
@@ -82,30 +69,31 @@ def test_check_windows_admin_success():
     assert check_windows_admin_success("test_credential admin wrong", "Authentication error\n") is False
     # command path: whoami output showing SYSTEM / Administrators
     assert check_windows_admin_success("whoami", "nt authority\\system") is True
-    assert check_windows_admin_success(
-        "whoami /groups", "BUILTIN\\Administrators S-1-5-32-544 Enabled group"
-    ) is True
+    assert check_windows_admin_success("whoami /groups", "BUILTIN\\Administrators S-1-5-32-544 Enabled group") is True
     assert check_windows_admin_success("whoami", "myhost\\alice") is False
-def test_local_shell_publishes_connector_verification():
-    output, verified = asyncio.run(LocalShellCapability(_FakeLocalShell({"id": "root"}, True))("id"))
-    assert output == "root"
-    assert verified is True
 
 
-def test_local_shell_verifies_shared_root_proof(monkeypatch):
+@pytest.mark.parametrize(
+    ("command_uid", "uid_after_challenge", "expected_verified"),
+    [(0, 0, True), (0, 1000, False), (1000, None, False)],
+    ids=["stays-root", "drops-uid", "root-looking-output"],
+)
+def test_local_shell_requires_root_before_and_after_challenge(
+    monkeypatch, command_uid, uid_after_challenge, expected_verified
+):
     conn = LocalShellConnection(tmux_session="unused")
     conn._initialized = True
     conn._root_proof = "proof"
 
     def run(command):
-        conn.last_uid = 0
+        conn.last_uid = command_uid if command == "id" else uid_after_challenge
         return {"id": "uid=0(root)", "challenge": "digest  -"}[command]
 
     conn.run_with_unique_markers = run
     monkeypatch.setattr(local_shell, "new_root_proof_challenge", lambda proof: ("challenge", "digest"))
 
     assert conn.run("id") == ("uid=0(root)", "", 0)
-    assert conn.root_verified is True
+    assert conn.root_verified is expected_verified
 
 
 def test_local_shell_clears_stale_root():
@@ -131,7 +119,7 @@ class _FakeLegacySSHConnection:
         pass
 
 
-def test_legacy_credential_tracks_authenticated_user():
+def test_legacy_credential_sets_root_only_for_root_login():
     conn = _FakeLegacySSHConnection()
 
     result = asyncio.run(SSHTestCredential(conn=conn)("lowpriv", "trustno1"))

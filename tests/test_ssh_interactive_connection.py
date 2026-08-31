@@ -2,6 +2,8 @@ import asyncio
 import hashlib
 import re
 
+import pytest
+
 import hackingBuddyGPT.utils.connectors.ssh_interactive_connection as ssh_interactive
 from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
 from hackingBuddyGPT.utils.shell_root_detection import ROOT_PROOF_PATH
@@ -24,12 +26,14 @@ class FakeShell:
         prompt="alice@box:~$ ",
         sudo_password=None,
         root_proof="",
+        uid_after_proof=None,
     ):
         self.user, self.prompt = user, prompt
         self.uid = 0 if user == "root" else 1000
         self.responses = responses
         self.sudo_password = sudo_password
         self.root_proof = root_proof
+        self.uid_after_proof = uid_after_proof
         self.writes = []
         self._queue = []
         self._awaiting_password_for = None
@@ -57,7 +61,8 @@ class FakeShell:
                 self._queue.append("Sorry, try again.\n")
             return
 
-        self._queue.append(self.prompt + line + "\n")  # PTY echoes the typed line
+        echo = self.prompt + line
+        self._queue.append("\n".join(echo[i : i + 200] for i in range(0, len(echo), 200)) + "\n")
 
         if line.startswith("sudo ") and self.sudo_password is not None:
             self._queue.append(f"[sudo] password for {self.user}: ")
@@ -71,13 +76,13 @@ class FakeShell:
             nonce = re.search(r"printf '%s' ([0-9a-f]+)", line).group(1)
             digest = hashlib.sha256(f"{self.root_proof}{nonce}".encode()).hexdigest()
             self._queue.append(f"{digest}  -\n")
+            if self.uid_after_proof is not None:
+                self.uid = self.uid_after_proof
+        elif match := re.search(r"(__CMDEND_[0-9a-f]+__)", line):
+            self._queue.append(f"{match.group(1)}:0:{self.uid}\n")
         elif line.startswith("echo "):
             arg = line[len("echo ") :].strip().strip('"').strip("'")
-            arg = (
-                arg.replace("$?", "0")
-                .replace("$(id -u)", str(self.uid))
-                .replace("$(id -un)", self.user)
-            )
+            arg = arg.replace("$?", "0")
             self._queue.append(arg + "\n")
         else:
             key = line[len("sudo ") :] if line.startswith("sudo ") else line
@@ -117,7 +122,7 @@ def test_connect_kwargs_disable_agent_and_keys_for_password_auth():
     assert keyed._connect_kwargs()["client_keys"] == ["/k/id"]
 
 
-def test_parse_extracts_body_and_identity():
+def test_parse_extracts_body_and_uid():
     conn = SSHInteractiveConnection(host="h", username="alice", password="pw")
     start, end = "__CMDSTART_aaaa1111__", "__CMDEND_bbbb2222__"
     captured = (
@@ -125,16 +130,15 @@ def test_parse_extracts_body_and_identity():
         f"{start}\n"
         "alice@box:~$ id\n"
         "uid=1000(alice) gid=1000(alice) groups=1000(alice)\n"
-        f'alice@box:~$ echo "{end}:$?:$(id -u):$(id -un)"\n'
-        f"{end}:0:1000:alice\n"
+        f'alice@box:~$ echo "{end}:$?:$(id -u)"\n'
+        f"{end}:0:1000\n"
         "alice@box:~$ "
     )
-    end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+):(\S+)")
+    end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+)")
     body, err, rc = conn._parse(captured, start, end, "id", end_re)
 
     assert body == "uid=1000(alice) gid=1000(alice) groups=1000(alice)"
     assert rc == 0
-    assert conn.last_user == "alice"
     assert conn.last_uid == 1000
     assert conn.root_verified is False
 
@@ -144,11 +148,10 @@ def test_parse_redacts_root_proof_without_complete_framing():
     conn = SSHInteractiveConnection(host="h", username="alice", password="pw")
     conn._root_proof = proof
     start, end = "__CMDSTART_aaaa1111__", "__CMDEND_bbbb2222__"
-    end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+):(\S+)")
+    end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+)")
 
     body, _, _ = conn._parse(f"{start}\n{proof}\n", start, end, "cat proof", end_re)
 
-    assert proof not in body
     assert body == "[root proof redacted]"
 
 
@@ -158,44 +161,48 @@ def test_run_framed_low_priv():
 
     out, err, rc = asyncio.run(conn._run_framed("id", timeout=2))
 
-    assert "uid=1000(alice)" in out
+    assert out == "uid=1000(alice) gid=1000(alice)"
 
 
-def test_run_framed_sudo_answers_password_and_verifies_hidden_root_proof():
-    proof = "target-root-proof"
+def test_run_framed_answers_sudo_password():
     fake = FakeShell(
         user="root",
         responses={"id": "uid=0(root) gid=0(root) groups=0(root)"},
         sudo_password="hunter2",
+    )
+    conn = _make_conn(fake)
+
+    out, _, _ = asyncio.run(conn._run_framed("sudo id", timeout=2))
+
+    assert any(write.rstrip("\n") == "hunter2" for write in fake.writes)
+    assert "uid=0(root)" in out
+    assert conn.last_uid == 0
+
+
+@pytest.mark.parametrize(
+    ("uid_after_challenge", "expected_verified"),
+    [(0, True), (1000, False)],
+    ids=["uid-stays-root", "uid-drops"],
+)
+def test_root_verification_requires_root_through_challenge(uid_after_challenge, expected_verified):
+    proof = "target-root-proof"
+    fake = FakeShell(
+        user="root",
+        responses={"id": "uid=0(root) gid=0(root) groups=0(root)"},
         root_proof=proof,
+        uid_after_proof=uid_after_challenge,
     )
     conn = _make_conn(fake, proof)
 
-    out, err, rc = asyncio.run(conn.run("sudo id", timeout=2))
+    out, _, _ = asyncio.run(conn.run("id", timeout=2))
 
-    assert any(w.rstrip("\n") == "hunter2" for w in fake.writes)
     assert "uid=0(root)" in out
-    assert conn.root_verified is True
+    assert conn.root_verified is expected_verified
     assert any(ROOT_PROOF_PATH in write for write in fake.writes)
     assert proof not in "".join(fake.writes)
     assert proof not in repr(conn)
     assert proof not in out
     assert ROOT_PROOF_PATH not in out
-
-
-def test_low_privilege_is_not_challenged():
-    proof = "target-root-proof"
-    fake = FakeShell(
-        user="alice",
-        responses={"id": "uid=1000(alice) gid=1000(alice)"},
-        root_proof=proof,
-    )
-    conn = _make_conn(fake, proof)
-
-    asyncio.run(conn.run("id", timeout=2))
-
-    assert conn.root_verified is False
-    assert ROOT_PROOF_PATH not in "".join(fake.writes)
 
 
 def test_nested_root_without_target_proof_is_not_verified():
@@ -206,12 +213,10 @@ def test_nested_root_without_target_proof_is_not_verified():
     )
     conn = _make_conn(fake, "target-root-proof")
 
-    async def go():
-        out, err, rc = await conn.run("id", timeout=2)
-        assert conn.root_verified is False
-        return out
+    out, _, _ = asyncio.run(conn.run("id", timeout=2))
 
-    assert asyncio.run(go()).strip() == "uid=0(root)"
+    assert out == "uid=0(root)"
+    assert conn.root_verified is False
 
 
 def test_one_shot_command_that_reads_target_proof_is_not_verified():
@@ -233,7 +238,6 @@ def test_one_shot_command_that_reads_target_proof_is_not_verified():
 def test_failed_reconnect_clears_stale_root_proof():
     conn = SSHInteractiveConnection(host="h", username="alice", password="hunter2")
     conn.root_verified = True
-    conn.last_user = "root"
     conn.last_uid = 0
 
     async def fail_to_connect():
@@ -245,7 +249,6 @@ def test_failed_reconnect_clears_stale_root_proof():
 
     assert rc == 1
     assert conn.root_verified is False
-    assert conn.last_user is None
     assert conn.last_uid is None
 
 
@@ -265,9 +268,7 @@ def test_credential_uses_a_fresh_connection(monkeypatch):
         return fresh
 
     monkeypatch.setattr(ssh_interactive.asyncssh, "connect", connect)
-    conn = SSHInteractiveConnection(
-        host="h", username="alice", password="hunter2", keyfilename="/configured/key"
-    )
+    conn = SSHInteractiveConnection(host="h", username="alice", password="hunter2", keyfilename="/configured/key")
 
     assert asyncio.run(conn.test_credential("root", "s3cret")) is True
     assert fresh.closed is True

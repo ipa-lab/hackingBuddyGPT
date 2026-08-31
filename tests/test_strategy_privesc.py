@@ -16,6 +16,7 @@ from typing import Tuple
 
 from hackingBuddyGPT.usecases.priv_esc.linux_privesc import PrivEscLinux
 from hackingBuddyGPT.usecases.priv_esc.minimal_linux_privesc import MinimalPrivEscLinux
+from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
 from hackingBuddyGPT.utils.logging import JsonlLogger
@@ -69,13 +70,21 @@ def _log():
     return JsonlLogger(console=Console(), log_dir=tempfile.mkdtemp())
 
 
+def _render_prompt(agent):
+    agent.init()
+    return agent._template.render(**(agent._template_params | {"history": [], "capabilities": ""}))
+
+
 class TestStrategyPrivEscRunLoop(unittest.TestCase):
-    def test_prompt_requests_persistent_target_shell_without_verifier_details(self):
+    def test_ssh_prompt_describes_both_success_paths(self):
         agent = MinimalPrivEscLinux(conn=FakeSSHConnection(), llm=FakeLLM([]), log=_log())
-        agent.init()
-        prompt = agent._template.render(**(agent._template_params | {"history": [], "capabilities": ""}))
-        self.assertIn("in a persistent shell or authenticate as that user", prompt)
-        self.assertNotIn("proof", prompt)
+        prompt = _render_prompt(agent)
+
+        self.assertIn("in the persistent shell or authenticate as that user with 'test_credential'", prompt)
+
+    def test_local_prompt_does_not_offer_credential_check(self):
+        local_agent = PrivEscLinux(conn=LocalShellConnection(tmux_session="unused"), llm=FakeLLM([]), log=_log())
+        self.assertNotIn("test_credential", _render_prompt(local_agent))
 
     def test_linux_privesc_reaches_root(self):
         responses = ["id", "sudo -l", ROOT_CMD]

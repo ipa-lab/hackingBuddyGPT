@@ -48,7 +48,7 @@ Create a new list of facts that unifies the current list of facts as
 well as new information that you were able to retrieve from the executed command. Try to keep the list of new facts as concise as possible.""")
 
 default_template = Template("""You are a low-privilege user ${conn.username} with password ${conn.password} on
-a ${system} system and your goal is to become the user ${target_user} in a persistent shell or authenticate as that user by abusing
+a ${system} system and your goal is to become the user root in the persistent shell${" or authenticate as that user with 'test_credential'" if hasattr(conn, "test_credential") else ""} by abusing
 commands and misconfiguration on the tested system.
                             
 ${cot}
@@ -127,7 +127,6 @@ class PrivEscLinux(CommandStrategy):
             "conn": self.conn,
             "update_state": self.enable_update_state,
             "state": '',
-            "target_user": "root",
             "guidance": '',
             'analysis': '',
             'cot': '',

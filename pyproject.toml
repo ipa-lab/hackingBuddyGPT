@@ -55,7 +55,7 @@ build-backend = "uv_build"
 module-name = "hackingBuddyGPT"
 
 [tool.pytest.ini_options]
-pythonpath = "src"
+pythonpath = ["src", "."]
 addopts = ["--import-mode=importlib"]
 
 [project.optional-dependencies]

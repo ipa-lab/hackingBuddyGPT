@@ -1,4 +1,5 @@
 import asyncio
+import os
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -7,7 +8,13 @@ from typing import Optional, Tuple
 import asyncssh
 
 from hackingBuddyGPT.utils.configurable import configurable
-from hackingBuddyGPT.utils.shell_root_detection import strip_ansi
+from hackingBuddyGPT.utils.shell_root_detection import (
+    ROOT_PROOF_ENV,
+    new_root_proof_challenge,
+    redact_root_proof,
+    root_proof_challenge_matches,
+    strip_ansi,
+)
 
 # password prompts we auto-answer so that sudo/su work inside the interactive shell
 _PW_PROMPT = re.compile(r"(?:\[sudo\] password for [^:]*:|assword:\s*$|'s [Pp]assword:\s*$)")
@@ -21,9 +28,8 @@ class SSHInteractiveConnection:
     Unlike the Fabric-based :class:`SSHConnection` (which runs every command in a fresh
     ``exec_command`` channel), this connector holds a persistent PTY session, so an escalation that
     drops into an interactive root shell (``sudo su``, ``sudo bash``, an exploit) survives into the
-    next command. Each command is framed with unique start/end markers; the end marker also carries
-    ``$?`` and the in-session ``id -u`` / ``id -un``, which is recorded as :attr:`last_uid` /
-    :attr:`last_user` and is the robust, prompt-independent "are we root" signal.
+    next command. Each command is framed with unique start/end markers. Root sessions must answer a
+    nonce challenge using a root-owned proof installed on the target.
     """
 
     host: str
@@ -38,7 +44,8 @@ class SSHInteractiveConnection:
 
     # runtime state (not configuration)
     last_uid: Optional[int] = field(default=None, init=False)
-    last_user: Optional[str] = field(default=None, init=False)
+    root_verified: bool = field(default=False, init=False)
+    _root_proof: str = field(default_factory=lambda: os.environ.get(ROOT_PROOF_ENV, ""), init=False, repr=False)
     # how long the output stream must be quiet before a command is considered finished
     _idle: float = field(default=0.5, init=False, repr=False)
     _conn: Optional[asyncssh.SSHClientConnection] = field(default=None, init=False, repr=False)
@@ -100,9 +107,17 @@ class SSHInteractiveConnection:
     async def run(self, cmd: str, *args, **kwargs) -> Tuple[str, str, int]:
         timeout = kwargs.get("timeout", self.timeout)
         async with self._lock:
+            self.root_verified = False
+            self.last_uid = None
             try:
                 await self._ensure_connected()
-                return await self._run_framed(cmd, timeout)
+                result = await self._run_framed(cmd, timeout)
+                if self.last_uid == 0 and self._root_proof:
+                    command, digest = new_root_proof_challenge(self._root_proof)
+                    self.last_uid = None
+                    output, _, _ = await self._run_framed(command, timeout)
+                    self.root_verified = self.last_uid == 0 and root_proof_challenge_matches(output, digest)
+                return result
             except Exception as e:
                 # the shell may be wedged (a program still holding the tty) or gone; drop it so the
                 # next command reconnects, and surface the error text.
@@ -138,12 +153,12 @@ class SSHInteractiveConnection:
                 stdin.write(self.password + "\n")
                 answered = True
 
-        # 3) end marker (with $? and the in-session identity). The tty is idle and any password has
-        #    already been answered, so this line is not mistaken for a password.
-        stdin.write(f'echo "{end}:$?:$(id -u):$(id -un)"\n')
-
-        # 4) read until the end marker's result line shows up
-        end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+):(\S+)")
+        # 3) capture UID before attempting the root-only proof.
+        stdin.write(
+            f"r=$?;case $- in *r*)((EUID))||echo {end}:$r:0;;"
+            f"*)/usr/bin/printf '{end}:%s:%s\\n' \"$r\" \"$(/usr/bin/id -u)\";;esac\n"
+        )
+        end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+)")
         end_deadline = loop.time() + timeout
         while loop.time() < end_deadline:
             if end_re.search(strip_ansi("".join(buf))):
@@ -161,6 +176,7 @@ class SSHInteractiveConnection:
 
     def _parse(self, output: str, start: str, end: str, cmd: str, end_re: re.Pattern) -> Tuple[str, str, int]:
         text = strip_ansi(output).replace("\r\n", "\n").replace("\r", "\n")
+        text = redact_root_proof(text, self._root_proof)
         lines = text.split("\n")
 
         rc, start_idx, end_idx = 1, -1, -1
@@ -172,7 +188,6 @@ class SSHInteractiveConnection:
             if m and start_idx != -1:
                 rc = int(m.group(1))
                 self.last_uid = int(m.group(2))
-                self.last_user = m.group(3)
                 end_idx = i
                 break
 
@@ -199,25 +214,16 @@ class SSHInteractiveConnection:
                 return True
         return False
 
-    async def is_root(self) -> bool:
-        if self.last_uid is None:
-            await self.run("id -u")
-        return self.last_uid == 0
-
-    async def test_credential(self, username: str, password: str) -> Optional[str]:
-        """One-shot credential check on a fresh connection (never touches the persistent shell).
-
-        Returns the output of ``id`` for the given credentials, or ``None`` if authentication fails.
-        """
+    async def test_credential(self, username: str, password: str) -> bool:
+        """Test credentials on a fresh connection without touching the persistent shell."""
+        kwargs = self._connect_kwargs(username=username, password=password)
+        kwargs["client_keys"] = []
         try:
-            conn = await asyncssh.connect(**self._connect_kwargs(username=username, password=password))
+            conn = await asyncssh.connect(**kwargs)
         except asyncssh.PermissionDenied:
-            return None
-        try:
-            res = await conn.run("id", check=False)
-            return res.stdout
-        finally:
-            conn.close()
+            return False
+        conn.close()
+        return True
 
     async def close(self):
         await self._reset()

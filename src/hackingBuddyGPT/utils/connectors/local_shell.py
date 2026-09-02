@@ -1,13 +1,20 @@
-from dataclasses import dataclass, field
-from typing import Optional, Tuple
+import getpass
+import os
+import re
+import subprocess
 import time
 import uuid
-import subprocess
-import re
-import signal
-import getpass
+from dataclasses import dataclass, field
+from typing import Optional, Tuple
 
 from hackingBuddyGPT.utils.configurable import configurable
+from hackingBuddyGPT.utils.shell_root_detection import (
+    ROOT_PROOF_ENV,
+    new_root_proof_challenge,
+    redact_root_proof,
+    root_proof_challenge_matches,
+)
+
 
 @configurable("local_shell", "attaches to a running local shell inside tmux using tmux")
 @dataclass
@@ -26,6 +33,9 @@ class LocalShellConnection:
     
     # Internal state
     last_output_hash: Optional[int] = field(default=None, init=False)
+    last_uid: Optional[int] = field(default=None, init=False)
+    root_verified: bool = field(default=False, init=False)
+    _root_proof: str = field(default_factory=lambda: os.environ.get(ROOT_PROOF_ENV, ""), init=False, repr=False)
     _initialized: bool = field(default=False, init=False)
 
     def init(self):
@@ -49,14 +59,20 @@ class LocalShellConnection:
         """
         if not self._initialized:
             self.init()
-        
+
+        self.last_uid = None
+        self.root_verified = False
         if not cmd.strip():
             return "", "", 0
-        
+
         try:
             output = self.run_with_unique_markers(cmd)
-            
-            return output, "", 0
+            if self.last_uid == 0 and self._root_proof:
+                command, digest = new_root_proof_challenge(self._root_proof)
+                self.last_uid = None
+                proof_output = self.run_with_unique_markers(command)
+                self.root_verified = self.last_uid == 0 and root_proof_challenge_matches(proof_output, digest)
+            return redact_root_proof(output, self._root_proof), "", 0
         except Exception as e:
             return "", str(e), 1
 
@@ -65,7 +81,7 @@ class LocalShellConnection:
         try:
             subprocess.run(['tmux', 'send-keys', '-t', self.tmux_session, command, 'Enter'], check=True)
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Failed to send command to tmux: {e}")
+            raise RuntimeError(f"Failed to send command to tmux: {e}") from e
 
     def capture_output(self, history_lines=10000):
         """Capture the entire tmux pane content including scrollback."""
@@ -80,7 +96,7 @@ class LocalShellConnection:
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Failed to capture tmux output: {e}")
+            raise RuntimeError(f"Failed to capture tmux output: {e}") from e
 
     def get_cursor_position(self):
         """Get cursor position to detect if command is still running."""
@@ -180,16 +196,21 @@ class LocalShellConnection:
             if not self.wait_for_command_completion():
                 raise RuntimeError(f"Command timed out after {self.max_wait}s")
             
-            self.send_command(f"echo '{end_marker}'")
+            self.send_command(
+                f'case $- in *r*) if [[ $EUID -eq 0 ]]; then echo "{end_marker}:0"; fi ;; '
+                f'*) /usr/bin/printf "{end_marker}:%s\\n" "$(/usr/bin/id -u)" ;; esac'
+            )
             time.sleep(0.8)
             
             final_output = self.capture_output(50000)
+            match = re.search(re.escape(end_marker) + r":(-?\d+)", final_output)
+            self.last_uid = int(match.group(1)) if match else None
             
             # Extract content between markers
             result = self._extract_between_markers(final_output, start_marker, end_marker, command)
             return result
             
-        except Exception as e:
+        except Exception:
             return self.run_simple_fallback(command)
 
     def _extract_between_markers(self, output, start_marker, end_marker, original_command):
@@ -276,7 +297,7 @@ class LocalShellConnection:
         except Exception as e:
             subprocess.run(['tmux', 'set-option', '-t', self.tmux_session, 'history-limit', '10000'], 
                          capture_output=True)
-            raise RuntimeError(f"Error executing command: {e}")
+            raise RuntimeError(f"Error executing command: {e}") from e
 
     def _extract_recent_output(self, output, command):
         lines = output.splitlines()
@@ -332,4 +353,3 @@ class LocalShellConnection:
             return result.stdout.strip()
         except subprocess.CalledProcessError:
             return "Session info unavailable"
-

@@ -50,7 +50,7 @@ Experiments are structured into **use-cases**. Each becomes a `wintermute` sub-c
 | Command | Description |
 |---|---|
 | `MinimalPrivEscLinux` | Minimal ~20-line Linux privilege-escalation. Templates the whole history into one prompt each round and parses a bare command out of the reply (the classic hackingBuddyGPT loop). Great starting point — see [Build your own use-case](#build-your-own-use-case). |
-| `MinimalToolCallPrivEscLinux` | The tool-calling twin of the above: keeps a **real chat history**, drives the target through **function calling**, and completes only after the connector verifies root. |
+| `MinimalToolCallPrivEscLinux` | The tool-calling twin of the above: keeps a **real chat history**, drives the target through **function calling**, and completes only after root is verified. |
 | `PrivEscLinux` | Full-featured strategy-based Linux privesc with optional retrieval-augmented generation (`--rag_path`), chain-of-thought (`--enable_cot`), state tracking and structured guidance. |
 | `PrivEscWindows` | Strategy-based **Windows** privilege escalation, driving the target through `psexec` instead of SSH. |
 | `ExPrivEscLinuxLSE` | Runs [`lse.sh`](https://github.com/diego-treitos/linux-smart-enumeration) on the target first, turns its output into hints, then orchestrates `PrivEscLinux` per hint — an example of a use-case that *calls another use-case*. |
@@ -82,7 +82,7 @@ Experiments are structured into **use-cases**. Each becomes a `wintermute` sub-c
 - **One LLM upstream: [litellm](https://github.com/BerriAI/litellm).** Any provider is reachable through the `llm.model` string — OpenAI, OpenRouter (the default endpoint), Anthropic, Azure, a local Ollama, and more. Route API traffic through an intercepting proxy (Burp/mitmproxy) with `--llm.proxy`.
 - **Structured, self-contained logging** — every run is written as an append-only OpenTelemetry/GenAI JSONL trace, with CLI tools to replay and aggregate runs.
 - **Fully asynchronous** execution model built on `asyncio`.
-- **Target-verified privilege escalation** using a root-owned proof.
+- **Target-verified Linux privilege escalation** using a root-owned proof.
 - **Docker-fleet benchmark launcher** for regression testing against many targets at once.
 
 ## Installation & setup
@@ -171,7 +171,7 @@ wintermute MinimalPrivEscLinux --conn=ssh \
     --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1
 ```
 
-Persistent-shell root verification requires a root-owned proof on the target. Before a direct run, create `/root/.hackingbuddy-root-proof` as root with mode `0700`, write a random value to `/root/.hackingbuddy-root-proof/proof` with mode `0600`, and set `HACKINGBUDDYGPT_ROOT_PROOF` to the same value for `wintermute`. The target provisioning step needs root access; the user running `wintermute` does not.
+Persistent-shell root verification requires a root-owned proof on the target. Before a direct run, create `/root/.hackingbuddy-root-proof` as root with mode `0700`, write a random value without a trailing newline to `/root/.hackingbuddy-root-proof/proof` with mode `0600`, and set `HACKINGBUDDYGPT_ROOT_PROOF` to the same value for `wintermute`. The target provisioning step needs root access; the user running `wintermute` does not.
 
 > Never run this against real production systems. We use vulnerable Linux VMs — feel free to use the ones from our [Linux Privilege-Escalation Benchmark](https://github.com/ipa-lab/benchmark-privesc-linux).
 
@@ -226,11 +226,11 @@ Useful options (see `benchmark_privesc.py --help` for the full list): `--use-cas
 Creating a new LLM hacking agent is meant to be quick — the framework already handles LLM connectivity, logging, run limits and target connections for you. The example below is the *actual* `MinimalPrivEscLinux` use-case: a template-driven **command strategy** that, each round, renders the whole history into one prompt, asks the LLM for the next command, runs it, and checks whether root was reached.
 
 ```python
-from hackingBuddyGPT.capabilities import SSHInteractiveRunCommand, SSHTestCredential
 from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
 
 from ._base import TemplatedCommandPrivEsc
+from ._linux_capabilities import LinuxPrivEscRunCommand, LinuxPrivEscTestCredential
 
 
 @use_case("Minimal Strategy-based Linux Priv-Escalation")
@@ -241,11 +241,13 @@ class MinimalPrivEscLinux(TemplatedCommandPrivEsc):
     goal_details = " in the persistent shell or authenticate as that user with 'test_credential'"
 
     def _add_capabilities(self):
-        self._capabilities.add_capability(SSHInteractiveRunCommand(conn=self.conn), default=True)
-        self._capabilities.add_capability(SSHTestCredential(conn=self.conn))
+        self._run_command = LinuxPrivEscRunCommand(conn=self.conn)
+        self._test_credential = LinuxPrivEscTestCredential(conn=self.conn)
+        self._capabilities.add_capability(self._run_command, default=True)
+        self._capabilities.add_capability(self._test_credential)
 
     def check_success(self, cmd: str, result: str) -> bool:
-        return self.conn.root_verified
+        return self._run_command.root_verified or self._test_credential.root_verified
 ```
 
 Everything else — the round loop, prompt trimming, command parsing, logging and the round limit — comes from the shared `TemplatedCommandPrivEsc` / `CommandStrategy` base. The prompt itself is a small Mako template (shared by the Linux and Windows minimal use-cases):

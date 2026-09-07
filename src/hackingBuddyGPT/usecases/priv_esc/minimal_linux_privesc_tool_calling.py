@@ -1,40 +1,12 @@
-from dataclasses import dataclass
-from typing import Callable, Optional, override
+from typing import override
 
-from hackingBuddyGPT.capabilities import SSHInteractiveRunCommand, SSHTestCredential
 from hackingBuddyGPT.usecases.agents import ChatAgent
 from hackingBuddyGPT.usecases.usecase import AutonomousAgentUseCase, use_case
 from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
 from hackingBuddyGPT.utils.limits import Limits
 from hackingBuddyGPT.utils.llm import LiteLLM
 
-
-@dataclass
-class _RunCommand(SSHInteractiveRunCommand):
-    """Report commands that satisfy the connector's target root-proof check."""
-
-    on_root: Optional[Callable[[], None]] = None
-
-    @override
-    async def __call__(self, command: str) -> str:
-        result = await super().__call__(command)
-        if self.conn.root_verified and self.on_root is not None:
-            self.on_root()
-        return result
-
-
-@dataclass
-class _TestCredential(SSHTestCredential):
-    """Report credentials that authenticate as root on a fresh connection."""
-
-    on_root: Optional[Callable[[], None]] = None
-
-    @override
-    async def __call__(self, username: str, password: str) -> str:
-        result = await super().__call__(username, password)
-        if self.conn.root_verified and self.on_root is not None:
-            self.on_root()
-        return result
+from ._linux_capabilities import LinuxPrivEscRunCommand, LinuxPrivEscTestCredential
 
 
 class MinimalToolCallPrivEscLinux(ChatAgent):
@@ -72,8 +44,8 @@ class MinimalToolCallPrivEscLinux(ChatAgent):
     async def before_run(self, limits: Limits):
         await super().before_run(limits)
 
-        self.add_capability(_RunCommand(conn=self.conn, on_root=limits.complete), default=True)
-        self.add_capability(_TestCredential(conn=self.conn, on_root=limits.complete))
+        self.add_capability(LinuxPrivEscRunCommand(conn=self.conn, on_root=limits.complete), default=True)
+        self.add_capability(LinuxPrivEscTestCredential(conn=self.conn, on_root=limits.complete))
 
 
 @use_case("Tool-calling Minimal Linux Priv-Escalation (real chat history + function calling)")

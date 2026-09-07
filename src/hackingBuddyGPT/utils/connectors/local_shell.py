@@ -1,5 +1,4 @@
 import getpass
-import os
 import re
 import subprocess
 import time
@@ -8,12 +7,6 @@ from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
 from hackingBuddyGPT.utils.configurable import configurable
-from hackingBuddyGPT.utils.shell_root_detection import (
-    ROOT_PROOF_ENV,
-    new_root_proof_challenge,
-    redact_root_proof,
-    root_proof_challenge_matches,
-)
 
 
 @configurable("local_shell", "attaches to a running local shell inside tmux using tmux")
@@ -34,8 +27,6 @@ class LocalShellConnection:
     # Internal state
     last_output_hash: Optional[int] = field(default=None, init=False)
     last_uid: Optional[int] = field(default=None, init=False)
-    root_verified: bool = field(default=False, init=False)
-    _root_proof: str = field(default_factory=lambda: os.environ.get(ROOT_PROOF_ENV, ""), init=False, repr=False)
     _initialized: bool = field(default=False, init=False)
 
     def init(self):
@@ -61,18 +52,12 @@ class LocalShellConnection:
             self.init()
 
         self.last_uid = None
-        self.root_verified = False
         if not cmd.strip():
             return "", "", 0
 
         try:
             output = self.run_with_unique_markers(cmd)
-            if self.last_uid == 0 and self._root_proof:
-                command, digest = new_root_proof_challenge(self._root_proof)
-                self.last_uid = None
-                proof_output = self.run_with_unique_markers(command)
-                self.root_verified = self.last_uid == 0 and root_proof_challenge_matches(proof_output, digest)
-            return redact_root_proof(output, self._root_proof), "", 0
+            return output, "", 0
         except Exception as e:
             return "", str(e), 1
 
@@ -197,7 +182,7 @@ class LocalShellConnection:
                 raise RuntimeError(f"Command timed out after {self.max_wait}s")
             
             self.send_command(
-                f'case $- in *r*) if [[ $EUID -eq 0 ]]; then echo "{end_marker}:0"; fi ;; '
+                f'case $- in *r*) printf "{end_marker}:%s\\n" "$EUID" ;; '
                 f'*) /usr/bin/printf "{end_marker}:%s\\n" "$(/usr/bin/id -u)" ;; esac'
             )
             time.sleep(0.8)

@@ -1,5 +1,4 @@
 import asyncio
-import os
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -8,13 +7,7 @@ from typing import Optional, Tuple
 import asyncssh
 
 from hackingBuddyGPT.utils.configurable import configurable
-from hackingBuddyGPT.utils.shell_root_detection import (
-    ROOT_PROOF_ENV,
-    new_root_proof_challenge,
-    redact_root_proof,
-    root_proof_challenge_matches,
-    strip_ansi,
-)
+from hackingBuddyGPT.utils.shell_root_detection import strip_ansi
 
 # password prompts we auto-answer so that sudo/su work inside the interactive shell
 _PW_PROMPT = re.compile(r"(?:\[sudo\] password for [^:]*:|assword:\s*$|'s [Pp]assword:\s*$)")
@@ -28,8 +21,7 @@ class SSHInteractiveConnection:
     Unlike the Fabric-based :class:`SSHConnection` (which runs every command in a fresh
     ``exec_command`` channel), this connector holds a persistent PTY session, so an escalation that
     drops into an interactive root shell (``sudo su``, ``sudo bash``, an exploit) survives into the
-    next command. Each command is framed with unique start/end markers. Root sessions must answer a
-    nonce challenge using a root-owned proof installed on the target.
+    next command. Each command is framed with unique start/end markers, including the shell's UID.
     """
 
     host: str
@@ -44,8 +36,6 @@ class SSHInteractiveConnection:
 
     # runtime state (not configuration)
     last_uid: Optional[int] = field(default=None, init=False)
-    root_verified: bool = field(default=False, init=False)
-    _root_proof: str = field(default_factory=lambda: os.environ.get(ROOT_PROOF_ENV, ""), init=False, repr=False)
     # how long the output stream must be quiet before a command is considered finished
     _idle: float = field(default=0.5, init=False, repr=False)
     _conn: Optional[asyncssh.SSHClientConnection] = field(default=None, init=False, repr=False)
@@ -107,17 +97,10 @@ class SSHInteractiveConnection:
     async def run(self, cmd: str, *args, **kwargs) -> Tuple[str, str, int]:
         timeout = kwargs.get("timeout", self.timeout)
         async with self._lock:
-            self.root_verified = False
             self.last_uid = None
             try:
                 await self._ensure_connected()
-                result = await self._run_framed(cmd, timeout)
-                if self.last_uid == 0 and self._root_proof:
-                    command, digest = new_root_proof_challenge(self._root_proof)
-                    self.last_uid = None
-                    output, _, _ = await self._run_framed(command, timeout)
-                    self.root_verified = self.last_uid == 0 and root_proof_challenge_matches(output, digest)
-                return result
+                return await self._run_framed(cmd, timeout)
             except Exception as e:
                 # the shell may be wedged (a program still holding the tty) or gone; drop it so the
                 # next command reconnects, and surface the error text.
@@ -153,9 +136,9 @@ class SSHInteractiveConnection:
                 stdin.write(self.password + "\n")
                 answered = True
 
-        # 3) capture UID before attempting the root-only proof.
+        # 3) capture the command's exit status and the persistent shell's UID.
         stdin.write(
-            f"r=$?;case $- in *r*)((EUID))||echo {end}:$r:0;;"
+            f"r=$?;case $- in *r*)printf '{end}:%s:%s\\n' \"$r\" \"$EUID\";;"
             f"*)/usr/bin/printf '{end}:%s:%s\\n' \"$r\" \"$(/usr/bin/id -u)\";;esac\n"
         )
         end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+)")
@@ -176,7 +159,6 @@ class SSHInteractiveConnection:
 
     def _parse(self, output: str, start: str, end: str, cmd: str, end_re: re.Pattern) -> Tuple[str, str, int]:
         text = strip_ansi(output).replace("\r\n", "\n").replace("\r", "\n")
-        text = redact_root_proof(text, self._root_proof)
         lines = text.split("\n")
 
         rc, start_idx, end_idx = 1, -1, -1

@@ -1,10 +1,3 @@
-import asyncio
-
-import pytest
-
-import hackingBuddyGPT.utils.connectors.local_shell as local_shell
-from hackingBuddyGPT.capabilities.ssh_test_credential import SSHTestCredential
-from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
 from hackingBuddyGPT.utils.shell_root_detection import (
     ROOT_PROOF_DIR,
     ROOT_PROOF_PATH,
@@ -71,63 +64,3 @@ def test_check_windows_admin_success():
     assert check_windows_admin_success("whoami", "nt authority\\system") is True
     assert check_windows_admin_success("whoami /groups", "BUILTIN\\Administrators S-1-5-32-544 Enabled group") is True
     assert check_windows_admin_success("whoami", "myhost\\alice") is False
-
-
-@pytest.mark.parametrize(
-    ("command_uid", "uid_after_challenge", "expected_verified"),
-    [(0, 0, True), (0, 1000, False), (1000, None, False)],
-    ids=["stays-root", "drops-uid", "root-looking-output"],
-)
-def test_local_shell_requires_root_before_and_after_challenge(
-    monkeypatch, command_uid, uid_after_challenge, expected_verified
-):
-    conn = LocalShellConnection(tmux_session="unused")
-    conn._initialized = True
-    conn._root_proof = "proof"
-
-    def run(command):
-        conn.last_uid = command_uid if command == "id" else uid_after_challenge
-        return {"id": "uid=0(root)", "challenge": "digest  -"}[command]
-
-    conn.run_with_unique_markers = run
-    monkeypatch.setattr(local_shell, "new_root_proof_challenge", lambda proof: ("challenge", "digest"))
-
-    assert conn.run("id") == ("uid=0(root)", "", 0)
-    assert conn.root_verified is expected_verified
-
-
-def test_local_shell_clears_stale_root():
-    conn = LocalShellConnection(tmux_session="unused")
-    conn._initialized = True
-    conn.root_verified = True
-    conn.last_uid = 0
-
-    assert conn.run(" ") == ("", "", 0)
-    assert conn.root_verified is False
-    assert conn.last_uid is None
-
-
-class _FakeLegacySSHConnection:
-    def __init__(self):
-        self.root_verified = True
-        self.keyfilename = "/configured/key"
-
-    def new_with(self, **kwargs):
-        return self
-
-    def init(self):
-        pass
-
-
-def test_legacy_credential_sets_root_only_for_root_login():
-    conn = _FakeLegacySSHConnection()
-
-    result = asyncio.run(SSHTestCredential(conn=conn)("lowpriv", "trustno1"))
-
-    assert result == "Authentication successful, but user lowpriv is not root\n"
-    assert conn.root_verified is False
-    assert conn.keyfilename == ""
-
-    result = asyncio.run(SSHTestCredential(conn=conn)("root", "s3cret"))
-    assert result == "Login as root was successful\n"
-    assert conn.root_verified is True

@@ -4,7 +4,6 @@ from typing import List, Union
 
 from mako.template import Template
 
-from hackingBuddyGPT.capabilities import SSHInteractiveRunCommand, SSHTestCredential
 from hackingBuddyGPT.strategies import CommandStrategy
 from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils import llm_util
@@ -12,6 +11,8 @@ from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
 from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
 from hackingBuddyGPT.utils.logging import log_conversation
 from hackingBuddyGPT.utils.rag import has_langchain
+
+from ._linux_capabilities import LinuxPrivEscRunCommand, LinuxPrivEscTestCredential
 
 if has_langchain():
     from hackingBuddyGPT.utils.rag import RagBackground
@@ -118,9 +119,12 @@ class PrivEscLinux(CommandStrategy):
 
         self._template = default_template
 
-        self._capabilities.add_capability(SSHInteractiveRunCommand(conn=self.conn), default=True)
+        self._run_command = LinuxPrivEscRunCommand(conn=self.conn)
+        self._capabilities.add_capability(self._run_command, default=True)
+        self._test_credential = None
         if not isinstance(self.conn, LocalShellConnection):
-            self._capabilities.add_capability(SSHTestCredential(conn=self.conn))
+            self._test_credential = LinuxPrivEscTestCredential(conn=self.conn)
+            self._capabilities.add_capability(self._test_credential)
 
         self._template_params.update({
             "system": "Linux",
@@ -255,4 +259,6 @@ class PrivEscLinux(CommandStrategy):
 
 
     def check_success(self, cmd:str, result:str) -> bool:
-        return self.conn.root_verified
+        return self._run_command.root_verified or (
+            self._test_credential is not None and self._test_credential.root_verified
+        )

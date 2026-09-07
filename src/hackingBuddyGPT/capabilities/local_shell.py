@@ -17,4 +17,4 @@ class LocalShellCapability(Capability):
 
     async def __call__(self, cmd: str) -> Tuple[str, bool]:
         out, _, _ = self.conn.run(cmd)
-        return out, self.conn.root_verified
+        return out, False

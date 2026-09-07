@@ -17,7 +17,6 @@ class SSHTestCredential(TestCredentialCapability):
 
     async def __call__(self, username: str, password: str) -> str:
         # Interactive connectors test credentials on a fresh connection.
-        self.conn.root_verified = False
         if hasattr(self.conn, "test_credential"):
             authenticated = await self.conn.test_credential(username, password)
         else:
@@ -38,7 +37,6 @@ class SSHTestCredential(TestCredentialCapability):
 
         if not authenticated:
             return self._auth_error(username, password)
-        self.conn.root_verified = username == "root"
-        if self.conn.root_verified:
+        if username == "root":
             return LOGIN_AS_ROOT_SUCCESSFUL
         return f"Authentication successful, but user {username} is not root\n"

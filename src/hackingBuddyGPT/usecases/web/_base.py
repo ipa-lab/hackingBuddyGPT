@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import override
 
 from hackingBuddyGPT.capabilities.end_run import EndRun
@@ -24,6 +25,7 @@ WEB_PENTEST_TAIL = (
 )
 
 
+@dataclass
 class WebTestingAgent(ChatAgent):
     """Shared base for the web pentest agents: flag parameters, the common system-prompt fragments,
     and the ``SubmitFlag`` + ``EndRun`` capability wiring. Subclasses compose their exact

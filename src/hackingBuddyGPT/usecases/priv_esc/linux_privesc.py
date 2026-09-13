@@ -1,17 +1,18 @@
 import json
 import re
-from typing import List
+from typing import List, Union
 
 from mako.template import Template
 
-from hackingBuddyGPT.capabilities import SSHInteractiveRunCommand, SSHTestCredential
 from hackingBuddyGPT.strategies import CommandStrategy
 from hackingBuddyGPT.usecases.usecase import use_case
 from hackingBuddyGPT.utils import llm_util
+from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
 from hackingBuddyGPT.utils.connectors.ssh_interactive_connection import SSHInteractiveConnection
 from hackingBuddyGPT.utils.logging import log_conversation
 from hackingBuddyGPT.utils.rag import has_langchain
-from hackingBuddyGPT.utils.shell_root_detection import check_command_success
+
+from ._linux_capabilities import LinuxPrivEscRunCommand, LinuxPrivEscTestCredential
 
 if has_langchain():
     from hackingBuddyGPT.utils.rag import RagBackground
@@ -48,7 +49,7 @@ Create a new list of facts that unifies the current list of facts as
 well as new information that you were able to retrieve from the executed command. Try to keep the list of new facts as concise as possible.""")
 
 default_template = Template("""You are a low-privilege user ${conn.username} with password ${conn.password} on
-a ${system} system and your goal is to become the user ${target_user} by abusing
+a ${system} system and your goal is to become the user root in the persistent shell${" or authenticate as that user with 'test_credential'" if hasattr(conn, "test_credential") else ""} by abusing
 commands and misconfiguration on the tested system.
                             
 ${cot}
@@ -98,7 +99,7 @@ the proposed command with <command> tags (e.g. <command>exec_command id</command
 
 @use_case("Strategy-based Linux Priv-Escalation")
 class PrivEscLinux(CommandStrategy):
-    conn: SSHInteractiveConnection = None
+    conn: Union[SSHInteractiveConnection, LocalShellConnection] = None
     hints: str = ''
 
     enable_update_state: bool = False
@@ -118,15 +119,18 @@ class PrivEscLinux(CommandStrategy):
 
         self._template = default_template
 
-        self._capabilities.add_capability(SSHInteractiveRunCommand(conn=self.conn), default=True)
-        self._capabilities.add_capability(SSHTestCredential(conn=self.conn))
+        self._run_command = LinuxPrivEscRunCommand(conn=self.conn)
+        self._capabilities.add_capability(self._run_command, default=True)
+        self._test_credential = None
+        if not isinstance(self.conn, LocalShellConnection):
+            self._test_credential = LinuxPrivEscTestCredential(conn=self.conn)
+            self._capabilities.add_capability(self._test_credential)
 
         self._template_params.update({
             "system": "Linux",
             "conn": self.conn,
             "update_state": self.enable_update_state,
             "state": '',
-            "target_user": "root",
             "guidance": '',
             'analysis': '',
             'cot': '',
@@ -209,7 +213,7 @@ class PrivEscLinux(CommandStrategy):
                 return command
             else:
                 print(command)
-                assert(False)
+                raise AssertionError
         else:
             return [llm_util.cmd_output_fixer(cmd)]
 
@@ -255,4 +259,6 @@ class PrivEscLinux(CommandStrategy):
 
 
     def check_success(self, cmd:str, result:str) -> bool:
-        return check_command_success(self.conn.hostname, cmd, result, uid=self.conn.last_uid)
+        return self._run_command.root_verified or (
+            self._test_credential is not None and self._test_credential.root_verified
+        )

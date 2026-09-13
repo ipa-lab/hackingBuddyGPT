@@ -1,3 +1,4 @@
+import inspect
 from dataclasses import dataclass
 from typing import override
 
@@ -27,7 +28,10 @@ class SSHInteractiveRunCommand(SSHCommandCapability):
     async def __call__(self, command: str) -> str:
         command = self._strip_command_prefix(command)
 
-        out, err, _ = await self.conn.run(command, timeout=self.timeout)
+        result = self.conn.run(command, timeout=self.timeout)
+        if inspect.isawaitable(result):
+            result = await result
+        out, err, _ = result
         # a command can legitimately produce no output; only fall back to the error text (e.g. a
         # failed connection) when there is genuinely nothing else to report, so failures are visible
         # instead of looking like an empty successful command.

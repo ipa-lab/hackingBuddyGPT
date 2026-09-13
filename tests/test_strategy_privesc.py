@@ -2,29 +2,35 @@
 
 The only test that exercised this loop (``integration_minimal_test.py``) is skipped — it imports a
 pre-PR-#141 module layout that no longer exists. This pins the *current* ``CommandStrategy.run``
-behaviour (drive scripted commands, detect root via ``check_command_success``, return ``True``)
+behaviour (drive scripted commands, verify the target's root proof, return ``True``)
 before the run-loop unification (converge onto ``AutonomousUseCase.run`` + ``Limits``) touches it.
 
 A fake SSH connection maps commands to canned output and a fake LLM replays a fixed command
 sequence, so the loop runs deterministically to a root escalation.
 """
+
 import asyncio
+import hashlib
+import re
 import tempfile
 import unittest
 from typing import Tuple
 
 from hackingBuddyGPT.usecases.priv_esc.linux_privesc import PrivEscLinux
 from hackingBuddyGPT.usecases.priv_esc.minimal_linux_privesc import MinimalPrivEscLinux
+from hackingBuddyGPT.utils.connectors.local_shell import LocalShellConnection
 from hackingBuddyGPT.utils.console.console import Console
 from hackingBuddyGPT.utils.llm_util import LLM, LLMResult
 from hackingBuddyGPT.utils.logging import JsonlLogger
+from hackingBuddyGPT.utils.shell_root_detection import ROOT_PROOF_PATH
 
-# The winning command whose (faked) output shows root; everything else is lowpriv.
-ROOT_CMD = "sudo id"
+# The winning command whose fake connection reports a verified proof.
+ROOT_CMD = "sudo su"
+ROOT_PROOF = "target-root-proof"
 _RESULTS = {
     "id": "uid=1001(lowpriv) gid=1001(lowpriv) groups=1001(lowpriv)",
     "sudo -l": "Sorry, user lowpriv may not run sudo.",
-    ROOT_CMD: "uid=0(root) gid=0(root) groups=0(root)",
+    ROOT_CMD: "root shell entered",
 }
 
 
@@ -33,11 +39,17 @@ class FakeSSHConnection:
     password: str = "toomanysecrets"
     hostname: str = "host"
     banner: str = ""
-    last_uid = None
-    last_user: str = "lowpriv"
+    last_uid: int | None = None
 
     async def run(self, cmd, *args, **kwargs) -> Tuple[str, str, int]:
+        if ROOT_PROOF_PATH in cmd:
+            nonce = re.search(r"printf '%s' ([0-9a-f]+)", cmd).group(1)
+            digest = hashlib.sha256(f"{ROOT_PROOF}{nonce}".encode()).hexdigest()
+            self.last_uid = 0
+            return digest, "", 0
+
         out = _RESULTS.get(cmd, "")
+        self.last_uid = 0 if cmd == ROOT_CMD else 1000
         return (out, "", 0) if out else ("", "Command not found", 1)
 
     async def test_credential(self, username: str, password: str):
@@ -68,7 +80,22 @@ def _log():
     return JsonlLogger(console=Console(), log_dir=tempfile.mkdtemp())
 
 
+def _render_prompt(agent):
+    agent.init()
+    return agent._template.render(**(agent._template_params | {"history": [], "capabilities": ""}))
+
+
 class TestStrategyPrivEscRunLoop(unittest.TestCase):
+    def test_ssh_prompt_describes_both_success_paths(self):
+        agent = MinimalPrivEscLinux(conn=FakeSSHConnection(), llm=FakeLLM([]), log=_log())
+        prompt = _render_prompt(agent)
+
+        self.assertIn("in the persistent shell or authenticate as that user with 'test_credential'", prompt)
+
+    def test_local_prompt_does_not_offer_credential_check(self):
+        local_agent = PrivEscLinux(conn=LocalShellConnection(tmux_session="unused"), llm=FakeLLM([]), log=_log())
+        self.assertNotIn("test_credential", _render_prompt(local_agent))
+
     def test_linux_privesc_reaches_root(self):
         responses = ["id", "sudo -l", ROOT_CMD]
         agent = PrivEscLinux(
@@ -78,6 +105,7 @@ class TestStrategyPrivEscRunLoop(unittest.TestCase):
             max_turns=len(responses),
         )
         agent.init()
+        agent._run_command._root_proof = ROOT_PROOF
         result = asyncio.run(agent.run({}))
         self.assertTrue(result)
 
@@ -90,6 +118,7 @@ class TestStrategyPrivEscRunLoop(unittest.TestCase):
             max_turns=len(responses),
         )
         agent.init()
+        agent._run_command._root_proof = ROOT_PROOF
         result = asyncio.run(agent.run({}))
         self.assertTrue(result)
 

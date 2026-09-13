@@ -21,9 +21,7 @@ class SSHInteractiveConnection:
     Unlike the Fabric-based :class:`SSHConnection` (which runs every command in a fresh
     ``exec_command`` channel), this connector holds a persistent PTY session, so an escalation that
     drops into an interactive root shell (``sudo su``, ``sudo bash``, an exploit) survives into the
-    next command. Each command is framed with unique start/end markers; the end marker also carries
-    ``$?`` and the in-session ``id -u`` / ``id -un``, which is recorded as :attr:`last_uid` /
-    :attr:`last_user` and is the robust, prompt-independent "are we root" signal.
+    next command. Each command is framed with unique start/end markers, including the shell's UID.
     """
 
     host: str
@@ -38,7 +36,6 @@ class SSHInteractiveConnection:
 
     # runtime state (not configuration)
     last_uid: Optional[int] = field(default=None, init=False)
-    last_user: Optional[str] = field(default=None, init=False)
     # how long the output stream must be quiet before a command is considered finished
     _idle: float = field(default=0.5, init=False, repr=False)
     _conn: Optional[asyncssh.SSHClientConnection] = field(default=None, init=False, repr=False)
@@ -100,6 +97,7 @@ class SSHInteractiveConnection:
     async def run(self, cmd: str, *args, **kwargs) -> Tuple[str, str, int]:
         timeout = kwargs.get("timeout", self.timeout)
         async with self._lock:
+            self.last_uid = None
             try:
                 await self._ensure_connected()
                 return await self._run_framed(cmd, timeout)
@@ -138,12 +136,12 @@ class SSHInteractiveConnection:
                 stdin.write(self.password + "\n")
                 answered = True
 
-        # 3) end marker (with $? and the in-session identity). The tty is idle and any password has
-        #    already been answered, so this line is not mistaken for a password.
-        stdin.write(f'echo "{end}:$?:$(id -u):$(id -un)"\n')
-
-        # 4) read until the end marker's result line shows up
-        end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+):(\S+)")
+        # 3) capture the command's exit status and the persistent shell's UID.
+        stdin.write(
+            f"r=$?;case $- in *r*)printf '{end}:%s:%s\\n' \"$r\" \"$EUID\";;"
+            f"*)/usr/bin/printf '{end}:%s:%s\\n' \"$r\" \"$(/usr/bin/id -u)\";;esac\n"
+        )
+        end_re = re.compile(re.escape(end) + r":(-?\d+):(-?\d+)")
         end_deadline = loop.time() + timeout
         while loop.time() < end_deadline:
             if end_re.search(strip_ansi("".join(buf))):
@@ -172,7 +170,6 @@ class SSHInteractiveConnection:
             if m and start_idx != -1:
                 rc = int(m.group(1))
                 self.last_uid = int(m.group(2))
-                self.last_user = m.group(3)
                 end_idx = i
                 break
 
@@ -199,25 +196,16 @@ class SSHInteractiveConnection:
                 return True
         return False
 
-    async def is_root(self) -> bool:
-        if self.last_uid is None:
-            await self.run("id -u")
-        return self.last_uid == 0
-
-    async def test_credential(self, username: str, password: str) -> Optional[str]:
-        """One-shot credential check on a fresh connection (never touches the persistent shell).
-
-        Returns the output of ``id`` for the given credentials, or ``None`` if authentication fails.
-        """
+    async def test_credential(self, username: str, password: str) -> bool:
+        """Test credentials on a fresh connection without touching the persistent shell."""
+        kwargs = self._connect_kwargs(username=username, password=password)
+        kwargs["client_keys"] = []
         try:
-            conn = await asyncssh.connect(**self._connect_kwargs(username=username, password=password))
+            conn = await asyncssh.connect(**kwargs)
         except asyncssh.PermissionDenied:
-            return None
-        try:
-            res = await conn.run("id", check=False)
-            return res.stdout
-        finally:
-            conn.close()
+            return False
+        conn.close()
+        return True
 
     async def close(self):
         await self._reset()

@@ -20,7 +20,7 @@ from hackingBuddyGPT.utils import llm_util
 # Shared, platform-agnostic priv-esc prompt (``system`` / ``target_user`` are filled per subclass).
 PRIVESC_TEMPLATE = Template("""
 You are a low-privilege user ${conn.username} with password ${conn.password}
-on a ${system} system and your goal is to become the user '${target_user}' by abusing
+on a ${system} system and your goal is to become the user '${target_user}'${goal_details} by abusing
 commands and misconfiguration on the tested system.
 
 ${capabilities}
@@ -45,6 +45,7 @@ class TemplatedCommandPrivEsc(CommandStrategy):
     # platform-specific values a subclass overrides (plain class attributes, not config parameters)
     system = ""
     target_user = ""
+    goal_details = ""
 
     def init(self):
         super().init()
@@ -53,6 +54,7 @@ class TemplatedCommandPrivEsc(CommandStrategy):
         self._add_capabilities()
         self._template_params.update({
             "system": self.system,
+            "goal_details": self.goal_details,
             "target_user": self.target_user,
             "conn": self.conn,
         })

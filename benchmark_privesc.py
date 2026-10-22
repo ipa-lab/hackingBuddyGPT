@@ -70,6 +70,8 @@ USE_CASE_ALIASES = {
 DEFAULT_MODELS = {
     "ollama": "ollama_chat/llama3",
     "openrouter": "openrouter/anthropic/claude-3.5-sonnet",
+    # OrcaRouter ids are validated against its live catalog by the provider itself.
+    "orcarouter": "orcarouter/fusion",
 }
 
 # The two use-case families count "rounds" through different CLI flags: the strategy-based ones
@@ -247,6 +249,9 @@ def build_wintermute_argv(args: argparse.Namespace, container: Container, trace_
         f"--log.log_dir={trace_dir}",
         f"--log.tag={tag}",
     ]
+    if args.provider == "orcarouter":
+        # Select the named provider; it owns the endpoint, credential seam and model catalog.
+        argv.append("--llm.preset=orcarouter")
     if args.or_provider:
         argv.append(f"--llm.provider={args.or_provider}")
     if args.max_cost and args.max_cost > 0:
@@ -531,12 +536,14 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     )
     p.add_argument("--use-case", default="MinimalPrivEscLinux",
                    help="wintermute use-case command (alias 'minimal_linux_privesc' accepted)")
-    p.add_argument("--provider", choices=["ollama", "openrouter"], default="ollama",
-                   help="LLM provider")
+    p.add_argument("--provider", choices=["ollama", "openrouter", "orcarouter"], default="ollama",
+                   help="LLM provider (orcarouter selects the named OrcaRouter preset)")
     p.add_argument("--model", default=None,
-                   help="litellm model id; defaults per provider (ollama_chat/llama3 or openrouter/anthropic/claude-3.5-sonnet)")
+                   help="litellm model id; defaults per provider (ollama_chat/llama3, "
+                        "openrouter/anthropic/claude-3.5-sonnet or orcarouter/fusion)")
     p.add_argument("--api-key", default=None,
-                   help="LLM API key; for OpenRouter, defaults to $OPENROUTER_API_KEY; Ollama needs none")
+                   help="LLM API key; for OpenRouter defaults to $OPENROUTER_API_KEY, "
+                        "for OrcaRouter to $ORCAROUTER_API_KEY; Ollama needs none")
     p.add_argument("--ollama-host", default="http://localhost:11434",
                    help="Ollama base URL (exported as OLLAMA_API_BASE to the child process)")
     p.add_argument("--or-provider", default=None,
@@ -565,9 +572,16 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     if args.model is None:
         args.model = DEFAULT_MODELS[args.provider]
     if args.api_key is None:
-        args.api_key = os.environ.get("OPENROUTER_API_KEY", "") if args.provider == "openrouter" else "ollama"
+        if args.provider == "openrouter":
+            args.api_key = os.environ.get("OPENROUTER_API_KEY", "")
+        elif args.provider == "orcarouter":
+            args.api_key = os.environ.get("ORCAROUTER_API_KEY") or os.environ.get("ORCA_KEY", "")
+        else:
+            args.api_key = "ollama"
     if args.provider == "openrouter" and not args.api_key:
         p.error("OpenRouter selected but no API key given (pass --api-key or set $OPENROUTER_API_KEY)")
+    if args.provider == "orcarouter" and not args.api_key:
+        p.error("OrcaRouter selected but no API key given (pass --api-key or set $ORCAROUTER_API_KEY)")
     if args.output_dir is None:
         stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         args.output_dir = os.path.join("benchmark_results", stamp)

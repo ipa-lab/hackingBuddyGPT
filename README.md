@@ -80,6 +80,7 @@ Experiments are structured into **use-cases**. Each becomes a `wintermute` sub-c
 - **Two execution styles** on one shared loop: native **tool-calling agents** (real chat history + function calling) and simple-text **command strategies** (Mako template → single parsed command).
 - **Unified run limits** — cap any run by rounds, tokens, cost (in dollars) *and* wall-clock duration (`--limits.max_rounds/max_tokens/max_cost/max_duration`).
 - **One LLM upstream: [litellm](https://github.com/BerriAI/litellm).** Any provider is reachable through the `llm.model` string — OpenAI, OpenRouter (the default endpoint), Anthropic, Azure, a local Ollama, and more. Route API traffic through an intercepting proxy (Burp/mitmproxy) with `--llm.proxy`.
+- **Named provider presets.** [OrcaRouter](https://www.orcarouter.ai) ships as a first-class provider (`--llm.preset=orcarouter`) with its own API-key / OAuth 2.0 + PKCE login, live model catalog and capability filters — see [OrcaRouter provider](#orcarouter-provider).
 - **Structured, self-contained logging** — every run is written as an append-only OpenTelemetry/GenAI JSONL trace, with CLI tools to replay and aggregate runs.
 - **Fully asynchronous** execution model built on `asyncio`.
 - **Ground-truth-verified success detection** for privilege escalation (a claimed "got root" is checked against real command output).
@@ -125,6 +126,60 @@ Any option you can pass on the command line can also be set in `.env` or the JSO
 | `llm.proxy` / `llm.proxy_insecure` | Route requests through an intercepting proxy such as Burp or mitmproxy. |
 
 > 💡 Because the endpoint defaults to OpenRouter, set `llm.api_base` (or a matching `llm.model` prefix) if you want to talk to OpenAI directly or to a local model.
+
+### OrcaRouter provider
+
+[OrcaRouter](https://www.orcarouter.ai) is an OpenAI-compatible AI gateway that routes many
+providers behind one endpoint (`https://api.orcarouter.ai/v1`). It is available as a **named
+provider**, not as a hand-configured base URL:
+
+```bash
+# 1a. authenticate: paste an existing key …
+wintermute-orcarouter login --api-key
+# 1b. … or authorize this machine with OAuth 2.0 + PKCE (loopback; --oob for headless hosts)
+wintermute-orcarouter login
+
+# 2. see what this credential can actually call, and pick a model interactively
+wintermute-orcarouter models --select
+
+# 3. run any use-case through the provider
+wintermute MinimalPrivEscLinux --llm.preset=orcarouter \
+    --llm.model=<model id> \
+    --conn=ssh --conn.host=192.168.122.151 --conn.username=lowpriv --conn.password=trustno1
+```
+
+| Option | Meaning |
+|---|---|
+| `--llm.preset=orcarouter` | Select the named provider (inference origin `https://api.orcarouter.ai/v1`). |
+| `--llm.preset_credential=auto\|api_key\|pkce` | Which credential source to use; `auto` prefers a configured API key, then a stored login. |
+| `--llm.api_key` / `ORCAROUTER_API_KEY` / `ORCA_KEY` | Existing-key path; keys are stored in `.env` (mode 0600) by `wintermute-orcarouter login --api-key`. |
+| `--llm.preset_api_base` / `--llm.preset_auth_base` / `ORCA_BASE_URL` | Self-hosted or staging origins. Auth and inference origins are never derived from one another. |
+| `--llm.model` | Must be a model the live catalog offers for this credential; run without it on a TTY to pick from the list. |
+| `--llm.embedding_model` | Embedding model for `PrivEscLinux --rag_path`; resolved from the embedding-capable catalog when empty. |
+
+The model list is discovered from `GET https://api.orcarouter.ai/v1/models` with the configured
+credential and filtered per entry point (chat, multimodal chat, embedding, image, video, rerank).
+Capabilities are never inferred from a model name; undeclared modalities fail closed. If discovery
+is unavailable, a small verified fallback catalog keeps a fresh installation usable and is labelled
+as degraded. `--llm.context_size` still controls prompt trimming; set it to the selected model's
+window.
+
+**Recommended model for security work:** `orcacyber-zero` (OrcaCyber Zero) is intended for security
+teams that have completed business verification and is permitted for authorized security testing,
+where general-purpose gateways often refuse such requests. It is enabled per workspace; until then
+the provider's default falls back to `orcarouter/fusion`, and the catalog shows exactly what the
+credential may call.
+
+**Account and key management:** keys are billed to the user's own OrcaRouter account and can be
+reviewed or revoked at <https://www.orcarouter.ai/console/token>; app authorizations are listed at
+<https://www.orcarouter.ai/console/authorized-apps>. A PKCE-issued key is a durable API key — it is
+reused until revoked, not refreshed; a `401` from the relay means "log in again", and the client
+marks it for reauthentication instead of retrying. Revoking every key issued to this app is a single
+click in the console.
+
+Provider evidence and links: <https://www.orcarouter.ai> · API base
+`https://api.orcarouter.ai/v1` · docs <https://www.orcarouter.ai/docs> · terms of service
+<https://www.orcarouter.ai/terms>.
 
 Inspect any use-case's full option set with `--help`:
 

@@ -1,5 +1,5 @@
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 import litellm
@@ -8,7 +8,9 @@ from hackingBuddyGPT.capabilities import Capability
 from hackingBuddyGPT.capability import capabilities_to_tools
 from hackingBuddyGPT.utils import LLM, LLMResult, configurable
 from hackingBuddyGPT.utils.configurable import parameter
+from hackingBuddyGPT.utils.llm_providers import PROVIDER_PRESETS, get_preset
 from hackingBuddyGPT.utils.llm_util import user_message
+from hackingBuddyGPT.utils.orcarouter.provider import ModelSelectionError, OrcaRouterProvider
 
 
 @configurable("litellm", "litellm-based unified LLM connection")
@@ -41,6 +43,31 @@ class LiteLLM(LLM):
         desc="Disable TLS certificate verification for the proxy (only for intercepting proxies like Burp/mitmproxy)",
         default=False,
     )
+    preset: str = parameter(
+        desc="named provider preset with its own endpoint, credentials and model catalog (available: "
+        + ", ".join(sorted(PROVIDER_PRESETS))
+        + "); leave empty to use a plain litellm model",
+        default="",
+    )
+    preset_api_base: str = parameter(
+        desc="override the preset's inference base URL (defaults to the provider's public endpoint)",
+        default="",
+    )
+    preset_auth_base: str = parameter(
+        desc="override the preset's authentication origin (defaults to the provider's public endpoint)",
+        default="",
+    )
+    preset_credential: str = parameter(
+        desc="credential source for the preset: auto, api_key or pkce", default="auto"
+    )
+    embedding_model: str = parameter(
+        desc="embedding model used by the RAG path; the OrcaRouter preset resolves it from the "
+        "embedding-capable catalog when empty",
+        default="",
+    )
+
+    # runtime state (not configuration)
+    _preset_provider: OrcaRouterProvider | None = field(default=None, init=False, repr=False)
 
     def init(self):
         if self.proxy == "":
@@ -48,7 +75,33 @@ class LiteLLM(LLM):
         if self.provider == "":
             self.provider = None
 
-        if self.proxy:
+        self._preset_provider = None
+        if self.preset:
+            preset = get_preset(self.preset)
+            self._preset_provider = preset.create(
+                api_base=self.preset_api_base or None,
+                auth_base=self.preset_auth_base or None,
+                credential_mode=self.preset_credential or "auto",
+            )
+            if self.api_key:
+                self._preset_provider.set_api_key(self.api_key)
+            # The model control is catalog-backed: an explicitly configured model must be
+            # offered by the provider for this workspace, otherwise the run stops here.
+            if not self.model:
+                self.model = self._preset_provider.resolve_chat_model("")
+            else:
+                self.model = self._preset_provider.resolve_chat_model(self.model)
+            if not self.api_key:
+                self.api_key = self._preset_provider.credential().value
+
+        if self._preset_provider is not None:
+            # The project's supported proxy switch is --llm.proxy. For a named provider we build
+            # the HTTP client explicitly so ambient HTTP(S)/SOCKS proxy env vars cannot intercept
+            # credential exchange or inference unless the user asked for a proxy here.
+            litellm.client_session = httpx.Client(
+                proxy=self.proxy or None, verify=not self.proxy_insecure, trust_env=False
+            )
+        elif self.proxy:
             # TLS verification stays on by default; only an explicit opt-in disables it,
             # which is sometimes needed to route traffic through an intercepting proxy.
             litellm.client_session = httpx.Client(proxy=self.proxy, verify=not self.proxy_insecure)
@@ -134,6 +187,21 @@ class LiteLLM(LLM):
         provider routing, retries). It is used both by :meth:`get_response` and by callers
         that need the unprocessed completion, e.g. the web_api tool-calling flow.
         """
+        if self._preset_provider is not None:
+            kwargs = self._preset_provider.completion_kwargs(self.model)
+            try:
+                return litellm.completion(
+                    messages=messages,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                    timeout=self.api_timeout,
+                    num_retries=self.api_retries,
+                    **kwargs,
+                )
+            except Exception as exc:
+                self._preset_provider.check_response_error(exc)
+                raise
+
         extra_body = {"provider": {"only": [self.provider]}} if self.provider else None
         return litellm.completion(
             model=self.model,
@@ -147,7 +215,26 @@ class LiteLLM(LLM):
             extra_body=extra_body,
         )
 
+    def embedding_config(self) -> dict:
+        """Provider-specific arguments for the optional RAG embedding path."""
+        if self._preset_provider is not None:
+            credential = self._preset_provider.credential()
+            return {
+                "model": self._preset_provider.embedding_model(self.embedding_model),
+                "api_key": credential.value,
+                "base_url": self._preset_provider.origins.api_base,
+            }
+        return {
+            "model": self.embedding_model or "text-embedding-3-large",
+            "api_key": self.api_key,
+        }
+
     def count_tokens(self, query) -> int:
+        if self._preset_provider is not None:
+            # The provider model ids are not in litellm's bundled tokenizer map; a bounded
+            # character estimate keeps prompt trimming working without a network round trip.
+            text = str(query) if not isinstance(query, list) else " ".join(str(item) for item in query)
+            return max(1, len(text) // 4)
         if isinstance(query, list):
             return litellm.token_counter(model=self.model, messages=query)
         return litellm.token_counter(model=self.model, text=str(query))

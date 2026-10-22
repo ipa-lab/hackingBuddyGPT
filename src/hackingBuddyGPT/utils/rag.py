@@ -25,7 +25,9 @@ class RagBackground:
 
         markdown_splitter = MarkdownTextSplitter(chunk_size=1000, chunk_overlap=0)
         documents = markdown_splitter.split_documents(documents)
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=llm.api_key)
+        # The LLM provider owns the embedding endpoint and model: for OrcaRouter this is the
+        # provider's OpenAI-compatible base URL and an embedding-capable model from its catalog.
+        embeddings = OpenAIEmbeddings(**llm.embedding_config())
 
         print("loading into vector store")
         db = Chroma.from_documents(documents, embeddings)

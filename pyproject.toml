@@ -82,6 +82,7 @@ rag = [
 [project.scripts]
 wintermute = "hackingBuddyGPT.cli.wintermute:main"
 hackingBuddyGPT = "hackingBuddyGPT.cli.wintermute:main"
+wintermute-orcarouter = "hackingBuddyGPT.cli.orcarouter:main"
 hackingbuddygpt-log-view = "hackingBuddyGPT.cli.log_viewer:main"
 hackingbuddygpt-log-analyze = "hackingBuddyGPT.cli.log_analyze:main"
 

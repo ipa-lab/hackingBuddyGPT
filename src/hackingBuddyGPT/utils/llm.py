@@ -140,7 +140,7 @@ class LiteLLM(LLM):
             messages=messages,
             tools=tools,
             tool_choice=tool_choice,
-            # api_base=self.api_base, TODO: why is thi snot working anymore
+            # api_base=self.api_base, TODO: why is this not working anymore
             api_key=self.api_key,
             timeout=self.api_timeout,
             num_retries=self.api_retries,

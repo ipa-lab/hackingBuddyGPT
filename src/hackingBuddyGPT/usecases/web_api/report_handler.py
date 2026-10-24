@@ -99,7 +99,7 @@ class ReportHandler:
             elif "message" in body:
                 self._add_finding(
                     test_case_purpose, test_case_name, step,
-                    expected="Only necesary information should be returned.",
+                    expected="Only necessary information should be returned.",
                     actual="Too much information was logged.",
                 )
 

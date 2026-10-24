@@ -112,7 +112,7 @@ class BasicPrompt(ABC):
             [
                 "Query for related resource endpoints",
                 "Identify related resource endpoints that match the format `/resource/id/other_resource`: "
-                f"First, scan for the follwoing endpoints where an `id` in the middle position and follow them by another resource identifier.",
+                f"First, scan for the following endpoints where an `id` in the middle position and follow them by another resource identifier.",
                 "Second, look for other endpoints and query these endpoints with appropriate `id` values to determine their behavior and document responses or errors."
             ],
             [

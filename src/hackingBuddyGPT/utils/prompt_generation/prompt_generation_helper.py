@@ -56,7 +56,7 @@ class PromptGenerationHelper(object):
         self.unsuccessful_paths = ["/"]
         self.current_step = 1
         self.document_steps = 0
-        self.tried_methods_by_enpoint = {}
+        self.tried_methods_by_endpoint = {}
         self.accounts = []
         self.possible_instance_level_endpoints = []
 
@@ -161,12 +161,12 @@ class PromptGenerationHelper(object):
 
         if (missing_endpoint and not missing_endpoint in self.unsuccessful_paths
                 and not 'GET' in self.unsuccessful_methods
-                and missing_endpoint in self.tried_methods_by_enpoint.keys()
-                and not 'GET' in self.tried_methods_by_enpoint[missing_endpoint]):
+                and missing_endpoint in self.tried_methods_by_endpoint.keys()
+                and not 'GET' in self.tried_methods_by_endpoint[missing_endpoint]):
             formatted_endpoint = missing_endpoint.replace("{id}", "1") if "{id}" in missing_endpoint else missing_endpoint
-            if missing_endpoint not in self.tried_methods_by_enpoint:
-                self.tried_methods_by_enpoint[missing_endpoint] = []
-            self.tried_methods_by_enpoint[missing_endpoint].append('GET')
+            if missing_endpoint not in self.tried_methods_by_endpoint:
+                self.tried_methods_by_endpoint[missing_endpoint] = []
+            self.tried_methods_by_endpoint[missing_endpoint].append('GET')
             return [
                 f"{info}\n",
                 f"For endpoint {formatted_endpoint}, find this missing method: GET."
@@ -178,17 +178,17 @@ class PromptGenerationHelper(object):
             missing_methods = http_methods_set - set(methods)
             if missing_methods and endpoint not in self.unsuccessful_paths:
                 for needed_method in missing_methods:  # Iterate directly over missing methods
-                    if endpoint not in self.tried_methods_by_enpoint:
-                        self.tried_methods_by_enpoint[endpoint] = []
+                    if endpoint not in self.tried_methods_by_endpoint:
+                        self.tried_methods_by_endpoint[endpoint] = []
 
                     # Avoid retrying methods that were already unsuccessful
                     if (needed_method in self.unsuccessful_methods.get(endpoint, [])
-                            or needed_method in self.tried_methods_by_enpoint[endpoint]):
+                            or needed_method in self.tried_methods_by_endpoint[endpoint]):
                         continue
 
                     # Format the endpoint and append the method as tried
                     formatted_endpoint = endpoint.replace("{id}", "1") if "{id}" in endpoint else endpoint
-                    self.tried_methods_by_enpoint[endpoint].append(needed_method)
+                    self.tried_methods_by_endpoint[endpoint].append(needed_method)
 
                     return [
                         f"{info}\n",

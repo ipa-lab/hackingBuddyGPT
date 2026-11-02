@@ -11,6 +11,7 @@ unaffected by the switch away from the old SQLite/remote backends.
 
 import datetime
 from dataclasses import dataclass, field
+from datetime import timezone
 from functools import wraps
 from typing import Optional
 
@@ -138,7 +139,7 @@ class JsonlLogger:
         if self._writer is not None:
             raise ValueError("Run already started")
 
-        started_at = datetime.datetime.now()
+        started_at = datetime.datetime.now(timezone.utc)
         self._writer = SpanWriter(self.log_dir)
         trace_id = self._writer.open(started_at)
 
@@ -165,7 +166,7 @@ class JsonlLogger:
         self.console.log(f"[green]logging run to {self._writer.path}")
 
     def _finish_run(self, status_code: str, state: str):
-        self._run_span.end_time = datetime.datetime.now().isoformat()
+        self._run_span.end_time = datetime.datetime.now(timezone.utc).isoformat()
         self._run_span.status = {"code": status_code, "message": state}
         self._run_span.attributes[HB_RUN_STATE] = state
         self._writer.write(self._run_span)
@@ -197,7 +198,7 @@ class JsonlLogger:
             parent_span_id=self._parent_id,
             name=name,
             kind=KIND_INTERNAL,
-            start_time=datetime.datetime.now().isoformat(),
+            start_time=datetime.datetime.now(timezone.utc).isoformat(),
             end_time=None,
             attributes={HB_SECTION_NAME: name}
             | ({HB_SECTION_CONVERSATION: self._current_conversation} if self._current_conversation else {}),
@@ -207,7 +208,7 @@ class JsonlLogger:
         return span
 
     def _close_section(self, span: Span, failed: bool):
-        span.end_time = datetime.datetime.now().isoformat()
+        span.end_time = datetime.datetime.now(timezone.utc).isoformat()
         span.status = {"code": STATUS_ERROR if failed else STATUS_OK, "message": ""}
         # pop everything down to and including this span, tolerating imbalance
         if span in self._stack:
@@ -234,7 +235,7 @@ class JsonlLogger:
         message_id = self._next_message_id
         self._next_message_id += 1
 
-        end = datetime.datetime.now()
+        end = datetime.datetime.now(timezone.utc)
         start = end - as_timedelta(duration)
 
         attributes = {
@@ -275,7 +276,7 @@ class JsonlLogger:
         message_id = self._next_message_id
         self._next_message_id += 1
 
-        end = datetime.datetime.now()
+        end = datetime.datetime.now(timezone.utc)
         start = end - as_timedelta(llm_result.duration)
 
         model = getattr(llm_result, "model", "") or ""
@@ -333,7 +334,7 @@ class JsonlLogger:
         result_text: str,
         duration: datetime.timedelta,
     ):
-        end = datetime.datetime.now()
+        end = datetime.datetime.now(timezone.utc)
         start = end - as_timedelta(duration)
 
         attributes = {

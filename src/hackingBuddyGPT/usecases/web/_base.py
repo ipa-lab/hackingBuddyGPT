@@ -41,6 +41,11 @@ CONDENSE_LIST_ITEMS = 80        # max links / fields / comments kept each
 # Char budget for the history actually sent each round (~60k tokens). perform_round re-sends the whole
 # history, so this bounds a long run's per-call input/cost regardless of round count.
 HISTORY_CHAR_BUDGET = 240_000
+# Lower threshold for the hysteresis: once the sent history reaches HISTORY_CHAR_BUDGET it is pruned in one
+# block down to this size and then left to grow again, so the sent prefix stays byte-stable (API KV cache
+# stays warm) for the ~15-20 rounds between prunes instead of shifting every round (the per-round trim
+# invalidated the cache and drove ~10x cost late in long runs).
+HISTORY_CHAR_TARGET = 160_000
 
 _CD_SCRIPT_STYLE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.I | re.S)
 _CD_COMMENT = re.compile(r"<!--(.*?)-->", re.S)
@@ -189,3 +194,8 @@ class WebTestingAgent(ChatAgent):
     def _max_history_chars(self):
         # Bound the sent history so a long autonomous run does not grow the input without limit.
         return HISTORY_CHAR_BUDGET
+
+    @override
+    def _history_target_chars(self):
+        # Prune in one block down to this lower threshold (hysteresis) to keep the KV cache warm.
+        return HISTORY_CHAR_TARGET

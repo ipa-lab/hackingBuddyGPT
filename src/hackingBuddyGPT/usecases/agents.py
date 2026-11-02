@@ -152,31 +152,39 @@ def _message_role(m) -> str:
     return m.get("role", "") if isinstance(m, dict) else getattr(m, "role", "")
 
 
-def trim_history(history: Prompt, budget_chars) -> Prompt:
-    """Return a copy of ``history`` whose size (in characters of role+content+tool-call args) stays within
-    ``budget_chars``, by keeping the system message plus the newest messages and dropping the oldest. The
-    sent window never starts with an orphaned tool result (its assistant turn was dropped), and the newest
-    message is always kept. ``budget_chars is None`` -> no trimming. The caller keeps the full history for
-    logging and appends; only this sent copy is trimmed."""
+def trim_history(history: Prompt, budget_chars, target_chars=None, already_dropped: int = 0) -> tuple[Prompt, int]:
+    """Return ``(sent_copy, dropped)``: a copy of ``history`` bounded in size (characters of
+    role+content+tool-call args), plus the number of oldest non-system messages elided from it.
+
+    Hysteresis: nothing is pruned until the sent copy reaches ``budget_chars``; then the oldest messages
+    are dropped in one block down to ``target_chars`` (default: ``budget_chars``). The elision is never
+    undone -- ``already_dropped`` is the previous high-water mark and the count only grows -- so between
+    prunes the sent prefix stays byte-stable while new messages are appended, keeping the API KV prompt
+    cache warm for the many rounds until ``budget_chars`` is reached again. The sent window keeps the
+    system message at position 0, never starts with an orphaned tool result, and always keeps the newest
+    message. ``budget_chars is None`` -> no trimming. The caller keeps the full history for logging and
+    appends; only this sent copy is trimmed."""
     if budget_chars is None or len(history) <= 1:
-        return history
+        return history, 0
     system, rest = history[:1], history[1:]
-    total = len(_message_text(system[0]))
-    kept = []
-    for m in reversed(rest):
-        c = len(_message_text(m))
-        if kept and total + c > budget_chars:
-            break
-        kept.append(m)
-        total += c
-    kept.reverse()
-    while kept and _message_role(kept[0]) == "tool":
-        kept.pop(0)
-    dropped = len(rest) - len(kept)
+    target = target_chars if (target_chars is not None and target_chars < budget_chars) else budget_chars
+    sizes = [len(_message_text(m)) for m in rest]
+    sys_size = len(_message_text(system[0]))
+
+    dropped = max(0, min(already_dropped, len(rest)))
+    sent = sys_size + sum(sizes[dropped:])
+    # upper threshold reached -> drop the oldest in one block down to the lower threshold (target)
+    if sent >= budget_chars:
+        while dropped < len(rest) - 1 and sent > target:
+            sent -= sizes[dropped]
+            dropped += 1
+    # never start the sent window with an orphaned tool result (its assistant turn was dropped)
+    while dropped < len(rest) - 1 and _message_role(rest[dropped]) == "tool":
+        dropped += 1
     if dropped <= 0:
-        return history
+        return history, 0
     note = {"role": "user", "content": f"[note: {dropped} older message(s) elided to stay within the context budget; rely on your own earlier notes for anything not shown]"}
-    return system + [note] + kept
+    return system + [note] + rest[dropped:], dropped
 
 
 @dataclass
@@ -220,8 +228,21 @@ class ChatAgent(Agent, ABC):
         ``None`` = no trimming (default, keeps privesc unchanged); the web agents set a budget."""
         return None
 
+    def _history_target_chars(self):
+        """Lower threshold for the hysteresis in ``trim_history``: when the sent history reaches
+        ``_max_history_chars`` it is pruned in one block down to this size and then left to grow again, so
+        the sent prefix (and the API KV cache) stays stable between prunes. ``None`` = prune straight to the
+        budget (no hysteresis gap); the web agents set a lower target."""
+        return None
+
     def _trimmed_prompt(self) -> Prompt:
-        return trim_history(self._prompt_history, self._max_history_chars())
+        prompt, self._history_dropped = trim_history(
+            self._prompt_history,
+            self._max_history_chars(),
+            self._history_target_chars(),
+            getattr(self, "_history_dropped", 0),
+        )
+        return prompt
 
     @override
     async def perform_round(self, limits: Limits):

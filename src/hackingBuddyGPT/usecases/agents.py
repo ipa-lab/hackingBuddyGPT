@@ -132,6 +132,53 @@ class Agent(CapabilityRegistry, ABC):
 Prompt = list[Any]  # chat history: dict messages and/or litellm message objects
 
 
+def _message_text(m) -> str:
+    """Role + content + tool-call arguments of a chat message, robust across dict messages and litellm
+    message objects. Used only to size the history for trimming (an estimate, not an exact token count)."""
+    if isinstance(m, dict):
+        parts = [str(m.get("role", "")), str(m.get("content") or "")]
+        for tc in (m.get("tool_calls") or []):
+            fn = (tc.get("function") or {}) if isinstance(tc, dict) else {}
+            parts.append(str(fn.get("arguments", "")))
+        return " ".join(parts)
+    parts = [str(getattr(m, "role", "")), str(getattr(m, "content", "") or "")]
+    for tc in (getattr(m, "tool_calls", None) or []):
+        fn = getattr(tc, "function", None)
+        parts.append(str(getattr(fn, "arguments", "") if fn else ""))
+    return " ".join(parts)
+
+
+def _message_role(m) -> str:
+    return m.get("role", "") if isinstance(m, dict) else getattr(m, "role", "")
+
+
+def trim_history(history: Prompt, budget_chars) -> Prompt:
+    """Return a copy of ``history`` whose size (in characters of role+content+tool-call args) stays within
+    ``budget_chars``, by keeping the system message plus the newest messages and dropping the oldest. The
+    sent window never starts with an orphaned tool result (its assistant turn was dropped), and the newest
+    message is always kept. ``budget_chars is None`` -> no trimming. The caller keeps the full history for
+    logging and appends; only this sent copy is trimmed."""
+    if budget_chars is None or len(history) <= 1:
+        return history
+    system, rest = history[:1], history[1:]
+    total = len(_message_text(system[0]))
+    kept = []
+    for m in reversed(rest):
+        c = len(_message_text(m))
+        if kept and total + c > budget_chars:
+            break
+        kept.append(m)
+        total += c
+    kept.reverse()
+    while kept and _message_role(kept[0]) == "tool":
+        kept.pop(0)
+    dropped = len(rest) - len(kept)
+    if dropped <= 0:
+        return history
+    note = {"role": "user", "content": f"[note: {dropped} older message(s) elided to stay within the context budget; rely on your own earlier notes for anything not shown]"}
+    return system + [note] + kept
+
+
 @dataclass
 class ChatAgent(Agent, ABC):
     llm: LiteLLM  # pinning the llm implementation to the litellm-based upstream
@@ -158,21 +205,41 @@ class ChatAgent(Agent, ABC):
         self._prompt_history.append({"role": "user", "content": message})
         await self.log.limit_message(message)
 
+    def _history_result_transform(self):
+        """Optional transform applied to each raw tool result before it is appended to the prompt
+        history (see run_tool_calling_turn). Because ``perform_round`` re-sends the whole history every
+        round, whatever is stored here is paid for again on every later round. Default ``None`` keeps the
+        result verbatim; the web agents override this to condense verbose HTTP bodies so the context does
+        not grow without bound."""
+        return None
+
+    def _max_history_chars(self):
+        """Character budget for the history actually SENT to the model each round. ``perform_round``
+        re-sends the whole history every round, so without a bound a long autonomous run grows the input
+        without limit (measured: 91 rounds -> ~402k input tokens, even with the HTTP condenser active).
+        ``None`` = no trimming (default, keeps privesc unchanged); the web agents set a budget."""
+        return None
+
+    def _trimmed_prompt(self) -> Prompt:
+        return trim_history(self._prompt_history, self._max_history_chars())
+
     @override
     async def perform_round(self, limits: Limits):
         await self.add_limits_message(limits)
 
         # Offer all capabilities and let the model choose; tool calls run concurrently and their results are
-        # appended verbatim (see run_tool_calling_turn). The web-api testing engine reuses the same turn with
-        # a single forced capability, sequential execution and a reporting hook.
+        # appended (verbatim unless _history_result_transform condenses them first — see run_tool_calling_turn).
+        # The web-api testing engine reuses the same turn with a single forced capability, sequential execution
+        # and a reporting hook.
         await run_tool_calling_turn(
             self.llm,
             self.log,
             limits,
-            prompt=self._prompt_history,
+            prompt=self._trimmed_prompt(),
             history=self._prompt_history,
             capabilities=self._capabilities,
             run_capability_json=self.run_capability_json,
+            result_transform=self._history_result_transform(),
         )
 
         limits.register_round()

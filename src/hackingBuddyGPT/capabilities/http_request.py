@@ -17,14 +17,17 @@ class HTTPRequest(Capability):
     _client = requests.Session()
 
     def __post_init__(self):
+        # Lab targets routinely use self-signed TLS, so this capability never verifies certificates
+        # (see the request() call below); silence urllib3's warning so it does not flood the logs.
+        import urllib3
+
+        urllib3.disable_warnings()
+
         if not self.use_cookie_jar:
             self._client = requests
         else:
             self._client = requests.Session()
             if "CLIENT_HTTP_PROXY" in os.environ or "CLIENT_HTTPS_PROXY" in os.environ:
-                import urllib3
-
-                urllib3.disable_warnings()
                 self._client.verify = False
                 if "CLIENT_HTTP_PROXY" in os.environ:
                     self._client.proxies["http"] = os.environ["CLIENT_HTTP_PROXY"]
@@ -52,7 +55,7 @@ class HTTPRequest(Capability):
     @override
     async def __call__(
         self,
-        method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTION", "PATCH"],
+        method: Literal["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         path: str,
         query: str | None = None,
         body: str | None = None,
@@ -74,6 +77,10 @@ class HTTPRequest(Capability):
                 data=body,
                 headers=headers,
                 allow_redirects=self.follow_redirects,
+                # explicit timeout so a firewall/network drop cannot hang the run forever
+                timeout=30,
+                # lab targets use self-signed certs; skip TLS verification unconditionally
+                verify=False,
             )
         except requests.exceptions.RequestException as e:
             url = self.host + ("" if path.startswith("/") else "/") + path + (f"?{query}" if query else "")
